@@ -2,14 +2,14 @@
 
 # 🧵 MemoWeft
 
-**把零散的证据编织成一块独立于模型、可追溯、可迁移的『认知之布』。**
+**MemoWeft 是给大模型应用用的「用户理解层」——帮 AI 助手记住用户说过的话、需要时想起相关内容；它不把每句话都当成事实，而是分清「亲口说过的」「暂时猜的」「需要再确认的」。**
 
-*证据是纬线，认知纪律是经线，用户画像就是那块布。*
+*它是套在 AI 助手外面的一层，不是聊天机器人本身——温柔、人设、语气留给你的助手；它只负责把「对你的了解」备好、需要时递过去。*
 
 ![status](https://img.shields.io/badge/status-alpha-orange)
-![tests](https://img.shields.io/badge/tests-54%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-66%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)
-![Node](https://img.shields.io/badge/Node-%E2%89%A518-339933)
+![Node](https://img.shields.io/badge/Node-%E2%89%A524-339933)
 ![deps](https://img.shields.io/badge/runtime%20deps-zero-success)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
@@ -19,20 +19,50 @@
 
 ---
 
-> ⚠️ **实验性 · 早期 alpha。** 核心已成、有测试（**54 全过**），但接口可能还会变——尚未到生产级。
+> ⚠️ **实验性 · 早期 alpha。** 核心已成、有测试（**66 全过**），但接口可能还会变——尚未到生产级。
 
 ## 🧭 这是什么
 
-MemoWeft 是**套在你大模型应用外面的『用户认知层』**。
+MemoWeft 是**套在你大模型应用外面的一层「用户理解层」**（记忆 + 判断，不是普通记忆库）。它不吹「真正理解你」，只是对「允许相信什么」很克制。简单说，它做五件事：
 
-它持续接收用户授权的对话与行为证据，把你对一个人的理解，沉淀成一份**独立于模型、可追溯、可演化、可迁移**的认知资产。当应用需要时，MemoWeft 把用户上下文还给你——每一条都带着置信度和适用边界。
+1. **它记得你说过什么。**
+2. **它知道哪些只是它暂时的猜测**，不会把猜的当成你确认过的。
+3. **它发现前后矛盾会来问你**，而不是偷偷选一个信。
+4. **它不会把过期的状态一直当成现在的你**——一时的情绪会淡忘，稳定的偏好留得久。
+5. **它能让不同 AI 角色都继承同一份对你的了解**——换个模型、换个助手，这份理解还在。
 
 它是一个**被 `import` 的库**，不是一个应用。先把边界划清楚，免得误解：
 
 - ❌ 它**不**聊天、不做角色、不做任何 UI。
 - ❌ 它**不**决定你助手的语气或人设。
 - ❌ 它**不**替你定隐私/安全策略——那是宿主的事。
-- ✅ 它**只**负责把 `证据 → 事件 → 认知` 三层，织成一份带置信度、可溯源的用户画像，需要时交还给你。
+- ✅ 它**只**负责把 `证据 → 事件 → 认知`（evidence → event → cognition）三层，织成一份带把握度、能回溯来源的「对你的了解」，需要时交还给你。
+
+> **最简接入（给开发者）。** 你其实只做两件事：**①** 聊天时把用户的话交给 MemoWeft 存成证据；**②** 回话前问 MemoWeft 要相关上下文。下面那些——事件、把握度、归因、衰减——都是这两步**背后怎么运作**，可以后面再逐步用上，不必一上来全懂。
+
+### 名词对照（对外 ↔ 对内）
+
+同一件事，README 里用大白话讲，代码和 API 里仍是工程词——两套名字指的是一回事。
+
+| 对外（产品说法） | 对内（代码 / API） |
+| --- | --- |
+| 记忆线索 | `evidence` |
+| 经历片段 | `event` |
+| 理解条目（UI 里也可叫「理解卡片」） | `cognition` |
+| 对你的了解 | `profile` |
+| 把握度（它对这条判断有几成把握：只是猜 / 有点谱 / 比较确定） | `confidence` |
+| 暂时的猜测 | `hypothesis` |
+| 想起相关内容 | `recall` |
+| 猜测原因 | `attribution` / `attribute` |
+| 需要确认的矛盾 | `conflict` |
+| 整理记忆（一次跑完 distill→consolidate→attribute→索引） | `updateProfile` |
+| 整理成经历片段 | `distill` |
+| 更新理解 | `consolidate` |
+| 想问你的问题 | `asking` / `proposeAsk` |
+| 检查矛盾 | `revisitConflicts` |
+| 总结最近状态 | `aggregateTrends` |
+
+> 代码示例、导出名、配置项一律用右列的工程词——本节只是帮你把大白话对回到 API 上。完整的命名与定位口径见 [`docs/naming.md`](docs/naming.md)。
 
 ---
 
@@ -101,11 +131,18 @@ flowchart LR
 
 ## ⚡ 快速开始
 
-> **前置：** Node ≥ 18（基于 `node:sqlite`、`node:http`、`node:fs`——**零运行时依赖**），TypeScript。
+> **前置：** Node ≥ 24（基于 `node:sqlite`、`node:http`、`node:fs`——**零运行时依赖**），TypeScript。
+
+MemoWeft 目前**以源码形式使用**（尚未发布到 npm）。克隆下来，先跑一遍护栏确认三绿：
 
 ```bash
-npm install memoweft
+git clone https://github.com/kestercarroll702-gif/memoweft.git
+cd memoweft
+npm install                                   # 只装 devDependencies（typescript + @types/node）
+npm run typecheck && npm test && npm run build
 ```
+
+> 发布到 npm 之前，下面示例里的 `from 'memoweft'` 请改用相对路径（`../memoweft/src/index.ts`）或本地 `npm install <路径>` / git submodule 引入——详见 [INSTALL.md](docs/INSTALL.md)。
 
 在 `.env` 里配一个模型和一个嵌入器（见 [配置](#配置)）。然后接好三层 store、写一条证据、生成画像、在回话里召回它：
 
@@ -235,7 +272,7 @@ MemoWeft 从环境变量读模型。**主推 `MEMOWEFT_*` 前缀；旧的 `DLA_*
 - 阶段 0–4B：证据层、画像 + 召回、纠正闭环、归因 + 主动询问、周期后台（衰减 / 过期 / 召回门控 / 冲突复看 / 趋势）。
 - 阶段 4-A 档1：行为感知摄入口（`ingestObservations` + 活动窗口 → `observed` 证据）。
 - 攒批更新画像 + 写路径可配独立小模型（`llmPool`）。
-- 云端模型端到端跑通、dogfood 验过、**54 个测试全过**（`npm test`）。
+- 云端模型端到端跑通、dogfood 验过、**66 个测试全过**（`npm test`）。
 
 **还没做**
 - 阶段 4-A 档2：真采集器（目前只有骨架）。
