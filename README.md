@@ -4,7 +4,7 @@
 
 **A user-cognition layer for LLM apps — it remembers what the user said, tracks which parts are solid vs. just a guess, and carries that context across models.**
 
-*One metaphor: scattered memory cues are woven, thread by thread, into a picture of who you are.*
+*Scattered memory cues are woven, thread by thread, into a picture of who the user is — without pretending every thread is equally trustworthy.*
 
 ![status](https://img.shields.io/badge/status-alpha-orange)
 ![tests](https://img.shields.io/badge/tests-71%20passing-brightgreen)
@@ -23,91 +23,87 @@
 
 ## 🧭 What it is
 
-MemoWeft is a **user-cognition layer** — the part that remembers the *user*, sitting on the outside of your LLM app. It doesn't claim to *understand* people; it's deliberately disciplined about what it's allowed to believe. In plain terms, it:
+MemoWeft is a **user-cognition layer** — the part that remembers the *user*, sitting outside your LLM app. It does not claim to truly understand people; it is disciplined about what it is allowed to believe.
 
-- **Remembers what you said** — your own words become durable memory cues, not a prompt that vanishes.
-- **Knows which parts are just its guess** — a hunch it inferred is marked low-confidence, never treated as fact.
-- **Comes back to confirm contradictions** — when two things you said disagree, it surfaces the clash instead of silently picking one.
-- **Doesn't mistake a passing mood for the real you** — fleeting states fade over time, so a stale state isn't held up as who you are today.
-- **Carries the same understanding across AI roles** — different assistants can inherit one shared picture of you, even when you swap the underlying model.
+In plain terms, it:
 
-Under the hood it continuously receives user-authorized conversation and behavior evidence, and distills what it has learned about a person into a cognitive asset that is **independent of the model, traceable, evolvable, and portable**. When your app needs it, MemoWeft hands back user context — each piece carrying a confidence score and a boundary.
+- **Remembers what the user said** — their own words become durable memory cues, not a prompt that vanishes.
+- **Marks guesses as guesses** — a hunch inferred by an LLM is low-confidence, never treated as fact.
+- **Exposes contradictions** — when two signals disagree, it surfaces the conflict instead of silently picking one.
+- **Lets passing states fade** — moods and short-lived states decay faster than stable preferences.
+- **Carries user context across models and roles** — different assistants can inherit one shared picture of the user.
 
-It is a **library you `import`**, not an app. To be clear about the edges:
+Under the hood, MemoWeft receives user-authorized conversation and behavior evidence, distills it into events, and consolidates it into confidence-scored cognition entries. The resulting profile is **model-independent, traceable, evolvable, and portable**.
 
-- ❌ It does **not** chat, roleplay, or render any UI.
+It is a **library you `import`**, not an app:
+
+- ❌ It does **not** chat, roleplay, or render UI.
 - ❌ It does **not** decide your assistant's tone or persona.
 - ❌ It does **not** own your privacy or security policy — the host does.
-- ✅ It **does** turn `evidence → event → cognition` into a confidence-scored, source-traceable profile of the user, and gives it back on request.
+- ✅ It **does** turn `evidence → event → cognition` into a source-traceable user profile, and gives relevant context back on request.
 
-> **Minimal mental model (for integrators).** You really only do two things: **(1)** hand the user's message to MemoWeft as evidence, and **(2)** ask MemoWeft for relevant context when you reply. Everything below — events, confidence, attribution, decay — is *how* that works under the hood; you can adopt it incrementally.
+> **Minimal mental model for integrators:** hand the user's message or observation to MemoWeft as evidence, then ask MemoWeft for relevant context when your app replies. Everything else — events, confidence, attribution, decay, conflict review — is how the library keeps that memory disciplined under the hood.
 
 ---
 
 ## 🔤 Naming · product words ↔ engineering words
 
-The docs above use **product words** so anyone can follow along. The code, API, types, and the rest of this README use the **engineering words**. Same thing, two labels — this table is the bridge.
-
-| Product word (what users read) | Engineering word (code / API) |
+| Product word | Engineering word |
 | --- | --- |
 | memory cues | `evidence` |
-| moments (episodes) | `event` |
-| understanding entries (·cards· in the UI) | `cognition` |
-| what it understands about you | `profile` |
-| confidence (how sure it is) | `confidence` |
-| a tentative guess | `hypothesis` |
+| moments / episodes | `event` |
+| understanding entries | `cognition` |
+| what it understands about the user | `profile` |
+| confidence | `confidence` |
+| tentative guess | `hypothesis` |
 | recalling relevant context | `recall` |
-| guessing why | `attribution` |
+| guessing why | `attribution` / `attribute` |
 | contradictions to confirm | `conflict` |
 | tidy up memory | `updateProfile` |
-| questions it wants to ask you | `asking` / `proposeAsk` |
+| questions it wants to ask | `asking` / `proposeAsk` |
 | check contradictions | `revisitConflicts` |
 | summarize recent state | `aggregateTrends` |
 | distill into moments | `distill` |
 | consolidate understanding | `consolidate` |
 
-> From here on the README speaks **engineering words** (they match the identifiers you'll `import`). Keep this table handy if a term feels unfamiliar. Full bilingual naming & positioning guide: [`docs/naming.md`](docs/naming.md).
+Full bilingual naming & positioning guide: [`docs/naming.md`](docs/naming.md).
 
 ---
 
 ## Why MemoWeft
 
-Swap the model and the memory is gone. Stuff context into a prompt and it is neither traceable nor portable — you can't tell *why* the assistant believes something, and you can't carry that understanding to the next model.
+Swap the model and the memory is gone. Stuff context into a prompt and it is neither traceable nor portable — you cannot tell *why* the assistant believes something, and you cannot carry that understanding to the next model.
 
-MemoWeft treats the understanding of a user as a **first-class, durable asset** rather than a throwaway prompt:
+MemoWeft treats the understanding of a user as a **first-class durable asset** rather than a throwaway prompt:
 
-- **Cross-model portable** — the cognitive layer is plain data in SQLite, not baked into any model's weights. Change the LLM, keep the user.
-- **Traceable** — every judgment about the user links back to the raw evidence that formed it. Nothing is a black box.
-- **Woven, not dumped** — fragments of memory are *woven* into a multi-dimensional picture, not appended to an ever-growing prompt.
+- **Cross-model portable** — the cognitive layer is plain data in SQLite, not baked into a model's weights.
+- **Traceable** — every judgment links back to the raw evidence that formed it.
+- **Woven, not dumped** — fragments are consolidated into a multi-dimensional user profile instead of appended to an ever-growing prompt.
 
-It is **not just another vector-memory store.** The real difference is **cognitive discipline** — the rules that decide what MemoWeft is allowed to believe (see below).
+It is **not just another vector-memory store**. The difference is **cognitive discipline** — rules that decide what MemoWeft is allowed to believe.
 
 ---
 
-## 📐 Cognitive discipline (the actual difference)
+## 📐 Cognitive discipline
 
-This is what makes MemoWeft more than a note pile. Five rules govern what gets believed:
+Five rules govern what gets believed:
 
-- **Recorded ≠ believed.** What the LLM *infers* enters as a low-confidence candidate, never as fact.
-- **No system self-corroboration.** The assistant's own output and the user's silence are **not** evidence.
-- **Conflicts are exposed, not auto-resolved.** When two signals disagree, MemoWeft flags the conflict instead of quietly picking a winner.
-- **Confidence is computed by MemoWeft, not self-reported by the LLM.** The model doesn't get to grade its own certainty; MemoWeft derives it from source strength and supporting evidence.
-- **Typed expiry.** Fleeting states (moods) fade fast; explicit preferences don't. Confidence decays on a per-type half-life, computed at read time.
-
-### MemoWeft vs. a plain memory store
+- **Recorded ≠ believed.** LLM inferences enter as low-confidence candidates, never as fact.
+- **No system self-corroboration.** The assistant's own output and the user's silence are not evidence.
+- **Conflicts are exposed, not auto-resolved.** Contradictory signals are flagged instead of silently merged.
+- **Confidence is computed by MemoWeft, not self-reported by the LLM.**
+- **Typed expiry.** Fleeting states fade fast; explicit preferences persist.
 
 | | Typical vector / memory store | MemoWeft |
 | --- | --- | --- |
 | Conflicting info | overwrite / keep latest | **conflict exposed**, not silently merged |
-| Trust | stored = treated as true | **recorded ≠ believed** — confidence is *computed*, not assumed |
-| The model's own guesses | may slip in as fact | **no self-corroboration** — only real evidence counts |
-| Expiry | permanent | **typed expiry** — moods fade fast, preferences persist |
+| Trust | stored = treated as true | **recorded ≠ believed** |
+| Model guesses | may slip in as fact | **low-confidence hypothesis** |
+| Expiry | permanent | **typed expiry** |
 
 ---
 
 ## 🧵 Core concept: three layers
-
-MemoWeft weaves in one direction and reads back in another.
 
 ```mermaid
 flowchart LR
@@ -121,34 +117,32 @@ flowchart LR
   IDX -. indexes .-> S
 ```
 
-Read as: **evidence** is the *weft* (raw threads fed in — the user's own words and observed behavior), the **cognitive discipline** is the *warp* (the fixed structural rules), and the **cognition layer** is the *cloth* — your understanding of the person, woven from every thread and traceable back to it.
-
 | Layer | Plain meaning |
 | --- | --- |
-| **evidence** | The single source of truth. Raw material only — what was said or observed. No judgments stored here. |
-| **event** | Evidence placed in context — a small, situated summary of what happened. |
-| **cognition** | The judgment layer — a multi-dimensional user profile, each entry with a confidence score and links back to its evidence. |
+| **evidence** | The source of truth: what the user said or what was observed. No judgments live here. |
+| **event** | Evidence placed in context: a small summary of what happened. |
+| **cognition** | The judgment layer: a user-profile entry with confidence and source links. |
 
-Read and write are **decoupled**: reads are light and synchronous; writes are batched and asynchronous, so profile updates never block a reply.
+Reads are light and synchronous; writes are batched and asynchronous, so profile updates do not block replies.
 
 ---
 
 ## ⚡ Quick start
 
-> **Requirements:** Node ≥ 24 (built on `node:sqlite`, `node:http`, `node:fs` — **zero runtime dependencies**), TypeScript.
+> **Requirements:** Node ≥ 24, TypeScript. MemoWeft has **zero runtime dependencies** and uses Node built-ins such as `node:sqlite`, `node:http`, and `node:fs`.
 
-MemoWeft is currently **used from source** (not yet published to npm). Clone it and confirm the guardrails are green:
+MemoWeft is currently **used from source** and is not published to npm yet.
 
 ```bash
 git clone https://github.com/kestercarroll702-gif/memoweft.git
 cd memoweft
-npm install                                   # dev deps only (typescript + @types/node)
+npm install
 npm run typecheck && npm test && npm run build
 ```
 
-> Until it's on npm, the `from 'memoweft'` imports below resolve via a relative path (`../memoweft/src/index.ts`) or a local `npm install <path>` / git submodule — see [INSTALL.md](docs/INSTALL.md).
+Until it is published to npm, imports shown as `from 'memoweft'` should be resolved through a local path, local `npm install <path>`, git submodule, or the built `dist/index.js`. See [`docs/INSTALL.md`](docs/INSTALL.md).
 
-Configure a model and an embedder in your `.env` (see [Configuration](#configuration)). Then wire the three stores, write a piece of evidence, build the profile, and recall it in a reply:
+Configure a model and, optionally, an embedder in `.env`. Then wire the three stores, write evidence, update the profile, and recall it in a reply:
 
 ```ts
 import {
@@ -161,17 +155,16 @@ import {
   Conversation,
 } from 'memoweft';
 
-// 1) Three data layers, backed by SQLite — one shared connection + transaction.
 const { evidenceStore, eventStore, cognitionStore, transaction } = openStores('./memoweft.db');
 
-// 2) Models: a pool (chat vs. write) + an embedder for semantic recall.
 const pool = loadLLMPool();
-const embedder = new OpenAICompatEmbedder(loadEmbedConfig()!);
-const retriever = new VectorRetriever('./memoweft-vectors.db', embedder);
+const embedConfig = loadEmbedConfig();
+const retriever = embedConfig
+  ? new VectorRetriever('./memoweft-vectors.db', new OpenAICompatEmbedder(embedConfig))
+  : undefined;
 
 const subjectId = 'user-42';
 
-// 3) WRITE: store the user's own words as evidence (spoken = highest source strength).
 evidenceStore.put({
   subjectId,
   sourceKind: 'spoken',
@@ -179,7 +172,6 @@ evidenceStore.put({
   rawContent: 'I only drink decaf after 3pm — caffeine wrecks my sleep.',
 });
 
-// 4) Weave: distill → consolidate → attribute → rebuild recall index.
 await updateProfile(subjectId, {
   evidenceStore,
   eventStore,
@@ -189,60 +181,76 @@ await updateProfile(subjectId, {
   llm: pool.for('write'),
 });
 
-// 5) READ: recall relevant cognition and inject it into a reply.
 const convo = new Conversation({
   store: evidenceStore,
   retriever,
   cognitionStore,
   llm: pool.for('chat'),
 });
+
 const turn = await convo.handle('Recommend me an afternoon drink', { subjectId });
-console.log(turn.reply);          // reply informed by the recalled preference
-console.log(turn.recall);         // which cognition entries were injected, with scores
+console.log(turn.reply);
+console.log(turn.recall);
 ```
 
-No embedder configured yet? Swap `VectorRetriever` for `NullRetriever` — writes still land as evidence, recall simply returns nothing (equivalent to plain conversation).
+No embedder configured yet? Use `NullRetriever` or omit semantic recall while testing — writes still land as evidence.
 
-Want to see it running first — or don't want to touch code at all? MemoWeft ships an **optional local web UI** (see below).
+---
 
-## 🖥️ Experience layer (optional web UI)
+## ☁️ Model deployment: cloud-first, not cloud-blind
 
-Two kinds of reader are welcome: **"I just want to deploy and try it"** → use the setup wizard; **"I want to integrate it into my own LLM app"** → the [Quick start](#-quick-start) above is your path.
+MemoWeft is **cloud-friendly by default**: new developers should be able to provide OpenAI-compatible cloud endpoints and see the testbench work without first installing local models.
 
-Beyond `import`-ing the library, MemoWeft ships an optional local web UI — a good way to *feel* what it does before wiring it in. Three modes, one page:
+At the same time, MemoWeft should never imply that all raw evidence is safe to send to the cloud. The boundary is:
 
-- **⚙️ Setup wizard** — fill in your model / embedder keys through a guided form (every field explained in plain words), and it generates a ready-to-paste `.env`. No hand-editing config.
-- **💬 User-experience mode** — chat and hand it a few facts, then watch it slowly build a plain-language picture of *what it understands about you* (all internal scores hidden).
-- **🎛️ Developer mode** — every tunable in `src/config.ts` (recall `topK`, confidence half-lives, attribution thresholds…) exposed as live knobs; turn one, see the effect.
+- **Model calls may be cloud-first.** Chat, write-path, attribution, trends, and embeddings can all use OpenAI-compatible cloud endpoints.
+- **Evidence controls cloud access.** Each evidence item can carry authorization bits such as `allowCloudRead`.
+- **Observed behavior should be conservative.** Desktop, device, screen, clipboard, file, health, and wearable observations should default to not cloud-readable unless the host explicitly asks the user.
+- **The host owns consent.** MemoWeft provides the model switches and filtering hooks; the host owns policy, UI, and user-facing consent.
 
-<p align="center">
-  <img src="docs/assets/experience-wizard.png" width="32%" alt="Setup wizard" />
-  <img src="docs/assets/experience-user.png" width="32%" alt="User-experience mode" />
-  <img src="docs/assets/experience-developer.png" width="32%" alt="Developer mode · settings panel" />
-</p>
+Recommended modes:
+
+| Mode | Best for | Summary |
+| --- | --- | --- |
+| **Cloud-first** | demos, prototypes, normal developer onboarding | chat/write/embed all point to cloud endpoints |
+| **Cloud-guarded** | real apps using cloud models | cloud models are used, but non-cloud-readable evidence is filtered |
+| **Hybrid / local-sensitive** | privacy-sensitive desktop assistants | sensitive observations stay local while lower-risk calls may use cloud |
+
+See [`docs/deployment.md`](./docs/deployment.md) for the full policy and examples.
+
+---
+
+## 🖥️ Experience layer: optional local web UI
+
+MemoWeft ships an optional local testbench / experience UI so you can feel the system before wiring it into a host app.
 
 ```bash
-cp .env.example .env      # fill in your keys — or let the setup wizard do it
-npm run experience        # → http://localhost:7888  (alias of `npm run testbench`)
+cp .env.example .env
+npm run experience
+# → http://localhost:7888
 ```
 
-The UI is **optional and not a core dependency** — MemoWeft stays a library you `import`. Set `MEMOWEFT_EXPERIENCE_UI=off` in `.env` to run library-only, without starting the web server.
+Three modes are available:
+
+- **Setup wizard** — fill in model / embedder keys and generate `.env`.
+- **User-experience mode** — chat and watch it build a plain-language picture of what it understands.
+- **Developer mode** — inspect evidence, events, cognition, recall, configuration knobs, attribution, asking, and background profile updates.
+
+The UI is optional and not a core dependency. MemoWeft remains a library you `import`.
 
 ---
 
 ## Configuration
 
-MemoWeft reads models from environment variables. **Prefer the `MEMOWEFT_*` prefix; the legacy `DLA_*` prefix still works** (read `MEMOWEFT_*` first, fall back to `DLA_*`).
+MemoWeft reads models from environment variables. Prefer the `MEMOWEFT_*` prefix; the legacy `DLA_*` prefix still works.
 
 | Purpose | Variables |
 | --- | --- |
-| Chat LLM (read path) | `MEMOWEFT_LLM_BASE_URL` · `MEMOWEFT_LLM_API_KEY` · `MEMOWEFT_LLM_MODEL` |
-| Write LLM (write path, optional — falls back to chat) | `MEMOWEFT_WRITE_LLM_BASE_URL` · `MEMOWEFT_WRITE_LLM_API_KEY` · `MEMOWEFT_WRITE_LLM_MODEL` |
-| Embedder (semantic recall) | `MEMOWEFT_EMBED_BASE_URL` · `MEMOWEFT_EMBED_API_KEY` · `MEMOWEFT_EMBED_MODEL` |
+| Chat LLM | `MEMOWEFT_LLM_BASE_URL` · `MEMOWEFT_LLM_API_KEY` · `MEMOWEFT_LLM_MODEL` |
+| Write LLM | `MEMOWEFT_WRITE_LLM_BASE_URL` · `MEMOWEFT_WRITE_LLM_API_KEY` · `MEMOWEFT_WRITE_LLM_MODEL` |
+| Embedder | `MEMOWEFT_EMBED_BASE_URL` · `MEMOWEFT_EMBED_API_KEY` · `MEMOWEFT_EMBED_MODEL` |
 
-All three groups accept OpenAI-compatible endpoints, so local (Ollama, LM Studio) and cloud both work. Tunable parameters — recall `topK` (5), confidence half-lives, batch size for profile updates (5), and more — live in `src/config.ts`.
-
-> **Local or cloud is the host + user's call, not the library's.** MemoWeft only keeps the switch open: a swappable model pool (`llmPool`) and a per-evidence authorization bit (`allowCloudRead`). It does not decide your privacy or security policy.
+All three groups accept OpenAI-compatible endpoints. Cloud endpoints are the easiest default; local endpoints such as Ollama or LM Studio remain supported.
 
 See [`docs/INSTALL.md`](./docs/INSTALL.md) for the full env reference.
 
@@ -250,18 +258,13 @@ See [`docs/INSTALL.md`](./docs/INSTALL.md) for the full env reference.
 
 ## 🔌 What it does / doesn't do
 
-| MemoWeft (the library) | The host (your app) |
+| MemoWeft | The host app |
 | --- | --- |
-| Ingests evidence, weaves the three layers, computes confidence, exposes traceable user context | Owns chat, persona, tone, and UI |
-| Keeps the model swap-open (`llmPool`) and records an authorization bit per evidence (`allowCloudRead`) | **Owns the privacy & security policy** — what goes local vs. cloud, what is stored at all |
-| Hands back `who the user is` on request | Decides *when* and *how* to use it |
+| Ingests evidence, weaves the three layers, computes confidence, exposes traceable user context | Owns chat, persona, tone, UI, and when to speak |
+| Keeps model routing swappable and records evidence-level authorization | Owns privacy policy, consent UI, and what is stored at all |
+| Hands back relevant user context on request | Decides how to use it in a reply, tool call, desktop assistant, or agent |
 
-Main exports (see [`docs/integration.md`](./docs/integration.md) for the full table and signatures, all drawn from [`src/index.ts`](./src/index.ts)):
-
-- **Write path** — `SqliteEvidenceStore`, `ingestObservations`, `updateProfile` (one call: `distill → consolidate → attribute → index`)
-- **Read path** — `Conversation.handle`, `VectorRetriever` / `NullRetriever`
-- **Models** — `loadLLMPool`, `OpenAICompatClient`, `OpenAICompatEmbedder`
-- **Advanced** — `attribute`, `proposeAsk`, `revisitConflicts`, `expire`, `aggregateTrends`, `computeConfidence`
+Main exports are listed in [`src/index.ts`](./src/index.ts) and explained in [`docs/integration.md`](./docs/integration.md).
 
 ---
 
@@ -270,14 +273,18 @@ Main exports (see [`docs/integration.md`](./docs/integration.md) for the full ta
 **Alpha / early.** The first core skeleton is in place and green; the algorithms and cognitive discipline are real and tested. Interfaces may still move.
 
 **Done**
-- Phases 0–4B: evidence layer, profile + recall, correction loop, attribution + proactive asking, periodic background (decay / expiry / recall gating / conflict revisit / trends).
+
+- Phases 0–4B: evidence layer, profile + recall, correction loop, attribution + proactive asking, periodic background.
 - Phase 4-A tier 1: behavior-observation intake (`ingestObservations` + active-window → `observed` evidence).
-- Batched profile updates + a configurable, independent write-path model (`llmPool`).
-- Verified end-to-end against a cloud model, dogfooded, and **71 tests passing** (`npm test`).
+- Batched profile updates + configurable independent write-path model.
+- Verified end-to-end against a cloud model, dogfooded, and **71 tests passing**.
 
 **Not yet**
-- Phase 4-A tier 2: real behavior collectors (only a skeleton exists).
+
+- Phase 4-A tier 2: real behavior collectors.
 - Recall similarity-threshold gating and further recall refinement.
+- Import / export / portable memory bundles.
+- A polished user-facing memory manager.
 
 Status is derived from [`STATE.md`](./STATE.md).
 
@@ -287,19 +294,26 @@ Status is derived from [`STATE.md`](./STATE.md).
 
 | Doc | What's inside |
 | --- | --- |
-| [`docs/INSTALL.md`](./docs/INSTALL.md) | Install, configure `.env` (every env var), run tests, launch the testbench |
-| [`docs/architecture.md`](./docs/architecture.md) | Three layers, read/write decoupling, swappable parts, cognitive-discipline details, the warp/weft table |
-| [`docs/integration.md`](./docs/integration.md) | Host integration guide + the full export table |
-| [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md) | AI-maintenance strategy: issue → plan → implement → three-green → docs-sync |
+| [`docs/INSTALL.md`](./docs/INSTALL.md) | Install, configure `.env`, run tests, launch the testbench |
+| [`docs/deployment.md`](./docs/deployment.md) | Cloud-first / cloud-guarded / hybrid model deployment and privacy modes |
+| [`docs/architecture.md`](./docs/architecture.md) | Three layers, read/write decoupling, swappable parts, cognitive-discipline details |
+| [`docs/integration.md`](./docs/integration.md) | Host integration guide + export table |
+| [`docs/MAINTENANCE.md`](./docs/MAINTENANCE.md) | AI-maintenance strategy |
 | [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | Packaging & npm release flow |
-| [`examples/minimal.ts`](./examples/minimal.ts) | The runnable minimal example above |
+| [`examples/minimal.ts`](./examples/minimal.ts) | Runnable minimal example |
 | [`AGENTS.md`](./AGENTS.md) · [`CONTRIBUTING.md`](./CONTRIBUTING.md) | AI-maintainer working contract & contribution guardrails |
 
 ---
 
 ## Contributing
 
-MemoWeft is documented to be **AI-maintainable**: layered docs (`STATE.md` whiteboard, `docs/项目地图.md` design master, `LOG.md` history) plus a working contract in [`AGENTS.md`](./AGENTS.md). Any code change must keep three checks green: `npm run typecheck && npm test && npm run build`. See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+MemoWeft is documented to be **AI-maintainable**: layered docs (`STATE.md`, `docs/项目地图.md`, `LOG.md`) plus a working contract in [`AGENTS.md`](./AGENTS.md). Any code change must keep three checks green:
+
+```bash
+npm run typecheck && npm test && npm run build
+```
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## License
 
@@ -307,4 +321,4 @@ MemoWeft is documented to be **AI-maintainable**: layered docs (`STATE.md` white
 
 ## Acknowledgements
 
-Independently built, drawing on ideas from **Mem0** and **Graphiti** — interfaces kept isolated so parts stay swappable.
+Independently built, drawing on ideas from **Mem0** and **Graphiti** — interfaces are kept isolated so parts stay swappable.
