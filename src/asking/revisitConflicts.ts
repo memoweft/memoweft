@@ -8,7 +8,7 @@
  * 纪律：MemoWeft 只产"该问什么 + 两面证据"，是否开口、怎么措辞归宿主（cell 9）；
  *   提问不入证据库、用户回答才是证据（规则 4）；问过的（askedAt）不再问。
  */
-import { config } from '../config.ts';
+import { config, type MemoWeftConfig } from '../config.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
@@ -18,6 +18,8 @@ export interface RevisitDeps {
   cognitionStore: CognitionStore;
   evidenceStore: EvidenceStore;
   llm?: LLMClient;
+  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例（作为 opts.maxAsks 缺项的兜底）。 */
+  config?: MemoWeftConfig;
 }
 
 export interface RevisitResult {
@@ -79,7 +81,7 @@ export async function revisitConflicts(
   deps: RevisitDeps,
   opts: { maxAsks?: number; markAsked?: boolean } = {},
 ): Promise<RevisitResult> {
-  const maxAsks = opts.maxAsks ?? config.asking.maxAsks;
+  const maxAsks = opts.maxAsks ?? (deps.config ?? config).asking.maxAsks;
   const markAsked = opts.markAsked ?? true;
 
   // 候选 = active 的冲突认知里、没复看问过的。

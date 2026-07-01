@@ -11,7 +11,7 @@
  *   - 禁止系统自证（规则 4）：提问本身不入证据库；只有用户的【回答】才是证据（走阶段 2 闭环）。
  *   - 不烦用户：问过的（askedAt 已写）不再问；一轮最多 maxAsks 个。
  */
-import { config } from '../config.ts';
+import { config, type MemoWeftConfig } from '../config.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CredStatus } from '../cognition/model.ts';
@@ -40,6 +40,8 @@ export interface ProposeAskDeps {
   evidenceStore: EvidenceStore;
   /** 可选：用于润色问法；不给则用模板拼。 */
   llm?: LLMClient;
+  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例（作为 opts.policy 缺项的兜底）。 */
+  config?: MemoWeftConfig;
 }
 
 export interface AskPolicy {
@@ -91,10 +93,11 @@ export async function proposeAsk(
   deps: ProposeAskDeps,
   opts: ProposeAskOptions = {},
 ): Promise<ProposeAskResult> {
+  const cfg = deps.config ?? config; // 可注入配置（缺省=单例）
   const policy: AskPolicy = {
-    maxAsks: opts.policy?.maxAsks ?? config.asking.maxAsks,
-    confidenceBand: opts.policy?.confidenceBand ?? config.asking.confidenceBand,
-    askableStatuses: opts.policy?.askableStatuses ?? config.asking.askableStatuses,
+    maxAsks: opts.policy?.maxAsks ?? cfg.asking.maxAsks,
+    confidenceBand: opts.policy?.confidenceBand ?? cfg.asking.confidenceBand,
+    askableStatuses: opts.policy?.askableStatuses ?? cfg.asking.askableStatuses,
   };
   const markAsked = opts.markAsked ?? true;
 

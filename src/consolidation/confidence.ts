@@ -7,7 +7,7 @@
  * 分型时间策略 v1（cell 8 规则 8）：临时类（state）置信封顶、永不进"稳定/有限"——
  * 临时情绪重复 ≠ 稳定特质，不能越攒越高。完整版（按真实时间衰减/有效期）留后续。
  */
-import { config } from '../config.ts';
+import { config, type MemoWeftConfig } from '../config.ts';
 import type { ContentType, FormedBy, CredStatus } from '../cognition/model.ts';
 
 export interface ConfidenceInputs {
@@ -17,34 +17,35 @@ export interface ConfidenceInputs {
   contradictCount: number;
 }
 
-function isTransient(contentType: ContentType): boolean {
-  return config.consolidation.transientTypes.includes(contentType);
+function isTransient(contentType: ContentType, cfg: MemoWeftConfig): boolean {
+  return cfg.consolidation.transientTypes.includes(contentType);
 }
 
-/** 算把握度 0~1000（恒 >0）；临时类封顶。 */
-export function computeConfidence(i: ConfidenceInputs): number {
-  const c = config.consolidation;
+/** 算把握度 0~1000（恒 >0）；临时类封顶。cfg 可注入（缺省=全局单例，见 config 去单例 P2-5）。 */
+export function computeConfidence(i: ConfidenceInputs, cfg: MemoWeftConfig = config): number {
+  const c = cfg.consolidation;
   const base = c.baseByFormedBy[i.formedBy];
   const support = Math.min(Math.max(i.supportCount - 1, 0), c.supportCap) * c.supportStep;
   const penalty = i.contradictCount * c.contradictPenalty;
   let result = Math.max(c.minConfidence, Math.min(1000, Math.round(base + support - penalty)));
   // 临时类（如 state）封顶：重复不升成稳定。
-  if (isTransient(i.contentType)) result = Math.min(result, c.transientCap);
+  if (isTransient(i.contentType, cfg)) result = Math.min(result, c.transientCap);
   return result;
 }
 
-/** 由把握度 + 反对证据 + 内容类型定可信状态。 */
+/** 由把握度 + 反对证据 + 内容类型定可信状态。cfg 可注入（缺省=全局单例）。 */
 export function deriveCredStatus(
   confidence: number,
   contradictCount: number,
   contentType: ContentType,
+  cfg: MemoWeftConfig = config,
 ): CredStatus {
   if (contradictCount > 0) return 'conflicted'; // 有反对证据 → 先暴露，不消解
   // 临时类永不进"稳定/有限"，最多"低置信"。
-  if (isTransient(contentType)) {
-    return confidence >= config.consolidation.credThresholds.low ? 'low' : 'candidate';
+  if (isTransient(contentType, cfg)) {
+    return confidence >= cfg.consolidation.credThresholds.low ? 'low' : 'candidate';
   }
-  const t = config.consolidation.credThresholds;
+  const t = cfg.consolidation.credThresholds;
   if (confidence >= t.stable) return 'stable';
   if (confidence >= t.limited) return 'limited';
   if (confidence >= t.low) return 'low';

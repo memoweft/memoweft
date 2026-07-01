@@ -7,7 +7,7 @@
  *   - 召回的是【认知】（画像条目），由 retriever 在 updateProfile 时索引；这里只 search。
  *   - 召回 / 回话失败不影响证据已落库（先存后答）。
  */
-import { config } from '../config.ts';
+import { config, type MemoWeftConfig } from '../config.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { Evidence } from '../evidence/model.ts';
 import type { CognitionStore } from '../cognition/store.ts';
@@ -23,6 +23,8 @@ export interface ConversationDeps {
   retriever: Retriever;
   cognitionStore: CognitionStore;
   llm: LLMClient;
+  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例（含召回 topK/阈值、窗口轮数）。 */
+  config?: MemoWeftConfig;
 }
 
 /** 召回到、注入了回话的一条（含相似度，供透视）。 */
@@ -44,11 +46,12 @@ export class Conversation {
 
   constructor(deps: ConversationDeps) {
     this.deps = deps;
-    this.window = new WorkingMemory();
+    this.window = new WorkingMemory((deps.config ?? config).workingMemory.maxTurns);
   }
 
   async handle(userMsg: string, opts: PerceiveOptions = {}): Promise<TurnOutcome> {
     const { store, retriever, cognitionStore, llm } = this.deps;
+    const cfg = this.deps.config ?? config; // 可注入配置（缺省=单例）
 
     // 1) 感知 → 存证据（只存用户的，亲口）。先存，后答。
     const stored = store.put(perceive(userMsg, opts));
@@ -56,16 +59,16 @@ export class Conversation {
     // 2) 召回相关认知（阶段 1b）。失败不挡回话。
     const recall: RecalledCognition[] = [];
     try {
-      const hits = await retriever.search(userMsg, config.retrieval.topK);
+      const hits = await retriever.search(userMsg, cfg.retrieval.topK);
       for (const h of hits) {
         // 相似度门控（cell 7 / STATE.md）：这一轮问题跟这条认知不够像 → 别硬塞（防 top-k 召回不相关认知）。
         // 默认阈值 0 = 不筛（行为同旧）；调成非零后，低于阈值的召回直接跳过。
-        if (h.score < config.retrieval.minSimilarity) continue;
+        if (h.score < cfg.retrieval.minSimilarity) continue;
         const c = cognitionStore.get(h.id);
         if (!c || c.invalidAt) continue; // 失效的不注入（即便索引还没重建，也别把过期/被纠正的塞回话）
         // 衰减门控（cell 8 规则 8）：把握度用【有效置信】，淡了的情绪/过气的假设直接不注入。
-        const eff = effectiveConfidence(c);
-        if (eff < config.retrieval.minEffectiveConfidence) continue;
+        const eff = effectiveConfidence(c, new Date(), cfg);
+        if (eff < cfg.retrieval.minEffectiveConfidence) continue;
         recall.push({ content: c.content, confidence: eff, credStatus: c.credStatus, score: h.score });
       }
     } catch {

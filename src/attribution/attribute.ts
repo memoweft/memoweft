@@ -12,7 +12,7 @@
  *
  * 形态：独立写路径步骤，跟在 consolidate 之后（consolidate 先把"没睡好"沉淀成 state 认知）。
  */
-import { config } from '../config.ts';
+import { config, type MemoWeftConfig } from '../config.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { Cognition } from '../cognition/model.ts';
@@ -24,6 +24,8 @@ export interface AttributeDeps {
   evidenceStore: EvidenceStore;
   cognitionStore: CognitionStore;
   llm: LLMClient;
+  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例。 */
+  config?: MemoWeftConfig;
 }
 
 /** 一条落库的可解释假设 + 它解释的现象 + 依据。 */
@@ -97,7 +99,8 @@ function minusHours(iso: string, hours: number): string {
  * v1 简化：现象 = 当前 active 的 state 认知里【还没有假设解释过】的那些。
  */
 export async function attribute(subjectId: string, deps: AttributeDeps): Promise<AttributeResult> {
-  const cfg = config.attribution;
+  const fullCfg = deps.config ?? config; // 可注入配置（缺省=单例）
+  const cfg = fullCfg.attribution;
   const active = deps.cognitionStore.active(subjectId);
   const states = active.filter((c) => c.contentType === 'state');
   const hypos = active.filter((c) => c.contentType === 'hypothesis');
@@ -177,7 +180,7 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
         formedBy: 'inferred',
         supportCount: basedOn.length,
         contradictCount: 0,
-      });
+      }, fullCfg);
       const confidence = Math.min(rawConf, cfg.hypothesisCap); // 假设级封顶：低声说（规则 6）
       const cognition = deps.cognitionStore.put({
         subjectId,
@@ -185,7 +188,7 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
         contentType: 'hypothesis',
         formedBy: 'inferred',
         confidence,
-        credStatus: deriveCredStatus(confidence, 0, 'hypothesis'),
+        credStatus: deriveCredStatus(confidence, 0, 'hypothesis', fullCfg),
         evidence: basedOn.map((id) => ({ evidenceId: id, relation: 'support' as const })),
       });
       hypotheses.push({ cognition, phenomenon: phenom.content, basedOnEvidenceIds: basedOn });

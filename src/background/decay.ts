@@ -7,7 +7,7 @@
  * 纪律（用户拍板）：衰减【读时算、不持久化】——confidence 字段保持"证据强度"语义不动，
  *   展示/回话时再乘衰减因子得"有效置信"。不破坏静态算法、不动 updatedAt 衰减锚、不动表。
  */
-import { config } from '../config.ts';
+import { config, type MemoWeftConfig } from '../config.ts';
 import type { Cognition, ContentType } from '../cognition/model.ts';
 
 const DAY_MS = 86_400_000;
@@ -19,19 +19,20 @@ export function decayFactor(halfLifeDays: number, ageMs: number): number {
   return Math.pow(2, -ageDays / halfLifeDays);
 }
 
-/** 半衰期（天）按类型取；没配 = 0 = 不衰减。 */
-export function halfLifeOf(contentType: ContentType): number {
-  return config.background.halfLifeDays[contentType] ?? 0;
+/** 半衰期（天）按类型取；没配 = 0 = 不衰减。cfg 可注入（缺省=全局单例）。 */
+export function halfLifeOf(contentType: ContentType, cfg: MemoWeftConfig = config): number {
+  return cfg.background.halfLifeDays[contentType] ?? 0;
 }
 
 /**
  * 有效置信 = confidence × 衰减因子（按距上次印证 updatedAt 的时间）。
- * 读时算，恒整数。新鲜的≈原值；久没被印证的、且属易忘类型的，明显降。
+ * 读时算，恒整数。新鲜的≈原值；久没被印证的、且属易忘类型的，明显降。cfg 可注入（缺省=全局单例）。
  */
 export function effectiveConfidence(
   cog: Pick<Cognition, 'confidence' | 'contentType' | 'updatedAt'>,
   now: Date = new Date(),
+  cfg: MemoWeftConfig = config,
 ): number {
   const ageMs = now.getTime() - new Date(cog.updatedAt).getTime();
-  return Math.round(cog.confidence * decayFactor(halfLifeOf(cog.contentType), ageMs));
+  return Math.round(cog.confidence * decayFactor(halfLifeOf(cog.contentType, cfg), ageMs));
 }

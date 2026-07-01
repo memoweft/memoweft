@@ -8,11 +8,13 @@
  * 纪律：失效 = 标 invalidAt 保留，不删（cell 6 失效而非删除）。这是 MemoWeft 自己按规则过期，
  *   不是用户主动删；用户纠正/删除走另路（M6 / 规则 10）。
  */
-import { config } from '../config.ts';
+import { config, type MemoWeftConfig } from '../config.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 
 export interface ExpireDeps {
   cognitionStore: CognitionStore;
+  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例。 */
+  config?: MemoWeftConfig;
 }
 
 export interface ExpireResult {
@@ -24,7 +26,7 @@ const DAY_MS = 86_400_000;
 
 /** 把临时类里"距上次印证已超过期阈值"的认知标 invalidAt。稳定类不动。 */
 export function expire(subjectId: string, deps: ExpireDeps, now: Date = new Date()): ExpireResult {
-  const thresholds = config.background.expireAfterDays;
+  const thresholds = (deps.config ?? config).background.expireAfterDays;
   let expired = 0;
   for (const c of deps.cognitionStore.active(subjectId)) {
     const days = thresholds[c.contentType];

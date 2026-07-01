@@ -11,7 +11,7 @@
  * 纪律：挂聚合的真实证据可溯源；趋势也会随好转衰减/过期（config.background）；
  *   趋势本身不再被聚成趋势；同一批证据聚过了不重复（dedup）。
  */
-import { config } from '../config.ts';
+import { config, type MemoWeftConfig } from '../config.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { Cognition } from '../cognition/model.ts';
@@ -22,6 +22,8 @@ export interface AggregateTrendsDeps {
   evidenceStore: EvidenceStore;
   cognitionStore: CognitionStore;
   llm: LLMClient;
+  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例。 */
+  config?: MemoWeftConfig;
 }
 
 export interface TrendResult {
@@ -71,7 +73,8 @@ export async function aggregateTrends(
   deps: AggregateTrendsDeps,
   now: Date = new Date(),
 ): Promise<TrendResult> {
-  const cfg = config.background;
+  const fullCfg = deps.config ?? config; // 可注入配置（缺省=单例）
+  const cfg = fullCfg.background;
   const windowStart = new Date(now.getTime() - cfg.trendWindowDays * 86_400_000).toISOString();
 
   // 收集窗口内的"状态证据"：state 类认知（含已失效，趋势看的是"曾反复出现"）的支撑证据里、发生时间在窗内的。
@@ -108,7 +111,7 @@ export async function aggregateTrends(
     if (!content) continue;
     const cited = [...new Set((raw.based_on_evidence_ids ?? []).filter((id) => windowEvidence.has(id)))];
     if (cited.length === 0) continue; // 没引到真实状态证据 → 不硬编
-    const confidence = computeConfidence({ contentType: 'trend', formedBy: 'ruled', supportCount: cited.length, contradictCount: 0 });
+    const confidence = computeConfidence({ contentType: 'trend', formedBy: 'ruled', supportCount: cited.length, contradictCount: 0 }, fullCfg);
     trends.push(
       deps.cognitionStore.put({
         subjectId,
@@ -116,7 +119,7 @@ export async function aggregateTrends(
         contentType: 'trend',
         formedBy: 'ruled', // 规则聚出（基于客观频率），比 inferred 可信
         confidence,
-        credStatus: deriveCredStatus(confidence, 0, 'trend'),
+        credStatus: deriveCredStatus(confidence, 0, 'trend', fullCfg),
         evidence: cited.map((id) => ({ evidenceId: id, relation: 'support' as const })),
       }),
     );

@@ -18,6 +18,7 @@ import type { CognitionStore } from '../cognition/store.ts';
 import type { Retriever } from '../retrieval/retriever.ts';
 import type { LLMClient } from '../llm/client.ts';
 import type { Transaction } from '../store/transaction.ts';
+import type { MemoWeftConfig } from '../config.ts';
 
 export interface UpdateProfileDeps {
   evidenceStore: EvidenceStore;
@@ -28,6 +29,8 @@ export interface UpdateProfileDeps {
   /** 事务器（可选）：接了共享连接就传它，consolidate 的写入会原子化（崩在中间整段回滚）。见 store/openStores.ts。
    *  注意只作用于 consolidate 内部那段【同步】写——索引重建是读路径优化、故意放在事务外（失败不回滚画像）。 */
   transaction?: Transaction;
+  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例；传了则透传给 consolidate / attribute。 */
+  config?: MemoWeftConfig;
 }
 
 /** 各步耗时(ms)，治慢诊断用。 */
@@ -65,6 +68,7 @@ export async function updateProfile(subjectId: string, deps: UpdateProfileDeps):
     cognitionStore: deps.cognitionStore,
     llm: deps.llm,
     transaction: deps.transaction, // 有共享连接就把 consolidate 的写入原子化；没有则 undefined = 直接跑
+    config: deps.config, // 透传注入配置（缺省=单例）
   });
   const t2 = Date.now();
   // M4 归因（自动并进）：对刚沉淀出的新现象推可解释假设。内部自带节流，无现象/无原因时不调模型。
@@ -72,6 +76,7 @@ export async function updateProfile(subjectId: string, deps: UpdateProfileDeps):
     evidenceStore: deps.evidenceStore,
     cognitionStore: deps.cognitionStore,
     llm: deps.llm,
+    config: deps.config, // 透传注入配置（缺省=单例）
   });
   const t3 = Date.now();
   // 重建召回索引：只索引【未失效】的认知（被纠正/失效的不再被召回；含新产假设）。

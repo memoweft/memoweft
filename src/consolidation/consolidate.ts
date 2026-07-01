@@ -19,6 +19,7 @@ import { computeConfidence, deriveCredStatus } from './confidence.ts';
 import { filterCloudReadable } from '../evidence/privacy.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 import { noopTransaction, type Transaction } from '../store/transaction.ts';
+import type { MemoWeftConfig } from '../config.ts';
 
 export interface ConsolidateDeps {
   eventStore: EventStore;
@@ -29,6 +30,8 @@ export interface ConsolidateDeps {
   /** 事务器（可选）：接了共享连接就传它，把下方多步写（new/correct/conflict/reinforce + markConsolidated）
    *  原子化——崩在中间整段回滚，不留半拉画像。不传（如各开各连接的测试）= 直接跑，行为同旧。见 store/openStores.ts。 */
   transaction?: Transaction;
+  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例，行为同旧；传了则把握度阈值等按这份算。 */
+  config?: MemoWeftConfig;
 }
 
 export interface ConsolidateResult {
@@ -178,7 +181,7 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       if (!p) continue;
       const support = pickSupport(citedIds(c));
       if (support.length === 0) continue; // 无可溯源原话 → 跳过（不落无溯源认知，地基债 fork 决策）
-      const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 });
+      const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 }, deps.config);
       created.push(
         deps.cognitionStore.put({
           subjectId,
@@ -186,7 +189,7 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
           contentType: p.contentType,
           formedBy: p.formedBy,
           confidence,
-          credStatus: deriveCredStatus(confidence, 0, p.contentType),
+          credStatus: deriveCredStatus(confidence, 0, p.contentType, deps.config),
           evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
         }),
       );
@@ -204,8 +207,8 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       const links = deps.cognitionStore.sourcesOf(cog.id);
       const supportCount = links.filter((l) => l.relation === 'support').length;
       const contradictCount = links.filter((l) => l.relation === 'contradict').length;
-      const confidence = computeConfidence({ contentType: cog.contentType, formedBy: cog.formedBy, supportCount, contradictCount });
-      deps.cognitionStore.update(cog.id, { confidence, credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType) });
+      const confidence = computeConfidence({ contentType: cog.contentType, formedBy: cog.formedBy, supportCount, contradictCount }, deps.config);
+      deps.cognitionStore.update(cog.id, { confidence, credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config) });
       reinforced++;
     }
 
@@ -217,7 +220,7 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       const support = pickSupport(citedIds(c));
       if (support.length === 0) continue; // 纠正后的新认知也要可溯源，否则跳过（不动旧的）
       deps.cognitionStore.update(old.id, { invalidAt: now }); // 标失效、保留可溯源
-      const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 });
+      const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 }, deps.config);
       created.push(
         deps.cognitionStore.put({
           subjectId,
@@ -225,7 +228,7 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
           contentType: p.contentType,
           formedBy: p.formedBy,
           confidence,
-          credStatus: deriveCredStatus(confidence, 0, p.contentType),
+          credStatus: deriveCredStatus(confidence, 0, p.contentType, deps.config),
           evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
         }),
       );
