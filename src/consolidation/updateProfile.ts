@@ -17,6 +17,7 @@ import type { EventStore } from '../event/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { Retriever } from '../retrieval/retriever.ts';
 import type { LLMClient } from '../llm/client.ts';
+import type { Transaction } from '../store/transaction.ts';
 
 export interface UpdateProfileDeps {
   evidenceStore: EvidenceStore;
@@ -24,6 +25,9 @@ export interface UpdateProfileDeps {
   cognitionStore: CognitionStore;
   retriever: Retriever;
   llm: LLMClient;
+  /** 事务器（可选）：接了共享连接就传它，consolidate 的写入会原子化（崩在中间整段回滚）。见 store/openStores.ts。
+   *  注意只作用于 consolidate 内部那段【同步】写——索引重建是读路径优化、故意放在事务外（失败不回滚画像）。 */
+  transaction?: Transaction;
 }
 
 /** 各步耗时(ms)，治慢诊断用。 */
@@ -60,6 +64,7 @@ export async function updateProfile(subjectId: string, deps: UpdateProfileDeps):
     evidenceStore: deps.evidenceStore,
     cognitionStore: deps.cognitionStore,
     llm: deps.llm,
+    transaction: deps.transaction, // 有共享连接就把 consolidate 的写入原子化；没有则 undefined = 直接跑
   });
   const t2 = Date.now();
   // M4 归因（自动并进）：对刚沉淀出的新现象推可解释假设。内部自带节流，无现象/无原因时不调模型。

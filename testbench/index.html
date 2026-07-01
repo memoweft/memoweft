@@ -440,10 +440,10 @@
     <h1>MemoWeft 测试台</h1>
     <span class="sub">以"用户"身份用，右侧透视 MemoWeft 内部</span>
     <span class="spacer"></span>
-    <span id="bgstatus" class="sub" title="画像在后台自动消化：聊完停手几秒就开始整理，不挡你聊">后台：空闲</span>
+    <span id="bgstatus" class="sub" title="它对你的了解在后台慢慢整理：聊完停手几秒就开始，要调模型、可能需要一会儿，但不挡你聊">后台：空闲</span>
     <!-- 设置齿轮：仅开发者模式显示（CSS 控显隐）。点开右侧「设置」抽屉——参数旋钮/危险操作都收在里面。 -->
     <button id="btnSettings" class="icon-btn" onclick="openSettings()" title="设置：参数旋钮、恢复默认、恢复出厂都收在这里"><span class="gear">⚙</span>设置</button>
-    <button class="accent-outline" onclick="resetSession()" title="开一段新对话；之前存下的证据/画像/事件都还在，只是清空当前对话窗口">＋ 新会话</button>
+    <button class="accent-outline" onclick="resetSession()" title="开一段新对话；之前存下的记忆线索 / 经历 / 对你的了解都还在，只是清空当前对话窗口">＋ 新会话</button>
   </header>
 
   <!-- 模式切换器：三模式共壳的入口。点按钮 → applyMode 切换主体容器。 -->
@@ -507,7 +507,7 @@
         <!-- 步骤 2：写路径小模型（可选，带手把手 Ollama 步骤） -->
         <div class="wiz-panel" data-panel="2">
           <h3>第 2 步 · 写路径小模型<span class="wiz-optional-badge">可选 · 可跳过</span></h3>
-          <p class="wiz-sub">整理事件、生成画像、归因这些「后台重活」如果也用大模型会慢。配一个<b>本地小快模型</b>专门干这些，能明显提速。<b>不配也行</b>——写路径会自动回退到第 1 步的对话大模型，行为和以前一样、不会崩。</p>
+          <p class="wiz-sub">整理经历片段、更新对你的了解、猜测原因这些「后台重活」如果也用大模型会慢。配一个<b>本地小快模型</b>专门干这些，能明显提速。<b>不配也行</b>——写路径会自动回退到第 1 步的对话大模型，行为和以前一样、不会崩。</p>
 
           <div class="wiz-howto">
             <h4>🛠 想用本地小模型？先做这几步（照抄即可）</h4>
@@ -546,7 +546,7 @@
         <!-- 步骤 3：向量模型（可选，带手把手 Ollama 步骤） -->
         <div class="wiz-panel" data-panel="3">
           <h3>第 3 步 · 向量模型（嵌入）<span class="wiz-optional-badge">可选 · 可跳过</span></h3>
-          <p class="wiz-sub">向量模型让 MemoWeft 能「按意思找」你说过的话（比如问「喝什么」能翻出你说过「喜欢喝茶」）。<b>不配也能跑</b>——语义召回降级为空，画像照样在攒，只是回话时不会主动带上你的偏好。</p>
+          <p class="wiz-sub">向量模型让 MemoWeft 能「按意思找」你说过的话（比如问「喝什么」能翻出你说过「喜欢喝茶」）。<b>不配也能跑</b>——语义召回降级为空，「对你的了解」照样在攒，只是回话时不会主动带上你的偏好。</p>
 
           <div class="wiz-howto">
             <h4>🛠 想开启语义召回？先做这几步（照抄即可）</h4>
@@ -576,7 +576,7 @@
             <label>模型名（Model）</label>
             <div class="wiz-inwrap"><input type="text" id="embedModel" placeholder="bge-m3" /></div>
             <p class="wiz-explain">上一步拉的嵌入模型名，原样填 <code>bge-m3</code>。</p>
-            <p class="wiz-trap">这三格<b>要么都填、要么都留空</b>。留空整组会自动省略，召回降级为空、画像照写。</p>
+            <p class="wiz-trap">这三格<b>要么都填、要么都留空</b>。留空整组会自动省略，召回降级为空、「对你的了解」照写。</p>
           </div>
         </div>
 
@@ -634,8 +634,8 @@
       <!-- 不显眼的小齿轮：点开只有一件事——「清空它对我的了解·重新开始」。软文案，复用 factory-reset。 -->
       <button class="icon-btn ghost" style="position:absolute;top:0;right:var(--sp-5);" onclick="userSoftReset()" title="重新开始：让它忘掉目前对我的全部了解"><span class="gear">⚙</span></button>
       <div class="ux-hero">
-        <h2>MemoWeft · 会慢慢懂你的记忆</h2>
-        <p>你像平时一样<span class="accent">聊天、随口提一点自己</span>，它就在旁边悄悄记着、慢慢把这些拼成「它对你的了解」。不用填表、不用打标签——<span class="accent">聊着聊着，它就更懂你一点</span>。</p>
+        <h2>MemoWeft · 会慢慢记住你的那一层</h2>
+        <p>你像平时一样<span class="accent">聊天、随口提一点自己</span>，它就在旁边顺手一句句记下来、慢慢把这些拼成「它对你的了解」。不用填表、不用打标签——<span class="accent">聊着聊着，它就更接得上你说过的话</span>。</p>
       </div>
 
       <!-- 卡片一：MemoWeft 目前对我的了解（友好只读版画像） -->
@@ -646,7 +646,7 @@
         </div>
         <p class="ux-card-sub">这些是它从你说过的话里慢慢体会出来的。说得不对可以随时改，或者删掉。</p>
         <div id="uxCogList" class="ux-list">
-          <div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先在下面聊几句，它会慢慢开始懂你。</div>
+          <div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先在下面聊几句，它会慢慢记下你说的、开始拼出对你的了解。</div>
         </div>
       </div>
 
@@ -654,7 +654,7 @@
       <div class="ux-card">
         <div class="ux-card-head">
           <span class="dot"></span>
-          <span class="ttl">最近，你和它之间发生的事</span>
+          <span class="ttl">最近这些对话，整理成的片段</span>
         </div>
         <p class="ux-card-sub">它把你们的对话，整理成了一小段一小段好回看的片段。</p>
         <div id="uxEvtList" class="ux-list">
@@ -695,40 +695,40 @@
 
       <!-- 主区核心：用户画像（可展开）。整理/更新等手动操作已下沉到「开发者工具」，这里只留画像本体，看着清爽。 -->
       <details class="drawer" id="drawer-cognition" open>
-        <summary title="画像 = MemoWeft 对你形成的一条条认知（事实/偏好/目标/状态…），从事件里提炼出来、每条都能溯源到具体原话。">▾ 用户画像（cognition · 从事件提炼）</summary>
+        <summary title="理解条目 = MemoWeft 对你形成的一条条认知（事实/偏好/目标/状态…），从经历片段里提炼出来、每条都能溯源到具体原话。">▾ 对你的了解（理解条目 cognition · 从经历片段提炼）</summary>
         <div class="body">
-          <div id="coglist"><span class="empty">聊几句，后台会自动整理出画像；也可在「开发者工具」里手动更新。</span></div>
+          <div id="coglist"><span class="empty">聊几句，后台会自动整理出对你的了解；也可在「开发者工具」里手动更新。</span></div>
         </div>
       </details>
 
       <!-- 开发者工具：默认【收起】的次级折叠区。把手动调试操作（整理事件 / 更新画像 / 归因+主动询问 / 证据库）收进来，不平铺在主界面。 -->
       <details class="drawer" id="drawer-devtools">
-        <summary>▸ 开发者工具（手动整理 / 归因 / 证据库 · 平时用不到）</summary>
+        <summary>▸ 开发者工具（整理记忆 / 猜测原因 / 记忆线索库 · 平时用不到）</summary>
         <div class="body" style="padding-left:0;padding-right:0;">
 
           <details class="acc" id="drawer-events">
-            <summary><span class="chev">▸</span><span class="acc-ttl" title="事件 = 把零散的几句对话，总结成一段带前因后果的小情境（比一条条原话更好回看、也更好拿来提炼画像）。">事件 · 把近期对话整理成带情境的事件</span></summary>
+            <summary><span class="chev">▸</span><span class="acc-ttl" title="经历片段 = 把零散的几句对话，总结成一段带前因后果的小情境（比一条条原话更好回看、也更好拿来提炼理解条目）。">经历片段（event）· 把近期对话整理成带情境的经历片段</span></summary>
             <div class="acc-body">
-              <button onclick="distillEvents()">整理事件</button>
+              <button onclick="distillEvents()">整理成经历片段（distill）</button>
               <span id="diststatus" class="evmeta"></span>
-              <div id="evtlist"><span class="empty">先聊几句，再点"整理事件"。</span></div>
+              <div id="evtlist"><span class="empty">先聊几句，再点"整理成经历片段"。</span></div>
             </div>
           </details>
 
           <details class="acc" id="drawer-genprofile">
-            <summary><span class="chev">▸</span><span class="acc-ttl">画像 · 立即更新（不想等后台自动）</span></summary>
+            <summary><span class="chev">▸</span><span class="acc-ttl">对你的了解（profile）· 立即整理（不想等后台自动）</span></summary>
             <div class="acc-body">
-              <button onclick="genProfile()">立即更新画像</button>
-              <span class="evmeta">（聊完停手几秒会【后台自动】整理；这个按钮 = 不想等、立刻触发。结果显示在上面「用户画像」里）</span>
+              <button onclick="genProfile()">整理记忆（updateProfile）</button>
+              <span class="evmeta">（聊完停手几秒会【后台自动】整理；这个按钮 = 不想等、立刻触发。整理要调几次模型、可能需要一会儿，别指望点完立刻变聪明；整理完之后它在后续对话里会更容易想起相关内容。结果显示在上面「对你的了解」里）</span>
               <span id="genstatus" class="evmeta"></span>
             </div>
           </details>
 
           <details class="acc" id="drawer-attribution">
-            <summary><span class="chev">▸</span><span class="acc-ttl">归因 + 主动询问（阶段 3 · M4/M5）</span></summary>
+            <summary><span class="chev">▸</span><span class="acc-ttl">猜测原因 + 想问你的问题（归因 attribution + 主动询问 asking · 阶段 3 · M4/M5）</span></summary>
             <div class="acc-body">
               <div style="margin-bottom:8px;">
-                <div class="evmeta" style="margin-bottom:4px;">① 注入观察证据（observed，如"游戏开到 3:30"）：</div>
+                <div class="evmeta" style="margin-bottom:4px;">① 注入观察线索（observed，如"游戏开到 3:30"）：</div>
                 <input id="obsText" placeholder='例：昨晚游戏开到凌晨 3:30' style="width:100%;font:inherit;font-size:12.5px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;" />
                 <input id="obsWhen" placeholder='发生时间（可空，ISO，如 2026-06-23T03:30）' style="width:100%;margin-top:5px;font:inherit;font-size:12px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;" />
                 <button onclick="injectObserved()" style="margin-top:6px;">注入观察</button>
@@ -745,14 +745,14 @@
                 <span id="awstatus" class="evmeta"></span>
               </div>
               <div style="margin-bottom:8px;">
-                <div class="evmeta" style="margin-bottom:4px;">② 归因 M4（点"更新画像"时已自动跑；此按钮=手动再触发一次）：</div>
-                <button onclick="runAttribute()">手动跑归因 M4</button>
+                <div class="evmeta" style="margin-bottom:4px;">② 猜测原因 M4（归因 attribute；点"整理记忆"时已自动跑；此按钮=手动再触发一次）：</div>
+                <button onclick="runAttribute()">猜测原因（attribute）</button>
                 <span id="attrstatus" class="evmeta"></span>
                 <div id="hypolist"></div>
               </div>
               <div>
-                <div class="evmeta" style="margin-bottom:4px;">③ 带证据主动询问（求证低置信假设 + 复看冲突认知；MemoWeft 给"该问什么"，测试台替宿主发问）：</div>
-                <button onclick="runAsk()">产生提问（假设 + 冲突）</button>
+                <div class="evmeta" style="margin-bottom:4px;">③ 带记忆线索主动询问（求证低把握度假设 + 复看需要确认的矛盾；MemoWeft 给"该问什么"，测试台替宿主发问）：</div>
+                <button onclick="runAsk()">想问你的问题（假设 + 需要确认的矛盾）</button>
                 <span id="askstatus" class="evmeta"></span>
                 <div id="asklist"></div>
               </div>
@@ -760,10 +760,10 @@
           </details>
 
           <details class="acc" id="drawer-evidence">
-            <summary><span class="chev">▸</span><span class="acc-ttl">证据库（查看 / 改 / 删 / 原始 JSON）</span></summary>
+            <summary><span class="chev">▸</span><span class="acc-ttl">记忆线索库（evidence · 查看 / 改 / 删 / 原始 JSON）</span></summary>
             <div class="acc-body">
-              <button onclick="loadEvidence()">刷新证据</button>
-              <div id="evlist"><span class="empty">点"刷新证据"加载。</span></div>
+              <button onclick="loadEvidence()">刷新记忆线索（evidence）</button>
+              <div id="evlist"><span class="empty">点"刷新记忆线索"加载。</span></div>
             </div>
           </details>
 
@@ -773,7 +773,7 @@
   </div>
 
   <footer>
-    每轮自动落盘 → <code id="logfile">logs/run-*.jsonl</code> ｜ 执行 Agent 直接读此文件 + <code>dla.db</code> 调整。后端为真实逻辑（阶段 0-3：证据/画像/召回/纠正/归因+主动询问）。
+    每轮自动落盘 → <code id="logfile">logs/run-*.jsonl</code> ｜ 执行 Agent 直接读此文件 + <code>testbench-evidence.db</code> 调整。后端为真实逻辑（记忆线索/对你的了解/召回/纠正/猜测原因+主动询问）。
   </footer>
 
   <!-- toast 宿主（右下角轻提示，JS 往里塞、几秒自动移除） -->
@@ -831,7 +831,7 @@
         <div class="danger-zone" style="margin-top:var(--sp-2);">
           <div class="dz-title">⚠ 恢复出厂 · 清空全部数据</div>
           <div class="dz-desc">
-            永久删除 MemoWeft 攒下的<b>全部数据</b>：你说过的原话（证据）、整理出的事件、以及它对你形成的画像认知，连同检索索引一起清空。<br>
+            永久删除 MemoWeft 攒下的<b>全部数据</b>：你说过的原话（记忆线索 evidence）、整理出的经历片段（event）、以及它对你形成的理解（理解条目 cognition），连同检索索引一起清空。<br>
             和上面的「恢复默认参数」<b>互不相干</b>——那个只还原旋钮、不碰数据；这个只清数据、不动参数。<b>不可恢复。</b>
           </div>
           <button class="danger" onclick="factoryReset()">恢复出厂 · 清空全部数据</button>
@@ -1109,7 +1109,7 @@ async function loadCognitionFriendly(){
   _cog = list; // 与开发者版共用 _cog（editCog/delCog 靠它按 id 找当前 content）
   const live = list.filter(c => !c.invalidAt); // 已失效的不给普通用户看
   if (!live.length){
-    box.innerHTML = '<div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先在下面聊几句，它会慢慢开始懂你。</div>';
+    box.innerHTML = '<div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先在下面聊几句，它会慢慢记下你说的、开始拼出对你的了解。</div>';
     return;
   }
   box.innerHTML = live.map(c =>
@@ -1332,7 +1332,7 @@ async function resetSession(){
     _renderedTurns.clear();
     $('chat').innerHTML = '';
     $('xray').innerHTML = '<div class="empty" style="padding:8px 0;">已新开会话。</div>';
-    toast('已开新会话，之前存下的数据（原话/事件/画像）都还在', 'ok');
+    toast('已开新会话，之前存下的数据（记忆线索 / 经历片段 / 对你的了解）都还在', 'ok');
   } catch(e){
     toast('新会话失败：'+String(e), 'danger');
   }
@@ -1346,7 +1346,7 @@ function factoryReset(){
     title: '恢复出厂 · 清空全部数据？',
     okText: '我确定，永久删除',
     okKind: 'danger',
-    bodyHtml: '这会永久删除 MemoWeft 攒下的<b>所有数据</b>：<br>· 你说过的<b>原话</b>（证据）<br>· 整理出的<b>事件</b><br>· 它对你形成的<b>画像认知</b><br>· 以及检索索引<br><br>参数旋钮不受影响（那是「恢复默认参数」管的）。',
+    bodyHtml: '这会永久删除 MemoWeft 攒下的<b>所有数据</b>：<br>· 你说过的<b>原话</b>（记忆线索 evidence）<br>· 整理出的<b>经历片段</b>（event）<br>· 它对你形成的<b>理解</b>（理解条目 cognition）<br>· 以及检索索引<br><br>参数旋钮不受影响（那是「恢复默认参数」管的）。',
     warnLine: '删除后无法恢复，请确认这不是误操作。',
     onOk: doFactoryReset,
   });
@@ -1367,7 +1367,7 @@ async function doFactoryReset(){
     if (typeof loadCognitionFriendly==='function') loadCognitionFriendly();
     if (typeof loadEventsFriendly==='function') loadEventsFriendly();
     const n = (r.evidenceRemoved||0) + (r.eventRemoved||0) + (r.cognitionRemoved||0);
-    toast('已恢复出厂：清掉原话'+(r.evidenceRemoved||0)+'条、事件'+(r.eventRemoved||0)+'个、画像'+(r.cognitionRemoved||0)+'条（共'+n+'条）', 'ok', 4500);
+    toast('已恢复出厂：清掉原话'+(r.evidenceRemoved||0)+'条、经历片段'+(r.eventRemoved||0)+'个、理解条目'+(r.cognitionRemoved||0)+'条（共'+n+'条）', 'ok', 4500);
   } catch(e){
     toast('恢复出厂失败：'+String(e), 'danger');
   }
@@ -1610,7 +1610,7 @@ async function genProfile(){
     if (r.busy){ st.textContent = ' 后台正在更新，稍等再点…'; return; }
     if (r.error){ st.textContent = ' 失败：'+r.error; return; }
     // ①治等（2026-07-01）：更新不再阻塞——后台跑，靠 pollBg 状态条看进度、跑完自动刷新画像/事件面板。
-    st.textContent = ' 已触发后台更新，完成后画像会自动刷新（看顶部"后台"状态条）';
+    st.textContent = ' 已触发后台整理，要调几次模型、可能要一会儿；完成后「对你的了解」会自动刷新（看顶部"后台"状态条）';
   } catch(e){ st.textContent = ' 失败：'+String(e); }
 }
 // 画像里每条认知都带的几个内部量，读法一次性说清（挂在列表顶部，省得每条都堆问号）。
@@ -1687,7 +1687,7 @@ async function injectWindow(){
   } catch(e){ $('awstatus').textContent = ' 失败：'+String(e); }
 }
 async function runAttribute(){
-  $('attrstatus').textContent = ' 归因中…（先确保已"更新画像"生成了 state 现象）';
+  $('attrstatus').textContent = ' 猜测原因中…（先确保已点"整理记忆"生成了 state 现象）';
   try {
     const r = await fetch('/api/attribute',{method:'POST'}).then(x=>x.json());
     if (r.error){ $('attrstatus').textContent = ' 失败：'+r.error; return; }

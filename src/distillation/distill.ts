@@ -42,9 +42,10 @@ export async function distill(subjectId: string, deps: DistillDeps): Promise<Dis
   // 隐私关：只把"允许上云"的原话喂给（云端）LLM；cloud=false 的不进 prompt。
   // deps.llm 假设是云端模型——接本地模型时需改（见 evidence/privacy.ts 前提注释）。
   const cloudSafe = filterCloudReadable(pending);
-  // 极端情况：本批全是"不许上云"的证据（当前不会发生，现证据皆 cloud=true）→ 不拿空材料调云端模型。
-  // 仍用 pending 做下方事件的 evidenceIds，故这些证据【算已被覆盖处理】、不会每轮被重复重捞。
-  // TODO(4-A)：observed 默认 cloud=false 引入后，这些证据该走本地模型 / 覆盖语义如何记，随 4-A 折中 A/B 一并定。
+  // 极端情况：本批全是"不许上云"的证据（现证据多为 cloud=true；observed 默认 cloud=false 后会遇到）→ 不拿空材料调云端模型。
+  // 【注意·别再误读】此处直接 return、【不建 event】：这些证据【不算已覆盖】，会留在 pending，下一轮仍被扫到。
+  //   这是有意的——cloud=false 的 observed 证据要等【本地模型】能读它时才消化（档2「上本地模型」：给 LLMClient 加 tier，
+  //   本地写路径放行 allowCloudRead=false）。在档2落地前，默认不上云的 observed 就是"暂挂着等"，不是 bug、也别当已处理。
   if (cloudSafe.length === 0) return { event: null, pendingCount: pending.length, llmCalls: 0 };
 
   const lines = cloudSafe.map((e) => `(${e.occurredAt.slice(0, 16)}) ${e.rawContent}`).join('\n');

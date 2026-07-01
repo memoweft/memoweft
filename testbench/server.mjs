@@ -12,9 +12,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRunLogger } from '../src/obs/runLog.ts';
-import { SqliteEvidenceStore } from '../src/evidence/store.ts';
-import { SqliteCognitionStore } from '../src/cognition/store.ts';
-import { SqliteEventStore } from '../src/event/store.ts';
+import { openStores } from '../src/store/openStores.ts';
 import { distill } from '../src/distillation/distill.ts';
 import { consolidate } from '../src/consolidation/consolidate.ts';
 import { updateProfile } from '../src/consolidation/updateProfile.ts';
@@ -44,9 +42,12 @@ const LOG_DIR = join(__dirname, '..', 'logs');
 const DB_PATH = join(__dirname, 'testbench-evidence.db'); // 独立库，不污染正式 ./dla.db
 
 // 共享：证据库、空召回、LLM（懒、健壮：缺 .env 也不崩，回话时报错并落进 error）。
-const store = new SqliteEvidenceStore(DB_PATH);
-const eventStore = new SqliteEventStore(DB_PATH);
-const cogStore = new SqliteCognitionStore(DB_PATH);
+// 三个 store 共用【一条】连接 + 一个事务器——让 consolidate 的多步、多表写能原子化（跨连接事务是硬约束，见 store/openStores.ts）。
+const stores = openStores(DB_PATH);
+const store = stores.evidenceStore;
+const eventStore = stores.eventStore;
+const cogStore = stores.cognitionStore;
+const transaction = stores.transaction; // 传给 updateProfile / consolidate 即让其写入原子化
 // 治慢③：模型池（可切换模型第一块）——写路径(distill/consolidate/attribute/trends)用小快模型，对话用大模型。
 const llmPool = loadLLMPool();
 const llm = llmPool.for('write'); // 写路径统一用它（updateProfile / 手动 distill/consolidate/attribute/ask / trends）
@@ -89,7 +90,7 @@ async function runProfileUpdate(trigger = 'background') {
   profileUpdating = true;
   try {
     const r = await updateProfile(config.identity.subjectId, {
-      evidenceStore: store, eventStore, cognitionStore: cogStore, retriever, llm,
+      evidenceStore: store, eventStore, cognitionStore: cogStore, retriever, llm, transaction,
     });
     // 周期后台：跨会话趋势聚合（规则筛够频才调模型）+ 自然过期（临时类老了标失效）。
     const trd = await aggregateTrends(config.identity.subjectId, { evidenceStore: store, cognitionStore: cogStore, llm });
@@ -278,7 +279,7 @@ const server = createServer(async (req, res) => {
 
     // 增量消化（阶段 2）：未消化事件 + 现有画像 → 新增/强化/纠正/冲突
     if (req.method === 'POST' && url.pathname === '/api/consolidate') {
-      const r = await consolidate(config.identity.subjectId, { eventStore, evidenceStore: store, cognitionStore: cogStore, llm });
+      const r = await consolidate(config.identity.subjectId, { eventStore, evidenceStore: store, cognitionStore: cogStore, llm, transaction });
       sendJson(res, 200, {
         created: r.created, reinforced: r.reinforced, corrected: r.corrected,
         conflicted: r.conflicted, processedEvents: r.processedEvents, llmCalls: r.llmCalls,

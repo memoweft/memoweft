@@ -1,7 +1,7 @@
 # MemoWeft 架构总览
 
 > 本文是**对外可读**的架构文档：从三层数据模型、读写双路径，到认知纪律的落地方式，逐一对照真实代码讲清楚。
-> 需要更细的机制口径（置信度算法、冲突闭环、隐私授权语义）见 [spec.md](./spec.md)；宿主怎么接见 [integration.md](./integration.md)；内部 17 格设计稿见 [项目地图.md](./项目地图.md)。
+> 宿主怎么接见 [integration.md](./integration.md)；内部 17 格设计稿见 [项目地图.md](./项目地图.md)。更细的机制口径（置信度算法、冲突闭环、隐私授权语义）目前直接对照源码：`src/consolidation/confidence.ts`、`src/consolidation/consolidate.ts`、`src/evidence/privacy.ts`。
 
 MemoWeft = **Memo（记忆）+ Weft（织布的纬线）**。织布有经线（warp，稳定的规则）和纬线（weft，横穿的证据）；纬线把一条条线**编织**成整块布。这库做的正是这件事：把零散的证据一条条**编织**成一块"认知之布"——对一个人的理解。
 

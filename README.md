@@ -2,14 +2,14 @@
 
 # 🧵 MemoWeft
 
-**Weave scattered evidence into a model-independent, traceable map of who your user is.**
+**A user-cognition layer for LLM apps — it remembers what the user said, tracks which parts are solid vs. just a guess, and carries that context across models.**
 
-*Evidence is the weft; the cognitive discipline is the warp; your user profile is the cloth.*
+*One metaphor: scattered memory cues are woven, thread by thread, into a picture of who you are.*
 
 ![status](https://img.shields.io/badge/status-alpha-orange)
-![tests](https://img.shields.io/badge/tests-54%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-66%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)
-![Node](https://img.shields.io/badge/Node-%E2%89%A518-339933)
+![Node](https://img.shields.io/badge/Node-%E2%89%A524-339933)
 ![deps](https://img.shields.io/badge/runtime%20deps-zero-success)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
@@ -19,13 +19,19 @@
 
 ---
 
-> ⚠️ **Experimental · early alpha.** The core works and is tested (**54 passing**), but interfaces may still change — not production-ready yet.
+> ⚠️ **Experimental · early alpha.** The core works and is tested (**66 passing**), but interfaces may still change — not production-ready yet.
 
 ## 🧭 What it is
 
-MemoWeft is the **user-cognition layer your LLM app wears on the outside**.
+MemoWeft is a **user-cognition layer** — the part that remembers the *user*, sitting on the outside of your LLM app. It doesn't claim to *understand* people; it's deliberately disciplined about what it's allowed to believe. In plain terms, it:
 
-It continuously receives user-authorized conversation and behavior evidence, and distills your understanding of a person into a cognitive asset that is **independent of the model, traceable, evolvable, and portable**. When your app needs it, MemoWeft hands back user context — each piece carrying a confidence score and a boundary.
+- **Remembers what you said** — your own words become durable memory cues, not a prompt that vanishes.
+- **Knows which parts are just its guess** — a hunch it inferred is marked low-confidence, never treated as fact.
+- **Comes back to confirm contradictions** — when two things you said disagree, it surfaces the clash instead of silently picking one.
+- **Doesn't mistake a passing mood for the real you** — fleeting states fade over time, so a stale state isn't held up as who you are today.
+- **Carries the same understanding across AI roles** — different assistants can inherit one shared picture of you, even when you swap the underlying model.
+
+Under the hood it continuously receives user-authorized conversation and behavior evidence, and distills what it has learned about a person into a cognitive asset that is **independent of the model, traceable, evolvable, and portable**. When your app needs it, MemoWeft hands back user context — each piece carrying a confidence score and a boundary.
 
 It is a **library you `import`**, not an app. To be clear about the edges:
 
@@ -33,6 +39,34 @@ It is a **library you `import`**, not an app. To be clear about the edges:
 - ❌ It does **not** decide your assistant's tone or persona.
 - ❌ It does **not** own your privacy or security policy — the host does.
 - ✅ It **does** turn `evidence → event → cognition` into a confidence-scored, source-traceable profile of the user, and gives it back on request.
+
+> **Minimal mental model (for integrators).** You really only do two things: **(1)** hand the user's message to MemoWeft as evidence, and **(2)** ask MemoWeft for relevant context when you reply. Everything below — events, confidence, attribution, decay — is *how* that works under the hood; you can adopt it incrementally.
+
+---
+
+## 🔤 Naming · product words ↔ engineering words
+
+The docs above use **product words** so anyone can follow along. The code, API, types, and the rest of this README use the **engineering words**. Same thing, two labels — this table is the bridge.
+
+| Product word (what users read) | Engineering word (code / API) |
+| --- | --- |
+| memory cues | `evidence` |
+| moments (episodes) | `event` |
+| understanding entries (·cards· in the UI) | `cognition` |
+| what it understands about you | `profile` |
+| confidence (how sure it is) | `confidence` |
+| a tentative guess | `hypothesis` |
+| recalling relevant context | `recall` |
+| guessing why | `attribution` |
+| contradictions to confirm | `conflict` |
+| tidy up memory | `updateProfile` |
+| questions it wants to ask you | `asking` / `proposeAsk` |
+| check contradictions | `revisitConflicts` |
+| summarize recent state | `aggregateTrends` |
+| distill into moments | `distill` |
+| consolidate understanding | `consolidate` |
+
+> From here on the README speaks **engineering words** (they match the identifiers you'll `import`). Keep this table handy if a term feels unfamiliar. Full bilingual naming & positioning guide: [`docs/naming.md`](docs/naming.md).
 
 ---
 
@@ -101,11 +135,18 @@ Read and write are **decoupled**: reads are light and synchronous; writes are ba
 
 ## ⚡ Quick start
 
-> **Requirements:** Node ≥ 18 (built on `node:sqlite`, `node:http`, `node:fs` — **zero runtime dependencies**), TypeScript.
+> **Requirements:** Node ≥ 24 (built on `node:sqlite`, `node:http`, `node:fs` — **zero runtime dependencies**), TypeScript.
+
+MemoWeft is currently **used from source** (not yet published to npm). Clone it and confirm the guardrails are green:
 
 ```bash
-npm install memoweft
+git clone https://github.com/kestercarroll702-gif/memoweft.git
+cd memoweft
+npm install                                   # dev deps only (typescript + @types/node)
+npm run typecheck && npm test && npm run build
 ```
+
+> Until it's on npm, the `from 'memoweft'` imports below resolve via a relative path (`../memoweft/src/index.ts`) or a local `npm install <path>` / git submodule — see [INSTALL.md](docs/INSTALL.md).
 
 Configure a model and an embedder in your `.env` (see [Configuration](#configuration)). Then wire the three stores, write a piece of evidence, build the profile, and recall it in a reply:
 
@@ -235,7 +276,7 @@ Main exports (see [`docs/integration.md`](./docs/integration.md) for the full ta
 - Phases 0–4B: evidence layer, profile + recall, correction loop, attribution + proactive asking, periodic background (decay / expiry / recall gating / conflict revisit / trends).
 - Phase 4-A tier 1: behavior-observation intake (`ingestObservations` + active-window → `observed` evidence).
 - Batched profile updates + a configurable, independent write-path model (`llmPool`).
-- Verified end-to-end against a cloud model, dogfooded, and **54 tests passing** (`npm test`).
+- Verified end-to-end against a cloud model, dogfooded, and **66 tests passing** (`npm test`).
 
 **Not yet**
 - Phase 4-A tier 2: real behavior collectors (only a skeleton exists).

@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { SqliteEvidenceStore } from '../src/evidence/store.ts';
 import { SqliteCognitionStore } from '../src/cognition/store.ts';
 import { Conversation } from '../src/pipeline/conversation.ts';
+import { config } from '../src/config.ts';
 
 test('召回门控：失效 / 有效置信过低的认知不注入回话', async () => {
   const store = new SqliteEvidenceStore(':memory:');
@@ -40,6 +41,42 @@ test('召回门控：失效 / 有效置信过低的认知不注入回话', async
     assert.ok(!ids.some((c) => c.includes('有点烦')), '有效置信过低 → 不注入');
     assert.ok(!ids.some((c) => c.includes('咖啡')), '已失效 → 不注入');
   } finally {
+    store.close();
+    cog.close();
+  }
+});
+
+test('相似度门控：低于 minSimilarity 的召回不注入（防 top-k 硬塞不相关）', async () => {
+  const store = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  const savedMinSim = config.retrieval.minSimilarity;
+  config.retrieval.minSimilarity = 0.5; // 临时开门控（默认 0 = 关闭）
+  try {
+    // 两条都高置信（过得了置信门控），差别只在相似度分。
+    const near = cog.put({ subjectId: 'owner', content: '用户喜欢喝茶', contentType: 'preference', formedBy: 'stated', confidence: 600, credStatus: 'limited' });
+    const far = cog.put({ subjectId: 'owner', content: '用户在学吉他', contentType: 'project', formedBy: 'stated', confidence: 600, credStatus: 'limited' });
+
+    // 伪 retriever：near 相似度高（0.8 > 0.5 留下）、far 相似度低（0.2 < 0.5 被门控挡掉）。
+    const retriever = {
+      async indexAll() {},
+      async search() {
+        return [
+          { id: near.id, score: 0.8 },
+          { id: far.id, score: 0.2 },
+        ];
+      },
+    };
+    const llm = { callCount: 0, async chat() { this.callCount++; return '好的。'; } };
+
+    const convo = new Conversation({ store, retriever, cognitionStore: cog, llm });
+    const outcome = await convo.handle('喝点什么好');
+
+    const ids = outcome.recall.map((r) => r.content);
+    assert.equal(outcome.recall.length, 1, '只注入相似度过门的那 1 条');
+    assert.ok(ids.includes('用户喜欢喝茶'), '相似度高的留下');
+    assert.ok(!ids.some((c) => c.includes('吉他')), '相似度低 → 被门控挡掉');
+  } finally {
+    config.retrieval.minSimilarity = savedMinSim; // 还原全局配置，别污染其它测试
     store.close();
     cog.close();
   }

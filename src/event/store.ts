@@ -60,9 +60,12 @@ export interface EventStore {
 
 export class SqliteEventStore implements EventStore {
   private readonly db: DatabaseSync;
+  private readonly ownsDb: boolean;
 
-  constructor(dbPath: string = './dla.db') {
-    this.db = new DatabaseSync(dbPath);
+  /** @param db 文件路径（自开连接，默认 './dla.db'）或共享 DatabaseSync（多 store 共用一条连接，见 store/openStores.ts）。 */
+  constructor(db: string | DatabaseSync = './dla.db') {
+    this.ownsDb = typeof db === 'string';
+    this.db = typeof db === 'string' ? new DatabaseSync(db) : db;
     this.db.exec(SCHEMA);
     // 迁移：旧库 event 表可能缺 consolidated 列（增量消化追踪，阶段 2）。
     const cols = this.db.prepare('PRAGMA table_info(event)').all() as unknown as Array<{ name: string }>;
@@ -152,6 +155,6 @@ export class SqliteEventStore implements EventStore {
   }
 
   close(): void {
-    this.db.close();
+    if (this.ownsDb) this.db.close(); // 共享连接由 openStores 统一关
   }
 }

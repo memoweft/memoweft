@@ -58,6 +58,9 @@ export class Conversation {
     try {
       const hits = await retriever.search(userMsg, config.retrieval.topK);
       for (const h of hits) {
+        // 相似度门控（cell 7 / STATE.md）：这一轮问题跟这条认知不够像 → 别硬塞（防 top-k 召回不相关认知）。
+        // 默认阈值 0 = 不筛（行为同旧）；调成非零后，低于阈值的召回直接跳过。
+        if (h.score < config.retrieval.minSimilarity) continue;
         const c = cognitionStore.get(h.id);
         if (!c || c.invalidAt) continue; // 失效的不注入（即便索引还没重建，也别把过期/被纠正的塞回话）
         // 衰减门控（cell 8 规则 8）：把握度用【有效置信】，淡了的情绪/过气的假设直接不注入。

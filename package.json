@@ -2,6 +2,17 @@
   "name": "memoweft",
   "version": "0.0.0",
   "description": "MemoWeft — weave user evidence into a model-independent, traceable cognition layer. 套在大模型外部的用户认知层。",
+  "keywords": ["llm", "agent", "memory", "cognition", "user-profile"],
+  "license": "MIT",
+  "engines": { "node": ">=24" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kestercarroll702-gif/memoweft.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kestercarroll702-gif/memoweft/issues"
+  },
+  "homepage": "https://github.com/kestercarroll702-gif/memoweft#readme",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

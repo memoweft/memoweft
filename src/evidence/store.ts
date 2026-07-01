@@ -103,10 +103,15 @@ export interface EvidenceStore {
 
 export class SqliteEvidenceStore implements EvidenceStore {
   private readonly db: DatabaseSync;
+  private readonly ownsDb: boolean;
 
-  /** @param dbPath SQLite 文件；测试传 ':memory:'。默认 './dla.db'。 */
-  constructor(dbPath: string = './dla.db') {
-    this.db = new DatabaseSync(dbPath);
+  /**
+   * @param db SQLite 文件路径（自开连接，默认 './dla.db'；测试传 ':memory:'），
+   *   或一个【已打开的共享 DatabaseSync】——多个 store 共用一条连接时才能跨表事务（见 store/openStores.ts）。
+   */
+  constructor(db: string | DatabaseSync = './dla.db') {
+    this.ownsDb = typeof db === 'string';
+    this.db = typeof db === 'string' ? new DatabaseSync(db) : db;
     this.db.exec(SCHEMA);
   }
 
@@ -198,6 +203,6 @@ export class SqliteEvidenceStore implements EvidenceStore {
   }
 
   close(): void {
-    this.db.close();
+    if (this.ownsDb) this.db.close(); // 共享连接由 openStores 统一关；单个 store 不关，免得关掉别人还在用的连接
   }
 }

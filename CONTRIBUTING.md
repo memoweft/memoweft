@@ -18,12 +18,12 @@ AI 维护者（包括你，如果你是被派来干活的 AI）请先读 [`docs/
 
 - **Node ≥ 24**。不是随便写的：代码直接 `import 'node:sqlite'`（`DatabaseSync`），这个模块到 Node 24 才转正；测试和构建也直接跑 `.ts` 文件，靠 Node 24 原生解析 TypeScript。低版本会红。
 - **零 runtime 依赖**。装依赖只会装 `typescript` 和 `@types/node` 两个 devDependency。
-- 想跑测试台 / 真实写路径，需要在 `.env` 配模型与嵌入器（见下方「配置」）。**但单元测试不需要任何 .env**——测试用假 LLM，纯离线，54 个全过。
+- 想跑测试台 / 真实写路径，需要在 `.env` 配模型与嵌入器（见下方「配置」）。**但单元测试不需要任何 .env**——测试用假 LLM，纯离线，66 个全过。
 
 ```bash
 npm ci            # 或 npm install
 npm run typecheck # 类型
-npm test          # 单元测试（离线，54 过）
+npm test          # 单元测试（离线，66 过）
 npm run build     # 出 dist/
 ```
 
@@ -34,7 +34,7 @@ npm run build     # 出 dist/
 | 命令 | 干什么 | 绿的标准 |
 | --- | --- | --- |
 | `npm run typecheck` | `tsc` 全量类型检查（`src` + `tests`） | 无报错 |
-| `npm test` | `node --test tests/**/*.test.ts`，纯离线 | `pass 54 / fail 0`（数字随测试增减，`fail` 必须 0） |
+| `npm test` | `node --test tests/**/*.test.ts`，纯离线 | `pass 66 / fail 0`（数字随测试增减，`fail` 必须 0） |
 | `npm run build` | `tsc` 出 `dist/`（含 `.d.ts`） | 无报错、`dist/` 更新 |
 
 三条要**按顺序都过**才算完成。别只跑 typecheck 就交。

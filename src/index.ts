@@ -41,6 +41,10 @@ export {
 } from './cognition/model.ts';
 export { SqliteCognitionStore, type CognitionStore, type CognitionPatch } from './cognition/store.ts';
 
+// 存储装配：一条共享连接 + 三个 store + 事务器（让写路径多步、多表写能原子化）
+export { openStores, type StoreBundle } from './store/openStores.ts';
+export { noopTransaction, type Transaction } from './store/transaction.ts';
+
 // 画像生成（写路径）
 export { consolidate, type ConsolidateDeps, type ConsolidateResult } from './consolidation/consolidate.ts';
 export { updateProfile, type UpdateProfileDeps, type UpdateProfileResult, type UpdateProfileTimings } from './consolidation/updateProfile.ts';
@@ -91,6 +95,12 @@ export {
   loadLLMConfig,
 } from './llm/client.ts';
 export { loadLLMPool, type LLMPool, type LLMPurpose } from './llm/pool.ts';
+export {
+  extractJsonObject,
+  parseJsonObject,
+  parseJsonObjectWithRepair,
+  type ParseWithRepairDeps,
+} from './llm/jsonRepair.ts';
 
 // 管线 / 会话编排
 export { Conversation, type ConversationDeps, type TurnOutcome } from './pipeline/conversation.ts';

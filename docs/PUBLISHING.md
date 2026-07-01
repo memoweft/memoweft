@@ -23,7 +23,7 @@
 - **`main` / `types` 指向 `dist/`**：消费者装完 `import` 的是**编译后的 `.js` + `.d.ts`**，不是源码。所以**发布前必须先 `npm run build`**。
 - **`files` 只挑 `.js` + `.d.ts`**（外加 README / LICENSE）：不把 `.js.map` / `.d.ts.map` 打进包。原因见 §2。
 - **`type: "module"`**：纯 ESM 包。消费者用 `import`，不支持 `require`。
-- **零 `dependencies`**：存储 / HTTP / 向量全用 Node 内置（`node:sqlite` / `node:http` / `node:fs`）。这也意味着**消费者的 Node 必须 ≥ 22.6**（内置 `node:sqlite` 的要求）——建议在 README 和 `package.json` 里用 `engines` 声明（见 §6 可选加固）。
+- **零 `dependencies`**：存储 / HTTP / 向量全用 Node 内置（`node:sqlite` / `node:http` / `node:fs`）。这也意味着**消费者的 Node 必须 ≥ 24**（`node:sqlite` 到 24 才转正）——已在 `package.json` 用 `engines` 声明（见 §6）。
 
 ---
 
@@ -50,7 +50,7 @@
 
 ```bash
 npm run typecheck   # 类型全绿
-npm test            # 54 个测试全过
+npm test            # 66 个测试全过
 npm run build       # 重新产出 dist/（务必重跑，覆盖旧产物！）
 ```
 
@@ -129,11 +129,11 @@ node --input-type=module -e "import { MEMOWEFT_VERSION } from 'memoweft'; consol
 
 这些**不改源码逻辑**，只补元数据 / 工程护栏，作者按意愿加：
 
-- **`engines` 字段**：在 `package.json` 声明 `"engines": { "node": ">=22.6" }`，让装在旧 Node 上的人早收到警告（因为用了 `node:sqlite` + 原生 ESM）。
+- **`engines` 字段**：在 `package.json` 声明 `"engines": { "node": ">=24" }`，让装在旧 Node 上的人早收到警告（因为用了 `node:sqlite` + 原生 ESM）。
 - **`.gitignore` / `.npmignore`**：转 git 前务必忽略 `.env`、`*.db`、`dist/`、`logs/`、`node_modules/`。`files` 白名单已兜住 npm 侧，但 git 侧要单独防。
 - **`repository` / `homepage` / `bugs` 字段**：填 GitHub 地址，npm 页面会显示仓库链接。
 - **`keywords` 字段**：如 `["memory", "cognition", "llm", "agent", "user-model"]`，利于 npm 搜索。
-- **CI（GitHub Actions）**：push / PR 触发 `typecheck + test + build` 三绿作为合并门。这样 README 的 “tests 54 passing” 徽章才名副其实（首版无 CI 前先用 shields.io 静态徽章，别挂假动态徽章）。
+- **CI（GitHub Actions）**：push / PR 触发 `typecheck + test + build` 三绿作为合并门。这样 README 的 “tests 66 passing” 徽章才名副其实（首版无 CI 前先用 shields.io 静态徽章，别挂假动态徽章）。
 - **`bin` 字段**：**目前不需要**——MemoWeft 是库、无 CLI 命令。`testbench` 是 `npm run` 脚本、不是对外可执行入口，无需 `bin`。将来若要出 CLI 再加。
 
 ---

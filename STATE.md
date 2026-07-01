@@ -43,7 +43,7 @@
   - **更新画像治慢（2026-07-01）**：①手动更新不阻塞（`/api/refresh` 触发后台即返回、靠状态条）；②落盘 `profile_update` 记录含各步耗时（实测暴露 attributeMs~30s，慢在归因）；③写路径可配独立小模型（`DLA_WRITE_LLM_*`，缺则回退大模型）。根治=配上小快模型（模型生成慢，非代码 bug）。
 
 ## 命令
-`npm run typecheck` ｜ `npm test`（仅 tests/，54 过）｜ `npm run build`（出 dist/）｜ `npm run testbench`
+`npm run typecheck` ｜ `npm test`（仅 tests/，66 过）｜ `npm run build`（出 dist/）｜ `npm run testbench`
 > ⚠️ 嵌入器：MemoWeft 专用 Ollama 跑在 **11435**（避开 codex 占用的 11434）；`.env` 的 `DLA_EMBED_BASE_URL=http://localhost:11435/v1`。起服务前先 `OLLAMA_HOST=127.0.0.1:11435 ollama serve`。
 
 ## 进行中任务断点
