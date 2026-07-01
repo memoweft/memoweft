@@ -527,7 +527,10 @@ if (process.env.MEMOWEFT_EXPERIENCE_UI === 'off') {
   console.log('\n  体验界面已在 .env 关闭（MEMOWEFT_EXPERIENCE_UI=off），未启动网页。');
   console.log('  （把它当库 import 即可；想起网页请改回 on 或删掉该行，再跑 npm run experience）\n');
 } else {
-server.listen(PORT, () => {
+// 只绑 127.0.0.1（本机回环）：本服务无鉴权、直接读写个人画像/对话等隐私数据，
+// 且配置向导会经 HTTP 明文传 API key。若不指定 host，Node 默认绑 ::/0.0.0.0，
+// 同网段任何人都能读全部画像、发起对话、截明文 key。只开本机，杜绝这条外网面。
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`\n  MemoWeft 测试台（阶段 1：画像 + 召回）→ http://localhost:${PORT}`);
   console.log(`  证据库 → ${DB_PATH}`);
   console.log(`  运行日志 → ${LOG_DIR}\\run-${sessionId}.jsonl`);

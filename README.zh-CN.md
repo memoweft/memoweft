@@ -7,7 +7,7 @@
 *它是套在 AI 助手外面的一层，不是聊天机器人本身——温柔、人设、语气留给你的助手；它只负责把「对你的了解」备好、需要时递过去。*
 
 ![status](https://img.shields.io/badge/status-alpha-orange)
-![tests](https://img.shields.io/badge/tests-66%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-67%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)
 ![Node](https://img.shields.io/badge/Node-%E2%89%A524-339933)
 ![deps](https://img.shields.io/badge/runtime%20deps-zero-success)
@@ -19,7 +19,7 @@
 
 ---
 
-> ⚠️ **实验性 · 早期 alpha。** 核心已成、有测试（**66 全过**），但接口可能还会变——尚未到生产级。
+> ⚠️ **实验性 · 早期 alpha。** 核心已成、有测试（**67 全过**），但接口可能还会变——尚未到生产级。
 
 ## 🧭 这是什么
 
@@ -148,9 +148,7 @@ npm run typecheck && npm test && npm run build
 
 ```ts
 import {
-  SqliteEvidenceStore,
-  SqliteEventStore,
-  SqliteCognitionStore,
+  openStores,
   VectorRetriever,
   OpenAICompatEmbedder,
   loadEmbedConfig,
@@ -159,10 +157,8 @@ import {
   Conversation,
 } from 'memoweft';
 
-// 1) 三层数据，都落在 SQLite。
-const evidenceStore = new SqliteEvidenceStore('./memoweft.db');
-const eventStore = new SqliteEventStore('./memoweft.db');
-const cognitionStore = new SqliteCognitionStore('./memoweft.db');
+// 1) 三层数据，都落在 SQLite——共用一条连接 + 一个事务。
+const { evidenceStore, eventStore, cognitionStore, transaction } = openStores('./memoweft.db');
 
 // 2) 模型：一个池（对话 vs 写路径）+ 一个做语义召回的嵌入器。
 const pool = loadLLMPool();
@@ -185,6 +181,7 @@ await updateProfile(subjectId, {
   eventStore,
   cognitionStore,
   retriever,
+  transaction,
   llm: pool.for('write'),
 });
 
@@ -272,7 +269,7 @@ MemoWeft 从环境变量读模型。**主推 `MEMOWEFT_*` 前缀；旧的 `DLA_*
 - 阶段 0–4B：证据层、画像 + 召回、纠正闭环、归因 + 主动询问、周期后台（衰减 / 过期 / 召回门控 / 冲突复看 / 趋势）。
 - 阶段 4-A 档1：行为感知摄入口（`ingestObservations` + 活动窗口 → `observed` 证据）。
 - 攒批更新画像 + 写路径可配独立小模型（`llmPool`）。
-- 云端模型端到端跑通、dogfood 验过、**66 个测试全过**（`npm test`）。
+- 云端模型端到端跑通、dogfood 验过、**67 个测试全过**（`npm test`）。
 
 **还没做**
 - 阶段 4-A 档2：真采集器（目前只有骨架）。
