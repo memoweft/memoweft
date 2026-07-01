@@ -16,6 +16,7 @@ import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CredStatus } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
+import { filterCloudReadable } from '../evidence/privacy.ts';
 
 /** 一条主动询问建议：针对哪条认知、建议怎么问、附了什么证据、有多大把握。 */
 export interface AskProposal {
@@ -121,14 +122,16 @@ export async function proposeAsk(
       .sourcesOf(cog.id)
       .filter((l) => l.relation === 'support')
       .map((l) => l.evidenceId);
-    const evidence = supportIds
+    const supportEvidence = supportIds
       .map((id) => deps.evidenceStore.get(id))
       .filter((e): e is NonNullable<typeof e> => e !== null)
-      .sort((a, b) => (a.sourceKind === 'observed' ? -1 : 0) - (b.sourceKind === 'observed' ? -1 : 0))
-      .map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
+      .sort((a, b) => (a.sourceKind === 'observed' ? -1 : 0) - (b.sourceKind === 'observed' ? -1 : 0));
+    const evidence = supportEvidence.map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
+    // 隐私护栏：只把允许上云的证据喂给（云端）措辞模型；返回给宿主展示的 evidence 保持完整（展示归宿主）。
+    const cloudSafe = filterCloudReadable(supportEvidence).map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
 
     const question = deps.llm
-      ? await phraseQuestion(cog.content, evidence, deps.llm)
+      ? await phraseQuestion(cog.content, cloudSafe, deps.llm)
       : templateQuestion(cog.content, evidence);
 
     proposals.push({

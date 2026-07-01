@@ -17,6 +17,7 @@ import type { CognitionStore } from '../cognition/store.ts';
 import type { Cognition } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
+import { filterCloudReadable } from '../evidence/privacy.ts';
 
 export interface AggregateTrendsDeps {
   evidenceStore: EvidenceStore;
@@ -85,7 +86,8 @@ export async function aggregateTrends(
     for (const link of deps.cognitionStore.sourcesOf(s.id)) {
       if (link.relation !== 'support') continue;
       const e = deps.evidenceStore.get(link.evidenceId);
-      if (e && e.occurredAt >= windowStart && !windowEvidence.has(e.id)) {
+      // 隐私护栏：不许上云的证据不喂给（云端）趋势模型，也进不了趋势支撑（与 distill/consolidate/attribute 一致）。
+      if (e && filterCloudReadable([e]).length > 0 && e.occurredAt >= windowStart && !windowEvidence.has(e.id)) {
         windowEvidence.add(e.id);
         items.push({ id: e.id, state: s.content, text: e.summary || e.rawContent, at: e.occurredAt });
       }

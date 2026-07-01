@@ -1,8 +1,9 @@
 /**
- * 隐私开关接线 · 离线护栏（4-A 前置修复，地图 cell 8 隐私规则）。
+ * 隐私开关接线 · 离线护栏（4-A 前置修复 + 7-A Cloud Guard 验收，地图 cell 8 隐私规则）。
  *
- * 验收：写路径三处（distill / consolidate / attribute）把证据喂给（云端）LLM 前，
- * 按 allowCloudRead 过滤——cloud=false 的原话【不进 prompt】；cloud=true 的【照常进】。
+ * 验收：所有【吃证据 + 调（云端）LLM】的写路径步骤，喂 prompt 前都按 allowCloudRead 过滤——
+ * cloud=false 的原话【不进 prompt】、也进不了云端所授认知的支撑；cloud=true 的【照常进】。
+ * 覆盖六处：distill / consolidate / attribute（核心三步）+ trends / proposeAsk / revisitConflicts（7-A 补齐）。
  * 全用 stub LLM（捕获它收到的 messages），不依赖网络。
  */
 import { test } from 'node:test';
@@ -14,10 +15,14 @@ import { filterCloudReadable } from '../src/evidence/privacy.ts';
 import { distill } from '../src/distillation/distill.ts';
 import { consolidate } from '../src/consolidation/consolidate.ts';
 import { attribute } from '../src/attribution/attribute.ts';
+import { aggregateTrends } from '../src/background/trends.ts';
+import { proposeAsk } from '../src/asking/proposeAsk.ts';
+import { revisitConflicts } from '../src/asking/revisitConflicts.ts';
 import type { ChatMessage } from '../src/llm/client.ts';
 
 const CLOUD_TXT = '可以上云的话';
 const LOCAL_TXT = '机密不许上云的话';
+const LOCAL2_TXT = '另一条机密不许上云的话';
 
 test('filterCloudReadable：只留 allowCloudRead=true，顺序保留', () => {
   const items = [
@@ -107,6 +112,99 @@ test('attribute：cloud=false 的候选原因不进喂给 LLM 的 prompt', async
     assert.equal(stub.callCount, 1, '有云端可读候选 → 调了模型');
     assert.ok(seen.includes(CLOUD_TXT), 'cloud=true 候选进了 prompt');
     assert.ok(!seen.includes(LOCAL_TXT), 'cloud=false 候选没进 prompt');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('trends：cloud=false 状态证据不进云端 prompt、也进不了趋势支撑', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  const now = new Date('2026-06-30T00:00:00.000Z');
+  try {
+    // 3 条允许上云 + 1 条不许上云，各挂一条 state 认知（都在窗口内）。
+    const cloudTexts = ['很烦', '又没睡好', '提不起劲'];
+    const cloudIds: string[] = [];
+    cloudTexts.forEach((t, i) => {
+      const e = ev.put({ subjectId: 'u', sourceKind: 'spoken', hostId: 'h', rawContent: t, allowCloudRead: true, occurredAt: `2026-06-2${i}T08:00:00.000Z` });
+      cog.put({ subjectId: 'u', content: `用户${t}`, contentType: 'state', formedBy: 'stated', confidence: 250, credStatus: 'low', evidence: [{ evidenceId: e.id, relation: 'support' }] });
+      cloudIds.push(e.id);
+    });
+    const eLocal = ev.put({ subjectId: 'u', sourceKind: 'observed', hostId: 'h', rawContent: LOCAL_TXT, allowCloudRead: false, occurredAt: '2026-06-23T08:00:00.000Z' });
+    cog.put({ subjectId: 'u', content: '用户某机密状态', contentType: 'state', formedBy: 'observed', confidence: 250, credStatus: 'low', evidence: [{ evidenceId: eLocal.id, relation: 'support' }] });
+
+    let seen = '';
+    const stub = {
+      callCount: 0,
+      // LLM 硬引所有 id（含 cloud=false）——cloud=false 应被 windowEvidence 挡掉、进不了支撑。
+      async chat(msgs: ChatMessage[]): Promise<string> {
+        this.callCount++; seen = JSON.stringify(msgs);
+        return `{"trends":[{"content":"用户最近持续情绪低落","based_on_evidence_ids":${JSON.stringify([...cloudIds, eLocal.id])}}]}`;
+      },
+    };
+    const r = await aggregateTrends('u', { evidenceStore: ev, cognitionStore: cog, llm: stub }, now);
+    assert.ok(seen.includes(cloudTexts[0]!), 'cloud=true 状态原话进了 prompt');
+    assert.ok(!seen.includes(LOCAL_TXT), 'cloud=false 状态原话没进 prompt');
+    assert.equal(r.trends.length, 1, '聚出 1 条趋势');
+    const links = cog.sourcesOf(r.trends[0]!.id).map((l) => l.evidenceId);
+    assert.ok(!links.includes(eLocal.id), 'cloud=false 证据没成为趋势支撑');
+    assert.ok(cloudIds.every((id) => links.includes(id)), '3 条 cloud=true 证据都成了支撑');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('proposeAsk：cloud=false 支撑不进云端提问 prompt；宿主展示保留完整', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  try {
+    const eCloud = ev.put({ subjectId: 'owner', sourceKind: 'observed', hostId: 'h', rawContent: CLOUD_TXT, allowCloudRead: true });
+    const eLocal = ev.put({ subjectId: 'owner', sourceKind: 'observed', hostId: 'h', rawContent: LOCAL_TXT, allowCloudRead: false });
+    // 低置信假设（可问，把握度落在 confidenceBand 内），挂两条支撑：一云一本地。
+    cog.put({
+      subjectId: 'owner', content: '用户可能因为熬夜导致没睡好', contentType: 'hypothesis', formedBy: 'inferred',
+      confidence: 250, credStatus: 'low',
+      evidence: [{ evidenceId: eCloud.id, relation: 'support' }, { evidenceId: eLocal.id, relation: 'support' }],
+    });
+    let seen = '';
+    const stub = { callCount: 0, async chat(msgs: ChatMessage[]): Promise<string> { this.callCount++; seen = JSON.stringify(msgs); return '你是不是熬夜了？'; } };
+    const r = await proposeAsk('owner', { cognitionStore: cog, evidenceStore: ev, llm: stub });
+    assert.equal(r.proposals.length, 1, '产出 1 条提问建议');
+    assert.equal(stub.callCount, 1, '调了措辞模型');
+    assert.ok(seen.includes(CLOUD_TXT), 'cloud=true 证据进了提问 prompt');
+    assert.ok(!seen.includes(LOCAL_TXT), 'cloud=false 证据没进提问 prompt');
+    // 过滤只作用于喂云端的那份：返回给宿主展示的 evidence 仍是完整两条（展示归宿主）。
+    const shownIds = r.proposals[0]!.evidence.map((e) => e.id);
+    assert.ok(shownIds.includes(eCloud.id) && shownIds.includes(eLocal.id), '宿主展示保留完整两条证据');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('revisitConflicts：cloud=false 的正/反证据都不进云端提问 prompt', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  try {
+    const eCloud = ev.put({ subjectId: 'u', sourceKind: 'spoken', hostId: 'h', rawContent: CLOUD_TXT, allowCloudRead: true });
+    const eLocalSup = ev.put({ subjectId: 'u', sourceKind: 'observed', hostId: 'h', rawContent: LOCAL_TXT, allowCloudRead: false });
+    const eLocalCon = ev.put({ subjectId: 'u', sourceKind: 'observed', hostId: 'h', rawContent: LOCAL2_TXT, allowCloudRead: false });
+    cog.put({
+      subjectId: 'u', content: '用户喜欢喝茶', contentType: 'preference', formedBy: 'stated',
+      confidence: 600, credStatus: 'conflicted',
+      evidence: [
+        { evidenceId: eCloud.id, relation: 'support' },
+        { evidenceId: eLocalSup.id, relation: 'support' },
+        { evidenceId: eLocalCon.id, relation: 'contradict' },
+      ],
+    });
+    let seen = '';
+    const stub = { callCount: 0, async chat(msgs: ChatMessage[]): Promise<string> { this.callCount++; seen = JSON.stringify(msgs); return '你现在到底更常喝哪种？'; } };
+    const r = await revisitConflicts('u', { cognitionStore: cog, evidenceStore: ev, llm: stub });
+    assert.equal(r.proposals.length, 1, '复看那条冲突');
+    assert.equal(stub.callCount, 1, '调了措辞模型');
+    assert.ok(seen.includes(CLOUD_TXT), 'cloud=true 证据进了提问 prompt');
+    assert.ok(!seen.includes(LOCAL_TXT), 'cloud=false 支撑证据没进 prompt');
+    assert.ok(!seen.includes(LOCAL2_TXT), 'cloud=false 反对证据没进 prompt');
   } finally {
     ev.close(); cog.close();
   }

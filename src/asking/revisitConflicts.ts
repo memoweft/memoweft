@@ -12,6 +12,8 @@ import { config, type MemoWeftConfig } from '../config.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
+import type { Evidence } from '../evidence/model.ts';
+import { filterCloudReadable } from '../evidence/privacy.ts';
 import type { AskProposal } from './proposeAsk.ts';
 
 export interface RevisitDeps {
@@ -33,15 +35,14 @@ const PHRASE_SYSTEM = [
   '只输出这一句问话本身，不要解释、不要引号。',
 ].join('\n');
 
-function summarize(
-  ids: string[],
-  ev: EvidenceStore,
-): { id: string; summary: string }[] {
+/** 取回一批证据（保留完整对象，供隐私过滤用）。 */
+function evidenceByIds(ids: string[], ev: EvidenceStore): Evidence[] {
   return ids
     .map((id) => ev.get(id))
-    .filter((e): e is NonNullable<typeof e> => e !== null)
-    .map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
+    .filter((e): e is Evidence => e !== null);
 }
+/** 证据 → 展示用简讯（id + 摘要）。 */
+const brief = (e: Evidence): { id: string; summary: string } => ({ id: e.id, summary: e.summary || e.rawContent });
 
 /** 模板兜底：并排亮两面、留余地的朴素问法。 */
 function templateQuestion(
@@ -96,10 +97,13 @@ export async function revisitConflicts(
 
   for (const cog of candidates) {
     const links = deps.cognitionStore.sourcesOf(cog.id);
-    const support = summarize(links.filter((l) => l.relation === 'support').map((l) => l.evidenceId), deps.evidenceStore);
-    const contradict = summarize(links.filter((l) => l.relation === 'contradict').map((l) => l.evidenceId), deps.evidenceStore);
+    const supportEv = evidenceByIds(links.filter((l) => l.relation === 'support').map((l) => l.evidenceId), deps.evidenceStore);
+    const contradictEv = evidenceByIds(links.filter((l) => l.relation === 'contradict').map((l) => l.evidenceId), deps.evidenceStore);
+    const support = supportEv.map(brief);
+    const contradict = contradictEv.map(brief);
+    // 隐私护栏：只把允许上云的两面证据喂给（云端）措辞模型；宿主展示的两面证据保持完整（展示归宿主）。
     const question = deps.llm
-      ? await phraseQuestion(cog.content, support, contradict, deps.llm)
+      ? await phraseQuestion(cog.content, filterCloudReadable(supportEv).map(brief), filterCloudReadable(contradictEv).map(brief), deps.llm)
       : templateQuestion(cog.content, support, contradict);
 
     proposals.push({
