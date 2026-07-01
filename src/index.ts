@@ -123,6 +123,26 @@ export {
 // 配置
 export { config, cloudReadDefault, type MemoWeftConfig, type DlaConfig } from './config.ts';
 
-export const MEMOWEFT_VERSION = '0.0.0-rebuild';
+// 便携记忆包（导入/导出/备份/恢复 · Phase 5-A）：让用户记忆成为可迁移资产
+export {
+  exportBundle,
+  type ExportDeps,
+  type ExportOptions,
+  validateBundle,
+  importBundle,
+  type ImportDeps,
+  type ImportOptions,
+  BUNDLE_FORMAT,
+  BUNDLE_SCHEMA_VERSION,
+  type MemoryBundle,
+  type EventEvidenceLink,
+  type CognitionEvidenceLink,
+  type ImportMode,
+  type ImportPlan,
+  type ValidateResult,
+} from './portable/index.ts';
+
+import { MEMOWEFT_VERSION } from './version.ts';
+export { MEMOWEFT_VERSION };
 /** @deprecated 用 MEMOWEFT_VERSION；保留旧名兼容已引用 DLA_VERSION 的宿主。 */
 export const DLA_VERSION = MEMOWEFT_VERSION;

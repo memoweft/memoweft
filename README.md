@@ -7,7 +7,7 @@
 *Scattered memory cues are woven, thread by thread, into a picture of who the user is — without pretending every thread is equally trustworthy.*
 
 ![status](https://img.shields.io/badge/status-alpha-orange)
-![tests](https://img.shields.io/badge/tests-71%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-87%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)
 ![Node](https://img.shields.io/badge/Node-%E2%89%A524-339933)
 ![deps](https://img.shields.io/badge/runtime%20deps-zero-success)
@@ -19,7 +19,7 @@
 
 ---
 
-> ⚠️ **Experimental · early alpha.** The core works and is tested (**71 passing**), but interfaces may still change — not production-ready yet.
+> ⚠️ **Experimental · early alpha.** The core works and is tested (**87 passing**), but interfaces may still change — not production-ready yet.
 
 ## 🧭 What it is
 
@@ -279,14 +279,15 @@ Main exports are listed in [`src/index.ts`](./src/index.ts) and explained in [`d
 - Phases 0–4B: evidence layer, profile + recall, correction loop, attribution + proactive asking, periodic background.
 - Phase 4-A tier 1: behavior-observation intake (`ingestObservations` + active-window → `observed` evidence).
 - Batched profile updates + configurable independent write-path model.
-- Verified end-to-end against a cloud model, dogfooded, and **71 tests passing**.
+- Framework closure Phase 5-A: portable memory bundle (`exportBundle` / `validateBundle` / `importBundle`, faithful + idempotent + migratable).
+- Verified end-to-end against a cloud model, dogfooded, and **87 tests passing**.
 
 **Not yet**
 
 - Phase 4-A tier 2: real behavior collectors.
 - Recall similarity-threshold gating and further recall refinement.
-- Import / export / portable memory bundles.
-- A polished user-facing memory manager.
+- Testbench import/export buttons + backup/restore API (Phase 5-B).
+- A polished user-facing memory manager + graph view.
 
 Status is derived from [`STATE.md`](./STATE.md).
 

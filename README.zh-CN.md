@@ -7,7 +7,7 @@
 *它不是聊天机器人本身，而是套在 AI 助手外面的一层：人设、语气、桌宠、工具调用都留给宿主；它只负责把「对用户的了解」备好、需要时递过去。*
 
 ![status](https://img.shields.io/badge/status-alpha-orange)
-![tests](https://img.shields.io/badge/tests-71%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-87%20passing-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)
 ![Node](https://img.shields.io/badge/Node-%E2%89%A524-339933)
 ![deps](https://img.shields.io/badge/runtime%20deps-zero-success)
@@ -19,7 +19,7 @@
 
 ---
 
-> ⚠️ **实验性 · 早期 alpha。** 核心已成、有测试（**71 全过**），但接口可能还会变——尚未到生产级。
+> ⚠️ **实验性 · 早期 alpha。** 核心已成、有测试（**87 全过**），但接口可能还会变——尚未到生产级。
 
 ## 🧭 这是什么
 
@@ -275,14 +275,15 @@ MemoWeft 从环境变量读取模型配置。推荐使用 `MEMOWEFT_*` 前缀；
 - 阶段 0–4B：证据层、画像 + 召回、纠正闭环、归因 + 主动询问、周期后台。
 - 阶段 4-A 档 1：行为观察摄入口（`ingestObservations` + 活动窗口 → `observed` 证据）。
 - 攒批画像更新 + 可独立配置写路径模型。
-- 已用云端模型端到端验证，dogfood，**71 个测试通过**。
+- 框架闭环 Phase 5-A：便携记忆包（`exportBundle` / `validateBundle` / `importBundle`，保真 + 幂等 + 可迁移）。
+- 已用云端模型端到端验证，dogfood，**87 个测试通过**。
 
 **未完成**
 
 - 阶段 4-A 档 2：真实行为采集器。
 - 召回相似度阈值门控和进一步召回优化。
-- 导入 / 导出 / 可迁移记忆包。
-- 更像用户产品的记忆管理页。
+- 测试台导入/导出按钮与备份/恢复 API（Phase 5-B）。
+- 更像用户产品的记忆管理页 + 图谱视图。
 
 状态来源见 [`STATE.md`](./STATE.md)。
 

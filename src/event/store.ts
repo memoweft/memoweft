@@ -53,6 +53,8 @@ export interface EventStore {
   unconsolidated(subjectId: string): Event[];
   /** 标记一批事件已消化进画像。 */
   markConsolidated(ids: string[]): void;
+  /** 按【原 id 与时间戳】原样插入（导入/恢复用）。consolidated 缺省 false；导入已带 cognition 的包时应传 true 防重复消化。 */
+  insert(event: Event, evidenceIds: string[], opts?: { consolidated?: boolean }): void;
   remove(id: string): boolean;
   removeBySubject(subjectId: string): number;
   close(): void;
@@ -136,6 +138,15 @@ export class SqliteEventStore implements EventStore {
     if (ids.length === 0) return;
     const stmt = this.db.prepare('UPDATE event SET consolidated = 1 WHERE id = ?');
     for (const id of ids) stmt.run(id);
+  }
+
+  insert(event: Event, evidenceIds: string[], opts: { consolidated?: boolean } = {}): void {
+    const consolidated = opts.consolidated ? 1 : 0;
+    this.db
+      .prepare('INSERT INTO event (id, subject_id, summary, occurred_at, created_at, consolidated) VALUES (?,?,?,?,?,?)')
+      .run(event.id, event.subjectId, event.summary, event.occurredAt, event.createdAt, consolidated);
+    const stmt = this.db.prepare('INSERT INTO event_evidence (event_id, evidence_id) VALUES (?,?)');
+    for (const eid of evidenceIds) stmt.run(event.id, eid);
   }
 
   remove(id: string): boolean {

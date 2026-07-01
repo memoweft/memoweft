@@ -98,6 +98,8 @@ export interface EvidenceStore {
   remove(id: string): boolean;
   /** 按幂等键 originId 查回一条（摄入层判重用：已存在则跳过、不重复落库）。不存在返回 null。 */
   findByOrigin(originId: string): Evidence | null;
+  /** 按【原 id 与时间戳】原样插入（导入/恢复用；不生成新 id）。调用方须先判重：id 或 originId 已存在会抛约束错。 */
+  insert(evidence: Evidence): void;
   close(): void;
 }
 
@@ -204,6 +206,23 @@ export class SqliteEvidenceStore implements EvidenceStore {
       .prepare('SELECT * FROM evidence WHERE origin_id = ?')
       .get(originId) as unknown as EvidenceRow | undefined;
     return row ? fromRow(row) : null;
+  }
+
+  insert(evidence: Evidence): void {
+    const row = toRow(evidence);
+    this.db
+      .prepare(
+        `INSERT INTO evidence (
+          id, subject_id, source_kind, host_id, origin_id,
+          occurred_at, recorded_at, raw_content, summary,
+          allow_local_read, allow_cloud_read, allow_inference, corrects_evidence_id
+        ) VALUES (
+          $id, $subject_id, $source_kind, $host_id, $origin_id,
+          $occurred_at, $recorded_at, $raw_content, $summary,
+          $allow_local_read, $allow_cloud_read, $allow_inference, $corrects_evidence_id
+        )`,
+      )
+      .run(row as unknown as Record<string, SQLInputValue>);
   }
 
   close(): void {

@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-07-02 · Phase 5-A 便携记忆包（导入/导出/备份/恢复）
+
+**起因**
+- 总设计任务书把「可迁移」列为框架闭环第一优先：没有导入导出，用户记忆只是当前数据库里的数据，不是能搬家的资产。先让它能搬家，再让它变漂亮（管理页/图谱靠后）。
+
+**做了什么**
+- 新增 `src/portable/`：`model.ts`（`MemoryBundle` / `ImportPlan` 类型）、`exportBundle.ts`、`validateBundle.ts`、`importBundle.ts`、`index.ts`。
+- Bundle = 某 subject 的三层数据（evidence/events/cognitions）+ 两张溯源关系（event_evidence / cognition_evidence）+ 格式/版本/计数。**不含**向量索引（派生物，导入后 `retriever.indexAll` 重建）、logs、`.env`。
+- 三个 store 各加 `insert()`：按【原 id 与全部时间戳】原样落库（`put()` 的保真对偶）。**不改表结构，仅加方法**。
+- `src/version.ts` 抽出 `MEMOWEFT_VERSION` 单一真源（`index` 与 `portable` 共用，避免循环依赖）；`src/index.ts` 改为 re-export，公共 API 只增不改。
+
+**定下的决策（作者拍板）**
+- 保真度 = 保留原 id + 全部时间戳（含 `invalidAt`/`askedAt`/`createdAt`），而非 merge-remap。→ 因此需要 `store.insert`。
+- 导入模式 V1 = `dryRun` + `merge`（按 id/originId 去重）；`replace` 留 V2。
+- 导入的 event 一律标 `consolidated=true`：派生 cognition 已随包带入，防下一轮 `updateProfile` 重复消化（代价：源包里本未消化的事件导入后不再消化——V1 可接受）。
+- 引用完整性优先：`originId` 跨血缘撞车时，跳过该证据 + 丢弃指向它的 join 行 + 告警，**绝不写出悬空引用**。
+- 认知层红线未破：导入/导出是数据搬运，不产新判断、不自动消解冲突、不删历史（invalid 认知如实保留）。
+
+**对抗式审查加固（同日）**：独立 Agent 读全部实现 + 真库脚本验证，挖出并修掉 4 个真缺陷——① 悬空 `correctsEvidenceId` 落库前置空；② `validateBundle` 补元素级 id + 包内重复 id 校验（防 `Set(undefined)` 蒙混放行非法包 / merge 撞主键）；③ merge 写入 try/catch 收异常，不把裸错抛给调用方；④ `consolidated` 改为随包 `unconsolidatedEventIds` 保真（防"源包未消化事件导入后漏消化"）。
+
+**验证**：typecheck ✅ / test **87 过**（+16）/ build ✅（`dist/portable` 产物）。分支 `feat/portable-bundle`。测试台按钮/API（Phase 5-B）与前端未接，属下一步。
+
+---
+
 ## 2026-07-02 · 文档口径改为 Cloud-first，但不无脑上云
 
 **起因**

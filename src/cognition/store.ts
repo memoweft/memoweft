@@ -97,6 +97,8 @@ export interface CognitionStore {
   update(id: string, patch: CognitionPatch): Cognition | null;
   /** 给一条认知补挂证据（增量强化用）。 */
   addEvidence(cognitionId: string, links: EvidenceLink[]): void;
+  /** 按【原 id 与全部时间戳】原样插入（导入/恢复用；保留 asked_at/valid_at/invalid_at/created_at/updated_at）。 */
+  insert(cognition: Cognition, sources: EvidenceLink[]): void;
   /** 用户主动删一条认知（连溯源链）。 */
   remove(id: string): boolean;
   /** 删某 subject 全部认知（consolidate 重算替换用）。返回删除条数。 */
@@ -235,6 +237,36 @@ export class SqliteCognitionStore implements CognitionStore {
       'INSERT INTO cognition_evidence (cognition_id, evidence_id, relation) VALUES (?,?,?)',
     );
     for (const l of links) stmt.run(cognitionId, l.evidenceId, l.relation);
+  }
+
+  insert(cognition: Cognition, sources: EvidenceLink[]): void {
+    this.db
+      .prepare(
+        `INSERT INTO cognition (
+          id, subject_id, content, content_type, formed_by,
+          confidence, cred_status, scope, valid_at, invalid_at, asked_at, created_at, updated_at
+        ) VALUES ($id,$subject_id,$content,$content_type,$formed_by,
+          $confidence,$cred_status,$scope,$valid_at,$invalid_at,$asked_at,$created_at,$updated_at)`,
+      )
+      .run({
+        $id: cognition.id,
+        $subject_id: cognition.subjectId,
+        $content: cognition.content,
+        $content_type: cognition.contentType,
+        $formed_by: cognition.formedBy,
+        $confidence: cognition.confidence,
+        $cred_status: cognition.credStatus,
+        $scope: cognition.scope,
+        $valid_at: cognition.validAt,
+        $invalid_at: cognition.invalidAt,
+        $asked_at: cognition.askedAt,
+        $created_at: cognition.createdAt,
+        $updated_at: cognition.updatedAt,
+      } as unknown as Record<string, SQLInputValue>);
+    const stmt = this.db.prepare(
+      'INSERT INTO cognition_evidence (cognition_id, evidence_id, relation) VALUES (?,?,?)',
+    );
+    for (const l of sources) stmt.run(cognition.id, l.evidenceId, l.relation);
   }
 
   remove(id: string): boolean {

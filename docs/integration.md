@@ -224,9 +224,12 @@ console.log(res.stored, res.skipped);
 | 读路径 | `Conversation`, `WorkingMemory`, `VectorRetriever`, `NullRetriever` |
 | 主动询问 | `proposeAsk`, `revisitConflicts`, `AskProposal` |
 | 模型 | `loadLLMPool`, `OpenAICompatClient`, `OpenAICompatEmbedder`, `loadEmbedConfig` |
+| 便携记忆包 | `exportBundle`, `validateBundle`, `importBundle`, `MemoryBundle`, `ImportPlan` |
 | 配置 | `config`, `MEMOWEFT_VERSION` |
 
 真实导出以 [`src/index.ts`](../src/index.ts) 为准。
+
+**便携记忆包（Phase 5-A）**：`exportBundle(subjectId, { evidenceStore, eventStore, cognitionStore })` 把某用户的完整三层记忆导出成可校验 JSON；`importBundle(bundle, { ...三个 store, transaction }, { mode: 'dryRun' | 'merge' })` 保真导入（保留原 id 与时间戳、按 id/originId 幂等去重、非法包不写库、可选事务防污染）。向量索引不入包，导入后调 `retriever.indexAll()` 重建召回。
 
 ---
 
