@@ -17,6 +17,8 @@ import type { Evidence } from '../evidence/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from './confidence.ts';
 import { filterCloudReadable } from '../evidence/privacy.ts';
+import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
+import { noopTransaction, type Transaction } from '../store/transaction.ts';
 
 export interface ConsolidateDeps {
   eventStore: EventStore;
@@ -24,6 +26,9 @@ export interface ConsolidateDeps {
   evidenceStore: EvidenceStore;
   cognitionStore: CognitionStore;
   llm: LLMClient;
+  /** 事务器（可选）：接了共享连接就传它，把下方多步写（new/correct/conflict/reinforce + markConsolidated）
+   *  原子化——崩在中间整段回滚，不留半拉画像。不传（如各开各连接的测试）= 直接跑，行为同旧。见 store/openStores.ts。 */
+  transaction?: Transaction;
 }
 
 export interface ConsolidateResult {
@@ -119,17 +124,6 @@ function buildMessages(existing: Cognition[], events: EventView[]): ChatMessage[
   ];
 }
 
-function parseOut(raw: string): LLMOut {
-  const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) return {};
-  try {
-    return JSON.parse(raw.slice(start, end + 1)) as LLMOut;
-  } catch {
-    return {};
-  }
-}
-
 export async function consolidate(subjectId: string, deps: ConsolidateDeps): Promise<ConsolidateResult> {
   const newEvents = deps.eventStore.unconsolidated(subjectId);
   const empty: ConsolidateResult = { created: [], reinforced: 0, corrected: 0, conflicted: 0, processedEvents: 0, llmCalls: 0 };
@@ -157,89 +151,103 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   /** 取候选引的原话 id，只留合法的、去重（无合法引用 → 空，调用方按"跳过"处理）。 */
   const pickSupport = (ids: string[]): string[] => [...new Set(ids.filter((id) => validEvidence.has(id)))];
 
+  // 结构化输出加固（jsonRepair）：去代码块围栏 → 解析对象；失败落日志 + 最多重试一次（提示"只输出 JSON"）。
+  // 仍失败 → null（按"本轮无产出"处理，等价旧的返回空对象；下方各 `?? []` 兜住）。重试会多调一次模型，故计数取前后差。
   const before = deps.llm.callCount;
-  const out = parseOut(await deps.llm.chat(buildMessages(existing, events)));
+  const out = (await parseJsonObjectWithRepair<LLMOut>({
+    llm: deps.llm,
+    messages: buildMessages(existing, events),
+  })) ?? {};
   const llmCalls = deps.llm.callCount - before;
 
-  const now = new Date().toISOString();
-  const created: Cognition[] = [];
-  let reinforced = 0;
-  let corrected = 0;
-  let conflicted = 0;
+  // 事务化（写路径一致性，地图 cell 4）：下面这些多步写（new/correct/conflict/reinforce + markConsolidated）
+  // 要么全成、要么全滚——崩在中间不留半拉画像、也不出现"认知写了但事件没标已消化 → 下轮重复处理"。
+  // 只包这段【同步】写：LLM 已在上面 await 完，此闭包内不含任何 await（见 store/openStores.ts 的告诫）。
+  // 接了共享连接才真开事务；没接（各开各连接的测试）走 noopTransaction = 直接跑，行为同旧。
+  const runTx = deps.transaction ?? noopTransaction;
+  const mutation = runTx(() => {
+    const now = new Date().toISOString();
+    const created: Cognition[] = [];
+    let reinforced = 0;
+    let corrected = 0;
+    let conflicted = 0;
 
-  // new
-  for (const c of out.new ?? []) {
-    const p = pickCognition(c);
-    if (!p) continue;
-    const support = pickSupport(citedIds(c));
-    if (support.length === 0) continue; // 无可溯源原话 → 跳过（不落无溯源认知，地基债 fork 决策）
-    const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 });
-    created.push(
-      deps.cognitionStore.put({
-        subjectId,
-        content: p.content,
-        contentType: p.contentType,
-        formedBy: p.formedBy,
-        confidence,
-        credStatus: deriveCredStatus(confidence, 0, p.contentType),
-        evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
-      }),
-    );
-  }
+    // new
+    for (const c of out.new ?? []) {
+      const p = pickCognition(c);
+      if (!p) continue;
+      const support = pickSupport(citedIds(c));
+      if (support.length === 0) continue; // 无可溯源原话 → 跳过（不落无溯源认知，地基债 fork 决策）
+      const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 });
+      created.push(
+        deps.cognitionStore.put({
+          subjectId,
+          content: p.content,
+          contentType: p.contentType,
+          formedBy: p.formedBy,
+          confidence,
+          credStatus: deriveCredStatus(confidence, 0, p.contentType),
+          evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
+        }),
+      );
+    }
 
-  // reinforce
-  for (const c of out.reinforce ?? []) {
-    const cog = c.cognition_id ? deps.cognitionStore.get(c.cognition_id) : null;
-    if (!cog || cog.invalidAt) continue;
-    const cited = pickSupport(citedIds(c));
-    if (cited.length === 0) continue; // 没引到有效原话 → 无操作（地基债 fork 决策）
-    const already = new Set(deps.cognitionStore.sourcesOf(cog.id).map((s) => s.evidenceId));
-    const add = cited.filter((id) => !already.has(id));
-    if (add.length) deps.cognitionStore.addEvidence(cog.id, add.map((id) => ({ evidenceId: id, relation: 'support' as const })));
-    const links = deps.cognitionStore.sourcesOf(cog.id);
-    const supportCount = links.filter((l) => l.relation === 'support').length;
-    const contradictCount = links.filter((l) => l.relation === 'contradict').length;
-    const confidence = computeConfidence({ contentType: cog.contentType, formedBy: cog.formedBy, supportCount, contradictCount });
-    deps.cognitionStore.update(cog.id, { confidence, credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType) });
-    reinforced++;
-  }
+    // reinforce
+    for (const c of out.reinforce ?? []) {
+      const cog = c.cognition_id ? deps.cognitionStore.get(c.cognition_id) : null;
+      if (!cog || cog.invalidAt) continue;
+      const cited = pickSupport(citedIds(c));
+      if (cited.length === 0) continue; // 没引到有效原话 → 无操作（地基债 fork 决策）
+      const already = new Set(deps.cognitionStore.sourcesOf(cog.id).map((s) => s.evidenceId));
+      const add = cited.filter((id) => !already.has(id));
+      if (add.length) deps.cognitionStore.addEvidence(cog.id, add.map((id) => ({ evidenceId: id, relation: 'support' as const })));
+      const links = deps.cognitionStore.sourcesOf(cog.id);
+      const supportCount = links.filter((l) => l.relation === 'support').length;
+      const contradictCount = links.filter((l) => l.relation === 'contradict').length;
+      const confidence = computeConfidence({ contentType: cog.contentType, formedBy: cog.formedBy, supportCount, contradictCount });
+      deps.cognitionStore.update(cog.id, { confidence, credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType) });
+      reinforced++;
+    }
 
-  // correct：旧失效保留，采纳新的
-  for (const c of out.correct ?? []) {
-    const old = c.cognition_id ? deps.cognitionStore.get(c.cognition_id) : null;
-    const p = pickCognition(c);
-    if (!old || old.invalidAt || !p) continue;
-    const support = pickSupport(citedIds(c));
-    if (support.length === 0) continue; // 纠正后的新认知也要可溯源，否则跳过（不动旧的）
-    deps.cognitionStore.update(old.id, { invalidAt: now }); // 标失效、保留可溯源
-    const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 });
-    created.push(
-      deps.cognitionStore.put({
-        subjectId,
-        content: p.content,
-        contentType: p.contentType,
-        formedBy: p.formedBy,
-        confidence,
-        credStatus: deriveCredStatus(confidence, 0, p.contentType),
-        evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
-      }),
-    );
-    corrected++;
-  }
+    // correct：旧失效保留，采纳新的
+    for (const c of out.correct ?? []) {
+      const old = c.cognition_id ? deps.cognitionStore.get(c.cognition_id) : null;
+      const p = pickCognition(c);
+      if (!old || old.invalidAt || !p) continue;
+      const support = pickSupport(citedIds(c));
+      if (support.length === 0) continue; // 纠正后的新认知也要可溯源，否则跳过（不动旧的）
+      deps.cognitionStore.update(old.id, { invalidAt: now }); // 标失效、保留可溯源
+      const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 });
+      created.push(
+        deps.cognitionStore.put({
+          subjectId,
+          content: p.content,
+          contentType: p.contentType,
+          formedBy: p.formedBy,
+          confidence,
+          credStatus: deriveCredStatus(confidence, 0, p.contentType),
+          evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
+        }),
+      );
+      corrected++;
+    }
 
-  // conflict：标记暴露，不消解
-  for (const c of out.conflict ?? []) {
-    const cog = c.cognition_id ? deps.cognitionStore.get(c.cognition_id) : null;
-    if (!cog || cog.invalidAt) continue;
-    const contra = pickSupport(citedIds(c));
-    if (contra.length === 0) continue; // 没引到冲突原话 → 不凭空标冲突（无操作，地基债 fork 决策）
-    const already = new Set(deps.cognitionStore.sourcesOf(cog.id).map((s) => s.evidenceId));
-    const add = contra.filter((id) => !already.has(id));
-    if (add.length) deps.cognitionStore.addEvidence(cog.id, add.map((id) => ({ evidenceId: id, relation: 'contradict' as const })));
-    deps.cognitionStore.update(cog.id, { credStatus: 'conflicted' });
-    conflicted++;
-  }
+    // conflict：标记暴露，不消解
+    for (const c of out.conflict ?? []) {
+      const cog = c.cognition_id ? deps.cognitionStore.get(c.cognition_id) : null;
+      if (!cog || cog.invalidAt) continue;
+      const contra = pickSupport(citedIds(c));
+      if (contra.length === 0) continue; // 没引到冲突原话 → 不凭空标冲突（无操作，地基债 fork 决策）
+      const already = new Set(deps.cognitionStore.sourcesOf(cog.id).map((s) => s.evidenceId));
+      const add = contra.filter((id) => !already.has(id));
+      if (add.length) deps.cognitionStore.addEvidence(cog.id, add.map((id) => ({ evidenceId: id, relation: 'contradict' as const })));
+      deps.cognitionStore.update(cog.id, { credStatus: 'conflicted' });
+      conflicted++;
+    }
 
-  deps.eventStore.markConsolidated(newEvents.map((e) => e.id));
-  return { created, reinforced, corrected, conflicted, processedEvents: newEvents.length, llmCalls };
+    deps.eventStore.markConsolidated(newEvents.map((e) => e.id));
+    return { created, reinforced, corrected, conflicted };
+  });
+
+  return { ...mutation, processedEvents: newEvents.length, llmCalls };
 }
