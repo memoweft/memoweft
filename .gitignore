@@ -1,0 +1,30 @@
+# ── Secrets — NEVER commit ──
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ── Local user data (evidence / profiles / conversations) ──
+*.db
+*.db-journal
+*.sqlite
+dla.db
+testbench/*.db
+testbench/seed-*.ps1
+logs/*
+!logs/.gitkeep
+
+# ── Build output ──
+dist/
+*.tsbuildinfo
+
+# ── Dependencies ──
+node_modules/
+
+# ── OS / editor cruft ──
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/

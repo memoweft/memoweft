@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DLA 测试台 · TASK-01 Event 存储层</title>
+  <style>
+    :root { --bg:#0f1115; --panel:#1a1d24; --line:#2a2e38; --fg:#e6e6e6; --muted:#9aa0aa; --ok:#3fb950; --bad:#f85149; --accent:#58a6ff; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--fg); }
+    header { padding:16px 24px; border-bottom:1px solid var(--line); }
+    header h1 { margin:0; font-size:18px; } header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+    .wrap { display:grid; grid-template-columns: 380px 1fr; gap:16px; padding:16px 24px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+    .panel h2 { margin:0 0 12px; font-size:14px; color:var(--accent); }
+    label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+    input, select, textarea { width:100%; padding:7px 9px; background:#0d0f14; border:1px solid var(--line); border-radius:6px; color:var(--fg); font-size:13px; font-family:inherit; }
+    textarea { resize:vertical; min-height:54px; }
+    .row { display:flex; gap:8px; } .row > * { flex:1; }
+    button { margin-top:14px; padding:9px 14px; background:var(--accent); color:#06203f; border:0; border-radius:6px; font-weight:600; cursor:pointer; font-size:13px; }
+    button.ghost { background:#222733; color:var(--fg); border:1px solid var(--line); }
+    .btns { display:flex; gap:8px; flex-wrap:wrap; }
+    pre { background:#0d0f14; border:1px solid var(--line); border-radius:6px; padding:12px; overflow:auto; font-size:12px; max-height:340px; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { color:var(--muted); font-weight:500; }
+    .check { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
+    .badge { font-size:11px; padding:2px 8px; border-radius:999px; }
+    .badge.ok { background:rgba(63,185,80,.15); color:var(--ok); } .badge.bad { background:rgba(248,81,73,.15); color:var(--bad); }
+    .detail { color:var(--muted); font-size:11px; }
+    .hint { color:var(--muted); font-size:11px; margin-top:4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DLA 测试台 · 第一阶段（TASK-01 存储层 + TASK-02 最短闭环）</h1>
+    <p>独立于核心代码（testbench/）。上方：对话闭环（真实模型）。下方：手动写入 Event / 读取 / 验收自检。</p>
+  </header>
+
+  <!-- TASK-03 短期对话窗口面板（多轮会话） -->
+  <div style="padding:16px 24px 0;">
+    <div class="panel">
+      <h2>★ 短期对话窗口（TASK-03 / D-024：多数轮次仅1次调用，按需才召回，滑出才沉淀）</h2>
+      <div class="row">
+        <input id="chatInput" placeholder="连续聊几句，再问'刚说的X是什么'看是否被污染；问'很久以前/三年前…'看是否触发召回" value="我最近在做一个叫星瑶的AI项目" />
+        <button style="margin-top:0;flex:0 0 auto;" onclick="sendChat()">发送</button>
+        <button class="ghost" style="margin-top:0;flex:0 0 auto;" onclick="resetConvo()">新开会话</button>
+      </div>
+      <div class="hint">每轮标注：调用次数（窗口够=1/需召回=2）｜是否召回 ｜滑出轮数 ｜沉淀数。窗口内对话不写库，滑出才沉淀。</div>
+      <div id="dialog" style="margin-top:10px;"></div>
+      <div id="winState" class="hint"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- 左：写入表单 -->
+    <div class="panel">
+      <h2>① 写入一条 Event</h2>
+      <label>raw_content 用户原话</label>
+      <textarea id="raw_content">我决定以后早睡，11点前睡觉</textarea>
+
+      <div class="row">
+        <div>
+          <label>event_form</label>
+          <select id="event_form"><option>explicit</option><option>correction</option></select>
+        </div>
+        <div>
+          <label>is_directional_change</label>
+          <select id="is_directional_change"><option value="true">true</option><option value="false">false</option></select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>topic</label>
+          <input id="topic" value="作息" />
+        </div>
+        <div>
+          <label>sentiment</label>
+          <select id="sentiment"><option>positive</option><option>neutral</option><option>negative</option></select>
+        </div>
+      </div>
+
+      <label>tags（逗号分隔）</label>
+      <input id="tags" value="睡眠, 健康, 习惯" />
+
+      <label>summary 一句话摘要</label>
+      <input id="summary" value="用户决定调整作息，11点前入睡" />
+
+      <div class="row">
+        <div>
+          <label>source_type</label>
+          <select id="source_type"><option>user</option><option>observed</option></select>
+        </div>
+        <div>
+          <label>temporal_orientation</label>
+          <select id="temporal_orientation"><option>long_term</option><option>present</option></select>
+        </div>
+      </div>
+
+      <label>related_event_ids（逗号分隔，可空）</label>
+      <input id="related_event_ids" value="" />
+
+      <label>correction_target_id（可空）</label>
+      <input id="correction_target_id" value="" />
+
+      <button onclick="writeEvent()">写入</button>
+      <div id="writeResult" class="hint"></div>
+    </div>
+
+    <!-- 右：读取 / 列表 / 自检 -->
+    <div>
+      <div class="panel" style="margin-bottom:16px;">
+        <h2>② 验收自检（离线不变量 · TASK-01/03/04/05）</h2>
+        <div class="hint">这里是不调模型的结构性自检。需模型的部分（语义解析/召回命中/窗口回话）请用上方对话面板实跑验证。</div>
+        <button class="ghost" onclick="selfcheck()">跑自检</button>
+        <div id="checks"></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:16px;">
+        <h2>③ 读取 / 列表</h2>
+        <div class="row">
+          <input id="readId" placeholder="粘贴一个 Event id" />
+          <button style="margin-top:0;flex:0 0 auto;" onclick="readEvent()">读取</button>
+          <button class="ghost" style="margin-top:0;flex:0 0 auto;" onclick="listAll()">列出全部</button>
+        </div>
+        <pre id="readResult">（结果显示在这里）</pre>
+      </div>
+
+      <div class="panel">
+        <h2>④ 全部 Event（按时间升序）</h2>
+        <div id="tableWrap"><span class="hint">点"列出全部"加载</span></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+function val(id){ return document.getElementById(id).value; }
+function csv(s){ return s.split(',').map(x=>x.trim()).filter(Boolean); }
+
+async function writeEvent(){
+  const input = {
+    raw_content: val('raw_content'),
+    event_form: val('event_form'),
+    is_directional_change: val('is_directional_change') === 'true',
+    topic: val('topic'),
+    tags: csv(val('tags')),
+    summary: val('summary'),
+    sentiment: val('sentiment'),
+    source_type: val('source_type'),
+    temporal_orientation: val('temporal_orientation'),
+    related_event_ids: csv(val('related_event_ids')),
+    correction_target_id: val('correction_target_id').trim() || null,
+  };
+  const r = await fetch('/api/write', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(input)});
+  const data = await r.json();
+  const el = document.getElementById('writeResult');
+  if (data.id){ el.innerHTML = '已写入，id = <b>'+data.id+'</b>'; document.getElementById('readId').value = data.id; listAll(); }
+  else { el.textContent = '写入失败：' + (data.error||'?'); }
+}
+
+async function readEvent(){
+  const id = val('readId').trim();
+  const r = await fetch('/api/read?id=' + encodeURIComponent(id));
+  const data = await r.json();
+  document.getElementById('readResult').textContent = data.event ? JSON.stringify(data.event, null, 2) : '（读不到，返回 null）';
+}
+
+async function listAll(){
+  const r = await fetch('/api/all');
+  const { events } = await r.json();
+  const wrap = document.getElementById('tableWrap');
+  if (!events.length){ wrap.innerHTML = '<span class="hint">暂无数据</span>'; return; }
+  let h = '<table><tr><th>id</th><th>form</th><th>dir?</th><th>topic</th><th>tags</th><th>summary</th></tr>';
+  for (const e of events){
+    h += '<tr><td>'+e.id.slice(0,8)+'…</td><td>'+e.event_form+'</td><td>'+e.is_directional_change+'</td><td>'+e.topic+'</td><td>'+(e.tags||[]).join(', ')+'</td><td>'+e.summary+'</td></tr>';
+  }
+  wrap.innerHTML = h + '</table>';
+}
+
+function esc(s){ return (s||'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+async function sendChat(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const dialog = document.getElementById('dialog');
+  dialog.insertAdjacentHTML('beforeend', '<div style="margin:6px 0;"><b style="color:var(--accent)">你：</b>'+esc(text)+'</div>');
+  input.value=''; input.disabled=true;
+  const pending = document.createElement('div'); pending.className='hint'; pending.textContent='调用模型中…'; dialog.appendChild(pending);
+  try {
+    const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+    const d = await r.json();
+    pending.remove();
+    if (d.error){ dialog.insertAdjacentHTML('beforeend', '<div style="color:var(--bad)">出错：'+esc(d.error)+'</div>'); return; }
+    const callColor = d.replyLlmCalls===1 ? 'var(--ok)' : 'var(--accent)';
+    const tags =
+      '<span class="badge" style="background:rgba(88,166,255,.15);color:'+callColor+'">回话 '+d.replyLlmCalls+' 次</span> '+
+      (d.needRecall ? '<span class="badge bad">触发召回</span> ' : '<span class="badge ok">未召回</span> ')+
+      (d.recallLlmCalls ? '<span class="badge" style="background:rgba(88,166,255,.15);color:var(--accent)">粗筛 '+d.recallLlmCalls+' 次</span> ' : '')+
+      (d.recallQuery ? '<span class="detail">意图：'+esc(d.recallQuery)+'</span> ' : '')+
+      (d.evicted&&d.evicted.length ? '<span class="badge" style="background:rgba(248,201,73,.15);color:#f8c949">滑出 '+d.evicted.length+'</span> ' : '')+
+      (d.sedimented&&d.sedimented.length ? '<span class="badge ok">沉淀 '+d.sedimented.length+'</span>' : '');
+    const recallBlock = (d.recalled && d.recalled.length)
+      ? '<div class="detail" style="margin-top:4px;">召回('+esc((d.matchedTopics||[]).join(', '))+')：'+d.recalled.map(e=>esc(e.summary)).join(' ｜ ')+'</div>'
+      : (d.needRecall ? '<div class="detail" style="margin-top:4px;">召回：（无命中）</div>' : '');
+    dialog.insertAdjacentHTML('beforeend',
+      '<div style="margin:6px 0 14px;"><b>DLA：</b>'+esc(d.reply)+'<div style="margin-top:4px;">'+tags+'</div>'+recallBlock+'</div>');
+    document.getElementById('winState').textContent = '当前窗口轮数：'+(d.window? d.window.length:'?');
+    dialog.scrollTop = dialog.scrollHeight;
+    listAll();
+  } catch(e){ pending.remove(); dialog.insertAdjacentHTML('beforeend','<div style="color:var(--bad)">请求失败：'+esc(String(e))+'</div>'); }
+  finally { input.disabled=false; input.focus(); }
+}
+
+async function resetConvo(){
+  await fetch('/api/reset', {method:'POST'});
+  document.getElementById('dialog').innerHTML='';
+  document.getElementById('winState').textContent='已新开会话（短期窗口已清空）';
+}
+
+async function selfcheck(){
+  const r = await fetch('/api/selfcheck');
+  const { checks } = await r.json();
+  const groups = {};
+  for (const c of checks){ (groups[c.group] = groups[c.group] || []).push(c); }
+  let h = '';
+  for (const g of Object.keys(groups)){
+    const items = groups[g];
+    const allPass = items.every(c=>c.pass);
+    h += '<div style="margin-top:10px;font-size:12px;color:'+(allPass?'var(--ok)':'var(--bad)')+';font-weight:600;">'+esc(g)+' '+(allPass?'✓':'✗')+'</div>';
+    for (const c of items){
+      h += '<div class="check"><span class="badge '+(c.pass?'ok':'bad')+'">'+(c.pass?'PASS':'FAIL')+'</span><div><div>'+esc(c.name)+'</div><div class="detail">'+esc(c.detail)+'</div></div></div>';
+    }
+  }
+  document.getElementById('checks').innerHTML = h;
+}
+</script>
+</body>
+</html>
