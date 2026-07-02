@@ -31,6 +31,7 @@ import { OpenAICompatEmbedder, loadEmbedConfig } from '../src/retrieval/embedder
 import { loadLLMPool } from '../src/llm/pool.ts';
 import { Conversation } from '../src/pipeline/conversation.ts';
 import { config } from '../src/config.ts';
+import { exportBundle, importBundle } from '../src/portable/index.ts';
 
 // 开发者模式·热调：进程一启动就深拷一份 config 当"出厂默认"（必须在任何请求改动 config 之前拍这张快照）。
 // 之后 /api/config/reset 靠它把 config 恢复原样。structuredClone 是 Node 内置，零依赖。
@@ -160,6 +161,13 @@ function readJson(req) {
     req.on('end', () => {
       try {
         const body = Buffer.concat(chunks).toString('utf8');
+        // 字符集护栏：非法 UTF-8 字节解码后必出现 U+FFFD(�) → 拒收，防乱码入库。
+        // （事故：Windows cmd 的 curl 发中文默认 GBK，被按 UTF-8 解 → 乱码写进证据库。
+        //   浏览器 fetch 恒为 UTF-8 不受影响；命令行注入请用 UTF-8 编码的请求体。）
+        if (body.includes('�')) {
+          reject(new Error('请求体不是合法 UTF-8（Windows cmd 的 curl 会按 GBK 发中文；请改用测试台界面，或以 UTF-8 编码发送）'));
+          return;
+        }
         resolve(body ? JSON.parse(body) : {});
       } catch (e) {
         reject(e);
@@ -488,6 +496,29 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/reset') {
       newSession();
       sendJson(res, 200, { ok: true, sessionId });
+      return;
+    }
+
+    // ── 便携记忆包 · 导出（Phase 5-B · 备份/迁移）──
+    // 只读三层数据组包（portable/exportBundle 已做好，这里纯接线）；向量索引不入包（派生物，导入后重建）。
+    // 不需要 LLM / .env。前端拿 { bundle } 后用 Blob 下载成文件。
+    if (req.method === 'GET' && url.pathname === '/api/export-bundle') {
+      const subjectId = url.searchParams.get('subjectId') || config.identity.subjectId;
+      const bundle = exportBundle(subjectId, { evidenceStore: store, eventStore, cognitionStore: cogStore });
+      sendJson(res, 200, { bundle });
+      return;
+    }
+
+    // ── 便携记忆包 · 导入（Phase 5-B）──
+    // mode=dryRun（安全默认）：只校验、算将写入/重复条数，不落库；mode=merge：实际写入（走 transaction 原子化）。
+    // 非法包（valid=false）由 importBundle 内部拦下、绝不写库。merge 成功时提示 needsReindex：向量索引不入包，需点「更新画像」重建召回。
+    if (req.method === 'POST' && url.pathname === '/api/import-bundle') {
+      const mode = url.searchParams.get('mode') === 'merge' ? 'merge' : 'dryRun';
+      const bundle = await readJson(req);
+      const plan = importBundle(bundle, { evidenceStore: store, eventStore, cognitionStore: cogStore, transaction }, { mode });
+      const body = { plan };
+      if (mode === 'merge' && plan.valid) body.needsReindex = true; // 向量索引不入包 → 建议重建召回
+      sendJson(res, 200, body);
       return;
     }
 

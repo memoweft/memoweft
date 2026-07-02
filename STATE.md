@@ -4,7 +4,7 @@
 > 设计细节在 `docs/项目地图.md`（**按 cell 随用随读，别通读**）；协作契约在 `AGENTS.md`。
 
 **阶段**：阶段 0 ✅ · 1 画像+召回 ✅ · 阶段 2 纠正闭环 ✅ · 阶段 3 归因+主动询问 ✅ · **阶段 4-B 周期后台 ✅**（衰减/过期/召回门控/冲突复看/趋势）· 阶段 4-A 多源感知 · **档1 摄入口闭环 ✅**（`ingestObservations` + 活动窗口→observed 证据；真采集器留骨架）· 档2 真采集器 ⬜
-**框架闭环**（总设计任务书）：**Phase 5-A 便携记忆包 ✅**（导入/导出/备份/恢复，保真）· 5-B 测试台导入导出 API/按钮 ⬜ · 6-A 记忆管理页 · 6-B 图谱视图 · 7-A Cloud Guard 验收 · 8-A 真采集器 · 9-A 星瑶最小宿主 · 10-A 插件契约 · 11-A 稳定性/迁移 · 12-A npm 发布
+**框架闭环**（总设计任务书）：**Phase 5-A 便携记忆包 ✅**（导入/导出/备份/恢复，保真）· **5-B 测试台导入导出 ✅**（`/api/export-bundle`、`/api/import-bundle?mode=dryRun|merge` + 备份/迁移面板）· 6-A 记忆管理页 · 6-B 图谱视图 · 7-A Cloud Guard 验收 · 8-A 真采集器 · 9-A 星瑶最小宿主 · 10-A 插件契约 · 11-A 稳定性/迁移 · 12-A npm 发布
 **最后更新**：2026-07-02
 **模型部署口径**：文档已改为 **Cloud-first onboarding**（开发者先用 OpenAI-compatible 云端端点跑通）+ **evidence 级授权**（`allowCloudRead` 控制哪些证据可进云端 prompt）+ **Hybrid/local 作为高级选项**。详见 `docs/deployment.md`。
 **写路径**：原话 → 整理事件(distill) → 画像(consolidate) → 归因(attribute) → 索引(retriever.indexAll)　**读路径**：消息 → 召回相关认知 → 注入回话

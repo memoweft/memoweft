@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-07-02 · Phase 5-B 测试台导入导出（备份/迁移入口）
+
+**起因**
+- 5-A 的便携记忆包只有库层函数，用户点不到。5-B 把它接成测试台的 API + 按钮，让"导出备份 / 导入迁移"能真用、能 dogfood。
+
+**做了什么**
+- `testbench/server.mjs`（纯接线，不碰 `src/`）：
+  - `GET /api/export-bundle?subjectId=` → `exportBundle(...)` → `{ bundle }`（前端 Blob 下载成 `.bundle.json`）。
+  - `POST /api/import-bundle?mode=dryRun|merge` → `importBundle(...)` → `{ plan, needsReindex? }`。mode 缺省 `dryRun`（安全）；merge 走 `transaction` 原子化；非法包由 `importBundle` 内部拦下、不写库。
+- `testbench/index.html`：设置面板加「备份/迁移 · 便携记忆包」区——「导出记忆包」下载 `memoweft-<subjectId>-<日期>.bundle.json`；「导入记忆包」选 JSON → 先 dryRun 展示计划（合法性/将写入/重复跳过/错误/警告）→ **仅合法才给「确认合并导入」按钮**、非法显眼报错不给合并 → merge 后刷新各面板 + 提示重建召回。
+
+**决策/取舍**
+- 导入默认 dryRun：先让用户看清"会写多少、重复多少、有没有错"再决定 merge，避免糊里糊涂灌库。
+- 向量索引不入包 → merge 回 `needsReindex`，前端提示点「更新画像」重建（不自动重建：可能没配嵌入器）。
+
+**验证**：typecheck ✅ / test **87 过**（后端纯接线未加单测；导入导出逻辑已由 5-A 的 16 个测试覆盖）/ build ✅。分支 `feat/testbench-bundle-io`（基于 5-A）。前端真机点击待 dogfood。（本阶段由后台 Agent 实现，主控 AI 审后端接线 + 前端辅助函数存在性、补 docs-sync 与提交。）
+
+---
+
 ## 2026-07-02 · Phase 5-A 便携记忆包（导入/导出/备份/恢复）
 
 **起因**
