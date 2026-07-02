@@ -8,7 +8,7 @@
  * 启动：npm run testbench → http://localhost:7888
  */
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRunLogger } from '../src/obs/runLog.ts';
@@ -76,15 +76,50 @@ const REPLY_PERSONA =
   '你背后有一个跨对话持续记住 ta 的记忆层，ta 说的会被记下来、以后还认得。' +
   '语气自然、简洁、真诚，别生硬地复述你了解到的东西。';
 
-// 每会话一个 Conversation（窗口）+ logger；/api/reset 新开。
-let sessionId = `s-${Date.now()}`;
-let convo = new Conversation({ store, retriever, cognitionStore: cogStore, llm: chatLLM, systemPrompt: REPLY_PERSONA });
-let logger = createRunLogger({ dir: LOG_DIR, sessionId });
+// ── 多会话（S4b）：内存里的活跃会话 + 磁盘上的历史日志两处；current 指向"当前会话"。──
+// 一个会话 = 一个 Conversation（回话窗口）+ 一个 logger（run-<id>.jsonl）。/api/reset 新建并【保留】旧的
+// （"记住你"的产品，切个会话就把上一段销毁是自我否定）。旧会话进列表、可回访续聊。
+const sessions = new Map(); // id → { id, convo, logger, createdAt }
+let seq = 0;
+function makeSession(seedTurns = []) {
+  const id = `s-${Date.now()}-${seq++}`; // 带序号防同毫秒撞车
+  const s = {
+    id,
+    createdAt: new Date().toISOString(),
+    convo: new Conversation({ store, retriever, cognitionStore: cogStore, llm: chatLLM, systemPrompt: REPLY_PERSONA, seedTurns }),
+    logger: createRunLogger({ dir: LOG_DIR, sessionId: id }),
+  };
+  sessions.set(id, s);
+  return s;
+}
+let current = makeSession();
 
+// 新开一段会话并设为当前（旧的不销毁）。
 function newSession() {
-  sessionId = `s-${Date.now()}`;
-  convo = new Conversation({ store, retriever, cognitionStore: cogStore, llm: chatLLM, systemPrompt: REPLY_PERSONA });
-  logger = createRunLogger({ dir: LOG_DIR, sessionId });
+  current = makeSession();
+  return current;
+}
+
+// 打开一条会话：活跃的直接切；只在盘上的 → 读回最近几轮做种子重建（logger 续写同文件、轮号接着走）。
+function openSession(id) {
+  let s = sessions.get(id);
+  if (!s) {
+    const lg = createRunLogger({ dir: LOG_DIR, sessionId: id });
+    const past = lg.readRecent(200).filter((t) => t.kind !== 'profile_update' && t.userInput != null);
+    const seed = past.slice(-config.workingMemory.maxTurns).flatMap((t) => [
+      { role: 'user', content: t.userInput },
+      { role: 'assistant', content: t.reply },
+    ]);
+    s = {
+      id,
+      createdAt: new Date().toISOString(),
+      convo: new Conversation({ store, retriever, cognitionStore: cogStore, llm: chatLLM, systemPrompt: REPLY_PERSONA, seedTurns: seed }),
+      logger: lg,
+    };
+    sessions.set(id, s);
+  }
+  current = s;
+  return s;
 }
 
 // ── 后台自动更新画像（空闲防抖触发）──
@@ -116,7 +151,7 @@ async function runProfileUpdate(trigger = 'background') {
       newCognitions: c.created.map((x) => ({ id: x.id, content: x.content, credStatus: x.credStatus })),
     };
     // ②治慢落盘：各步耗时 + 摘要（AGENTS.md"内幕必落盘"；最慢的写路径以前没诊断日志）。
-    logger.appendProfileUpdate({
+    current.logger.appendProfileUpdate({
       trigger,
       timings: r.timings,
       summary: {
@@ -130,7 +165,7 @@ async function runProfileUpdate(trigger = 'background') {
     });
     return r;
   } catch (e) {
-    logger.appendProfileUpdate({ trigger, error: e instanceof Error ? e.message : String(e) });
+    current.logger.appendProfileUpdate({ trigger, error: e instanceof Error ? e.message : String(e) });
     throw e;
   } finally {
     profileUpdating = false;
@@ -234,9 +269,10 @@ const server = createServer(async (req, res) => {
 
     // 一轮对话：真实存证据 + 回话 → 落盘内幕 → 返回完整记录给透视区
     if (req.method === 'POST' && url.pathname === '/api/chat') {
-      const { text, originId } = await readJson(req);
-      const outcome = await convo.handle(String(text ?? ''), { originId: originId ?? null });
-      const record = logger.appendTurn({
+      const { text, originId, sessionId: reqSid } = await readJson(req);
+      if (reqSid && sessions.has(reqSid)) current = sessions.get(reqSid); // 指定了活跃会话 → 切过去
+      const outcome = await current.convo.handle(String(text ?? ''), { originId: originId ?? null });
+      const record = current.logger.appendTurn({
         userInput: String(text ?? ''),
         reply: outcome.reply,
         evidence: [{ id: outcome.storedEvidence.id, summary: outcome.storedEvidence.summary }],
@@ -244,7 +280,7 @@ const server = createServer(async (req, res) => {
         llmCalls: outcome.llmCalls,
         error: outcome.error,
       });
-      sendJson(res, 200, { record, sessionId, logFile: logger.file });
+      sendJson(res, 200, { record, sessionId: current.id, logFile: current.logger.file });
       scheduleBackgroundUpdate(); // 聊完一轮排上后台消化（防抖：停手 7 秒才真跑，不挡这次回话）
       return;
     }
@@ -266,7 +302,7 @@ const server = createServer(async (req, res) => {
 
     // 读回本会话最近内幕（执行 Agent 也读同一个 jsonl 文件）
     if (req.method === 'GET' && url.pathname === '/api/logs') {
-      sendJson(res, 200, { sessionId, logFile: logger.file, records: logger.readRecent(100) });
+      sendJson(res, 200, { sessionId: current.id, logFile: current.logger.file, records: current.logger.readRecent(100) });
       return;
     }
 
@@ -376,8 +412,10 @@ const server = createServer(async (req, res) => {
     }
     // 最近对话（前端聊天区轮询：脚本灌的对话也实时显示，不只手动发的）。
     if (req.method === 'GET' && url.pathname === '/api/chat-history') {
-      const turns = logger.readRecent(50).filter((t) => t.kind !== 'profile_update' && t.userInput != null);
-      sendJson(res, 200, { turns: turns.map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply })) });
+      const sid = url.searchParams.get('sessionId');
+      const lg = sid ? (sessions.get(sid)?.logger ?? createRunLogger({ dir: LOG_DIR, sessionId: sid })) : current.logger;
+      const turns = lg.readRecent(50).filter((t) => t.kind !== 'profile_update' && t.userInput != null);
+      sendJson(res, 200, { sessionId: sid || current.id, turns: turns.map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply })) });
       return;
     }
 
@@ -518,10 +556,42 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 新开会话（清空窗口；已落库证据不动）
+    // 新开会话（S4b：新建并设为当前，旧会话保留、进列表可回访；已落库证据不动）。
     if (req.method === 'POST' && url.pathname === '/api/reset') {
       newSession();
-      sendJson(res, 200, { ok: true, sessionId });
+      sendJson(res, 200, { ok: true, sessionId: current.id });
+      return;
+    }
+
+    // 会话列表（S4b）：磁盘上所有 run-s-*.jsonl → { sessionId, mtime, turnCount, preview, live, current }。
+    // 空会话（只有 profile_update、没真对话）不列。开发者/当前会话由前端按 id 自己标注。
+    if (req.method === 'GET' && url.pathname === '/api/sessions') {
+      let files = [];
+      try { files = (await readdir(LOG_DIR)).filter((f) => /^run-s-.*\.jsonl$/.test(f)); } catch { files = []; }
+      const list = [];
+      for (const f of files) {
+        const id = f.replace(/^run-/, '').replace(/\.jsonl$/, '');
+        try {
+          const st = await stat(join(LOG_DIR, f));
+          const lg = sessions.get(id)?.logger ?? createRunLogger({ dir: LOG_DIR, sessionId: id });
+          const turns = lg.readRecent(500).filter((t) => t.kind !== 'profile_update' && t.userInput != null);
+          if (turns.length === 0) continue;
+          list.push({ sessionId: id, mtime: st.mtimeMs, turnCount: turns.length, preview: String(turns[0].userInput || '').slice(0, 30), live: sessions.has(id), current: id === current.id });
+        } catch { /* 坏文件跳过 */ }
+      }
+      list.sort((a, b) => b.mtime - a.mtime);
+      sendJson(res, 200, { sessions: list, currentId: current.id });
+      return;
+    }
+
+    // 打开一条会话（S4b）：切当前 + 续聊种子（盘上的会重建带上下文）+ 返回历史轮供前端渲染。
+    if (req.method === 'POST' && url.pathname === '/api/session/open') {
+      const { id } = await readJson(req);
+      if (!id || typeof id !== 'string') { sendJson(res, 400, { error: '缺 id' }); return; }
+      const s = openSession(String(id));
+      const turns = s.logger.readRecent(200).filter((t) => t.kind !== 'profile_update' && t.userInput != null)
+        .map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply }));
+      sendJson(res, 200, { ok: true, sessionId: s.id, turns });
       return;
     }
 
@@ -590,7 +660,7 @@ if (process.env.MEMOWEFT_EXPERIENCE_UI === 'off') {
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`\n  MemoWeft 测试台（阶段 1：画像 + 召回）→ http://localhost:${PORT}`);
   console.log(`  证据库 → ${DB_PATH}`);
-  console.log(`  运行日志 → ${LOG_DIR}\\run-${sessionId}.jsonl`);
+  console.log(`  运行日志 → ${LOG_DIR}\\run-${current.id}.jsonl`);
   console.log('  (Ctrl+C 停止)\n');
 });
 }
