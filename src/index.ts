@@ -142,6 +142,19 @@ export {
   type ValidateResult,
 } from './portable/index.ts';
 
+// 图谱化记忆视图（Phase 6-B）：三层数据 → 力导向图 payload
+export {
+  buildMemoryGraph,
+  type BuildGraphDeps,
+  type BuildGraphOptions,
+  type MemoryGraphNode,
+  type MemoryGraphEdge,
+  type MemoryGraphNodeKind,
+  type MemoryGraphEdgeKind,
+  type MemoryGraphStats,
+  type MemoryGraphPayload,
+} from './graph/index.ts';
+
 import { MEMOWEFT_VERSION } from './version.ts';
 export { MEMOWEFT_VERSION };
 /** @deprecated 用 MEMOWEFT_VERSION；保留旧名兼容已引用 DLA_VERSION 的宿主。 */
