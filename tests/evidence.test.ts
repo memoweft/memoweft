@@ -89,6 +89,35 @@ test('all 按 recordedAt 升序', () => {
   }
 });
 
+test('update 改授权位：allowCloudRead / allowInference 持久化，未提供的位不动（6-A）', () => {
+  const s = fresh();
+  try {
+    const e = s.put({ ...base, allowCloudRead: true, allowInference: true });
+
+    // 关 cloud：改后 get 回来是 false；inference / 内容不受牵连
+    const u1 = s.update(e.id, { allowCloudRead: false });
+    assert.equal(u1?.allowCloudRead, false, 'cloud 已关');
+    assert.equal(u1?.allowInference, true, '未提供的 inference 不动');
+    assert.equal(u1?.rawContent, '昨晚没睡好', '内容不受牵连');
+    assert.equal(s.get(e.id)?.allowCloudRead, false, '已持久化（get 回读仍是 false）');
+
+    // 关 inference + 同时改 summary：两者都生效，之前关掉的 cloud 保持关
+    const u2 = s.update(e.id, { allowInference: false, summary: '顺手改摘要' });
+    assert.equal(u2?.allowInference, false, 'inference 已关');
+    assert.equal(u2?.summary, '顺手改摘要', 'summary 同步改');
+    assert.equal(u2?.allowCloudRead, false, '之前关的 cloud 保持');
+
+    // 再开回 cloud：布尔来回切都落库
+    s.update(e.id, { allowCloudRead: true });
+    assert.equal(s.get(e.id)?.allowCloudRead, true, 'cloud 可再开回');
+    assert.equal(s.get(e.id)?.allowInference, false, 'inference 仍是关');
+
+    assert.equal(s.update('nope', { allowCloudRead: false }), null, '不存在返回 null');
+  } finally {
+    s.close();
+  }
+});
+
 test('update 改 summary（原文不变） / remove 真删（用户主动）', () => {
   const s = fresh();
   try {

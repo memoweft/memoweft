@@ -255,10 +255,14 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 用户主动改一条证据的 summary / raw_content（cell 8 规则 10）
+    // 用户主动改一条证据的 summary / raw_content / 授权位（cell 8 规则 10 + 6-A 记忆管理页）。
+    // 授权位只认布尔（防脏值混进 0/1 落库）；不传 = 不动。
     if (req.method === 'POST' && url.pathname === '/api/evidence/update') {
-      const { id, rawContent, summary } = await readJson(req);
-      const updated = store.update(String(id ?? ''), { rawContent, summary });
+      const { id, rawContent, summary, allowCloudRead, allowInference } = await readJson(req);
+      const patch = { rawContent, summary };
+      if (typeof allowCloudRead === 'boolean') patch.allowCloudRead = allowCloudRead;
+      if (typeof allowInference === 'boolean') patch.allowInference = allowInference;
+      const updated = store.update(String(id ?? ''), patch);
       sendJson(res, 200, { updated });
       return;
     }
@@ -390,10 +394,11 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 用户主动改一条认知（cell 8 规则 10）
+    // 用户主动改一条认知（cell 8 规则 10）。invalidAt（6-A：标失效/否定假设，非删除）store 已支持，
+    // 此处透传：请求体不带该键 → undefined → store 保持原值；显式传 null 可恢复有效。
     if (req.method === 'POST' && url.pathname === '/api/cognition/update') {
-      const { id, content, confidence, credStatus, scope } = await readJson(req);
-      const updated = cogStore.update(String(id ?? ''), { content, confidence, credStatus, scope });
+      const { id, content, confidence, credStatus, scope, invalidAt } = await readJson(req);
+      const updated = cogStore.update(String(id ?? ''), { content, confidence, credStatus, scope, invalidAt });
       sendJson(res, 200, { updated });
       return;
     }

@@ -92,8 +92,11 @@ export interface EvidenceStore {
   all(): Evidence[];
   /** 按发生时间（occurredAt）区间取回，升序——时间窗粗筛用。 */
   byTimeRange(fromIso: string, toIso: string): Evidence[];
-  /** 用户主动修改一条证据的原文 / 摘要（cell 8 规则 10）。返回更新后的，不存在返回 null。 */
-  update(id: string, patch: { rawContent?: string; summary?: string }): Evidence | null;
+  /** 用户主动修改一条证据的原文 / 摘要 / 授权位（cell 8 规则 10；6-A 记忆管理页可改 cloud/inference 授权）。返回更新后的，不存在返回 null。 */
+  update(
+    id: string,
+    patch: { rawContent?: string; summary?: string; allowCloudRead?: boolean; allowInference?: boolean },
+  ): Evidence | null;
   /** 用户主动删除一条证据（cell 6 条件性真删；非系统自动删）。返回是否删除。 */
   remove(id: string): boolean;
   /** 按幂等键 originId 查回一条（摄入层判重用：已存在则跳过、不重复落库）。不存在返回 null。 */
@@ -185,14 +188,22 @@ export class SqliteEvidenceStore implements EvidenceStore {
     return rows.map(fromRow);
   }
 
-  update(id: string, patch: { rawContent?: string; summary?: string }): Evidence | null {
+  update(
+    id: string,
+    patch: { rawContent?: string; summary?: string; allowCloudRead?: boolean; allowInference?: boolean },
+  ): Evidence | null {
     const cur = this.get(id);
     if (!cur) return null;
     const rawContent = patch.rawContent ?? cur.rawContent;
     const summary = patch.summary ?? cur.summary;
+    // 授权位（6-A）：未提供则保持原值；布尔转 0/1 落库（表结构不变）。
+    const allowCloudRead = patch.allowCloudRead ?? cur.allowCloudRead;
+    const allowInference = patch.allowInference ?? cur.allowInference;
     this.db
-      .prepare('UPDATE evidence SET raw_content = ?, summary = ? WHERE id = ?')
-      .run(rawContent, summary, id);
+      .prepare(
+        'UPDATE evidence SET raw_content = ?, summary = ?, allow_cloud_read = ?, allow_inference = ? WHERE id = ?',
+      )
+      .run(rawContent, summary, allowCloudRead ? 1 : 0, allowInference ? 1 : 0, id);
     return this.get(id);
   }
 
