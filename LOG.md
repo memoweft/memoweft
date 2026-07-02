@@ -47,6 +47,24 @@
 
 ---
 
+## 2026-07-02 · Phase 6-B G1 图谱 payload 后端
+
+**起因**
+- 总设计任务书 Phase 6-B「图谱化记忆视图」。先做后端 payload（G1），前端力导向图（G2/G3）后接——先让"看关系/看来源/看冲突"有据可依，后端统一产出、前端不直接读库拼图。
+
+**做了什么**
+- 新增 `src/graph/`：`model.ts`（节点/边/payload 类型）、`buildMemoryGraph.ts`（三层数据 + 溯源 → `{nodes,edges,stats}`）、`index.ts`。
+- 边严格按【库里存了的】来：`belongs_to_subject`（subject→cognition）、`distilled_into`（evidence→event，源自 event_evidence）、`supports`/`contradicts`（evidence→cognition，源自 cognition_evidence.relation）。事件与认知不直接连，只经共享证据间接（真数据结构）。
+- 筛选：`includeEvidence`（默认展开，可关成高层视图防毛线球）、`includeInvalid`、`contentType`/`credStatus`/`sourceKind`、`onlyCloudBlocked`/`onlyConflicts`/`onlyHypotheses`、`q` 关键词。渲染提示 `val`（认知按 confidence/150）+ `colorKey`。
+
+**定下的边界（诚实）**
+- `conflicts_with` / `corrects`（认知↔认知）当前**数据没存**——cognition 表无"和谁冲突/被谁纠正"字段，只有 `credStatus='conflicted'` 和 `invalidAt`。故 V1 **不生成**这两种边（枚举保留待数据模型补）；冲突/失效靠节点属性体现。
+- 真 `credStatus` = candidate/low/limited/stable/conflicted（早先那份图谱参考文档写的 low/medium/high 是错的，已纠正）。
+
+**验证**：typecheck ✅ / test **77 过**（+6，rebase 到含 5-A/5-B 的 main 后合计 93）/ build ✅。分支 `feat/graph-payload`。API `/api/memory-graph` + 前端力导向图属 G2/G3，未做。
+
+---
+
 ## 2026-07-02 · 文档口径改为 Cloud-first，但不无脑上云
 
 **起因**

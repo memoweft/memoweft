@@ -24,10 +24,11 @@
 - **会话编排** `src/pipeline/conversation.ts` → `new Conversation({store,retriever,cognitionStore,llm})`，`handle(msg,opts)→TurnOutcome{reply,storedEvidence,recall,llmCalls,error}`。
 - **LLM / env**：`loadLLMPool()` / `LLMPool.for('chat'|'write')`；先读 `MEMOWEFT_*`，回退 `DLA_*`。默认文档推荐云端 OpenAI-compatible；本地 Ollama/LM Studio 仍可作为 endpoint。
 - **便携记忆包（Phase 5-A）** `src/portable/` → `exportBundle(subjectId,{evidenceStore,eventStore,cognitionStore},opts?)→MemoryBundle` ｜ `validateBundle(bundle)→{valid,errors,warnings}`（结构+引用完整性；致命 vs 软告警分级）｜ `importBundle(bundle,{...三 store,transaction?},{mode:'dryRun'|'merge'})→ImportPlan`。保真（保留原 id 与全部时间戳）、按 id/originId 幂等去重、非法包不写库、可选事务防污染。为此三个 store 各新增 `insert()`（按原 id 原样落库，导出的对偶）。不含向量索引（导入后 `retriever.indexAll` 重建）。
+- **图谱视图（Phase 6-B · G1）** `src/graph/` → `buildMemoryGraph(subjectId,{evidenceStore,eventStore,cognitionStore},opts?)→MemoryGraphPayload{nodes,edges,stats}`。节点 subject/evidence/event/cognition；边 belongs_to_subject/distilled_into/supports/contradicts（conflicts_with/corrects 数据未存 → V1 不产，冲突/失效靠节点 credStatus/invalidAt 体现）。筛选 includeEvidence/includeInvalid/contentType/credStatus/sourceKind/onlyCloudBlocked/onlyConflicts/onlyHypotheses/q。**仅 payload；API `/api/memory-graph` + 前端力导向图（G2/G3）待接。**
 - **测试台** `testbench/`：聊天 + 透视 + 事件/画像 + 归因/主动询问 + 活动窗口注入 + 开发者抽屉；`npm run testbench` → `:7888`。
 
 ## 命令
-`npm run typecheck` ｜ `npm test`（71 过）｜ `npm run build` ｜ `npm run testbench`
+`npm run typecheck` ｜ `npm test`（93 过）｜ `npm run build` ｜ `npm run testbench`
 
 ## 进行中任务断点
 （无）
