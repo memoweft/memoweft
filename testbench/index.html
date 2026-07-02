@@ -1175,6 +1175,11 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('confi
 // 每模式留一个"进入钩子"，第 2/3 块往里填初始化逻辑；这里先定义成空函数占位，applyMode 里择一调用。
 window._mode = null;
 
+// SB3 会话隔离：后端当前会话 id（loadSessions/openSessionUI 更新）；进开发者模式前记下的用户会话。
+let _currentSessionId = null;
+let _beforeDevSession = null;         // 进 dev 前用户所在会话（离开 dev 时切回它）
+const DEV_SESSION_KEY = 'mwDevSession'; // localStorage：开发者专属会话 id
+
 // ══════════════════════════════════════════════════════════════════
 // 配置向导（体验层阶段二）：4 步引导 → 生成 .env 文本。全部纯 vanilla JS。
 // 只在 #mode-wizard 容器内操作，不碰核心库、不动其它模式逻辑。
@@ -1566,6 +1571,7 @@ function onEnterDeveloper(){
   loadEvents();
 }
 function applyMode(mode){
+  const prevMode = window._mode; // SB3：记下切换前模式，判断是否"从开发者离开"（要切回用户会话）
   // 归一化：CSS 类用 mode-wizard/mode-user/mode-memory/mode-dev（dev 是 developer 的简写）。
   const bodyClass = mode === 'developer' ? 'mode-dev' : ('mode-' + mode);
   document.body.classList.remove('mode-wizard','mode-user','mode-memory','mode-dev');
@@ -1578,6 +1584,10 @@ function applyMode(mode){
   window._mode = mode;
   // 离开开发者模式时顺手收起设置抽屉（设置只在开发者模式有意义）。
   if (mode !== 'developer' && typeof closeSettings === 'function') closeSettings();
+  // SB3 会话隔离：进 dev → 切到开发者专属会话；从 dev 离开 → 切回进入前的用户会话。
+  //   两者都是异步切会话（fetch），失败不阻断模式切换（内部各自 try/catch）。
+  if (mode === 'developer' && prevMode !== 'developer' && typeof enterDevSession === 'function') enterDevSession();
+  if (prevMode === 'developer' && mode !== 'developer' && typeof leaveDevSession === 'function') leaveDevSession();
   // 进入钩子：仅当对应钩子已定义成函数才调（第 2/3 块填实现时无需改这里）。
   if (mode === 'wizard' && typeof onEnterWizard === 'function') onEnterWizard();
   if (mode === 'user' && typeof onEnterUser === 'function') onEnterUser();
@@ -1701,8 +1711,10 @@ async function send(){
 
 async function resetSession(){
   try {
-    await fetch('/api/reset', {method:'POST'});
+    const r = await fetch('/api/reset', {method:'POST'}).then(x=>x.json());
     _renderedTurns.clear();
+    _currentSessionId = r.sessionId || null;  // SB3：更新当前会话，避免 leaveDevSession 误判成"停在 dev 会话"
+    _beforeDevSession = null;                  // SB3：用户明确开新会话，取消"回 dev 前会话"的记忆
     $('chat').innerHTML = '';
     $('xray').innerHTML = '<div class="empty" style="padding:8px 0;">已新开会话。</div>';
     // SB2：新会话建好后保持在用户模式（若当前在别的模式，回到聊天正门），并刷新左侧会话列表。
@@ -1724,6 +1736,7 @@ async function loadSessions(){
   const host = $('railSessions'); if (!host) return;
   try {
     const d = await fetch('/api/sessions').then(x => x.json());
+    _currentSessionId = d.currentId || _currentSessionId; // 记住后端当前会话（SB3 切回用户会话用）
     let list = d.sessions || [];
     if (typeof filterDevSession === 'function') list = filterDevSession(list); // SB3：把开发者专属会话从用户列表滤掉
     if (!list.length){ host.innerHTML = '<div class="rail-empty">还没有对话。发一句话，或点上面「＋新会话」开始。</div>'; return; }
@@ -1741,12 +1754,15 @@ async function loadSessions(){
   } catch(e){ host.innerHTML = '<div class="rail-empty">会话列表加载失败，稍后自动重试。</div>'; }
 }
 
-// 打开一条历史会话：切当前 + 用返回的 turns 重渲聊天流 + 回到用户聊天正门。
-async function openSessionUI(id){
+// 打开一条会话：切当前 + 用返回的 turns 重渲聊天流。
+// opts.toUser（默认 true）：切完回用户聊天正门。SB3 切开发者专属会话时传 false（保持 dev 模式）。
+async function openSessionUI(id, opts){
+  const toUser = !opts || opts.toUser !== false;
   try {
     const d = await fetch('/api/session/open', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})}).then(x=>x.json());
     if (d.error){ toast('打开会话失败：'+d.error, 'danger'); return; }
     _renderedTurns.clear();
+    _currentSessionId = d.sessionId || id;
     $('chat').innerHTML = '';
     if ($('xray')) $('xray').innerHTML = '<div class="empty" style="padding:8px 0;">已切到这段对话；发一句话看本轮内幕。</div>';
     for (const t of (d.turns || [])){
@@ -1754,9 +1770,54 @@ async function openSessionUI(id){
       addMsg('user', t.userInput);
       if (t.reply) addMsg('dla', t.reply);
     }
-    applyMode('user');   // 回到聊天正门
+    if (toUser) applyMode('user');   // 回到聊天正门
     loadSessions();      // 刷新高亮（current 变了）
   } catch(e){ toast('打开会话失败：'+String(e), 'danger'); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SB3 开发者会话隔离：开发者模式用一个专属会话（localStorage: mwDevSession），
+// 让开发者联调的聊天不跟用户的会话混。用户会话列表里把这个 dev 会话滤掉。
+// 后端"当前会话"是全局单一的：进 dev → 切到 dev 会话；回 user → 切回进入前的用户会话。
+// ══════════════════════════════════════════════════════════════════
+function getDevSessionId(){ try { return localStorage.getItem(DEV_SESSION_KEY) || null; } catch(e){ return null; } }
+function setDevSessionId(id){ try { localStorage.setItem(DEV_SESSION_KEY, id); } catch(e){} }
+
+// loadSessions 的钩子（SB2 已留 typeof 保护）：把 dev 专属会话从用户列表滤掉。
+function filterDevSession(list){
+  const dev = getDevSessionId();
+  if (!dev) return list;
+  return list.filter(s => s.sessionId !== dev);
+}
+
+// 进开发者模式：切到（没有就先建）dev 专属会话，保持 dev 模式渲染其聊天流。
+async function enterDevSession(){
+  // 记下进入前用户所在会话，便于回 user 时切回（避免把用户留在 dev 会话里）。
+  if (window._mode !== 'developer') _beforeDevSession = _currentSessionId;
+  let dev = getDevSessionId();
+  try {
+    if (!dev){
+      // 没有 dev 会话：新建一个（保留旧的用户会话），存 localStorage。reset 后后端当前已是它。
+      const r = await fetch('/api/reset', {method:'POST'}).then(x=>x.json());
+      dev = r.sessionId; if (dev) setDevSessionId(dev);
+      _renderedTurns.clear(); _currentSessionId = dev;
+      if ($('chat')) $('chat').innerHTML = '';
+      loadSessions();
+    } else {
+      // 已有 dev 会话：切到它并渲染历史，但不切回 user 模式（保持在 developer）。
+      await openSessionUI(dev, { toUser:false });
+    }
+  } catch(e){ /* dev 会话建/切失败：不阻断进 dev，退化为共用当前会话 */ }
+}
+
+// 离开开发者模式回用户：切回进入 dev 前记下的用户会话（若有且不是当前）。
+async function leaveDevSession(){
+  const dev = getDevSessionId();
+  // 仅当当前正停在 dev 会话上、且记得进入前的用户会话时，才切回。
+  if (_beforeDevSession && dev && _currentSessionId === dev && _beforeDevSession !== dev){
+    await openSessionUI(_beforeDevSession, { toUser:true });
+  }
+  _beforeDevSession = null;
 }
 
 // ── 恢复出厂 · 清空全部数据（二次确认 → POST /api/factory-reset → 刷新各视图）──
