@@ -38,9 +38,10 @@ export async function reply(
   recent: Turn[],
   relevant: RelevantCognition[],
   llm: LLMClient,
+  systemPrompt: string = SYSTEM_PROMPT, // 宿主可注入人设/框定（cell 9：语气·角色归宿主）；缺省=库内最朴素提示
 ): Promise<ReplyResult> {
   const messages: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT + knowledgeBlock(relevant) },
+    { role: 'system', content: systemPrompt + knowledgeBlock(relevant) },
     ...recent.map((t): ChatMessage => ({ role: t.role, content: t.content })),
     { role: 'user', content: userMsg },
   ];

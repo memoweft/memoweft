@@ -45,7 +45,10 @@
       --font:ui-sans-serif,system-ui,"Segoe UI","Microsoft YaHei",-apple-system,sans-serif;
     }
     * { box-sizing:border-box; }
-    body { margin:0; font-family:var(--font); background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+    body { margin:0; font-family:var(--font); background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; padding-left:240px; transition:padding-left .18s ease; }
+    /* 首启门（gate）：没配模型时向导全屏——藏起左侧栏、收回内容左移。进 app 后去掉 gate。 */
+    body.gate { padding-left:0; }
+    body.gate #rail { display:none; }
 
     /* —— 顶栏 —— */
     header { padding:var(--sp-3) var(--sp-5); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:var(--sp-3); background:var(--panel); box-shadow:var(--shadow-sm); position:relative; z-index:5; }
@@ -68,7 +71,8 @@
     button.accent-outline:hover { background:#fbe6dc; border-color:var(--accent); }
 
     /* —— 主布局 —— */
-    .wrap { display:grid; grid-template-columns:1fr 380px; gap:var(--sp-4); padding:var(--sp-4) var(--sp-5); height:calc(100vh - 154px); }
+    /* 高度扣掉顶栏（原先还扣 modebar 那条，SB1 把 modebar 移进左侧栏后不再占纵向空间 → 154→114）。 */
+    .wrap { display:grid; grid-template-columns:1fr 380px; gap:var(--sp-4); padding:var(--sp-4) var(--sp-5); height:calc(100vh - 114px); }
 
     /* —— 卡片（列 / 抽屉共用卡片观感）—— */
     .col { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
@@ -129,16 +133,42 @@
     .col::-webkit-scrollbar-track { background:transparent; }
 
     /* ── 三模式共壳（配置向导 / 用户体验 / 开发者）── */
-    /* 模式切换器：做成好看的 segmented control —— 一整条药丸底槽，当前态白片高亮浮起。 */
-    .modebar { display:flex; align-items:center; gap:6px; padding:10px var(--sp-5); border-bottom:1px solid var(--line); background:var(--panel); }
-    .modebtn { font:inherit; font-size:12.5px; font-weight:600; padding:7px 18px; border:1px solid transparent; background:transparent; color:var(--muted); border-radius:var(--radius-pill); cursor:pointer; transition:background .15s ease, color .15s ease, box-shadow .15s ease; }
-    .modebtn:hover { color:var(--fg); background:var(--panel-2); }
-    .modebtn.active { background:var(--accent-soft); color:var(--accent); border-color:transparent; box-shadow:inset 0 0 0 1px var(--accent-ring); }
-    .modebtn.active:hover { background:var(--accent-soft); color:var(--accent); }
+    /* SB1：导航从顶部 modebar 挪进左侧固定栏 #rail（聊天为中心的应用壳）。
+       #rail 用 position:fixed 覆在左侧，body 加 padding-left:240px 让内容右移，
+       不重排现有 DOM 树（header/wrap 等原样），最省破坏。 */
+    #rail { position:fixed; left:0; top:0; bottom:0; width:240px; z-index:40; background:var(--panel);
+      border-right:1px solid var(--line); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; padding:var(--sp-4) var(--sp-3); gap:var(--sp-3); overflow-y:auto; }
+    #rail .rail-brand { display:flex; align-items:center; gap:8px; font-size:var(--fs-h1); font-weight:700; letter-spacing:.01em; padding:2px var(--sp-2) var(--sp-1); }
+    #rail .rail-brand::before { content:""; width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); flex:0 0 auto; }
+    #rail .rail-new { justify-content:center; font-weight:600; }
+    #rail .rail-sessions { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:4px; margin:2px 0; }
+    #rail .rail-foot { border-top:1px solid var(--line); padding-top:var(--sp-3); display:flex; flex-direction:column; gap:2px; }
+    #rail .rail-foot-title { font-size:var(--fs-xs); font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; padding:2px var(--sp-2) 4px; }
+    /* 导航项（设置/记忆管理/开发者）：安静的行式链接，当前模式高亮。 */
+    .rail-link { display:flex; align-items:center; gap:8px; font:inherit; font-size:var(--fs-body); text-align:left; padding:8px var(--sp-2); border:1px solid transparent; background:transparent; color:var(--fg); border-radius:var(--radius-sm); cursor:pointer; transition:background .15s ease, color .15s ease; width:100%; }
+    .rail-link:hover { background:var(--panel-2); border-color:transparent; }
+    .rail-link.active { background:var(--accent-soft); color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent-ring); }
+    .rail-link.active:hover { background:var(--accent-soft); }
+    /* 会话列表条目（SB2 填内容，样式先备好）：预览文字 + N轮，当前会话高亮。 */
+    .sess-item { display:flex; flex-direction:column; gap:2px; padding:7px var(--sp-2); border:1px solid transparent; border-radius:var(--radius-sm); cursor:pointer; transition:background .15s ease, border-color .15s ease; }
+    .sess-item:hover { background:var(--panel-2); }
+    .sess-item.current { background:var(--accent-soft); box-shadow:inset 0 0 0 1px var(--accent-ring); }
+    .sess-item .sess-prev { font-size:var(--fs-sm); color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sess-item.current .sess-prev { color:var(--accent); font-weight:600; }
+    .sess-item .sess-meta { font-size:var(--fs-xs); color:var(--muted); }
+    /* 会话行「归档」按钮：hover 才露，绝对定位右上，不挤标题（标题右留白让位）。 */
+    .sess-item { position:relative; }
+    .sess-item .sess-prev { padding-right:42px; }
+    .sess-arch { position:absolute; right:6px; top:6px; padding:2px 8px; font-size:var(--fs-xs); color:var(--muted); background:var(--panel); border:1px solid var(--line); border-radius:8px; opacity:0; transition:opacity .12s ease; cursor:pointer; }
+    .sess-item:hover .sess-arch { opacity:1; }
+    .sess-arch:hover { color:var(--accent); border-color:var(--accent-ring); }
+    .rail-sessions .rail-empty { font-size:var(--fs-sm); color:var(--muted); padding:8px var(--sp-2); line-height:1.5; }
     /* 空占位容器（配置向导 / 用户体验）默认藏起，靠 body 模式类亮出——后续块填内容。 */
-    #mode-wizard, #mode-user { display:none; }
+    #mode-wizard { display:none; }
     body.mode-wizard #mode-wizard { display:block; }
-    body.mode-user   #mode-user   { display:block; }
+    /* S0 首屏归位：用户正门 = 一屏聊天。#mode-user 不再平铺 hero+认知卡——那些内容搬进右侧「记忆抽屉」(#memPanel)。
+       #mode-user 容器只剩一个空壳（占位，不显任何东西），真正的首屏主体是下方 .wrap 的聊天列。 */
+    #mode-user { display:none; }
     /* .wrap（聊天列 + 开发者透视列）：只在"用户体验/开发者"两模式出现；"配置向导"里藏起。
        这样聊天区在 user/dev 都可见，不用把聊天列从 .wrap 里搬出去（最不破坏原布局）。 */
     body.mode-wizard .wrap { display:none; }
@@ -146,6 +176,11 @@
     body:not(.mode-dev) #mode-dev { display:none; }
     body.mode-user .wrap { grid-template-columns:1fr; }
     body.mode-dev  .wrap { grid-template-columns:1fr 380px; }
+    /* S0：用户模式下聊天区留出更舒适的居中宽度（正门体验，聊天不贴满屏）。 */
+    body.mode-user .wrap { max-width:1120px; margin-left:auto; margin-right:auto; }
+    /* S0：用户模式隐藏系统信号——灌数据进度条 seedbar 在正门不出现（开发者模式仍显）。
+       pollSeed 用内联 display 强制 block，故这里用 !important 压过它（只在 user 模式）。 */
+    body.mode-user #seedbar { display:none !important; }
     /* 顶栏「⚙设置」齿轮：只在开发者模式露出（参数/危险操作收在设置抽屉里，别在别的模式出现）。 */
     #btnSettings { display:none; }
     body.mode-dev #btnSettings { display:inline-flex; }
@@ -172,6 +207,56 @@
     .cfg-saved { margin-left:6px; font-size:var(--fs-xs); font-weight:600; color:var(--ok); }
 
     /* —— seedbar（灌数据进度条）样式移到文件末尾「体验层阶段二」区统一美化，此处不再定义 —— */
+
+    /* ══════════════════════════════════════════════════════════════════
+       S0 首屏归位（方案A·第一波）：用户正门 = 一屏聊天。
+       · 右上「它记住我 N 件事 ›」安静胶囊入口 → 开合右侧「记忆抽屉」。
+       · 抽屉里装原来平铺在首屏的 hero + 友好认知/事件卡（复用 .ux-* 样式）。
+       · 助手侧「思考中…」三点起伏气泡（纯 CSS 动画）。
+       ══════════════════════════════════════════════════════════════════ */
+    /* 右上胶囊入口：只在用户模式露出（开发者有自己的透视区，不需要这个）。安静低调，不抢聊天。 */
+    #memPill { display:none; align-items:center; gap:6px; padding:6px 13px; border-radius:var(--radius-pill);
+      font-size:var(--fs-sm); color:var(--muted); background:var(--panel); border:1px solid var(--line); cursor:pointer;
+      transition:background .15s ease, border-color .15s ease, color .15s ease; }
+    body.mode-user #memPill { display:inline-flex; }
+    #memPill:hover { color:var(--accent); border-color:var(--accent-ring); background:var(--accent-soft); }
+    #memPill .chev { font-size:12px; line-height:1; opacity:.7; }
+
+    /* 记忆抽屉（右侧滑出，复用 settings 抽屉的遮罩+滑入模式）。 */
+    #memMask { position:fixed; inset:0; z-index:55; display:none; background:rgba(43,39,36,.38); backdrop-filter:blur(2px); animation:maskIn .18s ease; }
+    #memMask.show { display:block; }
+    #memPanel { position:fixed; top:0; right:0; z-index:56; height:100vh; width:min(520px,94vw); background:var(--bg); box-shadow:var(--shadow-lg); border-left:1px solid var(--line); display:flex; flex-direction:column; transform:translateX(100%); transition:transform .24s cubic-bezier(.4,0,.2,1); }
+    #memMask.show ~ #memPanel, #memPanel.show { transform:translateX(0); }
+    #memPanel .sp-body { padding-top:var(--sp-4); }
+
+    /* 「思考中…」气泡：三个点做起伏动画（助手侧，回复到了原位替换）。纯 CSS，无依赖。 */
+    .msg.thinking .bubble { background:var(--panel-2); border:1px solid var(--line); border-radius:14px 14px 14px 4px; display:inline-flex; align-items:center; gap:5px; padding:12px 15px; }
+    .thinking-dots { display:inline-flex; gap:4px; }
+    .thinking-dots span { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.4; animation:thinkbob 1.2s ease-in-out infinite; }
+    .thinking-dots span:nth-child(2) { animation-delay:.18s; }
+    .thinking-dots span:nth-child(3) { animation-delay:.36s; }
+    @keyframes thinkbob { 0%,60%,100% { transform:translateY(0); opacity:.4; } 30% { transform:translateY(-4px); opacity:.9; } }
+
+    /* 就地软编辑一条认知：整条变成可编辑输入行（回车即存 / Esc 取消）。 */
+    .ux-item .ux-edit { display:flex; gap:var(--sp-2); align-items:center; margin-top:2px; }
+    .ux-item .ux-edit input { flex:1; font:inherit; font-size:var(--fs-body); padding:7px 11px; border:1px solid var(--accent); border-radius:10px; background:var(--panel); box-shadow:0 0 0 3px var(--accent-ring); }
+    .ux-item .ux-edit .hint { font-size:var(--fs-xs); color:var(--muted); flex:0 0 auto; }
+
+    /* 聊天流里「记忆气泡」（S1）：淡色、居中细行，织进消息流表示"后台刚记住了什么"。 */
+    .mem-note { margin:var(--sp-3) 0; display:flex; justify-content:center; }
+    .mem-note .inner { max-width:88%; display:flex; align-items:flex-start; gap:8px; padding:8px 13px; font-size:var(--fs-sm);
+      color:var(--muted); background:var(--accent-soft); border:1px solid var(--accent-ring); border-radius:var(--radius); line-height:1.55; }
+    .mem-note .ic { flex:0 0 auto; color:var(--accent); font-size:13px; line-height:1.5; }
+    .mem-note .body { flex:1; }
+    .mem-note .lead { color:var(--accent); font-weight:600; }
+    .mem-note .txt { color:var(--fg); }
+    .mem-note .tag-unconfirmed { display:inline-block; font-size:var(--fs-xs); padding:1px 8px; margin-left:6px; border-radius:var(--radius-pill); background:var(--panel-2); border:1px solid var(--line); color:var(--muted); }
+    .mem-note .acts { margin-top:5px; display:flex; gap:4px; }
+    .mem-note .acts button { padding:2px 10px; font-size:var(--fs-xs); color:var(--muted); border-color:transparent; background:transparent; }
+    .mem-note .acts button:hover { background:var(--panel); border-color:var(--line); color:var(--fg); }
+    .mem-note .acts button.del:hover { color:var(--danger); border-color:var(--danger-soft); background:var(--danger-soft); }
+    .mem-note .ux-edit { margin-top:6px; display:flex; gap:6px; align-items:center; }
+    .mem-note .ux-edit input { flex:1; font:inherit; font-size:var(--fs-sm); padding:5px 9px; border:1px solid var(--accent); border-radius:8px; background:var(--panel); }
 
     /* ══════════════════════════════════════════════════════════════════
        配置向导（#mode-wizard）· 体验层阶段二 · 温暖清爽现代风
@@ -489,23 +574,30 @@
   </style>
 </head>
 <body>
+  <!-- SB1 左侧应用壳：新会话 / 会话列表 / 底部设置导航。fixed 覆左侧，body padding-left 让内容右移。 -->
+  <nav id="rail" aria-label="侧边导航">
+    <div class="rail-brand">MemoWeft</div>
+    <button class="accent-outline rail-new" onclick="resetSession()" title="开一段新对话；之前存下的记忆线索 / 经历 / 对你的了解都还在，只是清空当前对话窗口">＋ 新会话</button>
+    <div class="rail-sessions" id="railSessions"><div class="rail-empty">加载会话中…</div></div>
+    <div class="rail-foot">
+      <div class="rail-foot-title">设置</div>
+      <button class="rail-link" id="rail-nav-wizard" data-mode="wizard" onclick="applyMode('wizard')">⚙ 配置</button>
+      <button class="rail-link" id="rail-nav-memory" data-mode="memory" onclick="applyMode('memory')">🗂 记忆管理</button>
+      <button class="rail-link" id="rail-nav-dev" data-mode="developer" onclick="applyMode('developer')">🛠 调试</button>
+    </div>
+  </nav>
+
   <header>
     <h1>MemoWeft 测试台</h1>
-    <span class="sub">以"用户"身份用，右侧透视 MemoWeft 内部</span>
+    <span class="sub">以"用户"身份聊；「调试」里能看 MemoWeft 内部怎么想</span>
     <span class="spacer"></span>
     <span id="bgstatus" class="sub" title="它对你的了解在后台慢慢整理：聊完停手几秒就开始，要调模型、可能需要一会儿，但不挡你聊">后台：空闲</span>
+    <!-- S0 用户正门入口：安静胶囊「它记住我 N 件事 ›」。只在用户模式露出，点开右侧记忆抽屉。 -->
+    <button id="memPill" onclick="openMem()" title="看看它目前记住了我哪些事——可以随时改或删"><span id="memPillN">它记住我的事</span><span class="chev">›</span></button>
     <!-- 设置齿轮：仅开发者模式显示（CSS 控显隐）。点开右侧「设置」抽屉——参数旋钮/危险操作都收在里面。 -->
     <button id="btnSettings" class="icon-btn" onclick="openSettings()" title="设置：参数旋钮、恢复默认、恢复出厂都收在这里"><span class="gear">⚙</span>设置</button>
-    <button class="accent-outline" onclick="resetSession()" title="开一段新对话；之前存下的记忆线索 / 经历 / 对你的了解都还在，只是清空当前对话窗口">＋ 新会话</button>
   </header>
 
-  <!-- 模式切换器：三模式共壳的入口。点按钮 → applyMode 切换主体容器。 -->
-  <div class="modebar">
-    <button class="modebtn" id="modebtn-wizard" onclick="applyMode('wizard')">配置向导</button>
-    <button class="modebtn" id="modebtn-user" onclick="applyMode('user')">用户体验</button>
-    <button class="modebtn" id="modebtn-memory" onclick="applyMode('memory')">记忆管理</button>
-    <button class="modebtn" id="modebtn-dev" onclick="applyMode('developer')">开发者</button>
-  </div>
 
   <!-- 配置向导模式：4 步向导（对话模型 / 写路径小模型 / 向量模型 / 部署选项）→ 生成 .env 文本 -->
   <div id="mode-wizard">
@@ -682,14 +774,25 @@
     </div>
   </div>
 
-  <!-- 用户体验模式：给普通人的门面（叙事 + 两张友好只读卡片）。聊天区本身在下方 .wrap 里，user/dev 两模式都可见。 -->
-  <div id="mode-user">
-    <div class="ux" style="position:relative;">
-      <!-- 不显眼的小齿轮：点开只有一件事——「清空它对我的了解·重新开始」。软文案，复用 factory-reset。 -->
-      <button class="icon-btn ghost" style="position:absolute;top:0;right:var(--sp-5);" onclick="userSoftReset()" title="重新开始：让它忘掉目前对我的全部了解"><span class="gear">⚙</span></button>
-      <div class="ux-hero">
-        <h2>MemoWeft · 会慢慢记住你的那一层</h2>
-        <p>你像平时一样<span class="accent">聊天、随口提一点自己</span>，它就在旁边顺手一句句记下来、慢慢把这些拼成「它对你的了解」。不用填表、不用打标签——<span class="accent">聊着聊着，它就更接得上你说过的话</span>。</p>
+  <!-- 用户体验模式（S0 首屏归位）：正门 = 一屏聊天（下方 .wrap 聊天列）。
+       原来平铺首屏的 hero + 友好认知/事件卡，已移进右上「它记住我 N 件事 ›」入口开合的记忆抽屉（#memPanel）。
+       #mode-user 容器本身留空（CSS display:none），只作模式占位。 -->
+  <div id="mode-user"></div>
+
+  <!-- S0 记忆抽屉：右侧滑出，装「它对我的了解」（友好认知/事件卡）。由 #memPill 开、叉/Esc/点遮罩关。 -->
+  <div id="memMask" onclick="closeMem()"></div>
+  <aside id="memPanel" role="dialog" aria-modal="true" aria-label="它对我的了解">
+    <div class="sp-head">
+      <div>
+        <div class="sp-ttl"><span class="dot" style="width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);display:inline-block;"></span>它对我的了解</div>
+        <div class="sp-sub">聊着聊着顺手记下的——说得不对可以随时改或删</div>
+      </div>
+      <span class="spacer"></span>
+      <button class="sp-close" onclick="closeMem()" title="关闭">✕</button>
+    </div>
+    <div class="sp-body">
+      <div class="ux-hero" style="margin-bottom:var(--sp-5);">
+        <p style="text-align:left;max-width:none;">你像平时一样<span class="accent">聊天、随口提一点自己</span>，它就在旁边顺手一句句记下来、慢慢把这些拼成「它对你的了解」。不用填表、不用打标签——<span class="accent">聊着聊着，它就更接得上你说过的话</span>。</p>
       </div>
 
       <!-- 卡片一：MemoWeft 目前对我的了解（友好只读版画像） -->
@@ -700,7 +803,7 @@
         </div>
         <p class="ux-card-sub">这些是它从你说过的话里慢慢体会出来的。说得不对可以随时改，或者删掉。</p>
         <div id="uxCogList" class="ux-list">
-          <div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先在下面聊几句，它会慢慢记下你说的、开始拼出对你的了解。</div>
+          <div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先聊几句，它会慢慢记下你说的、开始拼出对你的了解。</div>
         </div>
       </div>
 
@@ -715,8 +818,13 @@
           <div class="ux-empty"><span class="big">🌱</span>还没有片段——聊上几句，这里就会长出内容。</div>
         </div>
       </div>
+
+      <!-- 抽屉底部：不显眼的「重新开始」（复用 factory-reset 的软文案入口）。 -->
+      <div class="sp-danger">
+        <button class="icon-btn ghost" onclick="userSoftReset()" title="重新开始：让它忘掉目前对我的全部了解"><span class="gear">⚙</span>重新开始 · 让它忘掉目前对我的全部了解</button>
+      </div>
     </div>
-  </div>
+  </aside>
 
   <!-- ══════════════════════════════════════════════════════════════════
        记忆管理模式（Phase 6-A）：让用户真正能管理记忆，而不是只能看开发者 JSON。
@@ -838,7 +946,7 @@
 
     <!-- 右：透视（整体归入"开发者"模式）。所有面板都放这里，仅 developer 模式显示。 -->
     <div class="col" id="mode-dev">
-      <h2>MemoWeft 透视区（实时 log）</h2>
+      <h2>MemoWeft 调试区（实时 log）</h2>
 
       <!-- 本轮内幕：收进可折叠壳（默认展开，可收起，让主区更清爽）。#xray 节点/ID 不变，renderXray 照旧往里写。 -->
       <details class="xray-acc" id="drawer-xray" open>
@@ -848,47 +956,47 @@
 
       <!-- 主区核心：用户画像（可展开）。整理/更新等手动操作已下沉到「开发者工具」，这里只留画像本体，看着清爽。 -->
       <details class="drawer" id="drawer-cognition" open>
-        <summary title="理解条目 = MemoWeft 对你形成的一条条认知（事实/偏好/目标/状态…），从经历片段里提炼出来、每条都能溯源到具体原话。">▾ 对你的了解（理解条目 cognition · 从经历片段提炼）</summary>
+        <summary title="理解条目 = MemoWeft 对你形成的一条条认知（事实/偏好/目标/状态…），从经历片段里提炼出来、每条都能溯源到具体原话。">▾ 对你的了解（从经历片段里提炼出的一条条理解）</summary>
         <div class="body">
-          <div id="coglist"><span class="empty">聊几句，后台会自动整理出对你的了解；也可在「开发者工具」里手动更新。</span></div>
+          <div id="coglist"><span class="empty">聊几句，后台会自动整理出对你的了解；也可在「调试工具」里手动更新。</span></div>
         </div>
       </details>
 
       <!-- 开发者工具：默认【收起】的次级折叠区。把手动调试操作（整理事件 / 更新画像 / 归因+主动询问 / 证据库）收进来，不平铺在主界面。 -->
       <details class="drawer" id="drawer-devtools">
-        <summary>▸ 开发者工具（整理记忆 / 猜测原因 / 记忆线索库 · 平时用不到）</summary>
+        <summary>▸ 调试工具（整理记忆 / 猜测原因 / 记忆线索库 · 平时用不到）</summary>
         <div class="body" style="padding-left:0;padding-right:0;">
 
           <details class="acc" id="drawer-events">
-            <summary><span class="chev">▸</span><span class="acc-ttl" title="经历片段 = 把零散的几句对话，总结成一段带前因后果的小情境（比一条条原话更好回看、也更好拿来提炼理解条目）。">经历片段（event）· 把近期对话整理成带情境的经历片段</span></summary>
+            <summary><span class="chev">▸</span><span class="acc-ttl" title="经历片段 = 把零散的几句对话，总结成一段带前因后果的小情境（比一条条原话更好回看、也更好拿来提炼理解条目）。">经历片段 · 把近期对话整理成带前因后果的小情境</span></summary>
             <div class="acc-body">
-              <button onclick="distillEvents()">整理成经历片段（distill）</button>
+              <button onclick="distillEvents()">整理成经历片段</button>
               <span id="diststatus" class="evmeta"></span>
               <div id="evtlist"><span class="empty">先聊几句，再点"整理成经历片段"。</span></div>
             </div>
           </details>
 
           <details class="acc" id="drawer-genprofile">
-            <summary><span class="chev">▸</span><span class="acc-ttl">对你的了解（profile）· 立即整理（不想等后台自动）</span></summary>
+            <summary><span class="chev">▸</span><span class="acc-ttl">对你的了解 · 立即整理（不想等后台自动）</span></summary>
             <div class="acc-body">
-              <button onclick="genProfile()">整理记忆（updateProfile）</button>
+              <button onclick="genProfile()">整理记忆</button>
               <span class="evmeta">（聊完停手几秒会【后台自动】整理；这个按钮 = 不想等、立刻触发。整理要调几次模型、可能需要一会儿，别指望点完立刻变聪明；整理完之后它在后续对话里会更容易想起相关内容。结果显示在上面「对你的了解」里）</span>
               <span id="genstatus" class="evmeta"></span>
             </div>
           </details>
 
           <details class="acc" id="drawer-attribution">
-            <summary><span class="chev">▸</span><span class="acc-ttl">猜测原因 + 想问你的问题（归因 attribution + 主动询问 asking · 阶段 3 · M4/M5）</span></summary>
+            <summary><span class="chev">▸</span><span class="acc-ttl">猜测原因 + 想问你的问题（从证据推测"为什么"，再挑该问你的）</span></summary>
             <div class="acc-body">
               <div style="margin-bottom:8px;">
-                <div class="evmeta" style="margin-bottom:4px;">① 注入观察线索（observed，如"游戏开到 3:30"）：</div>
+                <div class="evmeta" style="margin-bottom:4px;">① 注入观察线索（如"游戏开到 3:30"）：</div>
                 <input id="obsText" placeholder='例：昨晚游戏开到凌晨 3:30' style="width:100%;font:inherit;font-size:12.5px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;" />
                 <input id="obsWhen" placeholder='发生时间（可空，ISO，如 2026-06-23T03:30）' style="width:100%;margin-top:5px;font:inherit;font-size:12px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;" />
                 <button onclick="injectObserved()" style="margin-top:6px;">注入观察</button>
                 <span id="obsstatus" class="evmeta"></span>
               </div>
               <div style="margin-bottom:8px;">
-                <div class="evmeta" style="margin-bottom:4px;">①′ 注入活动窗口观察（observed · 4-A 多源感知）：</div>
+                <div class="evmeta" style="margin-bottom:4px;">①′ 注入活动窗口观察：</div>
                 <input id="awApp" placeholder='app 名，例：某游戏' style="width:100%;font:inherit;font-size:12.5px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;" />
                 <input id="awTitle" placeholder='窗口标题（可空），例：战斗' style="width:100%;margin-top:5px;font:inherit;font-size:12px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;" />
                 <input id="awDur" type="number" placeholder='停留多久（分钟），例：50' style="width:100%;margin-top:5px;font:inherit;font-size:12px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;" />
@@ -898,8 +1006,8 @@
                 <span id="awstatus" class="evmeta"></span>
               </div>
               <div style="margin-bottom:8px;">
-                <div class="evmeta" style="margin-bottom:4px;">② 猜测原因 M4（归因 attribute；点"整理记忆"时已自动跑；此按钮=手动再触发一次）：</div>
-                <button onclick="runAttribute()">猜测原因（attribute）</button>
+                <div class="evmeta" style="margin-bottom:4px;">② 猜测原因（从证据推测"为什么"；点"整理记忆"时已自动跑，这个按钮=手动再触发一次）：</div>
+                <button onclick="runAttribute()">猜测原因</button>
                 <span id="attrstatus" class="evmeta"></span>
                 <div id="hypolist"></div>
               </div>
@@ -913,9 +1021,9 @@
           </details>
 
           <details class="acc" id="drawer-evidence">
-            <summary><span class="chev">▸</span><span class="acc-ttl">记忆线索库（evidence · 查看 / 改 / 删 / 原始 JSON）</span></summary>
+            <summary><span class="chev">▸</span><span class="acc-ttl">记忆线索库（查看 / 改 / 删 / 原始 JSON）</span></summary>
             <div class="acc-body">
-              <button onclick="loadEvidence()">刷新记忆线索（evidence）</button>
+              <button onclick="loadEvidence()">刷新记忆线索</button>
               <div id="evlist"><span class="empty">点"刷新记忆线索"加载。</span></div>
             </div>
           </details>
@@ -967,7 +1075,7 @@
       <p class="sp-intro">这里相当于<b>把配置文件图形化了</b>。参数按用途分成几类、默认折叠——点开哪类调哪类，改一下即时生效。底部是「危险操作」，平时别碰。</p>
 
       <!-- 参数旋钮：renderCfgKnobs 直接把 47 项按 group 渲进 #cfgKnobs，每个 group 包成一个默认折叠的 <details class="acc">。 -->
-      <div id="cfgKnobs"><span class="empty">进入开发者模式后加载…</span></div>
+      <div id="cfgKnobs"><span class="empty">进入「调试」后加载…</span></div>
 
       <!-- 备份 / 迁移（Phase 5-B）：导出记忆包（下载 JSON）/ 导入记忆包（先试算 dryRun 展示计划，确认后 merge 合并）。
            纯只读导出 + 合并导入，不删数据；非法包会显眼报错、且不让走 merge。 -->
@@ -1003,7 +1111,7 @@
         <div class="danger-zone" style="margin-top:var(--sp-2);">
           <div class="dz-title">⚠ 恢复出厂 · 清空全部数据</div>
           <div class="dz-desc">
-            永久删除 MemoWeft 攒下的<b>全部数据</b>：你说过的原话（记忆线索 evidence）、整理出的经历片段（event）、以及它对你形成的理解（理解条目 cognition），连同检索索引一起清空。<br>
+            永久删除 MemoWeft 攒下的<b>全部数据</b>：你说过的原话、整理出的经历片段、以及它对你形成的理解，连同检索索引一起清空。<br>
             和上面的「恢复默认参数」<b>互不相干</b>——那个只还原旋钮、不碰数据；这个只清数据、不动参数。<b>不可恢复。</b>
           </div>
           <button class="danger" onclick="factoryReset()">恢复出厂 · 清空全部数据</button>
@@ -1072,6 +1180,11 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('confi
 // _mode 取值：'wizard' | 'user' | 'developer'。body 上挂 mode-xxx 类，CSS 据此显隐各容器（见 <style>）。
 // 每模式留一个"进入钩子"，第 2/3 块往里填初始化逻辑；这里先定义成空函数占位，applyMode 里择一调用。
 window._mode = null;
+
+// SB3 会话隔离：后端当前会话 id（loadSessions/openSessionUI 更新）；进开发者模式前记下的用户会话。
+let _currentSessionId = null;
+let _beforeDevSession = null;         // 进 dev 前用户所在会话（离开 dev 时切回它）
+const DEV_SESSION_KEY = 'mwDevSession'; // localStorage：开发者专属会话 id
 
 // ══════════════════════════════════════════════════════════════════
 // 配置向导（体验层阶段二）：4 步引导 → 生成 .env 文本。全部纯 vanilla JS。
@@ -1261,6 +1374,95 @@ function applyUserHide(on){
   if (xray) xray.style.display = on ? 'none' : '';
 }
 
+// ── S0 记忆抽屉：右上「它记住我 N 件事 ›」入口开合（复用 settings 抽屉的滑入模式）──
+function openMem(){
+  const mask = $('memMask'), panel = $('memPanel');
+  if (!mask || !panel) return;
+  mask.classList.add('show'); panel.classList.add('show');
+  // 打开时补拉一次友好版画像/事件，保证抽屉里是最新的（首屏不再自动铺，改成打开时确保有内容）。
+  if (typeof loadCognitionFriendly === 'function') loadCognitionFriendly();
+  if (typeof loadEventsFriendly === 'function') loadEventsFriendly();
+}
+function closeMem(){
+  const mask = $('memMask'), panel = $('memPanel');
+  if (mask) mask.classList.remove('show');
+  if (panel) panel.classList.remove('show');
+}
+// 更新胶囊上的计数「它记住我 N 件事」：N = 当前有效认知条数（已失效不算）。_cog 由 loadCognitionFriendly/loadCognition 填。
+function updateMemPillCount(){
+  const el = $('memPillN'); if (!el) return;
+  const n = (_cog || []).filter(c => !c.invalidAt).length;
+  el.textContent = n > 0 ? ('它记住我 ' + n + ' 件事') : '它还没记住什么';
+}
+
+// ── 友好版·就地软编辑一条认知（替代浏览器 prompt）：只把 .txt 换成输入框，回车存 / Esc / 点走取消 ──
+// btnEl 用来定位所在卡片（.ux-item 友好卡 或 .mem-note 记忆气泡，两者都有 .txt）。
+function softEditCog(id, btnEl){
+  const host = btnEl && btnEl.closest('.ux-item, .mem-note'); if (!host) return;
+  const txtEl = host.querySelector('.txt'); if (!txtEl) return;
+  const orig = txtEl.textContent;
+  let finished = false;
+  txtEl.innerHTML = '';
+  const inp = document.createElement('input');
+  inp.value = orig;
+  inp.style.cssText = 'width:100%;font:inherit;padding:5px 9px;border:1px solid var(--accent);border-radius:8px;background:var(--panel);box-shadow:0 0 0 3px var(--accent-ring);';
+  txtEl.appendChild(inp); inp.focus(); inp.select();
+  const restore = () => { if (finished) return; finished = true; txtEl.textContent = orig; };
+  inp.addEventListener('blur', restore);
+  inp.addEventListener('keydown', async (e) => {
+    if (e.key === 'Escape') { restore(); return; }
+    if (e.key !== 'Enter') return;
+    const v = inp.value.trim();
+    if (!v) { toast('内容不能为空，未修改', 'warn'); restore(); return; }
+    if (v === orig) { restore(); return; }
+    finished = true; // 抢在 blur 前占位，避免保存后 blur 又把内容还原
+    try {
+      const r = await fetch('/api/cognition/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id, content: v }) }).then(x => x.json());
+      if (r.error || !r.updated) { toast('改失败：' + (r.error || '这条已不存在'), 'danger'); txtEl.textContent = orig; return; }
+    } catch(err) { toast('改失败：' + String(err), 'danger'); txtEl.textContent = orig; return; }
+    txtEl.textContent = v; toast('已改', 'ok'); updateMemPillCount(); refreshCognition();
+  });
+}
+
+// 友好版·软删一条认知（替代浏览器 confirm，用现有 showConfirm 温柔弹层）。
+function softDelCog(id){
+  showConfirm({
+    icon: '🗑', title: '删掉这条？', okText: '删掉', okKind: 'danger',
+    bodyHtml: '删了就没了。其实想让它别再算数的话不必删——<b>聊天里纠正一句，它会自己更新</b>。',
+    onOk: async () => {
+      try {
+        const r = await fetch('/api/cognition/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) }).then(x => x.json());
+        if (r.error || !r.removed) { toast('删失败：' + (r.error || '这条已不存在'), 'danger'); }
+        else toast('已删掉', 'ok');
+      } catch(e) { toast('删失败：' + String(e), 'danger'); }
+      refreshCognition(); updateMemPillCount();
+    },
+  });
+}
+
+// ── S1 记忆气泡：后台消化出新认知时，就地织进聊天流「记住了：X · 还没确认 · 改/删」──
+const _weavedNoteIds = new Set(); // 同一条只织一次
+function weaveMemNote(c){
+  if (!c || !c.id || _weavedNoteIds.has(c.id)) return;
+  _weavedNoteIds.add(c.id);
+  const chat = $('chat'); if (!chat) return;
+  const low = c.credStatus === 'candidate' || c.credStatus === 'low'; // 低置信 → 标「还没确认」
+  const note = document.createElement('div'); note.className = 'mem-note';
+  const inner = document.createElement('div'); inner.className = 'inner';
+  const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = '●';
+  const body = document.createElement('div'); body.className = 'body';
+  const lead = document.createElement('span'); lead.className = 'lead'; lead.textContent = '记住了：';
+  const txt = document.createElement('span'); txt.className = 'txt'; txt.textContent = c.content; // textContent 防注入
+  body.append(lead, txt);
+  if (low){ const tag = document.createElement('span'); tag.className = 'tag-unconfirmed'; tag.textContent = '还没确认'; body.append(tag); }
+  const acts = document.createElement('div'); acts.className = 'acts';
+  const bEdit = document.createElement('button'); bEdit.textContent = '改'; bEdit.onclick = () => softEditCog(c.id, bEdit);
+  const bDel = document.createElement('button'); bDel.className = 'del'; bDel.textContent = '删'; bDel.onclick = () => softDelCog(c.id);
+  acts.append(bEdit, bDel); body.append(acts);
+  inner.append(ic, body); note.append(inner);
+  chat.append(note); chat.scrollTop = chat.scrollHeight;
+}
+
 // 按当前模式刷新画像：user→友好只读版，dev→开发者原版。
 // 改/删认知后统一走这里，避免在 user 模式误调 loadCognition 渲染进开发者的 #coglist。
 function refreshCognition(){
@@ -1279,9 +1481,10 @@ async function loadCognitionFriendly(){
     list = (await fetch('/api/cognition').then(x=>x.json())).cognition || [];
   } catch(e){ /* 拉取失败：保持现状，不弹错吓用户 */ return; }
   _cog = list; // 与开发者版共用 _cog（editCog/delCog 靠它按 id 找当前 content）
+  updateMemPillCount(); // 刷右上胶囊「它记住我 N 件事」（空列表/正常两条路径都覆盖）
   const live = list.filter(c => !c.invalidAt); // 已失效的不给普通用户看
   if (!live.length){
-    box.innerHTML = '<div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先在下面聊几句，它会慢慢记下你说的、开始拼出对你的了解。</div>';
+    box.innerHTML = '<div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先聊几句，它会慢慢记下你说的、开始拼出对你的了解。</div>';
     return;
   }
   box.innerHTML = live.map(c =>
@@ -1290,8 +1493,8 @@ async function loadCognitionFriendly(){
       '<div class="foot">'+
         '<span class="ux-tag">'+esc(TYPE_CN[c.contentType]||c.contentType||'')+'</span>'+
         '<span class="spacer"></span>'+
-        '<button onclick="editCog(\''+c.id+'\')">这条说得不对，改一下</button>'+
-        '<button class="del" onclick="delCog(\''+c.id+'\')">删掉这条</button>'+
+        '<button onclick="softEditCog(\''+c.id+'\', this)">这条说得不对，改一下</button>'+
+        '<button class="del" onclick="softDelCog(\''+c.id+'\')">删掉这条</button>'+
       '</div>'+
     '</div>'
   ).join('');
@@ -1374,17 +1577,23 @@ function onEnterDeveloper(){
   loadEvents();
 }
 function applyMode(mode){
+  const prevMode = window._mode; // SB3：记下切换前模式，判断是否"从开发者离开"（要切回用户会话）
   // 归一化：CSS 类用 mode-wizard/mode-user/mode-memory/mode-dev（dev 是 developer 的简写）。
   const bodyClass = mode === 'developer' ? 'mode-dev' : ('mode-' + mode);
   document.body.classList.remove('mode-wizard','mode-user','mode-memory','mode-dev');
   document.body.classList.add(bodyClass);
-  // 切换器按钮高亮
-  ['wizard','user','memory','dev'].forEach(k => { const b = $('modebtn-'+k); if (b) b.classList.remove('active'); });
-  const activeBtn = $('modebtn-' + (mode === 'developer' ? 'dev' : mode));
-  if (activeBtn) activeBtn.classList.add('active');
+  // SB1：导航高亮从顶部 modebar 挪到左侧栏 #rail 的 .rail-link（按 data-mode 匹配）。
+  // user 模式是默认聊天态、不在 rail 导航里，故此时所有 rail-link 都不高亮（符合预期）。
+  document.querySelectorAll('#rail .rail-link').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-mode') === mode);
+  });
   window._mode = mode;
   // 离开开发者模式时顺手收起设置抽屉（设置只在开发者模式有意义）。
   if (mode !== 'developer' && typeof closeSettings === 'function') closeSettings();
+  // SB3 会话隔离：进 dev → 切到开发者专属会话；从 dev 离开 → 切回进入前的用户会话。
+  //   两者都是异步切会话（fetch），失败不阻断模式切换（内部各自 try/catch）。
+  if (mode === 'developer' && prevMode !== 'developer' && typeof enterDevSession === 'function') enterDevSession();
+  if (prevMode === 'developer' && mode !== 'developer' && typeof leaveDevSession === 'function') leaveDevSession();
   // 进入钩子：仅当对应钩子已定义成函数才调（第 2/3 块填实现时无需改这里）。
   if (mode === 'wizard' && typeof onEnterWizard === 'function') onEnterWizard();
   if (mode === 'user' && typeof onEnterUser === 'function') onEnterUser();
@@ -1485,30 +1694,159 @@ async function send(){
   if (!text) return;
   el.value = ''; el.disabled = true; _sending = true;
   addMsg('user', text);
+  // 「思考中…」：立刻冒一个助手侧三点起伏气泡占位，回复到了原位替换（别让人对着空白猜它死没死）。
+  const thinking = document.createElement('div');
+  thinking.className = 'msg dla thinking';
+  thinking.innerHTML = '<div class="bubble"><span class="thinking-dots"><span></span><span></span><span></span></span></div>';
+  $('chat').appendChild(thinking); $('chat').scrollTop = $('chat').scrollHeight;
+  const settle = (html) => { thinking.classList.remove('thinking'); thinking.innerHTML = '<div class="bubble">' + html + '</div>'; $('chat').scrollTop = $('chat').scrollHeight; };
   try {
     const res = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
     const d = await res.json();
-    if (d.error){ addMsg('dla', '出错：' + d.error); }
+    if (d.error){ settle(esc('出错：' + d.error)); }
     else {
-      addMsg('dla', d.record.reply);
+      settle(esc(d.record.reply));
       if (d.record && d.record.turn != null) _renderedTurns.add(d.record.turn); // 手动发的记下 turn，避免 pollChat 重复渲染
       renderXray(d.record);
       if (d.logFile) $('logfile').textContent = d.logFile;
+      loadSessions(); // SB2：发出首句后本会话才进列表（空会话被后端过滤），顺手刷新+更新轮数/高亮
     }
-  } catch(e){ addMsg('dla', '请求失败：' + String(e)); }
+  } catch(e){ settle(esc('没连上，你的话已经存下了，稍后再试试。')); }
   finally { el.disabled = false; el.focus(); _sending = false; }
 }
 
 async function resetSession(){
   try {
-    await fetch('/api/reset', {method:'POST'});
+    const r = await fetch('/api/reset', {method:'POST'}).then(x=>x.json());
     _renderedTurns.clear();
+    _currentSessionId = r.sessionId || null;  // SB3：更新当前会话，避免 leaveDevSession 误判成"停在 dev 会话"
+    _beforeDevSession = null;                  // SB3：用户明确开新会话，取消"回 dev 前会话"的记忆
     $('chat').innerHTML = '';
     $('xray').innerHTML = '<div class="empty" style="padding:8px 0;">已新开会话。</div>';
+    // SB2：新会话建好后保持在用户模式（若当前在别的模式，回到聊天正门），并刷新左侧会话列表。
+    if (window._mode !== 'user') applyMode('user');
+    loadSessions();
     toast('已开新会话，之前存下的数据（记忆线索 / 经历片段 / 对你的了解）都还在', 'ok');
   } catch(e){
     toast('新会话失败：'+String(e), 'danger');
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SB2 会话列表：左侧栏 #railSessions 渲染磁盘上所有会话，点一条续聊历史。
+// 后端契约（server.mjs，只调不改）：
+//   GET  /api/sessions        → { sessions:[{sessionId,mtime,turnCount,preview,live,current}], currentId }
+//   POST /api/session/open{id} → { ok, sessionId, turns:[{turn,userInput,reply}] }
+// ══════════════════════════════════════════════════════════════════
+async function loadSessions(){
+  const host = $('railSessions'); if (!host) return;
+  try {
+    const d = await fetch('/api/sessions').then(x => x.json());
+    _currentSessionId = d.currentId || _currentSessionId; // 记住后端当前会话（SB3 切回用户会话用）
+    let list = d.sessions || [];
+    if (typeof filterDevSession === 'function') list = filterDevSession(list); // SB3：把开发者专属会话从用户列表滤掉
+    if (!list.length){ host.innerHTML = '<div class="rail-empty">还没有对话。发一句话，或点上面「＋新会话」开始。</div>'; return; }
+    host.innerHTML = '';
+    for (const s of list){
+      const item = document.createElement('div');
+      item.className = 'sess-item' + (s.current ? ' current' : '');
+      const prev = (s.preview || '').trim() || '（空对话）';
+      item.innerHTML = '<div class="sess-prev"></div><div class="sess-meta">' + (s.turnCount||0) + ' 轮</div>';
+      item.querySelector('.sess-prev').textContent = prev; // textContent 防 XSS（preview 是用户原话）
+      item.title = prev;
+      item.onclick = () => openSessionUI(s.sessionId);
+      const arch = document.createElement('button');
+      arch.className = 'sess-arch'; arch.textContent = '归档';
+      arch.title = '归档这段对话（从列表收起，数据不删、可恢复）';
+      arch.onclick = (e) => { e.stopPropagation(); archiveSession(s.sessionId); }; // 别触发打开会话
+      item.appendChild(arch);
+      host.appendChild(item);
+    }
+  } catch(e){ host.innerHTML = '<div class="rail-empty">会话列表加载失败，稍后自动重试。</div>'; }
+}
+
+// 归档一条会话（软移除：从列表收起，数据不删、可恢复）。归档当前会话时后端会新开一段。
+async function archiveSession(id){
+  try {
+    const r = await fetch('/api/session/archive', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})}).then(x=>x.json());
+    if (r.error){ toast('归档失败：'+r.error, 'danger'); return; }
+    if (r.archivedCurrent){ // 归档的是当前会话 → 后端已新开一段，前端清空聊天窗口
+      _currentSessionId = r.currentId || null; _renderedTurns.clear();
+      if ($('chat')) $('chat').innerHTML = '';
+    }
+    toast('已归档（数据没删，可恢复）', 'ok');
+    loadSessions();
+  } catch(e){ toast('归档失败：'+String(e), 'danger'); }
+}
+
+// 打开一条会话：切当前 + 用返回的 turns 重渲聊天流。
+// opts.toUser（默认 true）：切完回用户聊天正门。SB3 切开发者专属会话时传 false（保持 dev 模式）。
+async function openSessionUI(id, opts){
+  const toUser = !opts || opts.toUser !== false;
+  try {
+    const d = await fetch('/api/session/open', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})}).then(x=>x.json());
+    if (d.error){ toast('打开会话失败：'+d.error, 'danger'); return; }
+    _renderedTurns.clear();
+    _currentSessionId = d.sessionId || id;
+    $('chat').innerHTML = '';
+    if ($('xray')) $('xray').innerHTML = '<div class="empty" style="padding:8px 0;">已切到这段对话；发一句话看本轮内幕。</div>';
+    for (const t of (d.turns || [])){
+      if (t.turn != null) _renderedTurns.add(t.turn); // 记下已渲染 turn，避免 pollChat 重复渲染
+      addMsg('user', t.userInput);
+      if (t.reply) addMsg('dla', t.reply);
+    }
+    if (toUser) applyMode('user');   // 回到聊天正门
+    loadSessions();      // 刷新高亮（current 变了）
+  } catch(e){ toast('打开会话失败：'+String(e), 'danger'); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SB3 开发者会话隔离：开发者模式用一个专属会话（localStorage: mwDevSession），
+// 让开发者联调的聊天不跟用户的会话混。用户会话列表里把这个 dev 会话滤掉。
+// 后端"当前会话"是全局单一的：进 dev → 切到 dev 会话；回 user → 切回进入前的用户会话。
+// ══════════════════════════════════════════════════════════════════
+function getDevSessionId(){ try { return localStorage.getItem(DEV_SESSION_KEY) || null; } catch(e){ return null; } }
+function setDevSessionId(id){ try { localStorage.setItem(DEV_SESSION_KEY, id); } catch(e){} }
+
+// loadSessions 的钩子（SB2 已留 typeof 保护）：把 dev 专属会话从用户列表滤掉。
+function filterDevSession(list){
+  const dev = getDevSessionId();
+  if (!dev) return list;
+  return list.filter(s => s.sessionId !== dev);
+}
+
+// 进开发者模式：切到（没有就先建）dev 专属会话，保持 dev 模式渲染其聊天流。
+async function enterDevSession(){
+  // 记下进入前用户所在会话，便于回 user 时切回（避免把用户留在 dev 会话里）。
+  // 注意：applyMode 调本函数前已把 window._mode 改成了 'developer'，所以【不能】再按 _mode 守卫
+  // （那样守卫恒假、记账丢失）。applyMode 的调用点已用 prevMode≠developer 保证只在真进入 dev 时调，直接记账即可。
+  _beforeDevSession = _currentSessionId;
+  let dev = getDevSessionId();
+  try {
+    if (!dev){
+      // 没有 dev 会话：新建一个（保留旧的用户会话），存 localStorage。reset 后后端当前已是它。
+      const r = await fetch('/api/reset', {method:'POST'}).then(x=>x.json());
+      dev = r.sessionId; if (dev) setDevSessionId(dev);
+      _renderedTurns.clear(); _currentSessionId = dev;
+      if ($('chat')) $('chat').innerHTML = '';
+      loadSessions();
+    } else {
+      // 已有 dev 会话：切到它并渲染历史，但不切回 user 模式（保持在 developer）。
+      await openSessionUI(dev, { toUser:false });
+    }
+  } catch(e){ /* dev 会话建/切失败：不阻断进 dev，退化为共用当前会话 */ }
+}
+
+// 离开开发者模式回用户：切回进入 dev 前记下的用户会话（若有且不是当前）。
+async function leaveDevSession(){
+  const dev = getDevSessionId();
+  // 仅当当前正停在 dev 会话上、且记得进入前的用户会话时，才切回。
+  if (_beforeDevSession && dev && _currentSessionId === dev && _beforeDevSession !== dev){
+    // 只把【后端当前会话】切回用户会话，不强改前端模式——否则 dev→记忆管理/配置 会被这一下弹回聊天正门。
+    // （dev→user 时 _currentSessionId 已由 openSessionUI/resetSession 切成非 dev，本 switch 不触发，故 toUser 取 false 安全。）
+    await openSessionUI(_beforeDevSession, { toUser:false });
+  }
+  _beforeDevSession = null;
 }
 
 // ── 恢复出厂 · 清空全部数据（二次确认 → POST /api/factory-reset → 刷新各视图）──
@@ -1519,7 +1857,7 @@ function factoryReset(){
     title: '恢复出厂 · 清空全部数据？',
     okText: '我确定，永久删除',
     okKind: 'danger',
-    bodyHtml: '这会永久删除 MemoWeft 攒下的<b>所有数据</b>：<br>· 你说过的<b>原话</b>（记忆线索 evidence）<br>· 整理出的<b>经历片段</b>（event）<br>· 它对你形成的<b>理解</b>（理解条目 cognition）<br>· 以及检索索引<br><br>参数旋钮不受影响（那是「恢复默认参数」管的）。',
+    bodyHtml: '这会永久删除 MemoWeft 攒下的<b>所有数据</b>：<br>· 你说过的<b>原话</b><br>· 整理出的<b>经历片段</b><br>· 它对你形成的<b>理解</b><br>· 以及检索索引<br><br>参数旋钮不受影响（那是「恢复默认参数」管的）。',
     warnLine: '删除后无法恢复，请确认这不是误操作。',
     onOk: doFactoryReset,
   });
@@ -2444,9 +2782,11 @@ async function pollBg(){
       _lastBgAt = s.last.at;
       if (!first) {
         loadCognition(); loadEvents();               // 开发者版面板（dev 模式在看）
-        if (window._mode === 'user') {               // 用户体验模式：刷友好版 + 自然发问一次
+        loadSessions();                              // SB2：后台整理完 mtime/轮数会变，顺手刷左侧会话列表
+        if (window._mode === 'user') {               // 用户体验模式：刷友好版 + 织记忆气泡 + 自然发问一次
           loadCognitionFriendly();
           loadEventsFriendly();
+          if (Array.isArray(s.last.newCognitions)) for (const c of s.last.newCognitions) weaveMemNote(c); // S1：新理解织进聊天流
           maybeAskInChat();
         }
         if (window._mode === 'memory') mmLoad();     // 记忆管理页：后台整理完自动刷新列表/详情
@@ -2497,7 +2837,29 @@ setInterval(pollChat, 2000);
 pollSeed(); pollChat();
 
 // 默认进"开发者"模式（方便联调：透视区所有面板可见）。
-applyMode('developer');
+applyMode('user'); // 方案A：正门 = 用户房间（原默认是 developer）。
+loadSessions();    // SB2：启动即拉一次左侧会话列表。
+
+// S3 首启门：没配模型时的常驻提示条（去配置 / 先逛逛）。配好重启后自然消失。
+function showNoModelBanner(){
+  if ($('noModelBanner')) return;
+  const b = document.createElement('div');
+  b.id = 'noModelBanner';
+  b.style.cssText = 'position:sticky;top:0;z-index:60;background:#fbe7c9;color:#8a5a00;border-bottom:1px solid #eaca8a;padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:12px;justify-content:center;';
+  const msg = document.createElement('span'); msg.textContent = '还没配置模型，聊天暂时不可用。';
+  const go = document.createElement('button'); go.textContent = '去配置'; go.style.cssText = 'padding:2px 12px'; go.onclick = () => applyMode('wizard');
+  const skip = document.createElement('button'); skip.textContent = '先逛逛'; skip.style.cssText = 'padding:2px 12px'; skip.onclick = () => { document.body.classList.remove('gate'); applyMode('user'); };
+  b.append(msg, go, skip);
+  document.body.insertBefore(b, document.body.firstChild);
+}
+// S3 首启门：没配模型 → 向导全屏（body.gate 藏左侧栏 + 内容不右移）+ 挂提示条；
+// 配了 → 去掉 gate、留在用户房间（左侧栏可见）。探测失败就当已配，别把人挡门外。
+(async function initGate(){
+  try {
+    const h = await fetch('/api/health').then(x => x.json());
+    if (!h.llmReady) { document.body.classList.add('gate'); applyMode('wizard'); showNoModelBanner(); }
+  } catch(e) { /* 探测失败 → 不拦 */ }
+})();
 </script>
 </body>
 </html>

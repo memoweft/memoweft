@@ -117,6 +117,16 @@ export class RunLogger {
     this.opts = opts;
     if (!existsSync(opts.dir)) mkdirSync(opts.dir, { recursive: true });
     this.file = join(opts.dir, `run-${opts.sessionId}.jsonl`);
+    // 续聊（S4b）：重开一个已存在会话的 logger 时，接着已有轮号往下写——否则新轮从 1 起、与历史轮号撞车，
+    // 前端按轮号去重会把新消息误当"已渲染"而漏显。只认对话轮（profile_update 不占轮号）。
+    if (existsSync(this.file)) {
+      try {
+        for (const l of readFileSync(this.file, 'utf8').split('\n').filter(Boolean)) {
+          const r = JSON.parse(l);
+          if (r && r.kind !== 'profile_update' && typeof r.turn === 'number') this.turn = Math.max(this.turn, r.turn);
+        }
+      } catch { /* 有损坏行就尽力而为 */ }
+    }
   }
 
   /** 追加一轮对话内幕；缺省字段补成空值，返回写入的完整记录。 */

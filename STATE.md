@@ -21,15 +21,15 @@
 - **召回** `src/retrieval/`：`Retriever` 接口；`VectorRetriever(dbPath,embedder)` / `NullRetriever`；`OpenAICompatEmbedder` + `loadEmbedConfig()`（缺配返回 null）。召回门控：跳过失效认知 + 有效置信 < `minEffectiveConfidence`(80) 不注入。
 - **归因 / 主动询问**：`attribute` 产低置信 hypothesis；`proposeAsk` 挑低置信假设；`revisitConflicts` 复看冲突认知。宿主决定是否开口和怎么问。
 - **周期后台 4-B**：`effectiveConfidence`（读时衰减）、`expire`（临时类过期）、`aggregateTrends`（近 14 天 state 聚趋势）。
-- **会话编排** `src/pipeline/conversation.ts` → `new Conversation({store,retriever,cognitionStore,llm})`，`handle(msg,opts)→TurnOutcome{reply,storedEvidence,recall,llmCalls,error}`。
+- **会话编排** `src/pipeline/conversation.ts` → `new Conversation({store,retriever,cognitionStore,llm,seedTurns?,systemPrompt?})`（`seedTurns`=打开旧会话把最近几轮种回窗口续聊；`systemPrompt`=宿主注入人设，缺省库内最朴素提示，cell 9 语气/角色归宿主），`handle(msg,opts)→TurnOutcome{reply,storedEvidence,recall,llmCalls,error}`。`RunLogger` 重开已存在会话 logger 时轮号接着历史往下。
 - **LLM / env**：`loadLLMPool()` / `LLMPool.for('chat'|'write')`；先读 `MEMOWEFT_*`，回退 `DLA_*`。默认文档推荐云端 OpenAI-compatible；本地 Ollama/LM Studio 仍可作为 endpoint。
 - **便携记忆包（Phase 5-A）** `src/portable/` → `exportBundle(subjectId,{evidenceStore,eventStore,cognitionStore},opts?)→MemoryBundle` ｜ `validateBundle(bundle)→{valid,errors,warnings}`（结构+引用完整性；致命 vs 软告警分级）｜ `importBundle(bundle,{...三 store,transaction?},{mode:'dryRun'|'merge'})→ImportPlan`。保真（保留原 id 与全部时间戳）、按 id/originId 幂等去重、非法包不写库、可选事务防污染。为此三个 store 各新增 `insert()`（按原 id 原样落库，导出的对偶）。不含向量索引（导入后 `retriever.indexAll` 重建）。
 - **图谱视图（Phase 6-B · G1）** `src/graph/` → `buildMemoryGraph(subjectId,{evidenceStore,eventStore,cognitionStore},opts?)→MemoryGraphPayload{nodes,edges,stats}`。节点 subject/evidence/event/cognition；边 belongs_to_subject/distilled_into/supports/contradicts（conflicts_with/corrects 数据未存 → V1 不产，冲突/失效靠节点 credStatus/invalidAt 体现）。筛选 includeEvidence/includeInvalid/contentType/credStatus/sourceKind/onlyCloudBlocked/onlyConflicts/onlyHypotheses/q。**仅 payload；API `/api/memory-graph` + 前端力导向图（G2/G3）待接。**
 - **真·活动窗口采集（8-A 档2）** `src/perception/collectors/` → `createActiveWindowCollector({sampler,onEmit,...})→{start,pause,resume,stop,tick}`（连续相同合并、≥`config.activeWindowCollector.minDurationSec` 才产出、时钟/定时器可注入）+ `sampleForegroundWindowWin32()`（PowerShell P/Invoke，双向 base64 防乱码，仅 Windows）。独立运行器 `npm run collector` → 投喂 `/api/observe-window`（observed 不上云默认不动）。
-- **测试台** `testbench/`：聊天 + 透视 + 事件/画像 + 归因/主动询问 + 活动窗口注入 + 开发者抽屉 + 备份/迁移（5-B）+ **记忆管理 tab（6-A：筛选/列表/详情/溯源反查/改删/标失效/云端授权开关）**；`npm run testbench` → `:7888`。
+- **测试台** `testbench/`（**体验层 V3 应用壳**）：左侧栏（＋新会话 / 会话列表·点开续聊·hover 可归档 / 设置组[配置·记忆管理]+调试）+ 聊天正门（思考中动效 + 记忆气泡"记住了…"就地织进对话 + 右上「它记住我 N 件事」抽屉）+ 首启门（没配模型先向导）+ 调试区（原透视/47旋钮/证据库/整理记忆/猜测原因，平时收起）+ 备份迁移(5-B) + 记忆管理(6-A)。多会话后端：`/api/sessions`、`/api/session/open`(续聊)、`/api/session/archive`(软移除·加 .archived·数据不删)、`/api/health`。`npm run testbench` → `:7888`。
 
 ## 命令
-`npm run typecheck` ｜ `npm test`（104 过）｜ `npm run build` ｜ `npm run testbench` ｜ `npm run collector`
+`npm run typecheck` ｜ `npm test`（108 过）｜ `npm run build` ｜ `npm run testbench` ｜ `npm run collector`
 
 ## 进行中任务断点
 （无）

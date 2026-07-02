@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-07-02 · 体验层 V3（方案A）：测试台改成"以人为正门"的应用壳
+
+**起因**：把测试台从"顶部四 tab 调试台"改成"聊天为中心的应用"。四视角(开发者/用户/软件/简单网页)论证后收敛为方案A——用户房间当正门、渐进展开、开发者另成一室。设计口径见记忆 [[memoweft-experience-layer]]。
+
+**做了什么（分片，每片三绿）**
+- **S4a** `Conversation.seedTurns`（续聊地基）+ `systemPrompt` 宿主可注入。修 dogfood 坑：素提示下大模型说"我不保留记忆/聊完就忘"、否定 MemoWeft 价值——按 cell 9(语气/角色归宿主)把系统提示做成宿主可注入，库默认不变、测试台注入 MemoWeft-aware 人设。
+- **S0** 首屏归位：聊天成正门，「它对我的了解」收进右上「它记住我 N 件事」抽屉；思考中三点动效；友好版改删就地软编辑（弃浏览器弹框）。
+- **S1** 记忆气泡：后台消化出新理解 → 聊天流里就地「记住了：X · 还没确认 · 改/删」（管理即对话）；server `bgLast` 带 `newCognitions`。
+- **S3** 首启门：`/api/health` 判模型配没配，没配→向导（带"先逛逛"出口 + 黄条）。
+- **S4b** 多会话：`sessions` Map，`+新会话`不销毁旧的；`/api/sessions`(列表)、`/api/session/open`(seedTurns 续聊)、`/api/session/archive`(软移除·日志加 .archived·数据不删可恢复)；`RunLogger` 重开会话轮号续写（防撞号漏显）。
+- **前端应用壳**：拆四 tab → 左侧固定 `#rail`（新会话/会话列表/设置组[配置·记忆管理]+调试）；开发者会话单开、不与用户混。
+- **改名+洗黑话**：开发者→调试、透视区→调试区；清掉调试面板里 event/profile/cognition/attribution/asking/attribute/observed/distill/updateProfile/evidence 英文括注 + 阶段/M编号路线图残留。
+
+**把关**：两轮对抗式审查。审前端重构一轮，挖出并修掉 **dev 会话隔离"回程失效"严重 bug**（`enterDevSession` 用已被 applyMode 改成 developer 的 `window._mode` 做守卫 → 记账恒丢 → 回用户永远切不回用户会话；修=去坏守卫 + `leaveDevSession` 切会话用 `toUser:false` 不夺模式）。零功能丢失/无 XSS/导航完整。**HTTP 全链路冒烟因本机 PowerShell 起 node 服务易挂未跑通**，逻辑靠 108 单测 + 审查读码兜底，真机交互经作者 dogfood。只碰 testbench + Conversation/RunLogger 加性接口，认知核心未动。
+
+**验证**：typecheck ✅ / test **108 过**（+4：seedTurns×2 / systemPrompt / runLogResume）/ build ✅。分支 `feat/experience-shell`（12 提交，b777946…）。
+
+---
+
 ## 2026-07-02 · Phase 6-A 记忆管理页 V1（+证据授权位可编辑）
 
 - 测试台新增「记忆管理」tab：左筛选（contentType/credStatus/formedBy/状态/搜索）/ 中列表（认知⇄证据切换）/ 右详情（全字段 + 溯源链 + 反查）。操作：改内容、**标失效（invalidAt，非删除；假设的「否定」走同条路）**、删除（二次确认+引用计数提示）、allowCloudRead/allowInference 开关即时保存。
