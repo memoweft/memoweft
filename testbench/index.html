@@ -1693,6 +1693,7 @@ async function send(){
       if (d.record && d.record.turn != null) _renderedTurns.add(d.record.turn); // 手动发的记下 turn，避免 pollChat 重复渲染
       renderXray(d.record);
       if (d.logFile) $('logfile').textContent = d.logFile;
+      loadSessions(); // SB2：发出首句后本会话才进列表（空会话被后端过滤），顺手刷新+更新轮数/高亮
     }
   } catch(e){ settle(esc('没连上，你的话已经存下了，稍后再试试。')); }
   finally { el.disabled = false; el.focus(); _sending = false; }
@@ -1704,10 +1705,58 @@ async function resetSession(){
     _renderedTurns.clear();
     $('chat').innerHTML = '';
     $('xray').innerHTML = '<div class="empty" style="padding:8px 0;">已新开会话。</div>';
+    // SB2：新会话建好后保持在用户模式（若当前在别的模式，回到聊天正门），并刷新左侧会话列表。
+    if (window._mode !== 'user') applyMode('user');
+    loadSessions();
     toast('已开新会话，之前存下的数据（记忆线索 / 经历片段 / 对你的了解）都还在', 'ok');
   } catch(e){
     toast('新会话失败：'+String(e), 'danger');
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SB2 会话列表：左侧栏 #railSessions 渲染磁盘上所有会话，点一条续聊历史。
+// 后端契约（server.mjs，只调不改）：
+//   GET  /api/sessions        → { sessions:[{sessionId,mtime,turnCount,preview,live,current}], currentId }
+//   POST /api/session/open{id} → { ok, sessionId, turns:[{turn,userInput,reply}] }
+// ══════════════════════════════════════════════════════════════════
+async function loadSessions(){
+  const host = $('railSessions'); if (!host) return;
+  try {
+    const d = await fetch('/api/sessions').then(x => x.json());
+    let list = d.sessions || [];
+    if (typeof filterDevSession === 'function') list = filterDevSession(list); // SB3：把开发者专属会话从用户列表滤掉
+    if (!list.length){ host.innerHTML = '<div class="rail-empty">还没有对话。发一句话，或点上面「＋新会话」开始。</div>'; return; }
+    host.innerHTML = '';
+    for (const s of list){
+      const item = document.createElement('div');
+      item.className = 'sess-item' + (s.current ? ' current' : '');
+      const prev = (s.preview || '').trim() || '（空对话）';
+      item.innerHTML = '<div class="sess-prev"></div><div class="sess-meta">' + (s.turnCount||0) + ' 轮</div>';
+      item.querySelector('.sess-prev').textContent = prev; // textContent 防 XSS（preview 是用户原话）
+      item.title = prev;
+      item.onclick = () => openSessionUI(s.sessionId);
+      host.appendChild(item);
+    }
+  } catch(e){ host.innerHTML = '<div class="rail-empty">会话列表加载失败，稍后自动重试。</div>'; }
+}
+
+// 打开一条历史会话：切当前 + 用返回的 turns 重渲聊天流 + 回到用户聊天正门。
+async function openSessionUI(id){
+  try {
+    const d = await fetch('/api/session/open', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})}).then(x=>x.json());
+    if (d.error){ toast('打开会话失败：'+d.error, 'danger'); return; }
+    _renderedTurns.clear();
+    $('chat').innerHTML = '';
+    if ($('xray')) $('xray').innerHTML = '<div class="empty" style="padding:8px 0;">已切到这段对话；发一句话看本轮内幕。</div>';
+    for (const t of (d.turns || [])){
+      if (t.turn != null) _renderedTurns.add(t.turn); // 记下已渲染 turn，避免 pollChat 重复渲染
+      addMsg('user', t.userInput);
+      if (t.reply) addMsg('dla', t.reply);
+    }
+    applyMode('user');   // 回到聊天正门
+    loadSessions();      // 刷新高亮（current 变了）
+  } catch(e){ toast('打开会话失败：'+String(e), 'danger'); }
 }
 
 // ── 恢复出厂 · 清空全部数据（二次确认 → POST /api/factory-reset → 刷新各视图）──
@@ -2643,6 +2692,7 @@ async function pollBg(){
       _lastBgAt = s.last.at;
       if (!first) {
         loadCognition(); loadEvents();               // 开发者版面板（dev 模式在看）
+        loadSessions();                              // SB2：后台整理完 mtime/轮数会变，顺手刷左侧会话列表
         if (window._mode === 'user') {               // 用户体验模式：刷友好版 + 织记忆气泡 + 自然发问一次
           loadCognitionFriendly();
           loadEventsFriendly();
@@ -2698,6 +2748,7 @@ pollSeed(); pollChat();
 
 // 默认进"开发者"模式（方便联调：透视区所有面板可见）。
 applyMode('user'); // 方案A：正门 = 用户房间（原默认是 developer）。
+loadSessions();    // SB2：启动即拉一次左侧会话列表。
 
 // S3 首启门：没配模型时的常驻提示条（去配置 / 先逛逛）。配好重启后自然消失。
 function showNoModelBanner(){
