@@ -156,6 +156,12 @@
     .sess-item .sess-prev { font-size:var(--fs-sm); color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .sess-item.current .sess-prev { color:var(--accent); font-weight:600; }
     .sess-item .sess-meta { font-size:var(--fs-xs); color:var(--muted); }
+    /* 会话行「归档」按钮：hover 才露，绝对定位右上，不挤标题（标题右留白让位）。 */
+    .sess-item { position:relative; }
+    .sess-item .sess-prev { padding-right:42px; }
+    .sess-arch { position:absolute; right:6px; top:6px; padding:2px 8px; font-size:var(--fs-xs); color:var(--muted); background:var(--panel); border:1px solid var(--line); border-radius:8px; opacity:0; transition:opacity .12s ease; cursor:pointer; }
+    .sess-item:hover .sess-arch { opacity:1; }
+    .sess-arch:hover { color:var(--accent); border-color:var(--accent-ring); }
     .rail-sessions .rail-empty { font-size:var(--fs-sm); color:var(--muted); padding:8px var(--sp-2); line-height:1.5; }
     /* 空占位容器（配置向导 / 用户体验）默认藏起，靠 body 模式类亮出——后续块填内容。 */
     #mode-wizard { display:none; }
@@ -577,13 +583,13 @@
       <div class="rail-foot-title">设置</div>
       <button class="rail-link" id="rail-nav-wizard" data-mode="wizard" onclick="applyMode('wizard')">⚙ 配置</button>
       <button class="rail-link" id="rail-nav-memory" data-mode="memory" onclick="applyMode('memory')">🗂 记忆管理</button>
-      <button class="rail-link" id="rail-nav-dev" data-mode="developer" onclick="applyMode('developer')">🛠 开发者</button>
+      <button class="rail-link" id="rail-nav-dev" data-mode="developer" onclick="applyMode('developer')">🛠 调试</button>
     </div>
   </nav>
 
   <header>
     <h1>MemoWeft 测试台</h1>
-    <span class="sub">以"用户"身份用，右侧透视 MemoWeft 内部</span>
+    <span class="sub">以"用户"身份聊；「调试」里能看 MemoWeft 内部怎么想</span>
     <span class="spacer"></span>
     <span id="bgstatus" class="sub" title="它对你的了解在后台慢慢整理：聊完停手几秒就开始，要调模型、可能需要一会儿，但不挡你聊">后台：空闲</span>
     <!-- S0 用户正门入口：安静胶囊「它记住我 N 件事 ›」。只在用户模式露出，点开右侧记忆抽屉。 -->
@@ -940,7 +946,7 @@
 
     <!-- 右：透视（整体归入"开发者"模式）。所有面板都放这里，仅 developer 模式显示。 -->
     <div class="col" id="mode-dev">
-      <h2>MemoWeft 透视区（实时 log）</h2>
+      <h2>MemoWeft 调试区（实时 log）</h2>
 
       <!-- 本轮内幕：收进可折叠壳（默认展开，可收起，让主区更清爽）。#xray 节点/ID 不变，renderXray 照旧往里写。 -->
       <details class="xray-acc" id="drawer-xray" open>
@@ -952,13 +958,13 @@
       <details class="drawer" id="drawer-cognition" open>
         <summary title="理解条目 = MemoWeft 对你形成的一条条认知（事实/偏好/目标/状态…），从经历片段里提炼出来、每条都能溯源到具体原话。">▾ 对你的了解（理解条目 cognition · 从经历片段提炼）</summary>
         <div class="body">
-          <div id="coglist"><span class="empty">聊几句，后台会自动整理出对你的了解；也可在「开发者工具」里手动更新。</span></div>
+          <div id="coglist"><span class="empty">聊几句，后台会自动整理出对你的了解；也可在「调试工具」里手动更新。</span></div>
         </div>
       </details>
 
       <!-- 开发者工具：默认【收起】的次级折叠区。把手动调试操作（整理事件 / 更新画像 / 归因+主动询问 / 证据库）收进来，不平铺在主界面。 -->
       <details class="drawer" id="drawer-devtools">
-        <summary>▸ 开发者工具（整理记忆 / 猜测原因 / 记忆线索库 · 平时用不到）</summary>
+        <summary>▸ 调试工具（整理记忆 / 猜测原因 / 记忆线索库 · 平时用不到）</summary>
         <div class="body" style="padding-left:0;padding-right:0;">
 
           <details class="acc" id="drawer-events">
@@ -1069,7 +1075,7 @@
       <p class="sp-intro">这里相当于<b>把配置文件图形化了</b>。参数按用途分成几类、默认折叠——点开哪类调哪类，改一下即时生效。底部是「危险操作」，平时别碰。</p>
 
       <!-- 参数旋钮：renderCfgKnobs 直接把 47 项按 group 渲进 #cfgKnobs，每个 group 包成一个默认折叠的 <details class="acc">。 -->
-      <div id="cfgKnobs"><span class="empty">进入开发者模式后加载…</span></div>
+      <div id="cfgKnobs"><span class="empty">进入「调试」后加载…</span></div>
 
       <!-- 备份 / 迁移（Phase 5-B）：导出记忆包（下载 JSON）/ 导入记忆包（先试算 dryRun 展示计划，确认后 merge 合并）。
            纯只读导出 + 合并导入，不删数据；非法包会显眼报错、且不让走 merge。 -->
@@ -1749,9 +1755,28 @@ async function loadSessions(){
       item.querySelector('.sess-prev').textContent = prev; // textContent 防 XSS（preview 是用户原话）
       item.title = prev;
       item.onclick = () => openSessionUI(s.sessionId);
+      const arch = document.createElement('button');
+      arch.className = 'sess-arch'; arch.textContent = '归档';
+      arch.title = '归档这段对话（从列表收起，数据不删、可恢复）';
+      arch.onclick = (e) => { e.stopPropagation(); archiveSession(s.sessionId); }; // 别触发打开会话
+      item.appendChild(arch);
       host.appendChild(item);
     }
   } catch(e){ host.innerHTML = '<div class="rail-empty">会话列表加载失败，稍后自动重试。</div>'; }
+}
+
+// 归档一条会话（软移除：从列表收起，数据不删、可恢复）。归档当前会话时后端会新开一段。
+async function archiveSession(id){
+  try {
+    const r = await fetch('/api/session/archive', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id})}).then(x=>x.json());
+    if (r.error){ toast('归档失败：'+r.error, 'danger'); return; }
+    if (r.archivedCurrent){ // 归档的是当前会话 → 后端已新开一段，前端清空聊天窗口
+      _currentSessionId = r.currentId || null; _renderedTurns.clear();
+      if ($('chat')) $('chat').innerHTML = '';
+    }
+    toast('已归档（数据没删，可恢复）', 'ok');
+    loadSessions();
+  } catch(e){ toast('归档失败：'+String(e), 'danger'); }
 }
 
 // 打开一条会话：切当前 + 用返回的 turns 重渲聊天流。

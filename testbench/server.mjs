@@ -8,7 +8,7 @@
  * 启动：npm run testbench → http://localhost:7888
  */
 import { createServer } from 'node:http';
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, stat, rename } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRunLogger } from '../src/obs/runLog.ts';
@@ -592,6 +592,19 @@ const server = createServer(async (req, res) => {
       const turns = s.logger.readRecent(200).filter((t) => t.kind !== 'profile_update' && t.userInput != null)
         .map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply }));
       sendJson(res, 200, { ok: true, sessionId: s.id, turns });
+      return;
+    }
+
+    // 归档一条会话（S4b）：日志文件加 .archived 后缀 → 从列表消失，但【数据不删、可恢复】（合 MemoWeft 不毁历史的调性）。
+    // 归档的若是当前会话，后端顺手新开一段（避免 current 指向已改名的文件）。
+    if (req.method === 'POST' && url.pathname === '/api/session/archive') {
+      const { id } = await readJson(req);
+      if (!id || typeof id !== 'string') { sendJson(res, 400, { error: '缺 id' }); return; }
+      sessions.delete(id); // 从活跃集移除（若在）
+      try { await rename(join(LOG_DIR, `run-${id}.jsonl`), join(LOG_DIR, `run-${id}.jsonl.archived`)); } catch { /* 文件不在就算了 */ }
+      let archivedCurrent = false;
+      if (id === current.id) { newSession(); archivedCurrent = true; }
+      sendJson(res, 200, { ok: true, currentId: current.id, archivedCurrent });
       return;
     }
 
