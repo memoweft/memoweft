@@ -22,6 +22,7 @@
     "test": "node --test \"tests/**/*.test.ts\"",
     "test:e2e": "node --test \"tests/**/*.e2e.ts\"",
     "testbench": "node testbench/server.mjs",
+    "collector": "node testbench/run-collector.mjs",
     "experience": "node testbench/server.mjs",
     "build": "tsc -p tsconfig.build.json"
   },

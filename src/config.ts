@@ -81,6 +81,13 @@ export interface MemoWeftConfig {
     /** 或空闲这么多分钟没新消息，就更新一次（与 batchSize 先到先触发）。 */
     idleMinutes: number;
   };
+  /** 活动窗口采集器（8-A·外挂采集参数）：多久采一次、多短的碎片丢弃。缺省保守，dogfood 后调。 */
+  activeWindowCollector: {
+    /** 每隔几秒采一次前台窗口。 */
+    sampleIntervalSec: number;
+    /** 合并段停留 ≥ 此秒数才产出 observation（太短的路过式切窗丢弃，防噪声灌库）。 */
+    minDurationSec: number;
+  };
 }
 
 export const config: MemoWeftConfig = {
@@ -115,6 +122,10 @@ export const config: MemoWeftConfig = {
   profileUpdate: {
     batchSize: 5,    // 核心①：攒够 5 条新对话才更新画像（别一聊完就算，太勤又费；dogfood 后调）
     idleMinutes: 30, // 或空闲 30 分钟没动静就更新一次（与 batchSize 先到先触发）
+  },
+  activeWindowCollector: {
+    sampleIntervalSec: 5, // 5s 采一次：够分辨"在哪个窗口"，又不至于狂 spawn PowerShell
+    minDurationSec: 30,   // 停留 <30s 的碎片丢弃：路过式切窗不算"停留"（dogfood 后调）
   },
   background: {
     // 半衰期（天）：情绪/假设忘得快，目标/项目中等，趋势/特质慢；fact/preference 不列=不衰减（明确偏好不自动忘）。
