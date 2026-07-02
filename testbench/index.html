@@ -433,6 +433,59 @@
     .xray-acc > summary:hover { background:var(--panel-2); }
     .xray-acc > summary .chev { color:var(--muted); font-size:11px; transition:transform .18s ease; width:12px; text-align:center; }
     .xray-acc[open] > summary .chev { transform:rotate(90deg); }
+
+    /* ══════════════════════════════════════════════════════════════════
+       记忆管理页（Phase 6-A）· 左筛选 / 中列表 / 右详情
+       纯手写 CSS，全部复用上面的设计令牌；窄屏（≤1100px）三列堆叠。
+       ══════════════════════════════════════════════════════════════════ */
+    #mode-memory { display:none; }
+    body.mode-memory #mode-memory { display:block; }
+    body.mode-memory .wrap { display:none; }   /* 记忆管理模式下藏聊天列（同向导的处理方式） */
+    .mm { display:grid; grid-template-columns:240px 1fr 400px; gap:var(--sp-4); padding:var(--sp-4) var(--sp-5); height:calc(100vh - 154px); }
+    @media (max-width:1100px){
+      .mm { grid-template-columns:1fr; height:auto; }
+      .mm .col { max-height:60vh; }
+    }
+    /* 筛选器 */
+    .mm-filter-sec { padding:10px var(--sp-4); border-bottom:1px solid var(--line-soft); }
+    .mm-filter-sec:last-child { border-bottom:none; }
+    .mm-filter-sec .t { font-size:var(--fs-xs); font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+    .mm-checks label { display:flex; align-items:flex-start; gap:6px; font-size:var(--fs-sm); color:var(--fg); padding:3px 0; cursor:pointer; line-height:1.5; }
+    .mm-checks input[type=checkbox] { accent-color:var(--accent); margin-top:2px; flex:0 0 auto; }
+    .mm-search { width:100%; font:inherit; font-size:var(--fs-sm); padding:7px 10px; border:1px solid var(--line); border-radius:var(--radius-sm); background:var(--panel-2); }
+    /* 认知/证据视图切换（segmented） */
+    .mm-seg { display:flex; gap:4px; background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius-pill); padding:3px; }
+    .mm-seg button { flex:1; border:none; background:transparent; color:var(--muted); font-size:var(--fs-sm); font-weight:600; padding:5px 0; border-radius:var(--radius-pill); box-shadow:none; }
+    .mm-seg button:hover { background:transparent; color:var(--fg); border:none; }
+    .mm-seg button.active { background:var(--panel); color:var(--accent); box-shadow:var(--shadow-sm); }
+    /* 列表项 */
+    .mm-item { padding:10px var(--sp-4); border-bottom:1px solid var(--line-soft); cursor:pointer; transition:background .12s ease; }
+    .mm-item:hover { background:var(--panel-2); }
+    .mm-item.sel { background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent); }
+    .mm-item.dead { opacity:.55; }
+    .mm-item .tt { font-size:var(--fs-body); color:var(--fg); line-height:1.5; word-break:break-word; }
+    .mm-item.dead .tt { text-decoration:line-through; }
+    .mm-item .meta { margin-top:4px; }
+    .pill.danger { background:var(--danger-soft); color:var(--danger); border-color:transparent; }
+    /* 列表头（计数 + 刷新，嵌在 .col h2 里） */
+    .mm-listhead { display:flex; align-items:center; gap:8px; }
+    .mm-listhead .cnt { font-weight:500; text-transform:none; letter-spacing:0; }
+    .mm-listhead .spacer { flex:1; }
+    .mm-listhead button { padding:3px 10px; font-size:var(--fs-xs); text-transform:none; letter-spacing:0; font-weight:500; }
+    /* 详情面板 */
+    #mmDetail { padding:var(--sp-3) var(--sp-4) var(--sp-4); font-size:12.5px; }
+    #mmDetail .row .k { flex:0 0 92px; }
+    .mm-actions { display:flex; gap:6px; flex-wrap:wrap; margin:var(--sp-3) 0 var(--sp-2); }
+    .mm-actions button { padding:5px 12px; font-size:var(--fs-sm); }
+    .mm-sec-title { font-size:var(--fs-xs); font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.06em; padding:10px 0 6px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+    /* 来源链条目（点击跳到该证据详情） */
+    .mm-src { padding:8px 10px; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:var(--radius-sm); margin-bottom:6px; cursor:pointer; transition:border-color .12s ease, box-shadow .12s ease; }
+    .mm-src:hover { border-color:var(--line); box-shadow:var(--shadow-sm); }
+    .mm-src .raw { margin-top:4px; font-size:var(--fs-sm); color:var(--fg); line-height:1.55; word-break:break-word; }
+    /* 授权开关行 */
+    .mm-auth { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:var(--fs-sm); }
+    .mm-auth input[type=checkbox] { accent-color:var(--accent); }
+    .mm-auth .lbl { flex:1; }
   </style>
 </head>
 <body>
@@ -450,6 +503,7 @@
   <div class="modebar">
     <button class="modebtn" id="modebtn-wizard" onclick="applyMode('wizard')">配置向导</button>
     <button class="modebtn" id="modebtn-user" onclick="applyMode('user')">用户体验</button>
+    <button class="modebtn" id="modebtn-memory" onclick="applyMode('memory')">记忆管理</button>
     <button class="modebtn" id="modebtn-dev" onclick="applyMode('developer')">开发者</button>
   </div>
 
@@ -661,6 +715,105 @@
           <div class="ux-empty"><span class="big">🌱</span>还没有片段——聊上几句，这里就会长出内容。</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       记忆管理模式（Phase 6-A）：让用户真正能管理记忆，而不是只能看开发者 JSON。
+       左筛选 / 中列表（认知卡片 ⇄ 证据列表）/ 右详情（全字段 + 来源链 + 操作）。
+       数据全部来自现有接口：GET /api/cognition（带 sources+effectiveConfidence）、
+       GET /api/evidence、GET /api/event（evidenceIds 反查覆盖事件）。前端过滤（数据量小）。
+       ══════════════════════════════════════════════════════════════════ -->
+  <div id="mode-memory">
+    <div class="mm">
+
+      <!-- 左：筛选器 -->
+      <div class="col">
+        <h2>筛选</h2>
+        <div class="mm-filter-sec">
+          <div class="mm-seg">
+            <button id="mmViewCog" class="active" onclick="mmSetView('cognition')">认知</button>
+            <button id="mmViewEv" onclick="mmSetView('evidence')">证据</button>
+          </div>
+        </div>
+        <div class="mm-filter-sec">
+          <div class="t">搜索</div>
+          <input id="mmSearchBox" class="mm-search" placeholder="搜认知内容 / 证据原话与摘要…" oninput="mmSetSearch(this.value)" />
+        </div>
+        <!-- 认知视图专属筛选（勾选=只看勾中的；全不勾=全部） -->
+        <div class="mm-filter-sec mm-only-cog">
+          <div class="t">状态</div>
+          <div class="mm-checks">
+            <label><input type="checkbox" onchange="mmSetCheck('State','active',this.checked)" /> 有效（未失效）</label>
+            <label><input type="checkbox" onchange="mmSetCheck('State','invalid',this.checked)" /> 已失效</label>
+            <label><input type="checkbox" onchange="mmSetCheck('State','conflicted',this.checked)" /> 冲突中</label>
+            <label><input type="checkbox" onchange="mmSetCheck('State','hypothesis',this.checked)" /> 假设</label>
+            <label><input type="checkbox" onchange="mmSetCheck('State','cloudRestricted',this.checked)" /> 云端受限（来源里有不上云的证据）</label>
+          </div>
+        </div>
+        <div class="mm-filter-sec mm-only-cog">
+          <div class="t">类型（contentType）</div>
+          <div class="mm-checks">
+            <label><input type="checkbox" onchange="mmSetCheck('Type','fact',this.checked)" /> 事实 fact</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Type','preference',this.checked)" /> 偏好 preference</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Type','goal',this.checked)" /> 目标 goal</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Type','project',this.checked)" /> 项目 project</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Type','state',this.checked)" /> 状态 state</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Type','trait',this.checked)" /> 特质 trait</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Type','hypothesis',this.checked)" /> 假设 hypothesis</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Type','trend',this.checked)" /> 趋势 trend</label>
+          </div>
+        </div>
+        <div class="mm-filter-sec mm-only-cog">
+          <div class="t">可信状态（credStatus）</div>
+          <div class="mm-checks">
+            <label><input type="checkbox" onchange="mmSetCheck('Cred','candidate',this.checked)" /> 候选 candidate</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Cred','low',this.checked)" /> 低置信 low</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Cred','limited',this.checked)" /> 有限 limited</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Cred','stable',this.checked)" /> 稳定 stable</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Cred','conflicted',this.checked)" /> 冲突中 conflicted</label>
+          </div>
+        </div>
+        <div class="mm-filter-sec mm-only-cog">
+          <div class="t">形成方式（formedBy）</div>
+          <div class="mm-checks">
+            <label><input type="checkbox" onchange="mmSetCheck('Formed','stated',this.checked)" /> 亲口 stated</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Formed','observed',this.checked)" /> 观察 observed</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Formed','ruled',this.checked)" /> 规则 ruled</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Formed','inferred',this.checked)" /> 推测 inferred</label>
+          </div>
+        </div>
+        <!-- 证据视图专属筛选 -->
+        <div class="mm-filter-sec mm-only-ev" style="display:none;">
+          <div class="t">来源（sourceKind）</div>
+          <div class="mm-checks">
+            <label><input type="checkbox" onchange="mmSetCheck('Source','spoken',this.checked)" /> 亲口 spoken</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Source','inferred',this.checked)" /> 推测 inferred</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Source','observed',this.checked)" /> 观察 observed</label>
+          </div>
+        </div>
+        <div class="mm-filter-sec mm-only-ev" style="display:none;">
+          <div class="t">授权</div>
+          <div class="mm-checks">
+            <label><input type="checkbox" onchange="mmSetCheck('Auth','cloudRestricted',this.checked)" /> 云端受限（不上云）</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Auth','cloudOk',this.checked)" /> 允许上云</label>
+            <label><input type="checkbox" onchange="mmSetCheck('Auth','noInfer',this.checked)" /> 禁止推理</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 中：列表 -->
+      <div class="col">
+        <h2><span class="mm-listhead"><span>列表</span><span class="cnt" id="mmCount"></span><span class="spacer"></span><button onclick="mmLoad()" title="重新拉取认知 / 证据 / 事件">刷新</button></span></h2>
+        <div id="mmList"><div class="empty" style="padding:14px;">加载中…</div></div>
+      </div>
+
+      <!-- 右：详情 + 操作 -->
+      <div class="col">
+        <h2>详情</h2>
+        <div id="mmDetail"><div class="empty" style="padding:10px 0;">点中间列表里的一条，这里显示全部字段、来源链和操作。</div></div>
+      </div>
+
     </div>
   </div>
 
@@ -1221,12 +1374,12 @@ function onEnterDeveloper(){
   loadEvents();
 }
 function applyMode(mode){
-  // 归一化：CSS 类用 mode-wizard/mode-user/mode-dev（dev 是 developer 的简写）。
+  // 归一化：CSS 类用 mode-wizard/mode-user/mode-memory/mode-dev（dev 是 developer 的简写）。
   const bodyClass = mode === 'developer' ? 'mode-dev' : ('mode-' + mode);
-  document.body.classList.remove('mode-wizard','mode-user','mode-dev');
+  document.body.classList.remove('mode-wizard','mode-user','mode-memory','mode-dev');
   document.body.classList.add(bodyClass);
   // 切换器按钮高亮
-  ['wizard','user','dev'].forEach(k => { const b = $('modebtn-'+k); if (b) b.classList.remove('active'); });
+  ['wizard','user','memory','dev'].forEach(k => { const b = $('modebtn-'+k); if (b) b.classList.remove('active'); });
   const activeBtn = $('modebtn-' + (mode === 'developer' ? 'dev' : mode));
   if (activeBtn) activeBtn.classList.add('active');
   window._mode = mode;
@@ -1235,6 +1388,7 @@ function applyMode(mode){
   // 进入钩子：仅当对应钩子已定义成函数才调（第 2/3 块填实现时无需改这里）。
   if (mode === 'wizard' && typeof onEnterWizard === 'function') onEnterWizard();
   if (mode === 'user' && typeof onEnterUser === 'function') onEnterUser();
+  if (mode === 'memory' && typeof onEnterMemory === 'function') onEnterMemory();
   if (mode === 'developer' && typeof onEnterDeveloper === 'function') onEnterDeveloper();
 }
 
@@ -1915,6 +2069,342 @@ async function loadEvents(){
   ).join('');
 }
 
+// ══════════════════════════════════════════════════════════════════
+// 记忆管理页（Phase 6-A）：左筛选 / 中列表 / 右详情。
+// 只用现有接口：读 GET /api/cognition（带 sources+effectiveConfidence）、/api/evidence、
+// /api/event（evidenceIds 反查覆盖事件）；写 POST /api/cognition/update|delete、
+// /api/evidence/update|delete。数据量小 → 前端过滤；操作后重拉三份数据、保持选中项。
+// 明确不做：「确认假设」按钮（其置信度语义属核心机制，未经作者拍板不实现）。
+// ══════════════════════════════════════════════════════════════════
+const SOURCE_CN = { spoken:'亲口', inferred:'推测', observed:'观察' };
+const MM = {
+  view: 'cognition',                  // 'cognition' | 'evidence'
+  cog: [], ev: [], evt: [],           // 三份数据快照（进入模式 / 操作后重拉）
+  selKind: null, selId: null,         // 详情选中：'cog' | 'ev' + id
+  q: '',                              // 搜索词
+  fState: new Set(), fType: new Set(), fCred: new Set(), fFormed: new Set(), // 认知视图筛选
+  fSource: new Set(), fAuth: new Set(),                                       // 证据视图筛选
+};
+
+function onEnterMemory(){ mmLoad(); }
+
+// 重拉三份数据 → 重渲列表 + 详情（选中项还在就保持，被删了 mmRenderDetail 会自动清）。
+async function mmLoad(){
+  try {
+    const [c, e, v] = await Promise.all([
+      fetch('/api/cognition').then(x=>x.json()),
+      fetch('/api/evidence').then(x=>x.json()),
+      fetch('/api/event').then(x=>x.json()),
+    ]);
+    MM.cog = c.cognition || [];
+    MM.ev = e.evidence || [];
+    MM.evt = v.event || [];
+  } catch(err){ toast('记忆管理加载失败：'+String(err), 'danger'); }
+  mmRenderList();
+  mmRenderDetail();
+}
+
+// 认知 ⇄ 证据视图切换：换列表内容 + 换左侧可用的筛选组（.mm-only-cog / .mm-only-ev）。
+function mmSetView(v){
+  MM.view = v;
+  $('mmViewCog').classList.toggle('active', v === 'cognition');
+  $('mmViewEv').classList.toggle('active', v === 'evidence');
+  document.querySelectorAll('#mode-memory .mm-only-cog').forEach(el => { el.style.display = v === 'cognition' ? '' : 'none'; });
+  document.querySelectorAll('#mode-memory .mm-only-ev').forEach(el => { el.style.display = v === 'evidence' ? '' : 'none'; });
+  mmRenderList();
+}
+
+// 勾一个筛选项：往对应 Set 加/删（勾选=只看勾中的；同组多勾=或；全不勾=不过滤）。
+function mmSetCheck(setName, val, on){
+  const s = MM['f' + setName];
+  if (!s) return;
+  if (on) s.add(val); else s.delete(val);
+  mmRenderList();
+}
+function mmSetSearch(v){ MM.q = String(v || ''); mmRenderList(); }
+
+function mmEvById(id){ return MM.ev.find(x => x.id === id) || null; }
+// 认知是否「云端受限」：来源链里挂着至少一条 allowCloudRead=false 的证据。
+function mmCloudRestricted(c){
+  return (c.sources || []).some(s => { const e = mmEvById(s.evidenceId); return e && !e.allowCloudRead; });
+}
+
+function mmFilteredCog(){
+  const q = MM.q.trim().toLowerCase();
+  return MM.cog.filter(c => {
+    if (MM.fType.size && !MM.fType.has(c.contentType)) return false;
+    if (MM.fCred.size && !MM.fCred.has(c.credStatus)) return false;
+    if (MM.fFormed.size && !MM.fFormed.has(c.formedBy)) return false;
+    if (MM.fState.size){
+      const hit = (MM.fState.has('active') && !c.invalidAt)
+        || (MM.fState.has('invalid') && !!c.invalidAt)
+        || (MM.fState.has('conflicted') && c.credStatus === 'conflicted')
+        || (MM.fState.has('hypothesis') && c.contentType === 'hypothesis')
+        || (MM.fState.has('cloudRestricted') && mmCloudRestricted(c));
+      if (!hit) return false;
+    }
+    if (q && !String(c.content || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function mmFilteredEv(){
+  const q = MM.q.trim().toLowerCase();
+  return MM.ev.filter(e => {
+    if (MM.fSource.size && !MM.fSource.has(e.sourceKind)) return false;
+    if (MM.fAuth.size){
+      const hit = (MM.fAuth.has('cloudRestricted') && !e.allowCloudRead)
+        || (MM.fAuth.has('cloudOk') && e.allowCloudRead)
+        || (MM.fAuth.has('noInfer') && !e.allowInference);
+      if (!hit) return false;
+    }
+    if (q && !(String(e.rawContent || '').toLowerCase().includes(q) || String(e.summary || '').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+// 中列表：按当前视图渲染认知卡片 / 证据行。invalid 的标灰（.dead）。
+function mmRenderList(){
+  const box = $('mmList'), cnt = $('mmCount');
+  if (!box) return;
+  if (MM.view === 'cognition'){
+    const rows = mmFilteredCog();
+    if (cnt) cnt.textContent = '认知 ' + rows.length + ' / ' + MM.cog.length + ' 条';
+    if (!rows.length){ box.innerHTML = '<div class="empty" style="padding:14px;">' + (MM.cog.length ? '没有匹配当前筛选的认知。' : '（还没有认知——先聊几句、让后台整理出画像）') + '</div>'; return; }
+    box.innerHTML = rows.map(c => {
+      const dead = !!c.invalidAt;
+      const sel = MM.selKind === 'cog' && MM.selId === c.id;
+      return '<div class="mm-item' + (dead ? ' dead' : '') + (sel ? ' sel' : '') + '" onclick="mmSelect(\'cog\',\'' + c.id + '\')">' +
+        '<div class="tt">' + esc(c.content) + '</div>' +
+        '<div class="meta">' +
+          '<span class="pill">' + (TYPE_CN[c.contentType] || c.contentType) + '</span>' +
+          '<span class="pill">' + (FORMED_CN[c.formedBy] || c.formedBy) + '</span>' +
+          '<span class="pill" title="原始置信→时间衰减后的有效置信">置信 ' + c.confidence + ((c.effectiveConfidence != null && c.effectiveConfidence < c.confidence) ? (' → ' + c.effectiveConfidence) : '') + '</span>' +
+          '<span class="pill ' + (c.credStatus === 'conflicted' ? 'warn' : (c.credStatus === 'stable' ? 'ok' : '')) + '">' + (STATUS_CN[c.credStatus] || c.credStatus) + '</span>' +
+          (dead ? '<span class="pill danger">已失效</span>' : '') +
+          '<span class="evmeta">证据×' + ((c.sources && c.sources.length) || 0) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  } else {
+    const rows = mmFilteredEv();
+    if (cnt) cnt.textContent = '证据 ' + rows.length + ' / ' + MM.ev.length + ' 条';
+    if (!rows.length){ box.innerHTML = '<div class="empty" style="padding:14px;">' + (MM.ev.length ? '没有匹配当前筛选的证据。' : '（证据库为空）') + '</div>'; return; }
+    box.innerHTML = rows.map(e => {
+      const sel = MM.selKind === 'ev' && MM.selId === e.id;
+      return '<div class="mm-item' + (sel ? ' sel' : '') + '" onclick="mmSelect(\'ev\',\'' + e.id + '\')">' +
+        '<div class="tt">' + esc(e.summary) + '</div>' +
+        '<div class="meta">' +
+          '<span class="pill">' + (SOURCE_CN[e.sourceKind] || e.sourceKind) + '</span>' +
+          '<span class="pill ' + (e.allowCloudRead ? '' : 'warn') + '">' + (e.allowCloudRead ? '可上云' : '不上云') + '</span>' +
+          '<span class="pill ' + (e.allowInference ? '' : 'warn') + '">' + (e.allowInference ? '可推理' : '禁推理') + '</span>' +
+          '<span class="evmeta">' + esc(String(e.occurredAt).slice(0, 16).replace('T', ' ')) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+}
+
+function mmSelect(kind, id){ MM.selKind = kind; MM.selId = id; mmRenderList(); mmRenderDetail(); }
+
+// 详情面板通用行 / 时间格式。
+function mmRow(k, vHtml){
+  return '<div class="row"><span class="k">' + k + '</span><span class="v">' + ((vHtml == null || vHtml === '') ? '<span class="empty">—</span>' : vHtml) + '</span></div>';
+}
+function mmTime(iso){ return iso ? esc(String(iso).slice(0, 19).replace('T', ' ')) : ''; }
+
+// 右详情：认知 → 全字段 + 来源链（evidenceId → 原话；再反查覆盖它的事件）+ 操作；
+//         证据 → 原话/摘要/来源/双时态/三个授权位 + 被谁引用 + 操作。
+function mmRenderDetail(){
+  const box = $('mmDetail');
+  if (!box) return;
+  const empty = '<div class="empty" style="padding:10px 0;">点中间列表里的一条，这里显示全部字段、来源链和操作。</div>';
+  if (!MM.selId){ box.innerHTML = empty; return; }
+
+  if (MM.selKind === 'cog'){
+    const c = MM.cog.find(x => x.id === MM.selId);
+    if (!c){ MM.selKind = null; MM.selId = null; box.innerHTML = empty; return; }
+    const dead = !!c.invalidAt;
+    const isHypo = c.contentType === 'hypothesis';
+    // 来源链：每条 evidenceId 解出原话 + 反查覆盖它的事件；点击跳到该证据详情。
+    const srcHtml = (c.sources || []).map(s => {
+      const rel = s.relation === 'contradict' ? '<span class="pill warn">反对</span>' : '<span class="pill ok">支持</span>';
+      const e = mmEvById(s.evidenceId);
+      if (!e) return '<div class="mm-src" style="cursor:default;">' + rel + ' <span class="evmeta">证据已被删除（' + esc(String(s.evidenceId).slice(0, 8)) + '…）</span></div>';
+      const evts = MM.evt.filter(v => (v.evidenceIds || []).includes(e.id));
+      return '<div class="mm-src" onclick="mmSelect(\'ev\',\'' + e.id + '\')" title="点开这条证据的详情">' +
+        rel + ' <span class="pill">' + (SOURCE_CN[e.sourceKind] || e.sourceKind) + '</span>' +
+        (e.allowCloudRead ? '' : '<span class="pill warn">不上云</span>') +
+        '<div class="raw">' + esc(e.rawContent) + '</div>' +
+        '<div class="evmeta" style="margin-top:3px;">' + mmTime(e.occurredAt) +
+          (evts.length ? (' · 归入事件：' + evts.map(v => esc(v.summary)).join('；')) : ' · 未归入事件') + '</div>' +
+      '</div>';
+    }).join('') || '<span class="empty">（没有挂证据——无法溯源的认知要多留个心眼）</span>';
+
+    box.innerHTML =
+      '<div style="font-size:var(--fs-body);font-weight:600;line-height:1.6;' + (dead ? 'text-decoration:line-through;opacity:.6;' : '') + '">' + esc(c.content) + '</div>' +
+      (dead ? '<div style="margin-top:4px;"><span class="pill danger">已失效 ' + mmTime(c.invalidAt) + '</span></div>' : '') +
+      '<div class="mm-actions">' +
+        '<button onclick="mmEditCog(\'' + c.id + '\')">改内容</button>' +
+        (!dead ? '<button onclick="mmInvalidateCog(\'' + c.id + '\')">' + (isHypo ? '否定假设（标失效）' : '标失效') + '</button>' : '') +
+        '<button class="danger" onclick="mmDeleteCog(\'' + c.id + '\')">删除</button>' +
+      '</div>' +
+      '<div class="mm-sec-title">全部字段</div>' +
+      mmRow('类型', '<span class="pill">' + (TYPE_CN[c.contentType] || c.contentType) + '</span> ' + esc(c.contentType)) +
+      mmRow('形成方式', '<span class="pill">' + (FORMED_CN[c.formedBy] || c.formedBy) + '</span> ' + esc(c.formedBy)) +
+      mmRow('置信', c.confidence + ((c.effectiveConfidence != null) ? ('（衰减后有效 ' + c.effectiveConfidence + '）') : '')) +
+      mmRow('可信状态', '<span class="pill ' + (c.credStatus === 'conflicted' ? 'warn' : (c.credStatus === 'stable' ? 'ok' : '')) + '">' + (STATUS_CN[c.credStatus] || c.credStatus) + '</span> ' + esc(c.credStatus)) +
+      mmRow('适用场景', c.scope ? esc(c.scope) : '<span class="empty">通用</span>') +
+      mmRow('生效于', mmTime(c.validAt)) +
+      mmRow('失效于', c.invalidAt ? ('<span class="pill danger">' + mmTime(c.invalidAt) + '</span>') : '<span class="pill ok">仍有效</span>') +
+      mmRow('问过用户', mmTime(c.askedAt)) +
+      mmRow('创建', mmTime(c.createdAt)) +
+      mmRow('更新', mmTime(c.updatedAt)) +
+      mmRow('id', '<code style="font-size:10.5px;">' + esc(c.id) + '</code>') +
+      '<div class="mm-sec-title">来源链（这条认知靠什么撑起来）</div>' +
+      srcHtml;
+    return;
+  }
+
+  // 证据详情
+  const e = mmEvById(MM.selId);
+  if (!e){ MM.selKind = null; MM.selId = null; box.innerHTML = empty; return; }
+  const evts = MM.evt.filter(v => (v.evidenceIds || []).includes(e.id));
+  const citedBy = MM.cog.filter(c => (c.sources || []).some(s => s.evidenceId === e.id));
+  box.innerHTML =
+    '<div style="font-size:var(--fs-body);font-weight:600;line-height:1.6;">' + esc(e.summary) + '</div>' +
+    '<div class="mm-actions">' +
+      '<button onclick="mmEditEvRaw(\'' + e.id + '\')">改原话</button>' +
+      '<button onclick="mmEditEvSummary(\'' + e.id + '\')">改摘要</button>' +
+      '<button class="danger" onclick="mmDeleteEv(\'' + e.id + '\')">删除</button>' +
+    '</div>' +
+    '<div class="mm-sec-title">授权（改了立即保存）</div>' +
+    '<label class="mm-auth"><input type="checkbox" ' + (e.allowCloudRead ? 'checked' : '') + ' onchange="mmToggleAuth(\'' + e.id + '\',\'allowCloudRead\',this.checked)" /><span class="lbl">允许发给云端模型（allowCloudRead）</span></label>' +
+    '<label class="mm-auth"><input type="checkbox" ' + (e.allowInference ? 'checked' : '') + ' onchange="mmToggleAuth(\'' + e.id + '\',\'allowInference\',this.checked)" /><span class="lbl">允许据此推测画像（allowInference）</span></label>' +
+    '<div class="mm-auth" style="color:var(--muted);"><input type="checkbox" ' + (e.allowLocalRead ? 'checked' : '') + ' disabled /><span class="lbl">允许本地 Agent 读（allowLocalRead · 此处只读）</span></div>' +
+    '<div class="mm-sec-title">全部字段</div>' +
+    mmRow('原话', '<span style="white-space:pre-wrap;">' + esc(e.rawContent) + '</span>') +
+    mmRow('摘要', esc(e.summary)) +
+    mmRow('来源', '<span class="pill">' + (SOURCE_CN[e.sourceKind] || e.sourceKind) + '</span> ' + esc(e.sourceKind)) +
+    mmRow('发生于', mmTime(e.occurredAt) + ' <span class="evmeta">（事情发生时）</span>') +
+    mmRow('记录于', mmTime(e.recordedAt) + ' <span class="evmeta">（MemoWeft 存入时）</span>') +
+    mmRow('宿主', esc(e.hostId)) +
+    mmRow('幂等键', e.originId ? ('<code style="font-size:10.5px;">' + esc(e.originId) + '</code>') : '') +
+    mmRow('纠正指向', e.correctsEvidenceId ? ('<code style="font-size:10.5px;">' + esc(e.correctsEvidenceId) + '</code>') : '') +
+    mmRow('id', '<code style="font-size:10.5px;">' + esc(e.id) + '</code>') +
+    '<div class="mm-sec-title">被谁用着</div>' +
+    (evts.length ? evts.map(v => '<div class="mm-src" style="cursor:default;"><span class="pill">事件</span><div class="raw">' + esc(v.summary) + '</div></div>').join('') : '<div class="evmeta" style="margin-bottom:6px;">未归入任何事件</div>') +
+    (citedBy.length ? citedBy.map(c => '<div class="mm-src" onclick="mmSelect(\'cog\',\'' + c.id + '\')" title="点开这条认知的详情"><span class="pill">认知</span>' + (c.invalidAt ? '<span class="pill danger">已失效</span>' : '') + '<div class="raw">' + esc(c.content) + '</div></div>').join('') : '<div class="evmeta">没有认知引用这条证据</div>');
+}
+
+// ── 记忆管理 · 写操作（全部走现有 API；成功后重拉三份数据局部刷新）──
+async function mmEditCog(id){
+  const c = MM.cog.find(x => x.id === id); if (!c) return;
+  const v = prompt('改这条认知的内容：', c.content);
+  if (v == null || v === c.content) return;
+  try {
+    const r = await fetch('/api/cognition/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id, content: v }) }).then(x => x.json());
+    if (r.error || !r.updated){ toast('修改失败：' + (r.error || '这条认知不存在了'), 'danger'); return; }
+    toast('已修改认知内容', 'ok');
+  } catch(e){ toast('修改失败：' + String(e), 'danger'); return; }
+  await mmLoad();
+}
+
+// 标失效 = 写 invalidAt（保留条目可溯源，不是删除）。假设的「否定」也是走这条。
+function mmInvalidateCog(id){
+  const c = MM.cog.find(x => x.id === id); if (!c) return;
+  const isHypo = c.contentType === 'hypothesis';
+  showConfirm({
+    icon: '🚫',
+    title: isHypo ? '否定这条假设？' : '把这条认知标为失效？',
+    okText: isHypo ? '否定（标失效）' : '标失效',
+    bodyHtml: '「' + esc(c.content) + '」<br><br>标失效 = <b>不再当真、召回时跳过</b>，但条目和溯源链都保留、随时可查——这不是删除。',
+    onOk: async () => {
+      try {
+        const r = await fetch('/api/cognition/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id, invalidAt: new Date().toISOString() }) }).then(x => x.json());
+        if (r.error || !r.updated){ toast('标失效失败：' + (r.error || '这条认知不存在了'), 'danger'); return; }
+        toast(isHypo ? '已否定该假设（条目保留，可溯源）' : '已标失效（条目保留，可溯源）', 'ok');
+      } catch(e){ toast('标失效失败：' + String(e), 'danger'); return; }
+      await mmLoad();
+    },
+  });
+}
+
+function mmDeleteCog(id){
+  const c = MM.cog.find(x => x.id === id); if (!c) return;
+  showConfirm({
+    icon: '🗑',
+    title: '删除这条认知？',
+    okText: '永久删除',
+    okKind: 'danger',
+    bodyHtml: '「' + esc(c.content) + '」<br><br>连同它的溯源链一起删除（挂着的原话证据本身不动）。只是想让它别再生效的话，用「标失效」更稳——那样还能追溯。',
+    warnLine: '删除后无法恢复。',
+    onOk: async () => {
+      try {
+        const r = await fetch('/api/cognition/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) }).then(x => x.json());
+        if (r.error){ toast('删除失败：' + r.error, 'danger'); return; }
+        toast('已删除这条认知', 'ok');
+      } catch(e){ toast('删除失败：' + String(e), 'danger'); return; }
+      if (MM.selKind === 'cog' && MM.selId === id){ MM.selKind = null; MM.selId = null; }
+      await mmLoad();
+    },
+  });
+}
+
+async function mmEditEvRaw(id){
+  const e = mmEvById(id); if (!e) return;
+  const v = prompt('改这条证据的原话（rawContent）：', e.rawContent);
+  if (v == null || v === e.rawContent) return;
+  await mmUpdateEv(id, { rawContent: v }, '已修改原话');
+}
+async function mmEditEvSummary(id){
+  const e = mmEvById(id); if (!e) return;
+  const v = prompt('改这条证据的摘要（summary，召回载体）：', e.summary);
+  if (v == null || v === e.summary) return;
+  await mmUpdateEv(id, { summary: v }, '已修改摘要');
+}
+async function mmUpdateEv(id, patch, okMsg){
+  try {
+    const r = await fetch('/api/evidence/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({ id }, patch)) }).then(x => x.json());
+    if (r.error || !r.updated){ toast('修改失败：' + (r.error || '这条证据不存在了'), 'danger'); return; }
+    toast(okMsg, 'ok');
+  } catch(e){ toast('修改失败：' + String(e), 'danger'); return; }
+  await mmLoad();
+}
+
+// 授权开关：改一下立即 POST 保存；失败时重拉数据把开关拨回真实状态。
+async function mmToggleAuth(id, key, val){
+  try {
+    const body = { id }; body[key] = val;
+    const r = await fetch('/api/evidence/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(x => x.json());
+    if (r.error || !r.updated){ toast('授权修改失败：' + (r.error || '这条证据不存在了'), 'danger'); await mmLoad(); return; }
+    const e = mmEvById(id); if (e) e[key] = val; // 本地同步，立即重渲不用等重拉
+    toast((key === 'allowCloudRead' ? '发给云端' : '据此推测') + '已' + (val ? '允许' : '关闭'), 'ok');
+    mmRenderList(); mmRenderDetail();
+  } catch(e){ toast('授权修改失败：' + String(e), 'danger'); await mmLoad(); }
+}
+
+function mmDeleteEv(id){
+  const e = mmEvById(id); if (!e) return;
+  const citedBy = MM.cog.filter(c => (c.sources || []).some(s => s.evidenceId === id));
+  showConfirm({
+    icon: '🗑',
+    title: '删除这条证据？',
+    okText: '永久删除',
+    okKind: 'danger',
+    bodyHtml: '「' + esc(e.summary) + '」<br><br>这是用户主动真删（非系统自动）。' + (citedBy.length ? ('目前有 <b>' + citedBy.length + '</b> 条认知引用它——删除后那些认知会少一条支撑。') : '没有认知引用它。'),
+    warnLine: '删除后无法恢复。',
+    onOk: async () => {
+      try {
+        const r = await fetch('/api/evidence/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) }).then(x => x.json());
+        if (r.error){ toast('删除失败：' + r.error, 'danger'); return; }
+        toast('已删除这条证据', 'ok');
+      } catch(e2){ toast('删除失败：' + String(e2), 'danger'); return; }
+      if (MM.selKind === 'ev' && MM.selId === id){ MM.selKind = null; MM.selId = null; }
+      await mmLoad();
+    },
+  });
+}
+
 // ── 后台自动更新：轮询状态、更新指示、跑完自动刷新画像 ──
 let _lastBgAt = null;
 async function pollBg(){
@@ -1948,6 +2438,7 @@ async function pollBg(){
           loadEventsFriendly();
           maybeAskInChat();
         }
+        if (window._mode === 'memory') mmLoad();     // 记忆管理页：后台整理完自动刷新列表/详情
       }
     }
   } catch(e) { /* 轮询失败忽略 */ }
