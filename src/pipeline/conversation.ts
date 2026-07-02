@@ -75,6 +75,7 @@ export class Conversation {
         if (h.score < cfg.retrieval.minSimilarity) continue;
         const c = cognitionStore.get(h.id);
         if (!c || c.invalidAt) continue; // 失效的不注入（即便索引还没重建，也别把过期/被纠正的塞回话）
+        if (c.subjectId !== stored.subjectId) continue; // 越界召回硬过滤（多 subject 隐私止血）：索引可能混入其他 subject 的条目，不是本人的认知绝不注入。契约见地图「召回边界」。
         // 衰减门控（cell 8 规则 8）：把握度用【有效置信】，淡了的情绪/过气的假设直接不注入。
         const eff = effectiveConfidence(c, new Date(), cfg);
         if (eff < cfg.retrieval.minEffectiveConfidence) continue;
