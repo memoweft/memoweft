@@ -13,7 +13,7 @@ import type { Evidence } from '../evidence/model.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { Retriever } from '../retrieval/retriever.ts';
 import type { LLMClient } from '../llm/client.ts';
-import { WorkingMemory } from './workingMemory.ts';
+import { WorkingMemory, type Turn } from './workingMemory.ts';
 import { perceive, type PerceiveOptions } from './perceive.ts';
 import { reply, type RelevantCognition } from './action.ts';
 import { effectiveConfidence } from '../background/decay.ts';
@@ -25,6 +25,11 @@ export interface ConversationDeps {
   llm: LLMClient;
   /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例（含召回 topK/阈值、窗口轮数）。 */
   config?: MemoWeftConfig;
+  /**
+   * 续聊种子（S4 会话持久化）：打开一条旧会话时，把它最近几轮种回工作记忆，
+   * 让续聊带上下文。缺省空 = 全新会话，行为同旧。只影响回话窗口，不落库、不产证据。
+   */
+  seedTurns?: Turn[];
 }
 
 /** 召回到、注入了回话的一条（含相似度，供透视）。 */
@@ -47,6 +52,8 @@ export class Conversation {
   constructor(deps: ConversationDeps) {
     this.deps = deps;
     this.window = new WorkingMemory((deps.config ?? config).workingMemory.maxTurns);
+    // 续聊：把旧会话最近几轮种回工作记忆（超窗上限由 WorkingMemory 自己丢最老的）。
+    for (const t of deps.seedTurns ?? []) this.window.push(t);
   }
 
   async handle(userMsg: string, opts: PerceiveOptions = {}): Promise<TurnOutcome> {
