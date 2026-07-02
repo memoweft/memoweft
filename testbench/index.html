@@ -2300,9 +2300,12 @@ function mmRenderDetail(){
 async function mmEditCog(id){
   const c = MM.cog.find(x => x.id === id); if (!c) return;
   const v = prompt('改这条认知的内容：', c.content);
-  if (v == null || v === c.content) return;
+  if (v == null) return;
+  const t = v.trim();
+  if (!t){ toast('内容不能为空，未修改', 'warn'); return; } // 防清空落库出空白卡片（审查③）
+  if (t === c.content) return;
   try {
-    const r = await fetch('/api/cognition/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id, content: v }) }).then(x => x.json());
+    const r = await fetch('/api/cognition/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id, content: t }) }).then(x => x.json());
     if (r.error || !r.updated){ toast('修改失败：' + (r.error || '这条认知不存在了'), 'danger'); return; }
     toast('已修改认知内容', 'ok');
   } catch(e){ toast('修改失败：' + String(e), 'danger'); return; }
@@ -2341,7 +2344,8 @@ function mmDeleteCog(id){
     onOk: async () => {
       try {
         const r = await fetch('/api/cognition/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) }).then(x => x.json());
-        if (r.error){ toast('删除失败：' + r.error, 'danger'); return; }
+        // removed:false = 早已不存在（如后台/别处先删了）→ 如实提示并重拉同步，别假报成功（审查②）
+        if (r.error || !r.removed){ toast('删除失败：' + (r.error || '这条认知已不存在，已刷新'), 'danger'); await mmLoad(); return; }
         toast('已删除这条认知', 'ok');
       } catch(e){ toast('删除失败：' + String(e), 'danger'); return; }
       if (MM.selKind === 'cog' && MM.selId === id){ MM.selKind = null; MM.selId = null; }
@@ -2353,14 +2357,20 @@ function mmDeleteCog(id){
 async function mmEditEvRaw(id){
   const e = mmEvById(id); if (!e) return;
   const v = prompt('改这条证据的原话（rawContent）：', e.rawContent);
-  if (v == null || v === e.rawContent) return;
-  await mmUpdateEv(id, { rawContent: v }, '已修改原话');
+  if (v == null) return;
+  const t = v.trim();
+  if (!t){ toast('原话不能为空，未修改', 'warn'); return; }
+  if (t === e.rawContent) return;
+  await mmUpdateEv(id, { rawContent: t }, '已修改原话');
 }
 async function mmEditEvSummary(id){
   const e = mmEvById(id); if (!e) return;
   const v = prompt('改这条证据的摘要（summary，召回载体）：', e.summary);
-  if (v == null || v === e.summary) return;
-  await mmUpdateEv(id, { summary: v }, '已修改摘要');
+  if (v == null) return;
+  const t = v.trim();
+  if (!t){ toast('摘要不能为空，未修改', 'warn'); return; }
+  if (t === e.summary) return;
+  await mmUpdateEv(id, { summary: t }, '已修改摘要');
 }
 async function mmUpdateEv(id, patch, okMsg){
   try {
@@ -2396,7 +2406,7 @@ function mmDeleteEv(id){
     onOk: async () => {
       try {
         const r = await fetch('/api/evidence/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) }).then(x => x.json());
-        if (r.error){ toast('删除失败：' + r.error, 'danger'); return; }
+        if (r.error || !r.removed){ toast('删除失败：' + (r.error || '这条证据已不存在，已刷新'), 'danger'); await mmLoad(); return; }
         toast('已删除这条证据', 'ok');
       } catch(e2){ toast('删除失败：' + String(e2), 'danger'); return; }
       if (MM.selKind === 'ev' && MM.selId === id){ MM.selKind = null; MM.selId = null; }
