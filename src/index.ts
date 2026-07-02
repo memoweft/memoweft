@@ -119,6 +119,19 @@ export {
   type ActiveWindowSample,
   type ActiveWindowCollector,
 } from './perception/collectors/activeWindow.ts';
+// 真·活动窗口采集器（阶段 8-A · 档2）：采集循环 + Win32 前台窗口采样
+export {
+  createActiveWindowCollector,
+  type ActiveWindowCollectorOptions,
+  type RunningActiveWindowCollector,
+  type ActiveWindowEmit,
+  type ForegroundWindow,
+  type ForegroundSampler,
+} from './perception/collectors/activeWindowCollector.ts';
+export {
+  sampleForegroundWindowWin32,
+  foregroundSamplerSupported,
+} from './perception/collectors/win32Foreground.ts';
 
 // 配置
 export { config, cloudReadDefault, type MemoWeftConfig, type DlaConfig } from './config.ts';

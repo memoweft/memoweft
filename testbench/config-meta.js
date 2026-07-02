@@ -73,6 +73,28 @@ export const CONFIG_META = [
     control: 'toggle',
   },
 
+  // ===== activeWindowCollector（活动窗口采集，阶段 8-A）=====
+  {
+    path: 'activeWindowCollector.sampleIntervalSec',
+    label: '采样间隔（秒）',
+    hint: '每隔几秒看一眼前台窗口；调小=分辨更细但更费（每次起一个 PowerShell），调大=省但可能漏短停留。',
+    group: 'activeWindowCollector',
+    control: 'number',
+    min: 1,
+    max: 60,
+    step: 1,
+  },
+  {
+    path: 'activeWindowCollector.minDurationSec',
+    label: '最短停留才记（秒）',
+    hint: '同一窗口连续停满这么久才记一条行为观察；调小=记得更多更碎，调大=只记真正的停留、防噪声灌库。',
+    group: 'activeWindowCollector',
+    control: 'number',
+    min: 5,
+    max: 600,
+    step: 5,
+  },
+
   // ===== workingMemory（回话窗口）=====
   {
     path: 'workingMemory.maxTurns',

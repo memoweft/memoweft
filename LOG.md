@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-07-02 · Phase 6-A 记忆管理页 V1（+证据授权位可编辑）
+
+- 测试台新增「记忆管理」tab：左筛选（contentType/credStatus/formedBy/状态/搜索）/ 中列表（认知⇄证据切换）/ 右详情（全字段 + 溯源链 + 反查）。操作：改内容、**标失效（invalidAt，非删除；假设的「否定」走同条路）**、删除（二次确认+引用计数提示）、allowCloudRead/allowInference 开关即时保存。
+- 为此 `EvidenceStore.update` patch 扩为 `{rawContent?,summary?,allowCloudRead?,allowInference?}`（不改表结构）；`/api/evidence/update` 布尔护栏透传、`/api/cognition/update` 透传 invalidAt（不带=不动、null=恢复有效）。
+- **「确认假设」按钮明确没做**：用户确认怎么影响置信度属核心机制，待作者拍板（cell 8 把握度自算红线）。
+- 对抗式审查（独立 Agent，DOM 桩 25 断言 + 注入实测）：零高中危；3 处低危已修——删除接口 `removed:false` 不再假报成功、prompt 清空拒绝落库防空白卡片、落库前 trim。
+- 验证：typecheck ✅ / test 88 过 / build ✅ / inline script `node --check` ✅。分支 `feat/memory-manager`（后台 Agent 实现 + 主控人工审数据层/路由 + 对抗式审查前端）。
+
+---
+
+## 2026-07-02 · Phase 8-A 真·活动窗口采集器 V1（档2）
+
+- `src/perception/collectors/win32Foreground.ts`：spawn PowerShell + P/Invoke 取前台窗口（仅 Windows；失败一律 null 不崩）。**编码双保险**：脚本走 `-EncodedCommand`（UTF-16LE base64）、结果 UTF-8→base64 回传——中文窗口标题全程不碰系统代码页（吸取 GBK 乱码入库事故）。
+- `activeWindowCollector.ts`：采集循环（连续相同 app+title 合并、停留 ≥`minDurationSec` 才产出、锁屏/采不到保守截断、start/pause/resume/stop、sampler/时钟/定时器全可注入）。产出不带显式授权位 → 下游 observed 保守默认（**不上云红线，测试有断言**）。
+- `testbench/run-collector.mjs`（`npm run collector`）：独立进程投喂现有 `/api/observe-window`，不碰 server.mjs。`config.activeWindowCollector`：5s 采样 / 30s 阈值（dogfood 后调）。
+- 已知限制：每次采样 spawn 一个 PowerShell（冷编译 ~0.5–2s，V2 可换长驻）；单窗口超长停留只在切换/stop/pause 时产出。
+- 验证：typecheck ✅ / test 94 过（+7 离线假采样测试）/ build ✅ / 真机采样+中文往返+全链路回显冒烟 ✅ 零残留。分支 `feat/active-window-collector`。
+
+---
+
+## 2026-07-02 · Phase 7-A Cloud Guard 验收：补漏 trends / ask 路径
+
+- 核心三步（distill/consolidate/attribute）原本就过 `filterCloudReadable`；本轮查出并补上**三处漏网**的云端写路径：`aggregateTrends`、`proposeAsk`、`revisitConflicts`——此前 allowCloudRead=false 的证据（含 observed 默认不上云的）会经这三条路进云端 prompt。
+- `tests/privacy.test.ts` 补端到端断言：local-only 原话不出现在喂给（云端）LLM 的 prompt 里。
+- 验证：typecheck ✅ / test 90 过（+3）/ build ✅。分支 `feat/cloud-guard-acceptance`（并行会话完成，rebase 零冲突并入）。
+- 合流备注：G1/7-A/8-A/6-A 四分支同日合入 main（互不碰文件，零冲突），合流后全量 **104 过**；docs-sync（本三条 LOG + STATE + config-meta 采集器参数 + index.ts collector 导出）由主控合流时统一补记。
+
+---
+
 ## 2026-07-02 · Phase 5-B 测试台导入导出（备份/迁移入口）
 
 **起因**
