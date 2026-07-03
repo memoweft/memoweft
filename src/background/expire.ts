@@ -28,6 +28,8 @@ const DAY_MS = 86_400_000;
 export function expire(subjectId: string, deps: ExpireDeps, now: Date = new Date()): ExpireResult {
   const thresholds = (deps.config ?? config).background.expireAfterDays;
   let expired = 0;
+  // active()（未失效且未归档）：归档全面雪藏（批次3 用户拍板）——定期清理不碰已归档的临时类，
+  // 【不能】给它标失效（归档要保住可恢复：恢复归档后它应还是原来的有效状态）。
   for (const c of deps.cognitionStore.active(subjectId)) {
     const days = thresholds[c.contentType];
     if (days == null) continue; // 不在过期名单 → 永不自动失效（明确偏好/事实）

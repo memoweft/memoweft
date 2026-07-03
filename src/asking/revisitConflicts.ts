@@ -86,6 +86,7 @@ export async function revisitConflicts(
   const markAsked = opts.markAsked ?? true;
 
   // 候选 = active 的冲突认知里、没复看问过的。
+  // active()（未失效且未归档）：归档全面雪藏（批次3 用户拍板）——已归档的冲突认知不再复看追问。
   const candidates = deps.cognitionStore
     .active(subjectId)
     .filter((c) => c.credStatus === 'conflicted')

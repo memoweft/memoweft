@@ -13,6 +13,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { SqliteEvidenceStore, type EvidenceStore } from '../evidence/store.ts';
 import { SqliteEventStore, type EventStore } from '../event/store.ts';
 import { SqliteCognitionStore, type CognitionStore } from '../cognition/store.ts';
+import { SqliteManagementLog, type ManagementLog } from '../memory/managementLog.ts';
 import type { Transaction } from './transaction.ts';
 import type { MemoWeftConfig } from '../config.ts';
 
@@ -22,6 +23,8 @@ export interface StoreBundle {
   evidenceStore: EvidenceStore;
   eventStore: EventStore;
   cognitionStore: CognitionStore;
+  /** 受控管理审计日志（批次2）：core.memory.* 的每个操作在此留痕（op/target/reason/detail）。 */
+  managementLog: ManagementLog;
   /** 把一段【同步】写包进一个事务（可重入）。传给 consolidate / updateProfile 即让其写入原子化。 */
   transaction: Transaction;
   /** 关掉这条共享连接（统一在此关，别去关单个 store——单 store 的 close 对共享连接是 no-op）。 */
@@ -39,6 +42,8 @@ export function openStores(dbPath: string, cfg?: MemoWeftConfig): StoreBundle {
   const evidenceStore = new SqliteEvidenceStore(db, cfg);
   const eventStore = new SqliteEventStore(db);
   const cognitionStore = new SqliteCognitionStore(db);
+  // 审计表也挂共享连接（批次2）：管理操作的"改数据 + 落审计"能包进同一个事务、全成或全滚。
+  const managementLog = new SqliteManagementLog(db);
 
   // 事务深度：SQLite 不支持嵌套事务，只有最外层真 BEGIN/COMMIT；里层再调只直接跑（可重入）。
   let depth = 0;
@@ -63,6 +68,7 @@ export function openStores(dbPath: string, cfg?: MemoWeftConfig): StoreBundle {
     evidenceStore,
     eventStore,
     cognitionStore,
+    managementLog,
     transaction,
     close: () => db.close(),
   };

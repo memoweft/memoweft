@@ -13,12 +13,14 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRunLogger } from '../src/obs/runLog.ts';
 import { openStores } from '../src/store/openStores.ts';
+import { createMemoryManagementAPI } from '../src/memory/managementApi.ts';
 import { distill } from '../src/distillation/distill.ts';
 import { consolidate } from '../src/consolidation/consolidate.ts';
 import { updateProfile } from '../src/consolidation/updateProfile.ts';
 import { perceive } from '../src/pipeline/perceive.ts';
 import { ingestObservations } from '../src/perception/ingest.ts';
-import { activeWindowToObservation } from '../src/perception/collectors/activeWindow.ts';
+// 活动窗口映射已迁出 Core 到采集插件（架构归位，boundaries.md §4.1）；testbench 手动 observe 调试表单从插件路径引。
+import { activeWindowToObservation } from '../plugins/collector-active-window/src/activeWindow.ts';
 import { attribute } from '../src/attribution/attribute.ts';
 import { proposeAsk } from '../src/asking/proposeAsk.ts';
 import { revisitConflicts } from '../src/asking/revisitConflicts.ts';
@@ -50,6 +52,9 @@ const store = stores.evidenceStore;
 const eventStore = stores.eventStore;
 const cogStore = stores.cognitionStore;
 const transaction = stores.transaction; // 传给 updateProfile / consolidate 即让其写入原子化
+// 受控记忆管理 API（架构归位·批次3，boundaries.md §4.3）：删除 / 标失效 / 授权变更等【关键管理行为】
+// 一律走它——带 reason 落审计（management_log），Host 不再直接摸 Sqlite*Store 完成这些操作。
+const memoryApi = createMemoryManagementAPI(stores);
 // 治慢③：模型池（可切换模型第一块）——写路径(distill/consolidate/attribute/trends)用小快模型，对话用大模型。
 const llmPool = loadLLMPool();
 const llm = llmPool.for('write'); // 写路径统一用它（updateProfile / 手动 distill/consolidate/attribute/ask / trends）
@@ -316,21 +321,38 @@ const server = createServer(async (req, res) => {
 
     // 用户主动改一条证据的 summary / raw_content / 授权位（cell 8 规则 10 + 6-A 记忆管理页）。
     // 授权位只认布尔（防脏值混进 0/1 落库）；不传 = 不动。
+    // 批次3 分流（boundaries.md §4.3）：授权位是隐私敏感的【关键管理行为】→ 走受控 API
+    //   （带 reason 落审计；零变更时受控 API 原样返回、不落审计，前端行为不受影响）；
+    //   rawContent/summary 是开发调试的内容编辑、非关键管理行为 → 保留 store 直调。
     if (req.method === 'POST' && url.pathname === '/api/evidence/update') {
-      const { id, rawContent, summary, allowCloudRead, allowInference } = await readJson(req);
-      const patch = { rawContent, summary };
-      if (typeof allowCloudRead === 'boolean') patch.allowCloudRead = allowCloudRead;
-      if (typeof allowInference === 'boolean') patch.allowInference = allowInference;
-      const updated = store.update(String(id ?? ''), patch);
+      const { id, rawContent, summary, allowCloudRead, allowInference, reason } = await readJson(req);
+      const evidenceId = String(id ?? '');
+      const hasContentEdit = rawContent !== undefined || summary !== undefined;
+      const hasAuthChange = typeof allowCloudRead === 'boolean' || typeof allowInference === 'boolean';
+      if (hasContentEdit) store.update(evidenceId, { rawContent, summary }); // 内容编辑=调试，直调保留
+      if (hasAuthChange) {
+        memoryApi.updateEvidenceAuthorization({
+          evidenceId,
+          allowCloudRead: typeof allowCloudRead === 'boolean' ? allowCloudRead : undefined,
+          allowInference: typeof allowInference === 'boolean' ? allowInference : undefined,
+          reason: typeof reason === 'string' && reason ? reason : 'testbench:用户在记忆管理页修改授权', // UI 不传就用缺省
+        });
+      }
+      // 响应统一取最新全量：内容与授权若一次同发（未来调用方，如 apps/memoweft-host），
+      //   两次写库都已生效，这里 get 一遍才能反映两者（避免只回后一次的快照）。
+      //   什么都没传：行为同旧（空 patch → 存在原样返回、不存在返回 null），响应形状 { updated } 不变。
+      const updated = (hasContentEdit || hasAuthChange) ? store.get(evidenceId) : store.update(evidenceId, {});
       sendJson(res, 200, { updated });
       return;
     }
 
-    // 用户主动删一条证据（真删，非系统自动删；cell 6 条件性真删）
+    // 用户主动删一条证据（真删，非系统自动删；cell 6 条件性真删）。
+    // 批次3（boundaries.md §4.3）：走受控 API。UI 已做二次确认 → 语义=用户执意删，故 force:true
+    // （有事件/认知引用也删、连关联链一起清，blockers 快照进审计 detail）。响应仍是 { removed }，前端不感知。
     if (req.method === 'POST' && url.pathname === '/api/evidence/delete') {
       const { id } = await readJson(req);
-      const removed = store.remove(String(id ?? ''));
-      sendJson(res, 200, { removed });
+      const r = memoryApi.removeEvidenceSafely({ evidenceId: String(id ?? ''), force: true, reason: 'testbench:用户在记忆管理页删除' });
+      sendJson(res, 200, { removed: r.removed });
       return;
     }
 
@@ -455,20 +477,27 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 用户主动改一条认知（cell 8 规则 10）。invalidAt（6-A：标失效/否定假设，非删除）store 已支持，
-    // 此处透传：请求体不带该键 → undefined → store 保持原值；显式传 null 可恢复有效。
+    // 用户主动改一条认知（cell 8 规则 10）。
+    // 批次3 分流（boundaries.md §4.3）：请求只带 invalidAt 且非 null =「标失效」这一关键管理行为 →
+    //   走受控 API（reason 落审计；invalidAt 由 API 统一取"现在"，与前端本就传 now 等价）。
+    //   其余字段（content/confidence/credStatus/scope 的开发调试编辑、invalidAt:null 恢复有效）保留 store 直调。
     if (req.method === 'POST' && url.pathname === '/api/cognition/update') {
       const { id, content, confidence, credStatus, scope, invalidAt } = await readJson(req);
-      const updated = cogStore.update(String(id ?? ''), { content, confidence, credStatus, scope, invalidAt });
+      const onlyInvalidate = invalidAt != null
+        && content === undefined && confidence === undefined && credStatus === undefined && scope === undefined;
+      const updated = onlyInvalidate
+        ? memoryApi.invalidateCognition({ cognitionId: String(id ?? ''), reason: 'testbench:用户标失效' })
+        : cogStore.update(String(id ?? ''), { content, confidence, credStatus, scope, invalidAt });
       sendJson(res, 200, { updated });
       return;
     }
 
-    // 用户主动删一条认知
+    // 用户主动删一条认知。批次3（boundaries.md §4.3）：走受控 API——连溯源链删 + reason 落审计
+    // （审计 detail 只存元数据不存内容原文，用户拍板）。响应仍是 { removed }，前端不感知。
     if (req.method === 'POST' && url.pathname === '/api/cognition/delete') {
       const { id } = await readJson(req);
-      const removed = cogStore.remove(String(id ?? ''));
-      sendJson(res, 200, { removed });
+      const r = memoryApi.removeCognitionSafely({ cognitionId: String(id ?? ''), reason: 'testbench:用户删除' });
+      sendJson(res, 200, { removed: r.removed });
       return;
     }
 
@@ -634,12 +663,14 @@ const server = createServer(async (req, res) => {
     }
 
     // ── 恢复出厂 · 清空全部数据（体验层阶段二 · 不可逆）──
-    // 铁律：绝不改 src/——只用现有 store 的公开方法清三层数据 + 检索索引。
+    // 批次3 注（boundaries.md §4.3 登记的直调例外）：批量清空【保留 store 直调】——恢复出厂是整库擦除、
+    //   不是逐条管理行为；逐条走受控 API 反而会往正要清掉的审计表里再写一堆行。只用公开方法清数据 + 索引：
     //   证据 evidence：EvidenceStore 无 removeBySubject，用 all() 逐条 remove(id)（测试台单 subject，全清）。
     //   事件 event   ：eventStore.removeBySubject(subjectId) → 连带清 event_evidence 关联表。
     //   画像 cognition：cogStore.removeBySubject(subjectId) → 连带清 cognition_evidence 溯源链。
     //   检索索引     ：retriever.indexAll([]) → VectorRetriever 会 DELETE FROM vectors（空数组即清空）；
     //                  NullRetriever 为 no-op（本就无索引）。两种都安全。
+    //   审计 management_log：批次3 用户拍板「出厂=无历史」→ 连审计表一起清（managementLog.clear()）。
     // 清完顺手 newSession()：把当前会话窗口也清掉，避免旧上下文残留（跟"＋新会话"同一动作）。
     if (req.method === 'POST' && url.pathname === '/api/factory-reset') {
       const subjectId = config.identity.subjectId;
@@ -649,9 +680,10 @@ const server = createServer(async (req, res) => {
       }
       const eventRemoved = eventStore.removeBySubject(subjectId);
       const cognitionRemoved = cogStore.removeBySubject(subjectId);
+      const auditRemoved = stores.managementLog.clear(); // 出厂=无历史（批次3 用户拍板）
       await retriever.indexAll([]); // 清空向量索引（空召回时无副作用）
       newSession(); // 顺手清当前会话窗口（不留旧上下文）
-      sendJson(res, 200, { ok: true, evidenceRemoved, eventRemoved, cognitionRemoved });
+      sendJson(res, 200, { ok: true, evidenceRemoved, eventRemoved, cognitionRemoved, auditRemoved });
       return;
     }
 

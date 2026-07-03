@@ -52,6 +52,9 @@ export interface Cognition {
   invalidAt: string | null;
   /** 主动询问时间戳（阶段 3 M5）：null = 未问过；proposeAsk 发问后写入，用于"问过不再问"去重。 */
   askedAt: string | null;
+  /** 归档时间（批次2 受控管理）：非 null = 已归档——召回跳过（invalid 同款待遇），数据保留、可恢复。
+   *  可选字段以兼容既有构造处（旧代码不填 = 未归档）。 */
+  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

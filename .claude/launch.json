@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "memoweft-host",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["apps/memoweft-host/src/server.ts"],
+      "port": 7788
+    }
+  ]
+}

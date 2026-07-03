@@ -32,6 +32,8 @@ export interface BuildGraphOptions {
   includeEvidence?: boolean;
   /** 是否含已失效认知（invalidAt≠null）。默认 false = 只活跃。 */
   includeInvalid?: boolean;
+  /** 是否含已归档认知（archivedAt≠null）。默认 false——归档向 invalid 看齐（批次2 受控管理）。 */
+  includeArchived?: boolean;
   /** 按认知内容类型过滤。 */
   contentType?: ContentType | ContentType[];
   /** 按可信状态过滤。 */
@@ -62,6 +64,7 @@ function truncate(s: string, n: number): string {
 function cognitionColorKey(c: Cognition): string {
   if (c.credStatus === 'conflicted') return 'conflicted';
   if (c.invalidAt != null) return 'invalid';
+  if (c.archivedAt != null) return 'archived'; // 仅 includeArchived=true 时可见（默认被过滤）
   return c.contentType;
 }
 
@@ -73,6 +76,7 @@ export function buildMemoryGraph(
   const { evidenceStore, eventStore, cognitionStore } = deps;
   const includeEvidence = opts.includeEvidence ?? true;
   const includeInvalid = opts.includeInvalid ?? false;
+  const includeArchived = opts.includeArchived ?? false;
   const contentTypes = asArray(opts.contentType);
   const credStatuses = asArray(opts.credStatus);
   const sourceKinds = asArray(opts.sourceKind);
@@ -90,6 +94,7 @@ export function buildMemoryGraph(
   const cognitions = cognitionStore.all(subjectId).filter((c) => {
     let keep = true;
     if (!includeInvalid && c.invalidAt != null) keep = false;
+    if (keep && !includeArchived && c.archivedAt != null) keep = false; // 归档默认不进图（invalid 同款待遇）
     if (keep && contentTypes && !contentTypes.includes(c.contentType)) keep = false;
     if (keep && credStatuses && !credStatuses.includes(c.credStatus)) keep = false;
     if (keep && opts.onlyConflicts && c.credStatus !== 'conflicted') keep = false;
@@ -113,6 +118,7 @@ export function buildMemoryGraph(
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       invalidAt: c.invalidAt,
+      archivedAt: c.archivedAt ?? null,
       val: 4 + Math.max(1, c.confidence / 150),
       colorKey: cognitionColorKey(c),
     });

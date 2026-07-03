@@ -12,6 +12,7 @@
 dla.db
 testbench/*.db
 testbench/seed-*.ps1
+apps/*/data/
 logs/*
 !logs/.gitkeep
 

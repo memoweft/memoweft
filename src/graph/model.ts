@@ -42,6 +42,8 @@ export interface MemoryGraphNode {
   createdAt?: string;
   updatedAt?: string;
   invalidAt?: string | null;
+  /** 仅 cognition：归档时间（批次2；默认被过滤，includeArchived=true 时可见）。 */
+  archivedAt?: string | null;
   // 渲染提示（前端可覆盖）
   val?: number;
   colorKey?: string;

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS cognition (
   valid_at     TEXT,
   invalid_at   TEXT,
   asked_at     TEXT,
+  archived_at  TEXT,
   created_at   TEXT    NOT NULL,
   updated_at   TEXT    NOT NULL
 );
@@ -53,6 +54,7 @@ interface CognitionRow {
   valid_at: string | null;
   invalid_at: string | null;
   asked_at: string | null;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +72,7 @@ function fromRow(r: CognitionRow): Cognition {
     validAt: r.valid_at,
     invalidAt: r.invalid_at,
     askedAt: r.asked_at,
+    archivedAt: r.archived_at,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -84,13 +87,16 @@ export interface CognitionPatch {
   invalidAt?: string | null;
   /** 主动询问时间戳（阶段 3 M5）：proposeAsk 发问后写入，用于"问过不再问"去重。 */
   askedAt?: string | null;
+  /** 归档时间（批次2 受控管理）：非 null = 已归档，召回跳过；传 null 可恢复。经 core.memory.archiveCognition 写入。 */
+  archivedAt?: string | null;
 }
 
 export interface CognitionStore {
   put(input: CognitionInput): Cognition;
   get(id: string): Cognition | null;
   all(subjectId?: string): Cognition[];
-  /** 只取未失效的（invalid_at IS NULL）——召回 / 增量比对用。 */
+  /** 只取【未失效 且 未归档】的（invalid_at IS NULL AND archived_at IS NULL）——召回 / 写路径读现有认知用。
+   *  归档全面雪藏（批次3 用户拍板）：画像更新不当现有认知、不被主动问起、定期清理不碰（保住可恢复）。 */
   active(subjectId: string): Cognition[];
   sourcesOf(cognitionId: string): EvidenceLink[];
   /** 用户主动改一条认知 / 标失效（cell 8 规则 10 / cell 6）。 */
@@ -118,13 +124,16 @@ export class SqliteCognitionStore implements CognitionStore {
     this.migrate();
   }
 
-  /** 幂等迁移：旧库（阶段 1a/2 建的）补上阶段 3 新增的 asked_at 列。新库由 SCHEMA 直接带上。 */
+  /** 幂等迁移：旧库补上后加的列（阶段 3 asked_at / 批次2 archived_at）。新库由 SCHEMA 直接带上。 */
   private migrate(): void {
     const cols = this.db
       .prepare("SELECT name FROM pragma_table_info('cognition')")
       .all() as unknown as Array<{ name: string }>;
     if (!cols.some((c) => c.name === 'asked_at')) {
       this.db.exec('ALTER TABLE cognition ADD COLUMN asked_at TEXT');
+    }
+    if (!cols.some((c) => c.name === 'archived_at')) {
+      this.db.exec('ALTER TABLE cognition ADD COLUMN archived_at TEXT');
     }
   }
 
@@ -142,6 +151,7 @@ export class SqliteCognitionStore implements CognitionStore {
       validAt: input.validAt ?? null,
       invalidAt: input.invalidAt ?? null,
       askedAt: null, // 新建的认知一律未问过；提问后由 proposeAsk 经 update 写入
+      archivedAt: null, // 新建的认知一律未归档；归档走 core.memory.archiveCognition
       createdAt: now,
       updatedAt: now,
     };
@@ -149,9 +159,9 @@ export class SqliteCognitionStore implements CognitionStore {
       .prepare(
         `INSERT INTO cognition (
           id, subject_id, content, content_type, formed_by,
-          confidence, cred_status, scope, valid_at, invalid_at, asked_at, created_at, updated_at
+          confidence, cred_status, scope, valid_at, invalid_at, asked_at, archived_at, created_at, updated_at
         ) VALUES ($id,$subject_id,$content,$content_type,$formed_by,
-          $confidence,$cred_status,$scope,$valid_at,$invalid_at,$asked_at,$created_at,$updated_at)`,
+          $confidence,$cred_status,$scope,$valid_at,$invalid_at,$asked_at,$archived_at,$created_at,$updated_at)`,
       )
       .run({
         $id: cog.id,
@@ -165,6 +175,7 @@ export class SqliteCognitionStore implements CognitionStore {
         $valid_at: cog.validAt,
         $invalid_at: cog.invalidAt,
         $asked_at: cog.askedAt,
+        $archived_at: cog.archivedAt,
         $created_at: cog.createdAt,
         $updated_at: cog.updatedAt,
       } as unknown as Record<string, SQLInputValue>);
@@ -195,10 +206,12 @@ export class SqliteCognitionStore implements CognitionStore {
     return rows.map(fromRow);
   }
 
+  /** 语义升级（批次3 用户拍板·归档全面雪藏）：active = 未失效【且未归档】。
+   *  升级后 consolidate/attribute/proposeAsk/revisitConflicts/expire 等走 active() 的写路径自动跳过归档。 */
   active(subjectId: string): Cognition[] {
     const rows = this.db
       .prepare(
-        'SELECT * FROM cognition WHERE subject_id = ? AND invalid_at IS NULL ORDER BY confidence DESC, created_at ASC',
+        'SELECT * FROM cognition WHERE subject_id = ? AND invalid_at IS NULL AND archived_at IS NULL ORDER BY confidence DESC, created_at ASC',
       )
       .all(subjectId) as unknown as CognitionRow[];
     return rows.map(fromRow);
@@ -221,13 +234,14 @@ export class SqliteCognitionStore implements CognitionStore {
       scope: patch.scope === undefined ? cur.scope : patch.scope,
       invalidAt: patch.invalidAt === undefined ? cur.invalidAt : patch.invalidAt,
       askedAt: patch.askedAt === undefined ? cur.askedAt : patch.askedAt,
+      archivedAt: patch.archivedAt === undefined ? (cur.archivedAt ?? null) : patch.archivedAt,
       updatedAt: new Date().toISOString(),
     };
     this.db
       .prepare(
-        'UPDATE cognition SET content=?, confidence=?, cred_status=?, scope=?, invalid_at=?, asked_at=?, updated_at=? WHERE id=?',
+        'UPDATE cognition SET content=?, confidence=?, cred_status=?, scope=?, invalid_at=?, asked_at=?, archived_at=?, updated_at=? WHERE id=?',
       )
-      .run(next.content, next.confidence, next.credStatus, next.scope, next.invalidAt, next.askedAt, next.updatedAt, id);
+      .run(next.content, next.confidence, next.credStatus, next.scope, next.invalidAt, next.askedAt, next.archivedAt, next.updatedAt, id);
     return this.get(id);
   }
 
@@ -244,9 +258,9 @@ export class SqliteCognitionStore implements CognitionStore {
       .prepare(
         `INSERT INTO cognition (
           id, subject_id, content, content_type, formed_by,
-          confidence, cred_status, scope, valid_at, invalid_at, asked_at, created_at, updated_at
+          confidence, cred_status, scope, valid_at, invalid_at, asked_at, archived_at, created_at, updated_at
         ) VALUES ($id,$subject_id,$content,$content_type,$formed_by,
-          $confidence,$cred_status,$scope,$valid_at,$invalid_at,$asked_at,$created_at,$updated_at)`,
+          $confidence,$cred_status,$scope,$valid_at,$invalid_at,$asked_at,$archived_at,$created_at,$updated_at)`,
       )
       .run({
         $id: cognition.id,
@@ -260,6 +274,7 @@ export class SqliteCognitionStore implements CognitionStore {
         $valid_at: cognition.validAt,
         $invalid_at: cognition.invalidAt,
         $asked_at: cognition.askedAt,
+        $archived_at: cognition.archivedAt ?? null, // 旧包没有此字段 → null（未归档）
         $created_at: cognition.createdAt,
         $updated_at: cognition.updatedAt,
       } as unknown as Record<string, SQLInputValue>);

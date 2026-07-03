@@ -138,6 +138,8 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   const empty: ConsolidateResult = { created: [], reinforced: 0, corrected: 0, conflicted: 0, processedEvents: 0, llmCalls: 0, profileSize: 0, promptChars: 0 };
   if (newEvents.length === 0) return empty;
 
+  // 现有画像 = active()（未失效且未归档）：归档全面雪藏（批次3 用户拍板）——已归档认知不进
+  // 「现有画像」prompt、不参与强化/纠正/冲突比对（数据保留、可经恢复归档重新生效）。
   const existing = deps.cognitionStore.active(subjectId);
 
   // 事件视图 + 合法原话集合：把每个新事件覆盖的原话（带 id+原文）摊开给 LLM 引用；

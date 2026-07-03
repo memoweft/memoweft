@@ -1,0 +1,12 @@
+{
+  // 采集插件类型检查档：extends 根 base 继承编译选项（NodeNext / strict / 带 .ts 后缀相对 import 等），
+  // include 指向本插件自己的 src/tests（extends 不继承 include，必须重写）。
+  // 类型解析靠 workspace：dependencies:{"memoweft":"*"} 软链到根仓，NodeNext 顺 exports.types 找 dist/index.d.ts
+  //   —— 前提是先 npm run build 出 dist（同 Host，见 docs/host-migration.md §1.4）。
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src", "tests"]
+}

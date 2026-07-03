@@ -4,6 +4,270 @@
 
 ---
 
+## 2026-07-03 · 架构归位：真采集器迁独立插件包 + 采集流接 Host
+
+**起因**：归位路线走到"做插件"收尾——体验插件（v1）已立，采集器是路线明列的**第二类插件（Collector）**、也是**唯一还赖在 Core 里的归位债**（`src/perception/collectors/` 批次3 只做到"不从主入口导出、标 experimental 暂居库内"，STATE 自记"待迁 plugins/collector-active-window/"）。作者拍板本轮做它，且选**完整版**（归位 + 按路线 §3 把采集流接到 Host，不只物理搬家）。
+
+**做了什么**
+- **建采集插件包** `plugins/collector-active-window/`（`@memoweft/collector-active-window` workspace，根 workspaces 加 `plugins/*`）：搬入三个源文件（`activeWindow.ts` 契约+映射 / `activeWindowCollector.ts` 采集循环 / `win32Foreground.ts` Win32 采样）+ 运行器 `run.mjs` + 测试 `tests/collector.test.ts`（8 例）+ README + tsconfig。
+- **解耦 Core config**：采集参数（采样间隔 / 碎片阈值）不再挂 `config.activeWindowCollector`（已从 `MemoWeftConfig` 删除），改由插件自持缺省 `DEFAULT_SAMPLE_INTERVAL_SEC/MIN_DURATION_SEC`。插件源文件里 `Observation` 类型从 `memoweft` 引（单一来源，type-only、运行时 elide）。
+- **瘦 Core**：`src/index.ts` 删掉采集器 3 个导出（Core 只留 generic `Observation` + `ingestObservations`）；`src/perception/collectors/` 整目录删除；`tests/perception.test.ts` 的映射用例搬去插件、端到端用例改用 plain `obs()` 不再依赖映射。
+- **接 Host（路线 §3 数据流）**：Host 加 `POST /api/observe`——收 generic Observation 数组 → 审核（① 采集总开关 `MEMOWEFT_HOST_COLLECTOR`，off 回 403；② `sanitizeObservation` 强制剥掉所有授权位，让 Core 套 observedDefaults 保证 observed 不上云；③ 调 `core.ingestObservation`）。运行器改指 Host `:7788`（不再喂旧 testbench `:7888`）。`npm run collector` 重定向到插件 `run.mjs`；testbench 手动 observe 表单的 import 改指插件路径（保留开发调试用途）。
+
+**为什么这样接**：窗口→Observation 的映射属**采集插件知识**，Host `/api/observe` 只认 generic Observation（任何采集插件——睡眠/心率——都能复用同一入口）。隐私红线在 Host 边界强制执行（剥授权位），不信任插件自报的 `allowCloudRead`（路线 §7「插件只能请求，Host 审核，Core 执行」）。上云是记忆管理页的人工动作，不是采集默认。
+
+**验证**（把关三查）：typecheck 三处全绿；`npm test` Core 144 / Host 25 / 插件 8 全过（采集器 7 + 映射 1 搬到插件、Core 相应减少）。端到端冒烟（**临时库** `MEMOWEFT_HOST_DB` 指 scratchpad，不碰 dogfood 库）：主流程落库 1 / 幂等跳过 / observed 默认（sourceKind=observed·本地可读·不上云·可推）/ **★隐私红线：POST 带 `allowCloudRead:true` 被 Host 强制剥成 false** / 空数组 400 / 采集关闭 403，全过。冒烟后按端口精确杀两个临时 Host + 删临时库/sessions，真库 `host.db` 时间戳未变（未被碰）。
+
+---
+
+## 2026-07-03 · 插件 v1 dogfood 修复：切人设被对话历史带跑
+
+**起因**：作者 dogfood 发现——切「星瑶 → 普通助手」后，当前对话下一句仍在演星瑶。
+
+**诊断**（看会话历史 + 后端状态）：切换本身生效了（`current=plain`、dropConversation 重建了实例、新 systemPrompt 也传了）；真凶是**续聊 seedTurns 把整段旧对话（含旧人设"我是星瑶"的 assistant 回复）种回窗口**，LLM 更信历史里自己演过的角色、被带跑——历史里的自我表述盖过了 systemPrompt。这是"换人设"和"续聊记上下文"的内在冲突，dropConversation 那轮没料到。
+
+**修**：切人设后【第一句】的 seedTurns 只种【用户说过的话】（`seedFor(convId, {onlyUser:true})` filter user turns），不种旧人设的 assistant 回复。切人设端点标记 `switchedExperienceConvs`，chat 用一次即清。普通续聊（open 旧会话、不换人设）仍种完整历史，保持对话连续。
+
+**设计口径**：短期对话窗口（seedTurns）属"当前这个人设"，切人设时旧人设的回复不该被新人设认领；但用户说过的话是跨人设的**事实**、要保留。长期记忆（cognition）本就跨人设（靠 recall 带回）。
+
+**验证**（真模型端到端，dogfood 库临时测试对话已归档）：切星瑶（"你好，云~真好听的名字"温柔）→ 切普通助手问"你是谁"→"我是一个能持续记住你的AI助手"（**不演星瑶**）→ 问"还记得我吗"→"你叫云、26岁"（**记得用户**）。Host test 25、Core test 152 不回归。
+
+---
+
+## 2026-07-03 · 插件 v1：Experience Plugin 契约 + experience-plain/xingyao + 切换
+
+**起因**：架构归位完成，路线（§7）下一步做插件。用户拍板 v1：只 systemPrompt 级契约、Host 内模块、星瑶人设工程师按 naming.md 补写。
+
+**做了什么**
+- **apps/memoweft-host/src/experiences/**（Host 内模块，零 Core 依赖）：`plugin.ts`（`MemoWeftPlugin` 契约，v1 只 `{id,name,type:'experience',systemPrompt}`；hooks/permissions/PluginContext 只预留注释、不实现）、`plain.ts`（= 原 REPLY_PERSONA，普通助手）、`xingyao.ts`（星瑶人设，守 naming §6：prompt 里可拟人自称"我"、但禁过度承诺"真正理解你/永远不忘"、落"记≠信"，覆盖记忆唤起/矛盾温和确认/陪伴三场景）、`index.ts`（注册表 + getExperience 回退 + listExperiences 不外泄 systemPrompt，默认 env `MEMOWEFT_EXPERIENCE`）+ tests/experiences.test.ts 6 例。
+- **server.ts**：硬编码 REPLY_PERSONA 换成"当前激活体验的 systemPrompt" + GET `/api/experiences` + POST `/api/experience`（切换，白名单 404）+ 前端顶栏体验选择器。
+- **Core 加 `core.dropConversation(id)`**（审查抓出的 must-fix，用户拍板破 v1"不改 Core"）：切换体验/重开会话要丢弃 Core 缓存的旧会话实例才真重建换人设——**Host 的 activatedConvs 与 Core 的 conversations Map 是两套独立缓存**，光清 Host 侧、Core 命中旧实例就不重建、新 systemPrompt 被静默忽略。切换端点 + 步4 open 都补调 dropConversation（一并根治步4 那个"Core 覆盖旧实例"的错误假设，虽步4 不换人设没暴露）。
+
+**决策**：v1 只 systemPrompt（用户拍板）；`dropConversation` 加进 Core facade（用户拍板破"不改 Core"，补 Core 本就缺的会话生命周期能力，纯增量方法不改现有）。
+
+**对抗审查（4 维×证伪）抓出 1 must-fix + PM 诚实纠错**：审查读代码证明"切换当前会话不生效"（Core 不重建实例）。**PM 承认：之前"切 xingyao 就温柔了"的行为冒烟是假阳性**——普通助手人设对"今天有点累"本来也会共情，被 LLM 通用温柔骗过；审查的代码逻辑比行为观察靠谱。修复：加 core.dropConversation + core.test 新增用例直接断言 systemPrompt 换没换（不 drop 仍旧人设、drop 后换新人设——把 bug 和假阳性都锁进测试）。
+
+**验证**：Core typecheck ✅ ｜ Core test 152 过（151 + 1 dropConversation）✅ ｜ build ✅ ｜ Host typecheck ✅ ｜ Host test 25（含 experiences 6）✅ ｜ 冒烟切换链路不崩 + 白名单 404 ✅。
+
+**意义**：证明 MemoWeft 是通用框架——同一套记忆底座，普通助手能用、星瑶也能用；插件只管"脸"(systemPrompt)、Core 只管"记忆"，边界清清楚楚。**路线后续**：更多插件（tool/collector）、清仓库/README、npm 发布。
+
+---
+
+## 2026-07-02 · 架构归位批次5 步6：Host S0-S1 用户正门（批次5 收尾）
+
+**起因**：批次5 最后一步——补上用户正门体验（记忆胶囊、记忆气泡、立即整理）。
+
+**做了什么（全在 apps/memoweft-host/）**
+- **scheduler.ts**：S1 新理解信号（lastUpdate.newCognitions 从 consolidated.created 取 id/content/credStatus，只新增几条不塞整段画像）+ refreshNow（用户"立即整理"，走同一单飞锁、不与后台并发）。
+- **server.ts**：POST `/api/refresh`（core.updateProfile 单飞）+ GET `/api/cognition/count`（胶囊数）。
+- **web/index.html**：#memPill 胶囊「它记住我 N 件事」→ 点进记忆抽屉；S1 气泡（整理出新理解就地织进聊天流「记住了：X · 把握度 · 这条不对/删」）；「立即整理记忆」按钮。
+- **tests/scheduler.test.ts** 3 例（newCognitions 信号透传 + refreshNow 单飞）。
+
+**决策**：refresh 用户版进 Host（分歧点1）；S0 抽屉复用记忆管理页；气泡把握度用 credStatus（刚生成无衰减）。
+
+**对抗审查（3 维×证伪）修的 4 条（1 must-fix + 3 minor；none 那条设计观察不修）**：
+- **must-fix**：气泡「删」直接硬删连溯源链、无确认，和记忆管理页删除口径不一致，且紧挨"这条不对"易误点（团队有误删事故教训）→ 加 memConfirm 二次确认（警示 + 引导用"这条不对"更稳）。
+- minor：refreshNow/trigger 成功后无条件清 pendingSinceUpdate，会抹掉 updateProfile 的 await 期间新到的 turn 计数 → 改快照相减保留新增（并只在真攒空才清 idle 兜底）。
+- minor：首启 pollBg 追溯织历史气泡的洞（"首次不织"依赖 lastAt、被 doRefresh 改掉）→ 用独立 `_seenFirstBg` flag 解耦。
+- minor：weaveMemNote 注释说"向导态不织"但无守卫 → 改注释如实（任何态都织进隐藏 chatInner、切回可见、不丢气泡）。
+
+**验证**：Core 151 不回归 ✅ ｜ Host typecheck ✅ ｜ Host test 19 ✅ ｜ build ✅ ｜ 前端内联 JS `node --check` ✅。冒烟（真 .env 临时库）：胶囊数端点通、**refresh 单飞端到端验到**（后台正忙时 ran:false、不并发）、DOM 齐。诚实标注：S1 气泡"真产认知内容渲染"因本机 updateProfile 慢没端到端浏览器验（信号逻辑 scheduler 单测覆盖 + 前端照搬 testbench 已验证的 weaveMemNote 结构）。
+
+**批次5 收尾**：apps/memoweft-host 六步（步0 骨架 → 步1 聊天 → 步2 配置向导 → 步3 记忆管理 → 步4 多会话 → 步5 备份/恢复出厂 → 步6 S0-S1 正门）全部完成。Host 已能承接 testbench 的全部用户功能，全走 core.* 公开面、零 store 直穿、零 runtime 依赖。testbench 回归开发调试。
+
+---
+
+## 2026-07-02 · 架构归位批次5 步5：Host 备份恢复 + 恢复出厂
+
+**起因**：步4 多会话，步5 让用户能导出/导入记忆包、恢复出厂——批次5 最后一个带破坏性操作的步骤。
+
+**做了什么（全在 apps/memoweft-host/）**
+- **server.ts** 加 3 端点，全走 core.portable.* / core.memory.resetSubject：GET `/api/export-bundle`（exportBundle → {bundle}）、POST `/api/import-bundle`（validateBundle 非法 400 → importBundle dryRun/merge，mode 默认安全 dryRun）、POST `/api/factory-reset`（resetSubject 清三层+审计+索引 + 归档 Host 会话软移除 + newSession）。
+- **web/index.html** 记忆管理页加「数据·备份」tab：导出（Blob 下载 + revokeObjectURL）、导入（FileReader → dryRun 预览 → 确认 merge）、恢复出厂（强确认要输入「清空」二字 + 劝先备份）。
+
+**决策**：导出/导入/恢复出厂放记忆管理页数据区（用户可达）；全走 core.portable.* / resetSubject；恢复出厂对 Host 会话软移除（不硬删）。
+
+**把关（审查工作流撞平台限制，改 PM 只读亲核补齐）**：本轮对抗审查工作流因撞【会话限制 session limit】大部分 agent 中途失败、只完成 1 维度；PM 改用只读亲核补齐（3 端点 + 前端逐个核：走 core.*/校验/软移除/强确认/textContent 免 XSS 全对）。**亲核发现并加固 1 处（CSRF）**：factory-reset 服务端原是裸端点（强确认全在前端），恶意网页的 CSRF simple-request 能直连清库（CORS 只挡"读响应"不挡"请求到达执行"）→ 加服务端确认词兜底（`body.confirm==='清空'`，带 JSON body 触发 preflight 挡跨源），前端配套带 confirm。
+
+**验证**：Core 151 不回归 ✅ ｜ Host typecheck ✅ ｜ Host test 16 ✅ ｜ build ✅。**临时库冒烟**（⚠ 恢复出厂全程用临时库 `MEMOWEFT_HOST_DB`，绝未碰默认库）：CSRF 无 confirm → 400 ✅、非法包 {} → 400 ✅、恢复出厂带 confirm 清 5 条证据 + 出厂后归零 ✅、导入/导出 dryRun 链路通 ✅、临时库/默认库零污染 ✅。**诚实标注**：cognition 维度因本机 updateProfile 整理慢未造出认知，链路靠 evidence 维度验证（portable 对 cognition 同一套路径）；dogfood 前建议带 .env 聊够、待整理出认知后复验含 cognition 的 bundle。
+
+**下一步**：步6 S0-S1 用户正门（记忆胶囊 + 记忆气泡 + 友好版渲染），批次5 收尾。
+
+---
+
+## 2026-07-02 · 架构归位批次5 步4：Host 多会话
+
+**起因**：步3 能管记忆，步4 让用户能有多条对话、切换续聊、归档。
+
+**做了什么（全在 apps/memoweft-host/）**
+- **chatHistory.ts** 从单会话扩成目录级多对话管理器：一对话一 jsonl，append/read/list/archive/newId；sanitizeId 挡路径穿越（非 `[A-Za-z0-9._-]` 全替换 `_`）；read 活跃优先、缺失回退归档。**SESSIONS_DIR 跟随库路径**（`join(dirname(DB_PATH),'sessions')`，步3 遗留 TODO 收口——隔离库时历史也隔离）。
+- **server.ts** 多对话状态（currentConvId + activatedConvs 决定 seedTurns 时机）+ 4 端点（`/api/reset`、`/api/sessions`、`/api/session/{open,archive}`）+ 改造 `/api/chat` 用当前会话、`/api/chat-history` 读当前会话。续聊靠 seedTurns（从历史读最近 `config.workingMemory.maxTurns` 轮转 Turn[]，本进程首次 chat 该会话时传 `core.handleConversationTurn` 重建窗口）。
+- **web/index.html** 左侧会话列表侧栏（新建/切换/归档/当前高亮），向导/记忆管理态藏侧栏。
+- **tests/chatHistory.test.ts** 11 例（9 基础 + 2 审查修复护栏）。
+
+**决策**：多会话是 Host 自实现（不从 Core 掏会话册，蓝图 §3.3）；归档=软移除可恢复；首启续上最近对话。
+
+**对抗审查（5 维×证伪）修的（1 must-fix + 4 minor，同一归档不变量根因，两招根治）**：
+- must-fix：重复归档 `renameSync` 静默覆盖旧 `.archived`、旧历史永久丢失，违背"归档可恢复"。
+- minor 群：open 不校验归档态 → open 已归档再聊会分叉/遮蔽历史；currentConvId 未 sanitize → 与 list 口径不一致；sanitizeId 多对一碰撞。
+- **根治①** `chatHistory.append` 加不变量：活跃缺失 + 归档存在 → 先恢复（取消归档）再续写，不新建空文件遮蔽、不覆盖旧归档。**根治②** `/api/session/open` 白名单：只接受 list（含归档）里存在的 id，挡碰撞/非规范 id、保证 currentConvId 与 list 口径一致。
+
+**验证**：Core 151 不回归 ✅ ｜ Host typecheck ✅ ｜ Host test 16 过（confBand 5 + chatHistory 11）✅ ｜ build ✅。冒烟（真 .env，llmReady=True）：多会话建/列/切 ✅、**续聊种子重建端到端命中**（切 B 再切回 A，续问"记得我叫什么、爱好吗"→回复"记得小明、喜欢爬山"= A 上下文被 seedTurns 重建）✅、open 不存在 id → 404 ✅、重复归档不丢历史（单测）✅。
+
+**下一步**：步5 备份恢复 + 恢复出厂（导出/导入记忆包从开发者抽屉拆到用户可达；恢复出厂沿用 S0 软入口，走 `core.memory.resetSubject`）。
+
+---
+
+## 2026-07-02 · 架构归位批次5 步3：Host 记忆管理页
+
+**起因**：步2 能配置了，步3 让用户能看/管自己的记忆——列认知/证据、标失效、改授权、删除，全走受控 API。
+
+**做了什么（全在 apps/memoweft-host/）**
+- **server.ts** 加 6 端点，全走 `core.memory.*`（零 store 直穿）：GET `/api/cognition`（listCognitions + confBand）、GET `/api/evidence`（listEvidence）、POST `/api/cognition/{invalidate,delete}`、POST `/api/evidence/{authorization,delete}`。都带 reason 留审计（management_log）。证据删除【默认探路】→ 有引用回 `blockers` → 前端提示影响面 → 确认带 force=true 断链删。**不做内容编辑**（用户拍板：留 testbench）。
+- **web/index.html** 叠加 mode-memory 页：两 tab「对你的理解」/「你说过的」+ 标失效/改授权(开关)/删除(二次确认+证据删除两步)。把握度用用户词档、不露 0-1000 分数。所有用户内容 textContent 免 XSS。步1/2 聊天/向导原样。
+- **confBand.ts**（新）抽把握度档纯函数 + **tests/confBand.test.ts**（Host 首个业务逻辑测试，4 例）。
+
+**对抗审查（5 维×证伪，零 blocker）修的 2 条**：
+- **must-fix**：把握度档原来用静态 credStatus，没用后端算好的 effectiveConfidence（读时衰减值）→ 衰减型认知（goal 14 天/trait 60 天半衰期）长期显示偏高的"比较确定"绿档，与「记≠信/会变淡」核心矛盾（审查实测：760 分认知 28 天后有效值衰减到 190，页面仍显"比较确定·活跃"）。改为按 effectiveConfidence 定档（confBand，阈值取自 `config.consolidation.credThresholds`、冲突态优先），抽纯函数 + 单测覆盖该衰减场景。
+- **minor**：前端"活跃/失效"漏看 archivedAt（归档认知误标"活跃"）→ dead 判据补 archivedAt、归档标"已收起"、过滤同款口径（当前 Host 无归档端点、属防御性前向兼容）。
+
+**验证**：Core 151 不回归 ✅ ｜ Host typecheck ✅ ｜ Host test 5 过（1 smoke + 4 confBand）✅ ｜ build ✅。端到端聊天/列取/标失效/授权/删除两步：步3 施工冒烟走通（发 5 句 → 后台整理 11 认知 → 证据删除返回 5 blockers → force 断链）；本轮 confBand 修复用单测验证（端到端 updateProfile 本机 write 模型偶发慢、未跑完，不影响逻辑正确性）。
+
+**已知待办**：`SESSIONS_DIR` 硬编码、不跟随 `MEMOWEFT_HOST_DB`（隔离库时聊天历史仍落默认目录）——步4 多会话时一并让 sessions 目录跟随库路径。
+
+**下一步**：步4 多会话（/api/reset、/api/sessions、session/open 续聊、session/archive）。
+
+---
+
+## 2026-07-02 · 架构归位批次5 步2：Host 配置向导（gen-env + mode-wizard）
+
+**起因**：步1 能聊了，但首启没配模型时用户无从下手。步2 搬配置向导——填模型配置 → 生成 .env 文本给用户复制。
+
+**做了什么（全在 apps/memoweft-host/，未碰 Core src/ 与 testbench）**
+- **server.ts** 加 POST `/api/gen-env`：`buildEnvResponse` 纯函数收 9 个模型字段（对话必填/写路径可选缺省复用/嵌入可选）+ withExperienceUI 布尔 → 拼 `MEMOWEFT_LLM_*`/`WRITE_LLM_*`/`EMBED_*` 的 .env 文本返回 `{env}`。**隐私铁律**：apiKey 只在纯函数栈内流过，全程无 writeFile、无 console.log(body)、不写任何模块级变量（Grep 核实 writeFile 只在注释）。缺必填 → 400。
+- **MEMOWEFT_EXPERIENCE_UI=off 纯库开关**：文件顶部（建任何库之前）判断，off 则打印提示 + 提前退出，不建 host.db/data。
+- **web/index.html** 叠加 mode-wizard：首启 health.llmReady=false → 进向导；三组表单（apiKey 输入 password）→ gen-env → 只读框展示 .env（textarea.value，免 XSS）+ 复制按钮 + 保存引导。步1 聊天原样保留。
+
+**对抗审查（5 维×证伪，零 must-fix）修的 3 条 minor（互相关联，一并解决）**：
+- .env 值裸拼 `KEY=VALUE`，apiKey/base_url 含 `#` 会被 `loadEnvFile` 当行内注释截断（Node 24 实测复现）→ 加 `q()` 转义：含 `#`/空格/引号的值加双引号并转义内部引号。
+- off "先建后收"留空库 + `loadEnvFile` 在 core 构造之后（`.env` 的 `MEMOWEFT_HOST_DB` 读不到、db 落默认路径）→ 把 `loadEnvFile` 上移到文件顶部、off 检查提到建 core 之前，两条一并根治。
+
+**验证**：Core 151 不回归、Host typecheck、build；冒烟：gen-env 含 `#` 的 key 正确加引号（`..._API_KEY="sk-abc#def"`）、off 模式不建 data 目录（实测 False）、正常聊天没坏、缺必填/空脏消息 400、apiKey 不落盘（根 .env 时间戳未变）。**已知现象**：off 退出在 stdout 被管道捕获时（自动化冒烟）Windows 偶报无害 libuv 退出竞态 assertion，真实终端不触发、不影响功能（已在 server.ts 注释说明）。
+
+**下一步**：步3 记忆管理页（core.memory.list* + 标失效/授权/删除，走受控 API；内容编辑不搬）。
+
+---
+
+## 2026-07-02 · 架构归位批次5 步1：Host 最小聊天（单会话）
+
+**起因**：步0 地基（workspaces + Core 缺口）经作者验收通过；步1 搬第一个用户功能——聊天。
+
+**做了什么（全在 apps/memoweft-host/，未碰 Core src/ 与 testbench）**
+- **server.ts** 在步0 骨架上加：POST `/api/chat`（`core.handleConversationTurn`，单会话 conversationId 'default'，注入 MemoWeft-aware `REPLY_PERSONA` 人设避免大模型说"不保留记忆"）、GET `/api/chat-history`、GET `/api/bg-status`、GET `/`（serve 前端）。
+- **scheduler.ts**（Host 自建·蓝图 §3.3）：后台画像更新调度器，攒够 `config.profileUpdate.batchSize` 或空闲 `idleMinutes` 触发 `core.updateProfile`，单飞锁防并发、fire-and-forget 不挡回话、try/catch 兜底不崩。
+- **chatHistory.ts**（Host 自建）：一会话一 `.jsonl`，UTF-8 读写、损坏行容错。
+- **web/index.html**：从零写的干净聊天前端，零外部依赖，消息全走 `textContent`（免 XSS），文案遵 naming.md（用户词、不露工程词、不说"真正理解你"、不用"她"），思考动效 + 后台状态轮询 + 未配模型黄条。
+- **端口默认 7890→7788**：7890 撞 Clash/FlClash 代理端口（冒烟时实测被占）。
+
+**对抗审查（5 维 × 每条证伪）修掉的 4 条**：① must-fix `outcome.error` 被无视——回话失败时 Core 吞成兜底串，原代码当正常回复落库+回前端；改为检查 outcome.error，失败不落 assistant 历史、回可识别失败信号。② must-fix 前端 fetch 失败文案"你的话已经存下了"是假承诺（请求没到服务端、没入库）；改为"这句话还没发出去，稍后再重发"。③ minor 服务端没校验 message（空串/`[object Object]`/超长都入库耗 LLM）；加服务端兜底：仅收 string、trim 非空、≤20000 字，否则 400 不落库。④ minor 进程退出截断在途 updateProfile（可恢复）→ 记入 host-migration.md §6.5 收尾 TODO。
+
+**验证**：Core typecheck/test 151 不回归 ✅ ｜ Host typecheck ✅ ｜ 端到端冒烟：GET / 返回前端、/api/health、POST /api/chat 真调云端模型拿到中文回复、证据落 host.db、chat-history 读回、bg-status 攒批防抖正确、空/脏消息 400 ✅ ｜ 冒烟数据清空、无残留 ✅。
+
+**下一步**：步2 配置向导（gen-env，Host 自拼 .env 文本不落盘 apiKey + mode-wizard）。
+
+---
+
+## 2026-07-02 · 架构归位批次5 步0：Core 三缺口 + workspaces 骨架 + CI
+
+**起因**：批次4 蓝图定了迁移路线，步0 是地基——补齐 Host 要用但 Core 没暴露的能力，并把仓库改成 npm workspaces monorepo，让 Host 能经 `import 'memoweft'` 调 Core。
+
+**做了什么**
+- **补 Core 三缺口**（`src/memory/managementApi.ts` + `src/core/createCore.ts`）：`core.memory.listEvidence/listCognitions/listEvents`（只读列取，配 sourcesOf/effectiveConfidence/evidenceOf）、`core.health()`（llmReady/embedReady，基于 core 实际持有的 pool/retriever 判断）、`core.memory.resetSubject()`（恢复出厂收口：库内三层+审计包事务、向量索引 fire-and-forget 清）。`createMemoryManagementAPI` 加可选第三参 `deps.retriever`（不破坏既有两参调用）。index.ts 纯增量导出。
+- **起 workspaces 骨架**：根 `package.json` 加 `"workspaces": [".", "apps/*"]`（**必须含根包**，否则子包的 `"memoweft":"*"` 会去 registry 报 E404——蓝图 §1.2 写的 `["apps/*"]` 是机制误判，施工隔离实验后修正）+ 显式 `exports`（单轨引 dist）+ `dev:core` watch。新建 `apps/memoweft-host/`：`package.json`（`@memoweft/host`，private，deps 只 `memoweft`）+ tsconfig（extends 根 base、重写 include）+ `src/server.ts`（node:http 骨架，经 `import 'memoweft'` 建 Core，只挂 `/api/health`，独立库 `data/host.db`，只绑 127.0.0.1，端口 7890）+ smoke.test。`.gitignore` 加 `apps/*/data/`。
+- **CI**：调成 Core typecheck → test → build（前置）→ Host typecheck → test（`-w @memoweft/host`），Node 仍锁 24。
+
+**定下的决策（用户拍板）**：Host 包名 `@memoweft/host`；Host 与 testbench 各独立库；不给用户编辑记忆文案（本步不补 editXxx）。**PM 拍板**：exports 单轨引 dist、Host 不产物化、CI 加 Core build 前置。
+
+**对抗审查（5 维 × 每条证伪，零 must-fix/blocker）**：3 条 minor 全是前瞻性、v1 单 subject 无影响——① resetSubject 的 `indexAll([])` 清整表向量（多 subject 化才需 subject 粒度，已加注释 + 记入 host-migration.md §6.5）；② health 用 instanceof 判定（注入非 OpenAICompatClient 的自定义真 client 会误报，主路径正确，记为未来向）；③ health 测试缺 llmReady=true 分支——**已补用例**（注入真 OpenAICompatClient，构造不触网、零成本）。
+
+**验证**：typecheck ✅ ｜ Core test 151 过（144→151：+6 缺口 +1 审查补的 health true）✅ ｜ build ✅ ｜ Host typecheck ✅（`import 'memoweft'` 经软链+exports 解析到 dist 类型）｜ Host test 1 过 ✅ ｜ Host 骨架冒烟 `/api/health` 200 `{llmReady,embedReady}` ✅ ｜ 零依赖红线：lockfile 仅 3 个 registry 包全 `dev:true`、workspace-link 无 registry runtime ✅。
+
+**下一步**：步0 是地基，等作者验收 workspaces 跑通后，按 host-migration.md 步1-6 渐进搬（步1 聊天+health / 步2 配置向导 / 步3 记忆管理 / 步4 多会话 / 步5 备份出厂 / 步6 S0-S1 正门）。
+
+---
+
+## 2026-07-02 · 架构归位批次4：apps/memoweft-host 迁移蓝图（设计文档）
+
+**起因**：批次1-3 已把 Core/Host 边界、统一入口、受控管理、归档雪藏、testbench 切受控 API 做完；下一步要把 testbench 的用户功能搬进独立 Host 壳。搬之前先出施工图，免得批次5 撞墙（尤其"Host 要用但 Core 没暴露的能力"没查全会中途卡壳）。
+
+**做了什么（纯设计文档，不落代码）**
+- 新建 `docs/host-migration.md`（约 2 万字施工蓝图）：最终仓库结构（workspaces + package.json/tsconfig/CI 具体改动）、testbench→Host 逐端点迁移映射表（进 Host 19 个 / 留 testbench 13 个）、Core 公开面缺口与补法、批次5 拆解（步0 补缺口+起骨架 → 步1-6 渐进搬）、testbench 与 Host 最终分工、风险与待拍板项。
+- 产出方式：三块并行调研（workspaces 形态 / 迁移映射 / Core 缺口）→ 综合 → 对抗审查（带修放行，4 findings 全修进文档）。
+
+**定下的决策（用户拍板的两条方向）**：① Host 形态=新建干净骨架、渐进迁移（testbench 保留作调试）；② 仓库结构=npm workspaces monorepo，Host 经公开入口 `import 'memoweft'` 调 Core、不相对 import `../../src`。据此设计：Core 引 dist（开发路径=发布路径）、Host `private` 挡误发、CI 加 Core build 前置。
+
+**Core 公开面缺口（批次5 步0 必补，已在文档给建议签名）**：`core.memory.listEvidence/listCognitions/listEvents`（只读列取）、`core.health()`（llmReady/embedReady）、`core.memory.resetSubject()`（恢复出厂收口，含审计清除）。判定属 Host 自实现的：gen-env 配置向导、多会话编排、后台画像更新调度。
+
+**审查修进文档的 4 条**：分歧点2 失实（恢复出厂已有 S0 用户软入口，只导出/导入才需从开发者抽屉拆出）、CSS 类名 mode-developer→mode-dev、resetSubject "原子"措辞降级（evidence 无 removeBySubject）、本地首次必须先 build 的内循环硬前置。
+
+**验证**：纯文档，不触发代码；三绿维持批次3 的 144 过。批次5 施工前另需作者拍板若干项（缺口B 内容编辑、独立库、分歧点1 等，见文档 §6.3）。
+
+---
+
+## 2026-07-02 · 架构归位批次3：收瘦主入口 + 归档全面雪藏 + testbench 切受控 API
+
+**起因**：路线 §5.2（主入口仍导出 8 个真实采集符号）+ 批次2 对抗审查留下的三项待拍板（归档在写路径的待遇、出厂清不清审计、删除审计存不存原文）+ boundaries.md §4.3 登记的 testbench 直调 Store 六处。
+
+**做了什么**
+- **收瘦主入口**：`src/index.ts` 删 8 个真实采集导出（createActiveWindowCollector 等 3 函数 + 5 类型）；`activeWindowCollector.ts` / `win32Foreground.ts` / `testbench/run-collector.mjs` 文件头标 experimental（未来迁 plugins/collector-active-window/）。摄入口 ingestObservations / activeWindowToObservation 保留。run-collector 与采集器测试本就直连模块路径，未动 import。
+- **归档全面雪藏**：`SqliteCognitionStore.active()` 语义升级为「未失效 且 未归档」（SQL 加 archived_at IS NULL）；consolidate/attribute/proposeAsk/revisitConflicts/expire 全走 active()，随之自动雪藏（各处加注释引拍板）；expire 因此不会给归档临时类标失效（保住可恢复）。新增 `tests/archiveShielding.test.ts` 5 例护栏。
+- **审计口径**：removeCognitionSafely 的审计 detail 改存元数据 {contentType, formedBy, credStatus, linkCount}、不存内容原文；`SqliteManagementLog` 新增 `clear()`（仅恢复出厂用）。
+- **testbench 切受控 API**（§4.3 六处）：顶部 `createMemoryManagementAPI(stores)`；授权变更→updateEvidenceAuthorization、删证据→removeEvidenceSafely({force:true}，UI 已二次确认)、标失效→invalidateCognition（请求只带非 null invalidAt 时）、删认知→removeCognitionSafely、恢复出厂→保留整库擦除直调 + 新增清 management_log。响应形状不变，index.html 零改动。reason 统一 'testbench:用户…' 缺省。
+- **文档**：architecture.md §9 补 8-A 临时入库说明；boundaries.md §4.1/§4.3 打 ✅ 并登记直调例外（内容编辑=调试、恢复出厂=整库擦除）；STATE.md / 项目地图 cell 8+13 同步。
+
+**定下的决策**：① 归档认知【全面雪藏】——画像更新不当现有认知、不被主动问起、定期清理不碰（用户拍板）；② 删除认知的审计 detail 不存内容原文、恢复出厂连 management_log 一起清（用户拍板）；③ trends 聚合保持 all() 现状——趋势是历史口径（看"曾反复出现"，本就含已失效），归档同理计入历史（PM 拍板）。
+
+**验证**：typecheck ✅ ｜ test 144 过（138→144：+5 archiveShielding、+1 managementLog.clear，零回归）✅ ｜ build ✅ ｜ testbench 冒烟（起服 → /api/health `{llmReady,embedReady}` → 停进程；无残留 logs/db 写动）✅。
+
+**对抗审查**（6 维度并行 × 每条发现独立证伪，结论：放行）：归档雪藏五处写路径、审计口径、收瘦入口、文档、零回归——全部零发现；唯一 1 条 minor 已当场修：`/api/evidence/update` 内容+授权一次同发时响应 `updated` 只反映后一次快照（两次写库均已生效、无数据丢失，现有前端永不同发不触发）——改为写库后统一 `store.get` 取最新全量，消除未来调用方（apps/memoweft-host）的隐患。
+
+---
+
+## 2026-07-02 · 架构归位批次2：createMemoWeftCore 统一入口 + 受控记忆管理 API
+
+**起因**：路线 §5.1/§5.3——Host 到处散装拼 Sqlite*Store，记忆管理没有受控入口（删除直删、失效无原因、无审计）。归位第二步：给 Core 一扇正门。
+
+**做了什么**
+- 新增 `src/core/`：`createMemoWeftCore({dbPath,llm?,embedder?,retriever?,config?,vectorDbPath?})` 工厂 + `MemoWeftCore` facade（ingestUserMessage / ingestObservation / recall / handleConversationTurn / updateProfile / memory / portable / graph / close）。无 .env 不崩（LLM 缺=真调用才报、嵌入缺=NullRetriever 降级）。
+- 新增 `src/memory/`：受控管理 7 操作 + `management_log` 审计表（挂共享连接，改数据+落审计同事务）。审计口径：只给真实发生的变更落行，被拒绝的操作不落。
+- 认知表幂等加列 `archived_at`（照 asked_at 先例）；归档=invalid 同款待遇：召回跳过、图谱默认不出（新增 includeArchived 选项）。
+- 召回段从 conversation.ts 抽为共享函数 `src/retrieval/recall.ts`，Conversation 与 core.recall 共用，门槛顺序一字不改；既有召回测试零改动保绿。
+- index.ts 纯增量导出；新增 tests/core.test.ts + tests/memoryApi.test.ts 共 19 例。
+
+**定下的决策**：路线 §5.3 的 9 项管理能力全做（7 个挂 core.memory + 导入导出挂 core.portable）+ 独立审计表（用户拍板）；merge 仅同 subject、链搬家去重、target 置信度按合并后链重算（假设仍按 hypothesisCap 封顶）、source 标失效不硬删；removeSafely 默认有引用即拒绝并返回影响面、force 才删；checkIntegrity v1 只报告不修（以上 PM 拍板）。mergeCognition/archiveCognition 自此从 boundaries.md §4.4 的"没有"转"已有"。
+
+**对抗审查后补修**（审查结论：放行）：① updateEvidenceAuthorization 零变更不再落审计、reason 改必填（对齐"只记真实变更、操作带 reason"口径）；② merge 拒绝已失效/已归档的 target（活链搬进死目标会从召回静默消失）。审查另留 3 项批次3 前拍板：归档认知在写路径（consolidate/proposeAsk/expire）的待遇、恢复出厂清不清审计表、删除审计存不存内容原文。
+
+**验证**：typecheck ✅ ｜ test 138 过（117→138，零回归）✅ ｜ build ✅。
+
+---
+
+## 2026-07-02 · 架构归位批次1：三层边界文档
+
+**起因**：架构归位路线定稿（2026-07 用户拍板，`docs/架构归位路线.md` 入库）——能力做了不少，但 Core / Host / Plugin 职责混在一起；归位第一步是把边界写清。
+
+**做了什么（纯文档，一行代码不动）**
+- 新建 `docs/boundaries.md`：一句话定稿 + 三层"负责/不负责"清单 + 标准交互流（Plugin→Host→Core；感知采集、记忆管理两个示例）+ 插件三类与"插件只能请求，Host 审核，Core 执行"原则 + **当前归位现状表**（主入口实测导出 139 个符号（含 DLA_VERSION 兼容别名）、其中 8 个真实采集相关导出待剥离；testbench 功能分家清单；server.mjs 直调 Store 的行号；受控记忆管理 API 已有/部分/没有清单）+ 归位路线（拆边界→瘦 Core→建 Host→迁旧功能→做插件→清仓库→发 npm）。
+- `docs/architecture.md` §1 下加 §1.1 三层边界小节，指向 boundaries.md 与归位路线。
+- `docs/项目地图.md` cell 9 登记决策：三层归位定稿；星瑶定位 Experience Plugin（另需 experience-plain 证明通用性）。
+- `STATE.md` 改写：阶段行加归位批次1 ✅ + 一行指向 boundaries.md（全文 36 行，红线 ≤40 内）。
+
+**定下的决策（用户拍板）**：三层归位——Core 管记忆怎么正确存在，Host 管用户怎么使用和管理，Plugin 管扩展能力；后续开发不堆功能，围绕归位展开。
+
+**验证**：纯文档改动，不触发代码路径；三绿由 PM 统一跑。
+
+---
+
 ## 2026-07-02 · 公开仓加固批次（Wave 1 · T1–T5 + 债登记）
 
 **起因**：公开仓门面与内里对不上（README 写死 87 passing 已过期）+ 多 subject 召回越界隐患 + 嵌入器无超时会无限挂 + 向量索引全量重嵌浪费 + 写路径膨胀没有观测数据。一批并行任务卡收口。

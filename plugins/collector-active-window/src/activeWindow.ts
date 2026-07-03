@@ -1,14 +1,14 @@
 /**
- * 活动窗口采集器（阶段 4-A 档1 · 骨架）。
+ * 活动窗口采集器 · 契约 + 标准化映射（Collector Plugin，架构归位后从 Core 迁出）。
  *
- * 边界（cell 9 / 四步定案 #1）：MemoWeft 核心只管"认知 + 通用摄入口"；从操作系统抓窗口是【独立可选外挂】。
- * 本版【只留契约 + 标准化映射】，不实现长驻采集、不引入 active-win 依赖（依赖最小化，cell 11）。
+ * 边界（boundaries.md §4.1 / 四步定案 #1）：MemoWeft Core 只管"认知 + 通用摄入口（generic Observation）"；
+ * 从操作系统抓窗口、把窗口样本翻译成 Observation，都是【采集插件】的知识，不属于 Core。
  *
- * 真采集器（下一版做）：长驻进程，监听窗口切换、算停留时长，定时把 ActiveWindowSample
- * 经 activeWindowToObservation → ingestObservations 批量落库。
- * 停留时长由【采集器】算好再喂（四步定案：MemoWeft 不碰"几点进/出窗口"这种平台细节）。
+ * 本文件是插件对 Core 的产出契约：把一条活动窗口样本映射成通用 Observation（纯函数，可测），
+ * 由运行器 / 宿主经 Host /api/observe → core.ingestObservation 落库。停留时长由采集器算好再喂
+ * （Core 不碰"几点进/出窗口"这种平台细节）。
  */
-import type { Observation } from '../ingest.ts';
+import type { Observation } from 'memoweft';
 
 /** 采集器算好的一条活动窗口样本（durationSec 已由采集器计算）。 */
 export interface ActiveWindowSample {
@@ -37,8 +37,8 @@ export function activeWindowToObservation(s: ActiveWindowSample): Observation {
 }
 
 /**
- * 真采集器契约（骨架，未实现）。下一版实现：start 起长驻监听、stop 收尾；
- * 内部把样本经 activeWindowToObservation → ingestObservations 落库。
+ * 活动窗口采集器契约（start/stop）。真实现见 activeWindowCollector.ts，
+ * 内部把样本经 activeWindowToObservation → 产出，由运行器 POST 给 Host /api/observe。
  */
 export interface ActiveWindowCollector {
   start(): void;

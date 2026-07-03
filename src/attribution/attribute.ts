@@ -101,6 +101,7 @@ function minusHours(iso: string, hours: number): string {
 export async function attribute(subjectId: string, deps: AttributeDeps): Promise<AttributeResult> {
   const fullCfg = deps.config ?? config; // 可注入配置（缺省=单例）
   const cfg = fullCfg.attribution;
+  // active()（未失效且未归档）：归档全面雪藏（批次3 用户拍板）——已归档的现象/假设不再参与归因。
   const active = deps.cognitionStore.active(subjectId);
   const states = active.filter((c) => c.contentType === 'state');
   const hypos = active.filter((c) => c.contentType === 'hypothesis');

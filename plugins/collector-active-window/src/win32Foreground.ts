@@ -1,5 +1,5 @@
 /**
- * Windows 前台窗口采样（阶段 8-A · 真采集器 V1 的平台层）。
+ * Windows 前台窗口采样（Collector Plugin · 真采集器 V1 的平台层）。
  *
  * 做法：spawn Windows 自带 powershell.exe + P/Invoke（GetForegroundWindow / GetWindowTextW /
  * GetWindowThreadProcessId → Get-Process 取进程名）。零 npm 依赖（cell 11），只用 node:child_process。

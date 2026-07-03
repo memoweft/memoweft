@@ -1,12 +1,12 @@
 /**
- * 活动窗口采集循环（阶段 8-A · 真采集器 V1）。顺着 activeWindow.ts 的契约实现，不推翻：
+ * 活动窗口采集循环（Collector Plugin · 真采集器 V1）。顺着 activeWindow.ts 的契约实现：
  * 实现 ActiveWindowCollector（start/stop），并加 pause/resume/tick。
  *
- * 职责边界（cell 9 / 四步定案 #1）：本文件只管「定时采样 → 连续相同合并 → 阈值过滤 → 产出」；
- * 停留时长由这里算好（MemoWeft 核心不碰"几点进/出窗口"的平台细节），产出统一走
- * activeWindowToObservation → 由调用方（运行器/宿主）决定落到哪（POST 测试台 / ingestObservations）。
+ * 职责边界（boundaries.md §4.1 / 四步定案 #1）：本文件只管「定时采样 → 连续相同合并 → 阈值过滤 → 产出」；
+ * 停留时长由这里算好（Core 不碰"几点进/出窗口"的平台细节），产出统一走
+ * activeWindowToObservation → 由调用方（运行器）决定落到哪（POST Host /api/observe）。
  * observed 隐私默认（不上云）不在这层放宽：产出的 Observation 不带任何显式授权位，
- * 下游 ingestObservations 会套 config.observedDefaults（local✓ / cloud✗ / infer✓）。
+ * 下游 Host 审核 + Core ingestObservations 才套 observed 保守默认（local✓ / cloud✗ / infer✓）。
  *
  * 合并 / 计时口径（V1，先简单可解释）：
  *   - 每 tick 采一次前台窗口；连续相同 app+title → 同一段，只推进 lastMs。
@@ -18,13 +18,16 @@
  * 可测性：sampler / 时钟 now / 定时器 setIntervalFn 全可注入——测试喂假采样序列 + 假时间，
  * 直接调 tick() 驱动，不起真定时器、不碰真 Win32。
  */
-import { config as globalConfig, type MemoWeftConfig } from '../../config.ts';
+import type { Observation } from 'memoweft';
 import {
   activeWindowToObservation,
   type ActiveWindowCollector,
   type ActiveWindowSample,
 } from './activeWindow.ts';
-import type { Observation } from '../ingest.ts';
+
+/** 采集参数缺省（本插件自持，不再依赖 Core 的 config——采集参数属插件知识）。dogfood 后调。 */
+export const DEFAULT_SAMPLE_INTERVAL_SEC = 5; // 5s 采一次：够分辨"在哪个窗口"，又不至于狂 spawn PowerShell
+export const DEFAULT_MIN_DURATION_SEC = 30;   // 停留 <30s 的碎片丢弃：路过式切窗不算"停留"
 
 /** 一次前台窗口采样结果（无时长——时长由本采集循环合并计算）。 */
 export interface ForegroundWindow {
@@ -46,9 +49,9 @@ export interface ActiveWindowCollectorOptions {
   sampler: ForegroundSampler;
   /** 合并段产出回调（只有 durationSec ≥ 阈值的段会到这里）。 */
   onEmit: (e: ActiveWindowEmit) => void | Promise<void>;
-  /** 采样间隔秒；缺省 config.activeWindowCollector.sampleIntervalSec。 */
+  /** 采样间隔秒；缺省 DEFAULT_SAMPLE_INTERVAL_SEC。 */
   sampleIntervalSec?: number;
-  /** 产出阈值秒（时长低于它的碎片丢弃）；缺省 config.activeWindowCollector.minDurationSec。 */
+  /** 产出阈值秒（时长低于它的碎片丢弃）；缺省 DEFAULT_MIN_DURATION_SEC。 */
   minDurationSec?: number;
   /** 时钟（测试注入假时间）；缺省 Date.now。 */
   now?: () => number;
@@ -57,8 +60,6 @@ export interface ActiveWindowCollectorOptions {
   /** 定时器注入（测试传 no-op 假定时器 + 手动 tick）；缺省全局 setInterval/clearInterval。 */
   setIntervalFn?: (fn: () => void, ms: number) => unknown;
   clearIntervalFn?: (timer: unknown) => void;
-  /** 可注入配置（P2-5 口径：缺省 = 全局单例）。 */
-  config?: MemoWeftConfig;
 }
 
 /** V1 采集器：契约的 start/stop + 本版加的 pause/resume/tick（stop/pause 会异步冲刷，返回 Promise）。 */
@@ -88,9 +89,8 @@ interface Segment {
 
 /** 工厂：创建活动窗口采集器（真采集 = sampler 传 Win32 采样器；测试 = 全注入）。 */
 export function createActiveWindowCollector(opts: ActiveWindowCollectorOptions): RunningActiveWindowCollector {
-  const cfg = opts.config ?? globalConfig; // 可注入配置（缺省=单例）
-  const intervalMs = Math.max(200, Math.round((opts.sampleIntervalSec ?? cfg.activeWindowCollector.sampleIntervalSec) * 1000));
-  const minDurationSec = opts.minDurationSec ?? cfg.activeWindowCollector.minDurationSec;
+  const intervalMs = Math.max(200, Math.round((opts.sampleIntervalSec ?? DEFAULT_SAMPLE_INTERVAL_SEC) * 1000));
+  const minDurationSec = opts.minDurationSec ?? DEFAULT_MIN_DURATION_SEC;
   const now = opts.now ?? Date.now;
   const onError = opts.onError ?? (() => {});
   const setIntervalFn = opts.setIntervalFn ?? ((fn: () => void, ms: number) => setInterval(fn, ms));
@@ -114,7 +114,7 @@ export function createActiveWindowCollector(opts: ActiveWindowCollectorOptions):
     try {
       await opts.onEmit({ sample, observation: activeWindowToObservation(sample) });
     } catch (err) {
-      onError(err); // 产出失败（如测试台没起）不崩采集循环
+      onError(err); // 产出失败（如 Host 没起）不崩采集循环
     }
   }
 

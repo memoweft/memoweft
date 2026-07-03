@@ -1,0 +1,1695 @@
+<!--
+  MemoWeft Host · 最小聊天（批次5 步1）。
+  单文件、内联 CSS/JS、零外部依赖（不引 CDN，本地无网也能用）。
+  文案遵 docs/naming.md：用户词（记住了/想起/对你的了解），不出现 evidence/cognition/updateProfile
+  等工程词，不说"真正理解你"，不用"她"指代 MemoWeft。
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MemoWeft</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --line: #e6e8ec; --text: #1d2733; --muted: #6b7684;
+    --user: #2f6fed; --user-text: #ffffff; --assistant: #eef1f5; --assistant-text: #1d2733;
+    --warn-bg: #fff6e0; --warn-line: #f0d68a; --warn-text: #8a6d00;
+    --ok: #1f9d61; --accent: #2f6fed; --radius: 14px; --radius-pill: 999px;
+    --fs: 15px; --fs-sm: 13px; --fs-xs: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: var(--fs)/1.55 -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+    color: var(--text); background: var(--bg);
+    display: flex; flex-direction: column; height: 100vh;
+    /* 左侧栏（固定定位）占 var(--sidebar-w)，给主列留出左内边距，让主列各态的 margin:0 auto 仍在剩余宽里居中。 */
+    --sidebar-w: 240px;
+    padding-left: var(--sidebar-w);
+  }
+  /* 向导态 / 记忆管理态是全屏页，藏侧栏、主列铺满（去掉左内边距）。 */
+  body.mode-wizard, body.mode-memory { padding-left: 0; }
+  body.mode-wizard #sidebar, body.mode-memory #sidebar { display: none; }
+
+  /* ── 左侧对话列表侧栏 ── */
+  #sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-w); z-index: 20;
+    background: var(--panel); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+  }
+  .sb-head {
+    flex: 0 0 auto; padding: 12px 14px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sb-head .sb-title { font-weight: 700; font-size: var(--fs-sm); color: var(--text); }
+  #sbNew {
+    margin-left: auto; border: 1px solid var(--line); background: var(--bg); color: var(--text);
+    cursor: pointer; border-radius: var(--radius-pill); padding: 4px 12px;
+    font: inherit; font-size: var(--fs-xs); font-weight: 600; white-space: nowrap;
+  }
+  #sbNew:hover { border-color: var(--accent); color: var(--accent); }
+  #sbList { flex: 1 1 auto; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .sb-empty { color: var(--muted); font-size: var(--fs-xs); text-align: center; padding: 20px 8px; line-height: 1.6; }
+  .sb-item {
+    position: relative; border: 1px solid transparent; border-radius: 10px; padding: 9px 11px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 2px; transition: background .12s, border-color .12s;
+  }
+  .sb-item:hover { background: var(--bg); }
+  .sb-item.on { background: #eaf1ff; border-color: var(--accent); }
+  .sb-item .sb-preview {
+    font-size: var(--fs-sm); color: var(--text); line-height: 1.45;
+    /* 单行截断，长预览不撑破侧栏 */
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 22px;
+  }
+  .sb-item.on .sb-preview { color: var(--accent); font-weight: 600; }
+  .sb-item .sb-time { font-size: var(--fs-xs); color: var(--muted); }
+  .sb-arch {
+    position: absolute; top: 8px; right: 8px; border: none; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 4px; border-radius: 6px;
+    opacity: 0; transition: opacity .12s;
+  }
+  .sb-item:hover .sb-arch { opacity: 1; }
+  .sb-arch:hover { background: rgba(0,0,0,.07); color: #b4232a; }
+
+  /* 顶栏：标题 + 后台整理状态 pill */
+  header {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header .brand { font-weight: 700; font-size: 16px; letter-spacing: .2px; }
+  header .brand small { font-weight: 400; color: var(--muted); font-size: var(--fs-xs); margin-left: 6px; }
+  #bgstatus {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 11px; border-radius: var(--radius-pill); background: var(--bg);
+    border: 1px solid var(--line); color: var(--muted); font-size: var(--fs-xs);
+    font-weight: 500; white-space: nowrap; transition: all .2s ease;
+  }
+  #bgstatus::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+  #bgstatus.st-busy { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
+  #bgstatus.st-busy::before { background: var(--warn-text); animation: pulse 1s ease-in-out infinite; }
+  #bgstatus.st-pending { background: #eaf1ff; color: var(--accent); border-color: transparent; }
+  #bgstatus.st-pending::before { background: var(--accent); }
+  #bgstatus.st-done { background: #e7f6ee; color: var(--ok); border-color: transparent; }
+  #bgstatus.st-done::before { background: var(--ok); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* 未配模型黄条 */
+  #warnbar {
+    flex: 0 0 auto; display: none; padding: 9px 18px;
+    background: var(--warn-bg); border-bottom: 1px solid var(--warn-line);
+    color: var(--warn-text); font-size: var(--fs-sm);
+  }
+  #warnbar.show { display: block; }
+  #warnbar code { background: rgba(0,0,0,.06); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+
+  /* 聊天区 */
+  #chat {
+    flex: 1 1 auto; overflow-y: auto; padding: 20px 0;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .chat-inner { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 18px; display: flex; flex-direction: column; gap: 12px; }
+  .empty { color: var(--muted); text-align: center; font-size: var(--fs-sm); margin: auto 0; padding: 40px 0; }
+
+  .msg { display: flex; }
+  .msg.user { justify-content: flex-end; }
+  .msg.assistant { justify-content: flex-start; }
+  .bubble {
+    max-width: 78%; padding: 9px 14px; border-radius: var(--radius);
+    white-space: pre-wrap; word-break: break-word; font-size: var(--fs);
+  }
+  .msg.user .bubble { background: var(--user); color: var(--user-text); border-bottom-right-radius: 5px; }
+  .msg.assistant .bubble { background: var(--assistant); color: var(--assistant-text); border-bottom-left-radius: 5px; }
+
+  /* 思考中三点 */
+  .thinking-dots { display: inline-flex; gap: 4px; padding: 3px 0; }
+  .thinking-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); opacity: .4; animation: bob 1.2s ease-in-out infinite; }
+  .thinking-dots span:nth-child(2) { animation-delay: .18s; }
+  .thinking-dots span:nth-child(3) { animation-delay: .36s; }
+  @keyframes bob { 0%,60%,100% { opacity: .35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+
+  /* 输入区 */
+  footer { flex: 0 0 auto; border-top: 1px solid var(--line); background: var(--panel); padding: 12px 18px; }
+  .composer { width: 100%; max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+  #text {
+    flex: 1 1 auto; resize: none; border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; font: inherit; color: var(--text); background: var(--bg);
+    max-height: 160px; min-height: 44px; line-height: 1.5;
+  }
+  #text:focus { outline: none; border-color: var(--accent); background: var(--panel); }
+  #send {
+    flex: 0 0 auto; border: none; border-radius: 12px; background: var(--accent); color: #fff;
+    padding: 0 20px; height: 44px; font: inherit; font-weight: 600; cursor: pointer; transition: opacity .15s;
+  }
+  #send:disabled { opacity: .5; cursor: default; }
+  .hint { width: 100%; max-width: 720px; margin: 6px auto 0; color: var(--muted); font-size: var(--fs-xs); }
+
+  /* ── 配置向导（首启没配好模型时进这一态；配好后走聊天，向导隐藏）── */
+  #wizard { display: none; flex: 1 1 auto; overflow-y: auto; padding: 28px 18px 40px; }
+  body.mode-wizard #wizard { display: block; }        /* 向导态：显示向导 */
+  body.mode-wizard #chat, body.mode-wizard footer { display: none; } /* 向导态：藏聊天与输入区 */
+  .wiz { width: 100%; max-width: 620px; margin: 0 auto; }
+  .wiz h1 { font-size: 21px; margin: 0 0 6px; letter-spacing: .2px; }
+  .wiz .lead { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 22px; line-height: 1.6; }
+  .wiz-group {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .wiz-group > h2 { font-size: 15px; margin: 0 0 3px; display: flex; align-items: center; gap: 8px; }
+  .wiz-group .tag {
+    font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: var(--radius-pill);
+  }
+  .wiz-group .tag.req { background: #eaf1ff; color: var(--accent); }
+  .wiz-group .tag.opt { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+  .wiz-group .desc { color: var(--muted); font-size: var(--fs-xs); margin: 0 0 12px; line-height: 1.55; }
+  .wiz-field { margin-bottom: 10px; }
+  .wiz-field:last-child { margin-bottom: 0; }
+  .wiz-field label { display: block; font-size: var(--fs-xs); color: var(--muted); margin-bottom: 4px; }
+  .wiz-field input {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+    font: inherit; font-size: var(--fs-sm); color: var(--text); background: var(--bg);
+  }
+  .wiz-field input:focus { outline: none; border-color: var(--accent); background: var(--panel); }
+  .wiz-check { display: flex; align-items: flex-start; gap: 9px; font-size: var(--fs-sm); }
+  .wiz-check input { margin-top: 3px; flex: 0 0 auto; }
+  .wiz-check .ck-text small { display: block; color: var(--muted); font-size: var(--fs-xs); margin-top: 2px; }
+  .wiz-actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  #wizGen {
+    border: none; border-radius: 12px; background: var(--accent); color: #fff;
+    padding: 0 24px; height: 44px; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  #wizGen:disabled { opacity: .5; cursor: default; }
+  #wizErr { color: #b4232a; font-size: var(--fs-sm); display: none; }
+  #wizResult { display: none; margin-top: 20px; }
+  #wizResult h2 { font-size: 15px; margin: 0 0 8px; }
+  #wizEnv {
+    width: 100%; min-height: 180px; resize: vertical; border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px; background: #0f1722; color: #d6e2f0;
+    font: 13px/1.6 "SF Mono", "Consolas", "Courier New", monospace; white-space: pre;
+  }
+  .wiz-result-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  #wizCopy {
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text);
+    padding: 8px 16px; font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+  }
+  #wizCopy:hover { border-color: var(--accent); color: var(--accent); }
+  #wizCopied { font-size: var(--fs-xs); color: var(--ok); display: none; }
+  .wiz-save-hint {
+    margin-top: 14px; padding: 12px 14px; background: var(--warn-bg); border: 1px solid var(--warn-line);
+    border-radius: 10px; color: var(--warn-text); font-size: var(--fs-sm); line-height: 1.6;
+  }
+  .wiz-save-hint code { background: rgba(0,0,0,.08); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+  #warnbar .gobtn {
+    margin-left: 10px; border: none; background: var(--warn-text); color: #fff; cursor: pointer;
+    border-radius: 8px; padding: 3px 12px; font: inherit; font-size: var(--fs-xs); font-weight: 600;
+  }
+
+  /* 顶栏体验选择器：换"聊天方式/人设"（普通助手 / 星瑶）。与 pill 风格一致，靠左排在 brand 后。 */
+  #expPick {
+    display: inline-flex; align-items: center; gap: 7px;
+    color: var(--muted); font-size: var(--fs-xs); white-space: nowrap;
+  }
+  #expPick .exp-label { font-weight: 500; }
+  #expSelect {
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer;
+    border-radius: var(--radius-pill); padding: 4px 11px; font: inherit; font-size: var(--fs-xs);
+    font-weight: 600; max-width: 160px;
+  }
+  #expSelect:hover { border-color: var(--accent); color: var(--accent); }
+  #expSelect:focus { outline: none; border-color: var(--accent); }
+  #expSelect:disabled { opacity: .55; cursor: default; }
+
+  /* 顶栏 S0 记忆胶囊「它记住我 N 件事 ›」入口按钮（切到记忆抽屉/记忆管理页） */
+  #memPill {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer;
+    border-radius: var(--radius-pill); padding: 4px 13px; font: inherit; font-size: var(--fs-xs);
+    font-weight: 600; white-space: nowrap;
+  }
+  #memPill:hover { border-color: var(--accent); color: var(--accent); }
+  #memPill .pill-chev { font-size: 12px; line-height: 1; opacity: .7; }
+
+  /* 顶栏「立即整理记忆」按钮 */
+  #btnRefresh {
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer;
+    border-radius: var(--radius-pill); padding: 4px 13px; font: inherit; font-size: var(--fs-xs);
+    font-weight: 600; white-space: nowrap;
+  }
+  #btnRefresh:hover { border-color: var(--accent); color: var(--accent); }
+  #btnRefresh:disabled { opacity: .55; cursor: default; }
+
+  /* S1 记忆气泡：后台/立即整理出新理解时，就地织进聊天流「记住了：X · 把握度档 · 改/删」的淡色细行。 */
+  .mem-note { display: flex; justify-content: center; padding: 2px 0; }
+  .mem-note .mn-inner {
+    display: flex; align-items: flex-start; gap: 8px; max-width: 85%;
+    background: #eef4ff; border: 1px solid #d5e3ff; border-radius: 12px;
+    padding: 8px 13px; font-size: var(--fs-sm); color: #33507e; line-height: 1.5;
+  }
+  .mem-note .mn-ic { color: var(--accent); flex: 0 0 auto; font-size: 10px; margin-top: 5px; }
+  .mem-note .mn-body { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .mem-note .mn-lead { font-weight: 600; }
+  .mem-note .mn-txt { word-break: break-word; }
+  .mem-note .mn-band {
+    font-size: var(--fs-xs); padding: 1px 8px; border-radius: var(--radius-pill);
+    background: #fff; border: 1px solid #cfe0ff; color: #5b7bb8; white-space: nowrap;
+  }
+  .mem-note .mn-band.warn { background: var(--warn-bg); border-color: transparent; color: var(--warn-text); }
+  .mem-note .mn-band.ok { background: #e7f6ee; border-color: transparent; color: var(--ok); }
+  .mem-note .mn-acts { display: inline-flex; gap: 6px; margin-left: 2px; }
+  .mem-note .mn-acts button {
+    border: 1px solid #cfe0ff; background: #fff; color: #4166a8; cursor: pointer;
+    border-radius: 7px; padding: 2px 9px; font: inherit; font-size: var(--fs-xs); font-weight: 600;
+  }
+  .mem-note .mn-acts button:hover { border-color: var(--accent); color: var(--accent); }
+  .mem-note .mn-acts button.del:hover { border-color: #b4232a; color: #b4232a; }
+
+  /* ── 记忆管理页（body.mode-memory 时显示，藏聊天/输入/向导）── */
+  #memory { display: none; flex: 1 1 auto; overflow-y: auto; padding: 22px 18px 40px; }
+  body.mode-memory #memory { display: block; }
+  body.mode-memory #chat, body.mode-memory footer, body.mode-memory #wizard { display: none; }
+  .mem { width: 100%; max-width: 720px; margin: 0 auto; }
+  .mem-top { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .mem-top h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
+  #memBack {
+    margin-left: auto; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    cursor: pointer; border-radius: var(--radius-pill); padding: 6px 15px; font: inherit;
+    font-size: var(--fs-sm); font-weight: 600;
+  }
+  #memBack:hover { border-color: var(--accent); color: var(--accent); }
+  .mem-lead { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 18px; line-height: 1.6; }
+
+  /* tab 切换（理解 / 记忆线索） */
+  .mem-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .mem-tab {
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer;
+    border-radius: 10px; padding: 7px 16px; font: inherit; font-size: var(--fs-sm); font-weight: 600;
+  }
+  .mem-tab.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* 只显示活跃 / 含已失效 切换 */
+  .mem-filter { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; color: var(--muted); font-size: var(--fs-xs); }
+  .mem-filter input { margin: 0; }
+
+  .mem-empty { color: var(--muted); text-align: center; font-size: var(--fs-sm); padding: 36px 0; }
+
+  /* 记忆卡片（认知 / 证据通用） */
+  .mem-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 13px 15px; margin-bottom: 10px;
+  }
+  .mem-card.dead { opacity: .6; }
+  .mem-card .mc-text { font-size: var(--fs); line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
+  .mem-card .mc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 9px; }
+  .mc-pill {
+    display: inline-flex; align-items: center; font-size: var(--fs-xs); padding: 2px 9px;
+    border-radius: var(--radius-pill); background: var(--bg); border: 1px solid var(--line); color: var(--muted);
+  }
+  .mc-pill.ok { background: #e7f6ee; color: var(--ok); border-color: transparent; }
+  .mc-pill.warn { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
+  .mem-card .mc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px; }
+  .mc-btn {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer;
+    border-radius: 9px; padding: 5px 12px; font: inherit; font-size: var(--fs-xs); font-weight: 600;
+  }
+  .mc-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mc-btn.danger:hover { border-color: #b4232a; color: #b4232a; }
+
+  /* 溯源折叠 */
+  .mc-sources { margin-top: 10px; }
+  .mc-sources > summary { cursor: pointer; color: var(--muted); font-size: var(--fs-xs); list-style: none; }
+  .mc-sources > summary::-webkit-details-marker { display: none; }
+  .mc-sources > summary::before { content: "▸ "; }
+  .mc-sources[open] > summary::before { content: "▾ "; }
+  .mc-source-item {
+    font-size: var(--fs-xs); color: var(--muted); padding: 6px 0 6px 12px;
+    border-left: 2px solid var(--line); margin-top: 6px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+  }
+
+  /* 授权开关行（证据卡） */
+  .mc-auth { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--muted); cursor: pointer; }
+  .mc-auth input { margin: 0; }
+
+  /* 二次确认弹窗 */
+  #memConfirm {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: rgba(15,23,34,.42); align-items: center; justify-content: center; padding: 20px;
+  }
+  #memConfirm.show { display: flex; }
+  .mc-dialog {
+    background: var(--panel); border-radius: var(--radius); max-width: 440px; width: 100%;
+    padding: 20px 22px; box-shadow: 0 12px 40px rgba(0,0,0,.18);
+  }
+  .mc-dialog h3 { margin: 0 0 10px; font-size: 16px; }
+  .mc-dialog .mc-body { font-size: var(--fs-sm); color: var(--text); line-height: 1.6; word-break: break-word; }
+  .mc-dialog .mc-body b { color: #b4232a; }
+  .mc-dialog .mc-warn { margin-top: 10px; color: #b4232a; font-size: var(--fs-xs); }
+  .mc-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  .mc-dialog-actions button { border-radius: 10px; padding: 8px 18px; font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+  #memConfirmCancel { border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+  #memConfirmOk { border: none; background: #b4232a; color: #fff; }
+
+  /* 轻提示 toast */
+  #memToast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(12px);
+    background: #1d2733; color: #fff; padding: 9px 18px; border-radius: var(--radius-pill);
+    font-size: var(--fs-sm); opacity: 0; pointer-events: none; transition: all .22s ease; z-index: 60; max-width: 90vw;
+  }
+  #memToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #memToast.warn { background: #8a6d00; }
+  #memToast.danger { background: #b4232a; }
+
+  /* ── 数据 / 备份区（步5）── */
+  .data-block {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 15px 16px; margin-bottom: 12px;
+  }
+  .data-block h2 { font-size: 15px; margin: 0 0 4px; }
+  .data-block .db-desc { color: var(--muted); font-size: var(--fs-xs); margin: 0 0 12px; line-height: 1.55; }
+  .data-btn {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer;
+    border-radius: 10px; padding: 8px 16px; font: inherit; font-size: var(--fs-sm); font-weight: 600;
+  }
+  .data-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .data-btn:disabled { opacity: .5; cursor: default; }
+  .data-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .data-btn.primary:hover { opacity: .9; color: #fff; }
+  .data-hint { display: block; margin-top: 9px; color: var(--muted); font-size: var(--fs-xs); line-height: 1.5; }
+  /* 导入试算结果框 */
+  #importPlan {
+    display: none; margin-top: 12px; padding: 11px 13px; border-radius: 10px;
+    background: var(--bg); border: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.6;
+  }
+  #importPlan.show { display: block; }
+  #importPlan .ip-warn { color: var(--warn-text); font-size: var(--fs-xs); margin-top: 6px; }
+  #importPlan .ip-actions { display: flex; gap: 10px; margin-top: 12px; }
+  #importFile { display: none; } /* 用按钮代触发原生 file 选择 */
+  /* 危险区（恢复出厂）：红框强调 */
+  .data-block.danger { border-color: #f0b6b9; background: #fdf5f5; }
+  .data-block.danger h2 { color: #b4232a; }
+  #factoryReset { border-color: #d9666c; color: #b4232a; }
+  #factoryReset:hover { background: #b4232a; color: #fff; border-color: #b4232a; }
+  /* 恢复出厂强确认弹窗内的输入框 */
+  .mc-typeconfirm { margin-top: 14px; }
+  .mc-typeconfirm label { display: block; font-size: var(--fs-xs); color: var(--muted); margin-bottom: 5px; }
+  .mc-typeconfirm input {
+    width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px;
+    font: inherit; font-size: var(--fs-sm); color: var(--text); background: var(--bg);
+  }
+  .mc-typeconfirm input:focus { outline: none; border-color: #b4232a; }
+</style>
+
+<!-- 左侧对话列表侧栏（步4）：新建 / 切换 / 归档。当前对话高亮；hover 出归档钮。向导/记忆态自动隐藏。 -->
+<aside id="sidebar">
+  <div class="sb-head">
+    <span class="sb-title">对话</span>
+    <button id="sbNew" title="开一段新对话（当前这段会留着，随时能切回来）">＋ 新对话</button>
+  </div>
+  <div id="sbList"><div class="sb-empty">加载中…</div></div>
+</aside>
+
+<header>
+  <div class="brand">MemoWeft <small>会记住你说过的话</small></div>
+  <!-- 体验选择器：切它用哪种"人设/语气"跟你聊（普通助手 / 星瑶）。记忆是同一份，只换回话的方式。
+       切换后当前这段对话下一句起生效（后端会重建对话窗口、换上新语气）。 -->
+  <label id="expPick" title="换一种跟你聊天的方式（记住你的还是同一份，只是语气不同）">
+    <span class="exp-label">聊天方式</span>
+    <select id="expSelect"><option>加载中…</option></select>
+  </label>
+  <!-- S0 记忆胶囊：显示「它记住我 N 件事」，N=当前活跃理解数（轮询 /api/cognition/count）。点开进记忆抽屉（现有记忆管理页）。 -->
+  <button id="memPill" title="看看它记住了你哪些事——可以随时改或删"><span id="memPillN">它记住我的事</span><span class="pill-chev">›</span></button>
+  <!-- 立即整理记忆（S1）：不等后台攒批，用户主动让它现在整理一次。 -->
+  <button id="btnRefresh" title="让它现在就把你刚说的整理进记忆（平时它会在后台自动整理，这里是手动催一下）">立即整理记忆</button>
+  <span id="bgstatus" title="它对你的了解会在后台慢慢整理：聊完停一会儿就开始，要想一想、可能需要一点时间，但不挡你聊。">还没开始整理</span>
+</header>
+
+<div id="warnbar">还没配好模型，暂时聊不了。<button class="gobtn" id="btnGoWizard">去配置</button></div>
+
+<div id="chat">
+  <div class="chat-inner" id="chatInner">
+    <div class="empty" id="emptyHint">跟它说点什么吧，它会记住你说过的话。</div>
+  </div>
+</div>
+
+<!-- 配置向导：首启没配好模型时进这一态（body.mode-wizard）。填完生成 .env 文本，保存后重启即可聊天。 -->
+<div id="wizard">
+  <div class="wiz">
+    <h1>先配一个模型，就能开始聊了</h1>
+    <p class="lead">MemoWeft 靠一个大模型来回话、并把你说的话记下来。填好下面第一组（必填），生成一段配置贴到项目里、重启，就能用了。你的密钥只用来生成这段文本，不会被保存在这里。</p>
+
+    <!-- 第 1 组：对话模型（必填） -->
+    <div class="wiz-group">
+      <h2>对话模型 <span class="tag req">必填</span></h2>
+      <p class="desc">用来跟你对话、也用来把你说的话整理成记忆。填一个 OpenAI 兼容的接口就行。</p>
+      <div class="wiz-field">
+        <label for="llmBase">接口地址（Base URL）</label>
+        <input id="llmBase" type="text" autocomplete="off" spellcheck="false" placeholder="https://…/v1" />
+      </div>
+      <div class="wiz-field">
+        <label for="llmKey">密钥（API Key）</label>
+        <input id="llmKey" type="password" autocomplete="off" placeholder="sk-…" />
+      </div>
+      <div class="wiz-field">
+        <label for="llmModel">模型名</label>
+        <input id="llmModel" type="text" autocomplete="off" spellcheck="false" placeholder="例如 gpt-4o-mini" />
+      </div>
+    </div>
+
+    <!-- 第 2 组：整理记忆用的小模型（可选） -->
+    <div class="wiz-group">
+      <h2>整理记忆的小模型 <span class="tag opt">可选</span></h2>
+      <p class="desc">在后台把你说的话整理成记忆时用它，通常更快更省。不填就用上面那个对话模型。</p>
+      <div class="wiz-field">
+        <label for="writeBase">接口地址（Base URL）</label>
+        <input id="writeBase" type="text" autocomplete="off" spellcheck="false" placeholder="不填则复用对话模型" />
+      </div>
+      <div class="wiz-field">
+        <label for="writeKey">密钥（API Key）</label>
+        <input id="writeKey" type="password" autocomplete="off" placeholder="不填则复用对话模型" />
+      </div>
+      <div class="wiz-field">
+        <label for="writeModel">模型名</label>
+        <input id="writeModel" type="text" autocomplete="off" spellcheck="false" placeholder="不填则复用对话模型" />
+      </div>
+    </div>
+
+    <!-- 第 3 组：嵌入模型（可选） -->
+    <div class="wiz-group">
+      <h2>语义联想模型 <span class="tag opt">可选</span></h2>
+      <p class="desc">配上它，对话里会更容易想起相关的旧事。不填也没关系——聊天和整理记忆都照常，只是暂时不启用语义联想。</p>
+      <div class="wiz-field">
+        <label for="embedBase">接口地址（Base URL）</label>
+        <input id="embedBase" type="text" autocomplete="off" spellcheck="false" placeholder="不填则暂不启用" />
+      </div>
+      <div class="wiz-field">
+        <label for="embedKey">密钥（API Key）</label>
+        <input id="embedKey" type="password" autocomplete="off" placeholder="不填则暂不启用" />
+      </div>
+      <div class="wiz-field">
+        <label for="embedModel">模型名</label>
+        <input id="embedModel" type="text" autocomplete="off" spellcheck="false" placeholder="不填则暂不启用" />
+      </div>
+    </div>
+
+    <!-- 部署选项：是否带网页界面（对齐后端 withExperienceUI） -->
+    <div class="wiz-group">
+      <label class="wiz-check">
+        <input id="expUI" type="checkbox" checked />
+        <span class="ck-text">带网页界面使用
+          <small>勾选＝像现在这样用网页聊天；取消＝只把 MemoWeft 当作程序库、不起网页（给开发者接进自己的应用用）。</small>
+        </span>
+      </label>
+    </div>
+
+    <div class="wiz-actions">
+      <button id="wizGen">生成配置</button>
+      <span id="wizErr"></span>
+    </div>
+
+    <!-- 生成结果：只读 .env 文本 + 复制 + 保存引导 -->
+    <div id="wizResult">
+      <h2>把下面这段保存好</h2>
+      <textarea id="wizEnv" readonly spellcheck="false"></textarea>
+      <div class="wiz-result-actions">
+        <button id="wizCopy">复制</button>
+        <span id="wizCopied">已复制 ✓</span>
+      </div>
+      <div class="wiz-save-hint">
+        把上面内容保存到项目根目录的 <code>.env</code> 文件里，然后重启，就能开始聊了。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 记忆管理页（body.mode-memory）：看它记住了你哪些事，可标失效 / 改授权 / 删除。只做受控管理，无内容编辑框。 -->
+<div id="memory">
+  <div class="mem">
+    <div class="mem-top">
+      <h1>它记住我的事</h1>
+      <button id="memBack">← 返回聊天</button>
+    </div>
+    <p class="mem-lead">下面是它对你的理解，以及记下的原话线索。你可以把不对的标为"不再有效"、决定哪些能用于云端、或删掉不想留的。</p>
+
+    <div class="mem-tabs">
+      <button class="mem-tab on" id="tabCog" data-tab="cog">对你的理解</button>
+      <button class="mem-tab" id="tabEv" data-tab="ev">你说过的（记忆线索）</button>
+      <button class="mem-tab" id="tabData" data-tab="data">数据 · 备份</button>
+    </div>
+
+    <!-- 只在"理解" tab 显示：是否含已失效 -->
+    <label class="mem-filter" id="cogFilter">
+      <input type="checkbox" id="showDead" /> 也显示已经"不再有效"的
+    </label>
+
+    <div id="memList"><div class="mem-empty">加载中…</div></div>
+
+    <!-- 数据 / 备份区（步5）：数据 tab 时显示。导出/导入/恢复出厂。 -->
+    <div id="memData" style="display:none;">
+      <!-- 导出 -->
+      <div class="data-block">
+        <h2>导出我的记忆包</h2>
+        <p class="db-desc">把它记住你的全部内容（记忆线索、经历片段、对你的理解，以及它们之间的关联）打包成一个文件存到本地。可以拿去备份，或换个地方接着用。你的密钥、聊天记录不在里面。</p>
+        <button class="data-btn primary" id="exportBundle">导出我的记忆包</button>
+        <span class="data-hint">会下载一个 <code>.bundle.json</code> 文件到你的电脑。</span>
+      </div>
+
+      <!-- 导入 -->
+      <div class="data-block">
+        <h2>从记忆包恢复</h2>
+        <p class="db-desc">选一个之前导出的 <code>.bundle.json</code> 文件，把里面的记忆合并进来。已经有的不会重复导入。导入前会先给你看一遍将要导入多少、跳过多少，确认后才真正写入。</p>
+        <input type="file" id="importFile" accept=".json,.bundle.json,application/json" />
+        <button class="data-btn" id="importPick">选择记忆包文件…</button>
+        <span class="data-hint" id="importFileName"></span>
+        <!-- 试算结果 + 确认导入 -->
+        <div id="importPlan">
+          <div id="importPlanText"></div>
+          <div class="ip-warn" id="importPlanWarn"></div>
+          <div class="ip-actions">
+            <button class="data-btn primary" id="importConfirm">确认导入</button>
+            <button class="data-btn" id="importCancel">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 危险区：恢复出厂 -->
+      <div class="data-block danger">
+        <h2>清空全部记忆 · 重新开始</h2>
+        <p class="db-desc">把它记住你的一切都清空——所有记忆线索、经历片段、对你的理解，以及这些操作的记录，全部抹掉，回到刚认识你时的空白。当前的对话会被收起（不删）、并开一段新的空对话。<b style="color:#b4232a;">此操作不可恢复。</b>建议先"导出我的记忆包"留个备份。</p>
+        <button class="data-btn" id="factoryReset">清空全部记忆 · 重新开始</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 二次确认弹窗（标失效 / 删除等危险操作） -->
+<div id="memConfirm">
+  <div class="mc-dialog">
+    <h3 id="memConfirmTitle"></h3>
+    <div class="mc-body" id="memConfirmBody"></div>
+    <div class="mc-warn" id="memConfirmWarn"></div>
+    <div class="mc-dialog-actions">
+      <button id="memConfirmCancel">取消</button>
+      <button id="memConfirmOk">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="memToast"></div>
+
+<footer>
+  <div class="composer">
+    <textarea id="text" rows="1" placeholder="说点什么…（Enter 发送，Shift+Enter 换行）"></textarea>
+    <button id="send">发送</button>
+  </div>
+  <div class="hint">它会记下你说的，之后在对话里更容易想起相关内容。</div>
+</footer>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const chatInner = $('chatInner');
+  let sending = false;
+
+  // HTML 转义（气泡按 textContent 放更稳，这里用 DOM 文本节点，天然免注入）。
+  function addMsg(role, content) {
+    hideEmpty();
+    const msg = document.createElement('div');
+    msg.className = 'msg ' + role;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = content;
+    msg.appendChild(bubble);
+    chatInner.appendChild(msg);
+    scrollDown();
+    return msg;
+  }
+  function hideEmpty() { const e = $('emptyHint'); if (e) e.remove(); }
+  function scrollDown() { const c = $('chat'); c.scrollTop = c.scrollHeight; }
+
+  // ── 发送一轮 ──
+  async function send() {
+    const el = $('text');
+    const message = el.value.trim();
+    if (!message || sending) return;
+    el.value = ''; el.style.height = 'auto'; el.disabled = true;
+    $('send').disabled = true; sending = true;
+    addMsg('user', message);
+
+    // 思考中：冒一个助手侧三点起伏气泡占位，回复到了原位替换。
+    const thinking = document.createElement('div');
+    thinking.className = 'msg assistant';
+    thinking.innerHTML = '<div class="bubble"><span class="thinking-dots"><span></span><span></span><span></span></span></div>';
+    chatInner.appendChild(thinking); scrollDown();
+
+    const settle = (text) => { thinking.querySelector('.bubble').textContent = text; scrollDown(); };
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const d = await res.json();
+      if (d.error) settle('出错了：' + d.error);
+      else settle(d.reply);
+    } catch (e) {
+      // fetch 没连上 = 请求没到服务端，这句话还没入库也没落历史——别假承诺"已存下"（诚实口径）。
+      settle('没连上，这句话还没发出去，稍后再重发一次。');
+    } finally {
+      el.disabled = false; $('send').disabled = false; sending = false; el.focus();
+      loadSessions(); // 聊完刷侧栏：新对话首条后要出现在列表、预览/最后活跃时间随之更新
+    }
+  }
+
+  // Enter 发送，Shift+Enter 换行；输入框随内容长高。
+  $('text').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  $('text').addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+  });
+  $('send').addEventListener('click', send);
+
+  // ── 加载/重载当前对话历史 ──
+  // 清空聊天区、按传入的 turns（或拉 /api/chat-history）重铺。切换对话、新建时复用。
+  function renderChat(turns) {
+    // 清空聊天区，恢复空提示占位。
+    chatInner.textContent = '';
+    const empty = document.createElement('div');
+    empty.className = 'empty'; empty.id = 'emptyHint';
+    empty.textContent = '跟它说点什么吧，它会记住你说过的话。';
+    chatInner.appendChild(empty);
+    if (turns && turns.length) {
+      hideEmpty();
+      for (const t of turns) addMsg(t.role === 'user' ? 'user' : 'assistant', t.content);
+    }
+  }
+  async function loadHistory() {
+    try {
+      const d = await fetch('/api/chat-history').then((x) => x.json());
+      renderChat(d.turns || []);
+    } catch (e) { /* 历史读不到不影响新聊 */ }
+  }
+
+  // ── 首启门：模型没配好 → 进配置向导；配好了 → 正常聊天 ──
+  //   llmReady=false：显示顶部黄条（带"去配置"）并直接进向导态（body.mode-wizard，藏聊天区、显向导面板）。
+  //   llmReady=true：不进向导，正常聊天（步1 行为不变）。
+  async function checkHealth() {
+    try {
+      const h = await fetch('/api/health').then((x) => x.json());
+      if (!h.llmReady) {
+        $('warnbar').classList.add('show');
+        enterWizard();
+      }
+    } catch (e) { /* 拿不到就先不提示、不强进向导 */ }
+  }
+
+  // ── 配置向导 ──
+  function enterWizard() { document.body.classList.add('mode-wizard'); }
+
+  // 生成配置：收三组 9 字段 + 是否带界面 → POST /api/gen-env → 只读框展示返回的 .env 文本。
+  //   apiKey 只随这次请求发出去、不存在页面任何持久处；生成后由用户自行保存到 .env。
+  async function wizGenEnv() {
+    const errBox = $('wizErr');
+    errBox.style.display = 'none'; errBox.textContent = '';
+    // 前端先兜一层必填校验（服务端还会再兜底，返回 400 也照样处理）。
+    const llmBase = $('llmBase').value.trim(), llmKey = $('llmKey').value.trim(), llmModel = $('llmModel').value.trim();
+    if (!llmBase || !llmKey || !llmModel) {
+      errBox.textContent = '「对话模型」三项都要填：接口地址、密钥、模型名。';
+      errBox.style.display = 'inline';
+      return;
+    }
+    const payload = {
+      llmBaseUrl: llmBase, llmApiKey: llmKey, llmModel: llmModel,
+      writeBaseUrl: $('writeBase').value.trim(), writeApiKey: $('writeKey').value.trim(), writeModel: $('writeModel').value.trim(),
+      embedBaseUrl: $('embedBase').value.trim(), embedApiKey: $('embedKey').value.trim(), embedModel: $('embedModel').value.trim(),
+      withExperienceUI: $('expUI').checked,
+    };
+    $('wizGen').disabled = true;
+    try {
+      const res = await fetch('/api/gen-env', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      });
+      const d = await res.json();
+      if (d.error) { errBox.textContent = d.error; errBox.style.display = 'inline'; return; }
+      $('wizEnv').value = d.env || '';
+      $('wizResult').style.display = 'block';
+      $('wizCopied').style.display = 'none';
+      $('wizResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) {
+      errBox.textContent = '生成失败：' + (e && e.message ? e.message : String(e));
+      errBox.style.display = 'inline';
+    } finally {
+      $('wizGen').disabled = false;
+    }
+  }
+
+  // 复制生成的 .env 文本（clipboard API 优先，失败降级 execCommand）。
+  async function wizCopyEnv() {
+    const text = $('wizEnv').value || '';
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); ok = true; }
+    } catch (e) { /* 落降级 */ }
+    if (!ok) {
+      try { $('wizEnv').select(); ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    }
+    const tag = $('wizCopied');
+    tag.textContent = ok ? '已复制 ✓' : '复制失败，请手动全选复制';
+    tag.style.color = ok ? 'var(--ok)' : '#b4232a';
+    tag.style.display = 'inline';
+    setTimeout(() => { tag.style.display = 'none'; }, 2500);
+  }
+
+  $('btnGoWizard').addEventListener('click', enterWizard);
+  $('wizGen').addEventListener('click', wizGenEnv);
+  $('wizCopy').addEventListener('click', wizCopyEnv);
+
+  // ── 后台整理状态轮询（用户词，不显示 updateProfile 等术语） ──
+  let lastAt = null;
+  let _seenFirstBg = false; // 首个 bg-status 响应后置 true——"首次不追溯织历史气泡"靠它判，别依赖 lastAt（doRefresh 会改 lastAt、误开追溯闸门）
+  async function pollBg() {
+    try {
+      const s = await fetch('/api/bg-status').then((x) => x.json());
+      const el = $('bgstatus');
+      el.classList.remove('st-busy', 'st-pending', 'st-done');
+      if (s.profileUpdating) {
+        el.classList.add('st-busy');
+        el.textContent = '正在整理记忆…';
+      } else if (s.pendingSinceUpdate > 0) {
+        el.classList.add('st-pending');
+        el.textContent = '聊完会自动整理';
+      } else if (s.lastUpdate) {
+        el.classList.add('st-done');
+        const t = String(s.lastUpdate.at).slice(11, 16);
+        const created = s.lastUpdate.created;
+        el.textContent = created > 0 ? ('已整理 · 新记住 ' + created + ' 件（' + t + '）') : ('已整理（' + t + '）');
+      } else {
+        el.textContent = '还没开始整理';
+      }
+      // 后台跑完一轮（时间戳变了）→ ① 织 S1 记忆气泡（本轮新增理解就地进聊天流）② 刷胶囊计数。
+      //   首次拿到（lastAt===null）不追溯织历史气泡——只从"本次会话看到的新一轮"起织，避免刷页面把旧的全补一遍。
+      if (s.lastUpdate && s.lastUpdate.at !== lastAt) {
+        const first = !_seenFirstBg; // 首次响应不追溯织历史（独立 flag，不受 doRefresh 改 lastAt 影响）
+        lastAt = s.lastUpdate.at;
+        if (!first) {
+          const news = Array.isArray(s.lastUpdate.newCognitions) ? s.lastUpdate.newCognitions : [];
+          for (const c of news) weaveMemNote(c); // S1：逐条织进聊天流（内部按 id 去重）
+          updateMemPill(); // 新理解出现 → 刷胶囊数
+        }
+      }
+      _seenFirstBg = true; // 首个 bg-status 响应处理完 → 此后 lastUpdate 变化才织
+    } catch (e) { /* 轮询失败静默，下次再试 */ }
+  }
+
+  // ── S0 记忆胶囊计数：「它记住我 N 件事」，N=当前活跃理解数（GET /api/cognition/count，轻量）──
+  async function updateMemPill() {
+    try {
+      const d = await fetch('/api/cognition/count').then((x) => x.json());
+      const n = typeof d.count === 'number' ? d.count : 0;
+      $('memPillN').textContent = n > 0 ? ('它记住我 ' + n + ' 件事') : '它还没记住什么';
+    } catch (e) { /* 拿不到就保持原文案，不吓用户 */ }
+  }
+
+  // ── S1 记忆气泡：后台/立即整理出新理解时，就地织进聊天流「记住了：X · 把握度档 · 改/删」──
+  //   textContent 免 XSS；_weavedNoteIds 按 id 去重（同一条只织一次，跨轮询不重复）。
+  //   改/删复用受控端点（/api/cognition/{invalidate,delete}），与记忆管理页同一套后端。
+  const _weavedNoteIds = new Set();
+  function weaveMemNote(c) {
+    if (!c || !c.id || _weavedNoteIds.has(c.id)) return;
+    _weavedNoteIds.add(c.id);
+    // 气泡织进聊天流 chatInner：向导/记忆管理态下聊天流是隐藏的（气泡照织、藏着），切回聊天即可见、不丢新理解。
+    const note = document.createElement('div');
+    note.className = 'mem-note';
+    const inner = document.createElement('div'); inner.className = 'mn-inner';
+    const ic = document.createElement('span'); ic.className = 'mn-ic'; ic.textContent = '●';
+    const body = document.createElement('div'); body.className = 'mn-body';
+    const lead = document.createElement('span'); lead.className = 'mn-lead'; lead.textContent = '记住了：';
+    const txt = document.createElement('span'); txt.className = 'mn-txt'; txt.textContent = c.content; // 用户内容 → textContent
+    body.append(lead, txt);
+    // 把握度档：刚生成的认知无衰减，credStatus 即当档 → 映射到用户词（CRED_CN，与记忆管理页同款）。
+    const band = c.credStatus || 'candidate';
+    const bandText = CRED_CN[band] || '还没确认';
+    const tag = document.createElement('span');
+    tag.className = 'mn-band' + (band === 'stable' ? ' ok' : (band === 'conflicted' ? ' warn' : ''));
+    tag.textContent = bandText;
+    body.append(tag);
+    // 改 / 删：改 = 标"不再有效"（受控端点，不做内容编辑，与记忆管理页口径一致）；删 = 删这条理解。
+    const acts = document.createElement('div'); acts.className = 'mn-acts';
+    const bEdit = document.createElement('button');
+    bEdit.textContent = '这条不对';
+    bEdit.title = '把这条标为"不再有效"，往后不再用它';
+    bEdit.onclick = () => noteInvalidate(c.id, note);
+    const bDel = document.createElement('button'); bDel.className = 'del';
+    bDel.textContent = '删';
+    bDel.title = '删掉这条理解';
+    bDel.onclick = () => noteDelete(c, note);
+    acts.append(bEdit, bDel);
+    body.append(acts);
+    inner.append(ic, body);
+    note.append(inner);
+    chatInner.appendChild(note);
+    scrollDown();
+  }
+
+  // 气泡上"这条不对"：标失效（受控端点）。成功后气泡淡出、刷胶囊。
+  async function noteInvalidate(id, noteEl) {
+    try {
+      const r = await fetch('/api/cognition/invalidate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+      }).then((x) => x.json());
+      if (r.error || !r.invalidated) { noteFlash(noteEl, '这条已经不在了'); }
+      else { noteFlash(noteEl, '好的，往后不用这条了'); updateMemPill(); }
+    } catch (e) { noteFlash(noteEl, '操作没成功，稍后再试'); }
+  }
+  // 气泡上"删"：删这条理解（受控端点·硬删连溯源链、不可逆）。破坏性操作先二次确认——
+  //   与记忆管理页删除同一护栏（团队有误删事故教训）；且"删"紧挨"这条不对"，别让手滑一点就永久删。
+  async function noteDelete(c, noteEl) {
+    const ok = await memConfirm({
+      title: '删掉这条理解？',
+      bodyQuote: c.content,
+      warn: '删除后无法恢复。想让它别再生效，用「这条不对」更稳——还能追溯。',
+      okText: '永久删除', okKind: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const r = await fetch('/api/cognition/delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
+      }).then((x) => x.json());
+      if (r.error || !r.removed) { noteFlash(noteEl, '这条已经不在了'); }
+      else { noteFlash(noteEl, '已删掉这条'); updateMemPill(); }
+    } catch (e) { noteFlash(noteEl, '删除没成功，稍后再试'); }
+  }
+  // 气泡操作后把整条气泡换成一行淡提示（就地反馈，不弹 toast、不跳走）。
+  function noteFlash(noteEl, msg) {
+    const inner = noteEl.querySelector('.mn-inner');
+    if (!inner) return;
+    inner.textContent = '';
+    const s = document.createElement('span');
+    s.style.cssText = 'color:var(--muted);font-size:var(--fs-sm);';
+    s.textContent = msg;
+    inner.appendChild(s);
+  }
+
+  // ── 立即整理记忆（S1 · 用户主动）：POST /api/refresh → 整理中禁按钮、完成提示新增数、刷胶囊 ──
+  async function doRefresh() {
+    const btn = $('btnRefresh');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const orig = btn.textContent;
+    btn.textContent = '正在整理…';
+    try {
+      const d = await fetch('/api/refresh', { method: 'POST' }).then((x) => x.json());
+      if (d.error) { memToast('整理没成功：' + d.error, 'danger'); return; }
+      if (d.ran === false) {
+        // 后台正好在整理 → 没重复跑。提示稍等，bg-status 那趟跑完会自然刷。
+        memToast('它正在整理了，稍等一下～', '');
+        return;
+      }
+      const sum = d.summary || {};
+      const created = sum.created || 0;
+      // 立即整理出的新理解也就地织气泡（与后台轮询同一套；_weavedNoteIds 去重，pollBg 稍后不会重复织）。
+      const news = Array.isArray(sum.newCognitions) ? sum.newCognitions : [];
+      for (const c of news) weaveMemNote(c);
+      // 让 pollBg 别把这一轮再当"新"的重复处理：把 lastAt 对齐到本次的时间戳。
+      if (sum.at) lastAt = sum.at;
+      updateMemPill();
+      memToast(created > 0 ? ('整理好了，新记住 ' + created + ' 件') : '整理好了，这次没有新的', '');
+    } catch (e) {
+      memToast('整理没成功：' + String(e), 'danger');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = orig;
+    }
+  }
+  $('btnRefresh').addEventListener('click', doRefresh);
+
+  // ══════════════════ 记忆管理页（步3） ══════════════════
+  // 全走 /api/cognition|evidence 及其受控管理端点（后端只经 core.memory.*）。
+  // 列表渲染用户输入内容一律 textContent（免 XSS）；把握度/状态用 naming.md §5 的用户词，不露工程词。
+
+  // 可信状态 → 用户词档（naming.md §5）。不显示 0~1000 原始分数。
+  const CRED_CN = {
+    candidate: '还没确认', low: '低把握', limited: '有一定把握',
+    stable: '比较确定', conflicted: '有冲突，需确认',
+  };
+  // 内容类型 → 用户词（naming.md 词表）。
+  const CTYPE_CN = {
+    fact: '事实', preference: '偏好', goal: '目标', project: '进行中的事',
+    state: '近来状态', trait: '特点', hypothesis: '暂时的猜测', trend: '近来的趋势',
+  };
+
+  const MEM = {
+    tab: 'cog',        // 'cog' | 'ev'
+    showDead: false,   // 理解 tab 是否显示已失效
+    cog: [],           // 认知列表缓存
+    ev: [],            // 证据列表缓存
+    loaded: false,
+  };
+
+  function memToast(msg, kind) {
+    const t = $('memToast');
+    t.textContent = msg;
+    t.className = kind ? kind : '';
+    t.classList.add('show');
+    clearTimeout(memToast._t);
+    memToast._t = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  // 二次确认弹窗：返回 Promise<boolean>。所有用户内容经 setText 放，不拼 innerHTML。
+  function memConfirm({ title, bodyText, bodyQuote, warn, okText, okKind }) {
+    return new Promise((resolve) => {
+      $('memConfirmTitle').textContent = title || '确认操作';
+      const body = $('memConfirmBody');
+      body.textContent = '';
+      if (bodyQuote) {
+        const q = document.createElement('div');
+        q.style.cssText = 'margin-bottom:8px;font-weight:600;';
+        q.textContent = '「' + bodyQuote + '」'; // 用户内容 → textContent
+        body.appendChild(q);
+      }
+      if (bodyText) {
+        const p = document.createElement('div');
+        p.textContent = bodyText;
+        body.appendChild(p);
+      }
+      $('memConfirmWarn').textContent = warn || '';
+      const okBtn = $('memConfirmOk');
+      okBtn.textContent = okText || '确认';
+      okBtn.style.background = okKind === 'danger' ? '#b4232a' : 'var(--accent)';
+      const box = $('memConfirm');
+      box.classList.add('show');
+      const done = (v) => {
+        box.classList.remove('show');
+        okBtn.onclick = null; $('memConfirmCancel').onclick = null;
+        resolve(v);
+      };
+      okBtn.onclick = () => done(true);
+      $('memConfirmCancel').onclick = () => done(false);
+    });
+  }
+
+  // 进 / 出记忆管理页
+  function enterMemory() {
+    document.body.classList.add('mode-memory');
+    memLoad(); // 每次进都重拉，保证是最新的
+  }
+  function exitMemory() { document.body.classList.remove('mode-memory'); }
+
+  // 拉两份数据（认知 + 证据），再按当前 tab 渲染。
+  async function memLoad() {
+    const list = $('memList');
+    if (!MEM.loaded) list.innerHTML = '<div class="mem-empty">加载中…</div>';
+    try {
+      const [cd, ed] = await Promise.all([
+        fetch('/api/cognition').then((x) => x.json()),
+        fetch('/api/evidence').then((x) => x.json()),
+      ]);
+      MEM.cog = Array.isArray(cd.cognitions) ? cd.cognitions : [];
+      MEM.ev = Array.isArray(ed.evidences) ? ed.evidences : [];
+      MEM.loaded = true;
+      // 顺手刷 S0 胶囊：用刚拉到的这份算活跃数（零额外请求，口径同 /api/cognition/count：!invalidAt && !archivedAt）。
+      //   记忆管理页里删/标失效后都会 memLoad，胶囊随之同步、不必等 count 轮询。
+      const activeN = MEM.cog.filter((c) => !c.invalidAt && !c.archivedAt).length;
+      $('memPillN').textContent = activeN > 0 ? ('它记住我 ' + activeN + ' 件事') : '它还没记住什么';
+      memRender();
+    } catch (e) {
+      list.innerHTML = '';
+      const d = document.createElement('div');
+      d.className = 'mem-empty';
+      d.textContent = '读取记忆失败，稍后再试。';
+      list.appendChild(d);
+    }
+  }
+
+  // 按证据 id 找证据（溯源展示用）。
+  function memEvById(id) { return MEM.ev.find((e) => e.id === id); }
+
+  function memRender() {
+    // tab 高亮
+    $('tabCog').classList.toggle('on', MEM.tab === 'cog');
+    $('tabEv').classList.toggle('on', MEM.tab === 'ev');
+    $('tabData').classList.toggle('on', MEM.tab === 'data');
+    // 过滤器只在理解 tab 显示
+    $('cogFilter').style.display = MEM.tab === 'cog' ? '' : 'none';
+    // 数据 tab：显示数据面板、藏列表；其余 tab：显示列表、藏数据面板。
+    const isData = MEM.tab === 'data';
+    $('memData').style.display = isData ? 'block' : 'none';
+    $('memList').style.display = isData ? 'none' : 'block';
+    if (isData) return; // 数据面板是静态的，不随列表数据重渲
+    if (MEM.tab === 'cog') memRenderCognitions();
+    else memRenderEvidences();
+  }
+
+  // ── 理解（认知）列表 ──
+  function memRenderCognitions() {
+    const list = $('memList');
+    list.textContent = '';
+    const rows = MEM.cog.filter((c) => MEM.showDead || (!c.invalidAt && !c.archivedAt));
+    if (!rows.length) {
+      const d = document.createElement('div');
+      d.className = 'mem-empty';
+      d.textContent = MEM.cog.length
+        ? '当前没有"有效"的理解（勾上上面可看已失效的）。'
+        : '它还没形成对你的理解——多聊几句、等它在后台整理一下就有了。';
+      list.appendChild(d);
+      return;
+    }
+    for (const c of rows) list.appendChild(memCognitionCard(c));
+  }
+
+  function memCognitionCard(c) {
+    const dead = !!c.invalidAt || !!c.archivedAt; // 失效 或 已归档 都算"非活跃"（召回同款跳过）
+    const card = document.createElement('div');
+    card.className = 'mem-card' + (dead ? ' dead' : '');
+
+    const text = document.createElement('div');
+    text.className = 'mc-text';
+    text.textContent = c.content; // 用户内容 → textContent
+    card.appendChild(text);
+
+    // 元信息：类型 + 把握度档 + 状态
+    const meta = document.createElement('div');
+    meta.className = 'mc-meta';
+    meta.appendChild(memPill(CTYPE_CN[c.contentType] || '理解'));
+    // 把握度：用 confBand 定性档（后端按【有效把握度】effectiveConfidence 衰减后定，反映"会变淡"；不露 0~1000 数字）。
+    const band = c.confBand || c.credStatus || 'candidate';
+    const credText = CRED_CN[band] || '还没确认';
+    meta.appendChild(memPill('把握度：' + credText, band === 'stable' ? 'ok' : (band === 'conflicted' ? 'warn' : '')));
+    // 状态：活跃 / 已标失效 / 已收起（归档）——用用户词；冲突已并入把握度档。
+    if (c.invalidAt) meta.appendChild(memPill('已标为不再有效', 'warn'));
+    else if (c.archivedAt) meta.appendChild(memPill('已收起', ''));
+    else meta.appendChild(memPill('活跃', 'ok'));
+    card.appendChild(meta);
+
+    // 溯源折叠：这条理解从哪几条记忆线索来的
+    const sources = Array.isArray(c.sources) ? c.sources : [];
+    const det = document.createElement('details');
+    det.className = 'mc-sources';
+    const sum = document.createElement('summary');
+    sum.textContent = '根据哪些话看出来的（' + sources.length + '）';
+    det.appendChild(sum);
+    if (sources.length) {
+      for (const s of sources) {
+        const item = document.createElement('div');
+        item.className = 'mc-source-item';
+        const e = memEvById(s.evidenceId);
+        const rel = s.relation === 'contradict' ? '（反着说的）' : '';
+        // 证据本身可能已被删（列表里找不到）→ 诚实提示，不假装有内容
+        item.textContent = (e ? (e.summary || e.rawContent) : '（这条线索已不在了）') + rel;
+        det.appendChild(item);
+      }
+    } else {
+      const item = document.createElement('div');
+      item.className = 'mc-source-item';
+      item.textContent = '（没有挂线索——无法溯源的理解要多留个心眼）';
+      det.appendChild(item);
+    }
+    card.appendChild(det);
+
+    // 操作：标失效（未失效时）+ 删除
+    const actions = document.createElement('div');
+    actions.className = 'mc-actions';
+    if (!dead) {
+      const b = document.createElement('button');
+      b.className = 'mc-btn';
+      b.textContent = '标记不再有效';
+      b.onclick = () => memInvalidateCog(c);
+      actions.appendChild(b);
+    }
+    const del = document.createElement('button');
+    del.className = 'mc-btn danger';
+    del.textContent = '删除';
+    del.onclick = () => memDeleteCog(c);
+    actions.appendChild(del);
+    card.appendChild(actions);
+
+    return card;
+  }
+
+  // ── 记忆线索（证据）列表 ──
+  function memRenderEvidences() {
+    const list = $('memList');
+    list.textContent = '';
+    if (!MEM.ev.length) {
+      const d = document.createElement('div');
+      d.className = 'mem-empty';
+      d.textContent = '还没有记下的线索——跟它聊几句就有了。';
+      list.appendChild(d);
+      return;
+    }
+    for (const e of MEM.ev) list.appendChild(memEvidenceCard(e));
+  }
+
+  function memEvidenceCard(e) {
+    const card = document.createElement('div');
+    card.className = 'mem-card';
+
+    const text = document.createElement('div');
+    text.className = 'mc-text';
+    text.textContent = e.summary || e.rawContent; // summary 优先，无则 rawContent；都 textContent
+    card.appendChild(text);
+
+    // 来源：亲口 / 观察 / 推测（用户词）
+    const meta = document.createElement('div');
+    meta.className = 'mc-meta';
+    const SRC_CN = { spoken: '你亲口说的', observed: '从行为观察到的', inferred: '它推测的' };
+    meta.appendChild(memPill(SRC_CN[e.sourceKind] || '记录'));
+    meta.appendChild(memPill(e.allowCloudRead ? '可用于云端' : '不上云', e.allowCloudRead ? '' : 'warn'));
+    card.appendChild(meta);
+
+    // "能否用于云端"开关：即时保存
+    const authWrap = document.createElement('div');
+    authWrap.style.marginTop = '10px';
+    const label = document.createElement('label');
+    label.className = 'mc-auth';
+    const ck = document.createElement('input');
+    ck.type = 'checkbox';
+    ck.checked = !!e.allowCloudRead;
+    ck.onchange = () => memToggleCloud(e, ck);
+    const span = document.createElement('span');
+    span.textContent = '允许这条用于云端模型';
+    label.appendChild(ck);
+    label.appendChild(span);
+    authWrap.appendChild(label);
+    card.appendChild(authWrap);
+
+    // 操作：删除
+    const actions = document.createElement('div');
+    actions.className = 'mc-actions';
+    const del = document.createElement('button');
+    del.className = 'mc-btn danger';
+    del.textContent = '删除';
+    del.onclick = () => memDeleteEv(e);
+    actions.appendChild(del);
+    card.appendChild(actions);
+
+    return card;
+  }
+
+  function memPill(txt, kind) {
+    const s = document.createElement('span');
+    s.className = 'mc-pill' + (kind ? ' ' + kind : '');
+    s.textContent = txt;
+    return s;
+  }
+
+  // ── 操作：标失效认知 ──
+  async function memInvalidateCog(c) {
+    const ok = await memConfirm({
+      title: '把这条理解标为"不再有效"？',
+      bodyQuote: c.content,
+      bodyText: '标为不再有效后，它在往后对话里就不会再用这条，但条目和来龙去脉都保留、随时能查——这不是删除。',
+      okText: '标为不再有效',
+    });
+    if (!ok) return;
+    try {
+      const r = await fetch('/api/cognition/invalidate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
+      }).then((x) => x.json());
+      if (r.error || !r.invalidated) { memToast('操作失败：' + (r.error || '这条已经不在了'), 'danger'); }
+      else memToast('已标为不再有效', '');
+    } catch (e) { memToast('操作失败：' + String(e), 'danger'); }
+    await memLoad();
+  }
+
+  // ── 操作：删除认知 ──
+  async function memDeleteCog(c) {
+    const ok = await memConfirm({
+      title: '删除这条理解？',
+      bodyQuote: c.content,
+      bodyText: '会连同它的来龙去脉一起删掉（挂着的原话线索本身不动）。只是想让它别再生效的话，用"标记不再有效"更稳——那样还能追溯。',
+      warn: '删除后无法恢复。',
+      okText: '永久删除', okKind: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const r = await fetch('/api/cognition/delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
+      }).then((x) => x.json());
+      if (r.error || !r.removed) { memToast('删除失败：' + (r.error || '这条已不存在，已刷新'), 'danger'); }
+      else memToast('已删除这条理解', '');
+    } catch (e) { memToast('删除失败：' + String(e), 'danger'); }
+    await memLoad();
+  }
+
+  // ── 操作：授权开关（能否用于云端），即时保存 ──
+  async function memToggleCloud(e, ck) {
+    const val = ck.checked;
+    try {
+      const r = await fetch('/api/evidence/authorization', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: e.id, allowCloudRead: val }),
+      }).then((x) => x.json());
+      if (r.error || !r.updated) {
+        memToast('保存失败：' + (r.error || '这条已不存在'), 'danger');
+        ck.checked = !val; // 拨回真实状态
+        await memLoad();
+        return;
+      }
+      e.allowCloudRead = val; // 本地同步，重渲元信息
+      memToast(val ? '已允许用于云端' : '已改为不上云', '');
+      memRender();
+    } catch (err) {
+      memToast('保存失败：' + String(err), 'danger');
+      ck.checked = !val;
+    }
+  }
+
+  // ── 操作：删除证据（先不 force 探路 → 有 blockers 提示影响面 → 确认后 force 重试）──
+  async function memDeleteEv(e) {
+    const ok = await memConfirm({
+      title: '删除这条记忆线索？',
+      bodyQuote: e.summary || e.rawContent,
+      bodyText: '这是你主动删除（非系统自动）。',
+      warn: '删除后无法恢复。',
+      okText: '删除', okKind: 'danger',
+    });
+    if (!ok) return;
+    try {
+      // 第一步：不 force 探路
+      const r = await fetch('/api/evidence/delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: e.id }),
+      }).then((x) => x.json());
+      if (r.error) { memToast('删除失败：' + r.error, 'danger'); return; }
+      if (r.removed) { memToast('已删除这条记忆线索', ''); await memLoad(); return; }
+
+      // removed=false + blockers 非空 = 被引用，拦下了 → 提示影响面，确认后 force 重试
+      const blockers = Array.isArray(r.blockers) ? r.blockers : [];
+      if (!blockers.length) { memToast('这条线索已不存在，已刷新', 'danger'); await memLoad(); return; }
+      const n = blockers.length;
+      const ok2 = await memConfirm({
+        title: '这条线索还被用到',
+        bodyQuote: e.summary || e.rawContent,
+        bodyText: '它被 ' + n + ' 处用到（相关的经历片段或对你的理解）。删了会一并断开这些关联，那些理解会少一条支撑。仍然要删吗？',
+        warn: '删除后无法恢复。',
+        okText: '仍然删除', okKind: 'danger',
+      });
+      if (!ok2) return;
+      const r2 = await fetch('/api/evidence/delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: e.id, force: true }),
+      }).then((x) => x.json());
+      if (r2.error || !r2.removed) { memToast('删除失败：' + (r2.error || '这条已不存在，已刷新'), 'danger'); }
+      else memToast('已删除这条线索、并断开 ' + n + ' 处关联', '');
+    } catch (err) {
+      memToast('删除失败：' + String(err), 'danger');
+    }
+    await memLoad();
+  }
+
+  // 记忆管理页事件绑定（S0 胶囊点开 = 进记忆抽屉/管理页）
+  $('memPill').addEventListener('click', enterMemory);
+  $('memBack').addEventListener('click', exitMemory);
+  $('tabCog').addEventListener('click', () => { MEM.tab = 'cog'; memRender(); });
+  $('tabEv').addEventListener('click', () => { MEM.tab = 'ev'; memRender(); });
+  $('tabData').addEventListener('click', () => { MEM.tab = 'data'; importReset(); memRender(); });
+  $('showDead').addEventListener('change', function () { MEM.showDead = this.checked; memRender(); });
+
+  // ══════════════════ 数据 / 备份区（步5） ══════════════════
+  // 导出：GET /api/export-bundle 拿 { bundle } → 前端 Blob + a[download] 存盘（零外部依赖）。
+  // 导入：选 .bundle.json → FileReader 读 → 先 dryRun 试算 → 用户确认 → merge 真导。
+  // 恢复出厂：强二次确认（要求输入「清空」二字）→ POST /api/factory-reset。
+
+  // ── 导出记忆包 ──
+  async function doExport() {
+    const btn = $('exportBundle');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/export-bundle');
+      const d = await res.json();
+      if (!res.ok || d.error || !d.bundle) { memToast('导出失败：' + (d.error || '拿不到记忆包'), 'danger'); return; }
+      // 组文件：<日期>-memoweft.bundle.json。用 Blob + 临时 a[download] 触发浏览器下载，零外部依赖。
+      const text = JSON.stringify(d.bundle, null, 2);
+      const blob = new Blob([text], { type: 'application/json' });
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      a.href = urlObj;
+      a.download = stamp + '-memoweft.bundle.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(urlObj), 1000);
+      const cnt = (d.bundle.metadata && d.bundle.metadata.counts) || {};
+      memToast('已导出记忆包（记忆线索 ' + (cnt.evidence || 0) + ' 条、理解 ' + (cnt.cognitions || 0) + ' 条）', '');
+    } catch (e) {
+      memToast('导出失败：' + String(e), 'danger');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── 导入记忆包 ──
+  // IMPORT 暂存本次选中的文件解析出的 bundle（供"确认导入"复用，避免再读一次文件）。
+  const IMPORT = { bundle: null, fileName: '' };
+
+  function importReset() {
+    IMPORT.bundle = null; IMPORT.fileName = '';
+    $('importFileName').textContent = '';
+    $('importPlan').classList.remove('show');
+    $('importPlanText').textContent = '';
+    $('importPlanWarn').textContent = '';
+    if ($('importFile')) $('importFile').value = '';
+  }
+
+  // 选文件 → FileReader 读文本 → JSON.parse → dryRun 试算（不写库）→ 展示试算结果。
+  async function onImportFile(file) {
+    if (!file) return;
+    IMPORT.fileName = file.name;
+    $('importFileName').textContent = '已选择：' + file.name; // textContent 免 XSS
+    $('importPlan').classList.remove('show');
+    let bundle;
+    try {
+      const text = await file.text(); // 浏览器原生（FileReader 的 Promise 版），零外部依赖
+      bundle = JSON.parse(text);
+    } catch (e) {
+      memToast('这个文件读不了：不是有效的 JSON', 'danger');
+      return;
+    }
+    IMPORT.bundle = bundle;
+    // 先 dryRun 试算：不写库，只算将导入多少、跳过多少。
+    try {
+      const res = await fetch('/api/import-bundle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bundle, mode: 'dryRun' }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        // 非法包：后端 400 带 errors。友好报错，不显示确认导入。
+        const errs = Array.isArray(d.errors) && d.errors.length ? '（' + d.errors[0] + '）' : '';
+        memToast('这个记忆包不能用' + errs, 'danger');
+        IMPORT.bundle = null;
+        return;
+      }
+      showImportPlan(d.plan);
+    } catch (e) {
+      memToast('试算失败：' + String(e), 'danger');
+    }
+  }
+
+  // 展示 dryRun 试算（用用户词：记忆线索 / 经历片段 / 理解；跳过=已有的重复）。
+  function showImportPlan(plan) {
+    if (!plan) return;
+    const c = plan.counts || {};
+    const dup = plan.duplicates || {};
+    const willImport = (c.evidence || 0) + (c.events || 0) + (c.cognitions || 0);
+    const willSkip = (dup.evidence || 0) + (dup.events || 0) + (dup.cognitions || 0);
+    const box = $('importPlanText');
+    box.textContent = ''; // 清空，用 DOM 文本节点拼（免 XSS）
+    const line1 = document.createElement('div');
+    if (willImport === 0 && willSkip > 0) {
+      line1.textContent = '这些记忆你已经都有了，无需重复导入（' + willSkip + ' 条跳过）。';
+    } else {
+      line1.textContent = '将导入 ' + (c.evidence || 0) + ' 条记忆线索、'
+        + (c.cognitions || 0) + ' 条理解、' + (c.events || 0) + ' 段经历'
+        + (willSkip > 0 ? ('；跳过 ' + willSkip + ' 条已有的重复。') : '。');
+    }
+    box.appendChild(line1);
+    // 软告警（如 subject 混入、correctsEvidenceId 指向包外）：如实提示但不拦。
+    const warns = Array.isArray(plan.warnings) ? plan.warnings : [];
+    $('importPlanWarn').textContent = warns.length ? ('提示：' + warns.length + ' 条小告警（导入不受影响）') : '';
+    // 没有可导入的就把"确认导入"禁掉（全是重复，导也白导）。
+    $('importConfirm').disabled = willImport === 0;
+    $('importPlan').classList.add('show');
+  }
+
+  // 确认导入：mode=merge 真写库。成功后刷新记忆列表 + 提示"更新画像"重建召回。
+  async function doImportConfirm() {
+    if (!IMPORT.bundle) return;
+    const btn = $('importConfirm');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/import-bundle', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bundle: IMPORT.bundle, mode: 'merge' }),
+      });
+      const d = await res.json();
+      if (!res.ok || (d.plan && !d.plan.valid)) {
+        const errs = d.errors || (d.plan && d.plan.errors) || [];
+        memToast('导入失败' + (errs.length ? '：' + errs[0] : ''), 'danger');
+        return;
+      }
+      const c = (d.plan && d.plan.counts) || {};
+      const done = (c.evidence || 0) + (c.cognitions || 0) + (c.events || 0);
+      memToast('已导入 ' + done + ' 条记忆' + (d.needsReindex ? '（多聊几句它会重新整理、更容易想起）' : ''), '');
+      importReset();
+      MEM.loaded = false; // 强制重拉
+      await memLoad();
+      MEM.tab = 'data'; memRender(); // 导完仍留在数据 tab
+    } catch (e) {
+      memToast('导入失败：' + String(e), 'danger');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── 恢复出厂（强二次确认：要输入「清空」二字）──
+  async function doFactoryReset() {
+    const ok = await memConfirmType({
+      title: '清空全部记忆 · 重新开始？',
+      bodyText: '这会把它记住你的一切都抹掉：所有记忆线索、经历片段、对你的理解，以及这些操作的记录。当前对话会被收起、并开一段新的空对话。',
+      warn: '此操作不可恢复。建议先导出记忆包留个备份。',
+      needWord: '清空',
+      okText: '我确认，清空全部记忆', okKind: 'danger',
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch('/api/factory-reset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: '清空' }), // 服务端确认兜底（防 CSRF/误触发直连）
+      });
+      const d = await res.json();
+      if (!res.ok || d.error || !d.ok) { memToast('清空失败：' + (d.error || '未知错误'), 'danger'); return; }
+      const total = (d.evidenceRemoved || 0) + (d.cognitionRemoved || 0) + (d.eventRemoved || 0);
+      memToast('已清空全部记忆，回到空白（清掉 ' + total + ' 条）', '');
+      // 回到干净空白：刷新记忆列表（应空）、刷侧栏（旧对话已归档）、清聊天区。
+      importReset();
+      MEM.loaded = false;
+      await memLoad();
+      MEM.tab = 'cog'; memRender(); // 切回"理解" tab，让用户看到已空
+      renderChat([]); // 聊天区清空（后端已 newSession）
+      loadSessions(); // 侧栏刷新（旧对话已归档、当前是新空对话）
+      loadHistory(); // 当前对话历史（新空对话 → 空）
+    } catch (e) {
+      memToast('清空失败：' + String(e), 'danger');
+    }
+  }
+
+  // 强确认弹窗（要求输入指定词才放行）：复用 #memConfirm 弹窗，临时插一个输入框。返回 Promise<boolean>。
+  function memConfirmType({ title, bodyText, warn, needWord, okText, okKind }) {
+    return new Promise((resolve) => {
+      $('memConfirmTitle').textContent = title || '确认操作';
+      const body = $('memConfirmBody');
+      body.textContent = '';
+      if (bodyText) {
+        const p = document.createElement('div');
+        p.textContent = bodyText;
+        body.appendChild(p);
+      }
+      // 输入框：要求原样输入 needWord 才能确认（防手滑，比单个 confirm 更重）。
+      const wrap = document.createElement('div');
+      wrap.className = 'mc-typeconfirm';
+      const lab = document.createElement('label');
+      lab.textContent = '请输入「' + needWord + '」以确认：'; // needWord 是固定文案，非用户内容
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.autocomplete = 'off'; inp.spellcheck = false;
+      inp.placeholder = needWord;
+      wrap.appendChild(lab); wrap.appendChild(inp);
+      body.appendChild(wrap);
+
+      $('memConfirmWarn').textContent = warn || '';
+      const okBtn = $('memConfirmOk');
+      okBtn.textContent = okText || '确认';
+      okBtn.style.background = okKind === 'danger' ? '#b4232a' : 'var(--accent)';
+      okBtn.disabled = true; // 未输入正确词前禁用
+      const sync = () => { okBtn.disabled = inp.value.trim() !== needWord; };
+      inp.addEventListener('input', sync);
+
+      const box = $('memConfirm');
+      box.classList.add('show');
+      setTimeout(() => inp.focus(), 30);
+      const done = (v) => {
+        box.classList.remove('show');
+        okBtn.disabled = false; // 复位，别影响下次普通确认
+        okBtn.onclick = null; $('memConfirmCancel').onclick = null;
+        resolve(v);
+      };
+      okBtn.onclick = () => { if (inp.value.trim() === needWord) done(true); };
+      $('memConfirmCancel').onclick = () => done(false);
+    });
+  }
+
+  // 数据区事件绑定
+  $('exportBundle').addEventListener('click', doExport);
+  $('importPick').addEventListener('click', () => $('importFile').click());
+  $('importFile').addEventListener('change', function () { onImportFile(this.files && this.files[0]); });
+  $('importConfirm').addEventListener('click', doImportConfirm);
+  $('importCancel').addEventListener('click', importReset);
+  $('factoryReset').addEventListener('click', doFactoryReset);
+
+  // ══════════════════ 对话列表侧栏（步4） ══════════════════
+  // 会话册由后端持久（扫 sessions 目录）；前端只渲染 + 切换/新建/归档。用户内容一律 textContent（免 XSS）。
+  let currentConvId = null;
+
+  // 相对时间（用户词）：刚刚 / N 分钟前 / N 小时前 / 昨天 / M-D。不显示原始毫秒/id。
+  function relTime(ms) {
+    if (!ms) return '';
+    const diff = Date.now() - ms;
+    if (diff < 60_000) return '刚刚';
+    if (diff < 3_600_000) return Math.floor(diff / 60_000) + ' 分钟前';
+    if (diff < 86_400_000) return Math.floor(diff / 3_600_000) + ' 小时前';
+    if (diff < 172_800_000) return '昨天';
+    const d = new Date(ms);
+    return (d.getMonth() + 1) + '-' + d.getDate();
+  }
+
+  async function loadSessions() {
+    try {
+      const d = await fetch('/api/sessions').then((x) => x.json());
+      currentConvId = d.currentId || currentConvId;
+      renderSessions(Array.isArray(d.sessions) ? d.sessions : []);
+    } catch (e) { /* 侧栏拉不到不影响聊天 */ }
+  }
+
+  function renderSessions(sessions) {
+    const list = $('sbList');
+    list.textContent = '';
+    if (!sessions.length) {
+      const d = document.createElement('div');
+      d.className = 'sb-empty';
+      d.textContent = '还没有对话。发一句话，就有第一段了。';
+      list.appendChild(d);
+      return;
+    }
+    for (const s of sessions) list.appendChild(sessionItem(s));
+  }
+
+  function sessionItem(s) {
+    const item = document.createElement('div');
+    item.className = 'sb-item' + (s.current ? ' on' : '');
+    item.onclick = () => openSession(s.id);
+
+    const prev = document.createElement('div');
+    prev.className = 'sb-preview';
+    prev.textContent = s.preview || '（还没说话的新对话）'; // 用户内容 → textContent
+    item.appendChild(prev);
+
+    const time = document.createElement('div');
+    time.className = 'sb-time';
+    time.textContent = relTime(s.lastActiveMs);
+    item.appendChild(time);
+
+    // 归档钮（hover 出现）：阻止冒泡，别触发切换。
+    const arch = document.createElement('button');
+    arch.className = 'sb-arch';
+    arch.title = '归档这段对话（不删数据，之后可恢复）';
+    arch.textContent = '✕';
+    arch.onclick = (e) => { e.stopPropagation(); archiveSession(s); };
+    item.appendChild(arch);
+
+    return item;
+  }
+
+  // 切到一条对话：/api/session/open → 后端切当前 + 标未激活（下次聊触发续聊种子重建）+ 返回该对话历史 → 重渲聊天区。
+  async function openSession(id) {
+    if (id === currentConvId) return; // 点的是当前那条 → 不折腾
+    try {
+      const d = await fetch('/api/session/open', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+      }).then((x) => x.json());
+      if (d.error) return;
+      currentConvId = d.conversationId || id;
+      renderChat(d.turns || []); // 用返回的历史重铺聊天区
+      loadSessions();            // 刷高亮
+    } catch (e) { /* 切换失败静默，保持原状 */ }
+  }
+
+  // 新建对话：/api/reset → 换当前对话 id → 清空聊天区。
+  async function newSession() {
+    try {
+      const d = await fetch('/api/reset', { method: 'POST' }).then((x) => x.json());
+      currentConvId = d.conversationId || currentConvId;
+      renderChat([]);   // 清空聊天区
+      loadSessions();   // 新对话此刻还没落盘（首条 chat 才落），列表里可能还没它——聊一句后 send() 再刷
+      $('text').focus();
+    } catch (e) { /* 新建失败静默 */ }
+  }
+
+  // 归档对话：/api/session/archive → 从列表消失（数据留盘）。若归档的是当前对话，后端已自动切走 → 重载聊天区。
+  async function archiveSession(s) {
+    try {
+      const d = await fetch('/api/session/archive', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id }),
+      }).then((x) => x.json());
+      if (d.error) return;
+      if (d.archivedCurrent) {
+        // 归档掉的是当前对话，后端切到了另一条 → 重载那条历史。
+        currentConvId = d.currentId || currentConvId;
+        await loadHistory();
+      }
+      loadSessions();
+    } catch (e) { /* 归档失败静默 */ }
+  }
+
+  $('sbNew').addEventListener('click', newSession);
+
+  // ══════════════════ 体验选择器（换"聊天方式/人设"，批次5 做插件 v1） ══════════════════
+  // 列 /api/experiences 填下拉、标当前；切换 POST /api/experience。记忆是同一份，只换回话的语气。
+  // 名字来自后端（用户词，如"普通助手"/"星瑶"），用 textContent 放，免 XSS。
+  let expOptions = []; // [{id,name}]，缓存用于切换后按 id 找名字做提示
+
+  async function loadExperiences() {
+    const sel = $('expSelect');
+    try {
+      const d = await fetch('/api/experiences').then((x) => x.json());
+      expOptions = Array.isArray(d.experiences) ? d.experiences : [];
+      sel.textContent = ''; // 清"加载中…"占位
+      for (const e of expOptions) {
+        const opt = document.createElement('option');
+        opt.value = e.id;
+        opt.textContent = e.name;     // 用户词 → textContent，免注入
+        if (e.current) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.disabled = false;
+    } catch (e) {
+      // 拉不到就退化成禁用的占位，别挡聊天（体验非必需，聊天照常用默认人设）。
+      sel.textContent = '';
+      const opt = document.createElement('option');
+      opt.textContent = '（暂不可选）';
+      sel.appendChild(opt);
+      sel.disabled = true;
+    }
+  }
+
+  // 切换体验：POST /api/experience {id} → 成功后提示"下一句起会用〈名字〉的方式跟你聊"。
+  //   因后端靠重建对话窗口换人设，所以是【当前对话下一句起】生效，不是立刻改已发出的话。
+  async function onExperienceChange() {
+    const sel = $('expSelect');
+    const id = sel.value;
+    const picked = expOptions.find((e) => e.id === id);
+    const name = picked ? picked.name : id;
+    sel.disabled = true;
+    try {
+      const d = await fetch('/api/experience', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+      }).then((x) => x.json());
+      if (d.error || !d.ok) {
+        memToast('没切成功：' + (d.error || '请稍后再试'), 'danger');
+        loadExperiences(); // 回读后端真实当前值，纠正下拉选中态
+        return;
+      }
+      memToast('好，下一句起，它会用「' + name + '」的方式跟你聊', '');
+    } catch (e) {
+      memToast('没切成功，稍后再试', 'danger');
+      loadExperiences();
+    } finally {
+      sel.disabled = false;
+    }
+  }
+  $('expSelect').addEventListener('change', onExperienceChange);
+
+  // 启动
+  checkHealth();
+  loadHistory();
+  loadSessions();
+  loadExperiences(); // 填体验选择器、标当前
+  updateMemPill(); // 首次刷 S0 记忆胶囊计数
+  pollBg();
+  setInterval(pollBg, 3000);
+  $('text').focus();
+</script>

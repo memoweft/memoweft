@@ -102,36 +102,64 @@ export {
   type ParseWithRepairDeps,
 } from './llm/jsonRepair.ts';
 
+// 统一 Core 入口（架构归位·批次2）：Host 优先经它调 Core，不散装拼底层件
+export {
+  createMemoWeftCore,
+  type MemoWeftCore,
+  type CreateCoreOptions,
+  type UserMessageInput,
+  type ObservationInput,
+  type RecallInput,
+  type ConversationInput,
+  type UpdateProfileInput,
+  type PortableAPI,
+  type MemoryGraphAPI,
+  type HealthReport,
+} from './core/index.ts';
+
+// 受控记忆管理 API（批次2）：7 操作 + 审计表，管理操作带 reason 留痕
+export {
+  createMemoryManagementAPI,
+  type MemoryManagementAPI,
+  type InvalidateCognitionInput,
+  type UpdateEvidenceAuthorizationInput,
+  type RemoveEvidenceSafelyInput,
+  type RemoveEvidenceResult,
+  type RemovalBlocker,
+  type RemoveCognitionSafelyInput,
+  type RemoveCognitionResult,
+  type MergeCognitionInput,
+  type MergeCognitionResult,
+  type ArchiveCognitionInput,
+  type IntegrityIssue,
+  type IntegrityReport,
+  type MemoryManagementDeps,
+  type ListMemoryInput,
+  type CognitionWithMeta,
+  type ResetSubjectInput,
+  type ResetSubjectResult,
+  SqliteManagementLog,
+  type ManagementLog,
+  type ManagementLogEntry,
+} from './memory/index.ts';
+
+// 共享召回（批次2 抽取）：Conversation 与 core.recall 共用的同一段召回语义
+export { recallCognitions, type RecallDeps, type RecalledCognitionItem } from './retrieval/recall.ts';
+
 // 管线 / 会话编排
-export { Conversation, type ConversationDeps, type TurnOutcome } from './pipeline/conversation.ts';
+export { Conversation, type ConversationDeps, type TurnOutcome, type RecalledCognition } from './pipeline/conversation.ts';
 export { perceive, type PerceiveOptions } from './pipeline/perceive.ts';
 export { WorkingMemory, type Turn } from './pipeline/workingMemory.ts';
 
-// 感知 / 多源摄入（阶段 4-A）：通用观察摄入口 + 活动窗口采集器骨架
+// 感知 / 多源摄入（阶段 4-A）：Core 只保留【通用观察摄入口】（generic Observation + ingestObservations）。
 export {
   ingestObservations,
   type Observation,
   type IngestDeps,
   type IngestResult,
 } from './perception/ingest.ts';
-export {
-  activeWindowToObservation,
-  type ActiveWindowSample,
-  type ActiveWindowCollector,
-} from './perception/collectors/activeWindow.ts';
-// 真·活动窗口采集器（阶段 8-A · 档2）：采集循环 + Win32 前台窗口采样
-export {
-  createActiveWindowCollector,
-  type ActiveWindowCollectorOptions,
-  type RunningActiveWindowCollector,
-  type ActiveWindowEmit,
-  type ForegroundWindow,
-  type ForegroundSampler,
-} from './perception/collectors/activeWindowCollector.ts';
-export {
-  sampleForegroundWindowWin32,
-  foregroundSamplerSupported,
-} from './perception/collectors/win32Foreground.ts';
+// 真实采集（活动窗口等）已【整体迁出 Core】到采集插件 plugins/collector-active-window/（架构归位，boundaries.md §4.1）：
+// 窗口采样、样本→Observation 映射、采集循环都是 Plugin 层知识；采集插件经 Host /api/observe → core.ingestObservation 落库。
 
 // 配置
 export { config, cloudReadDefault, type MemoWeftConfig, type DlaConfig } from './config.ts';

@@ -103,6 +103,7 @@ export async function proposeAsk(
   const markAsked = opts.markAsked ?? true;
 
   // 候选 = active 假设里：没问过、状态可问、把握度在"将信将疑"带内。
+  // active()（未失效且未归档）：归档全面雪藏（批次3 用户拍板）——已归档的假设不被主动问起。
   const candidates = deps.cognitionStore
     .active(subjectId)
     .filter((c) => c.contentType === 'hypothesis')

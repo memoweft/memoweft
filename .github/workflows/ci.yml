@@ -49,11 +49,23 @@ jobs:
           fi
 
       # 三绿，逐步跑：任一步非零退出，job 即红，PR 被挡。
-      - name: Typecheck
+      # 顺序（架构归位·批次5 步0 · docs/host-migration.md §1.5）：
+      #   Core typecheck → Core test → Core build（前置）→ Host typecheck → Host test。
+      # 为什么 Core build 必须在 Host 之前：Host 经 `import 'memoweft'` 解析到 dist（路线甲），
+      #   其 typecheck 靠 dist/*.d.ts、其 test 靠 dist/*.js —— dist 不先 build 出来，Host 步骤必红。
+      # 用 `-w @memoweft/host` 显式点名（本步只有一个 Host 包）；未来插件包多了可换 `--workspaces --if-present`
+      #   免维护清单，但 Core build 仍须在 Host 步骤之前。
+      - name: Core Typecheck
         run: npm run typecheck
 
-      - name: Test
+      - name: Core Test
         run: npm test
 
-      - name: Build
+      - name: Core Build
         run: npm run build
+
+      - name: Host Typecheck
+        run: npm run typecheck -w @memoweft/host
+
+      - name: Host Test
+        run: npm test -w @memoweft/host

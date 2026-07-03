@@ -79,6 +79,8 @@ export async function aggregateTrends(
   const windowStart = new Date(now.getTime() - cfg.trendWindowDays * 86_400_000).toISOString();
 
   // 收集窗口内的"状态证据"：state 类认知（含已失效，趋势看的是"曾反复出现"）的支撑证据里、发生时间在窗内的。
+  // 保持 all()（批次3 PM 拍板）：趋势聚合是【历史口径】——看"曾反复出现"，本就计入已失效，
+  // 已归档同理计入历史，不随"归档全面雪藏"改成 active()。
   const states = deps.cognitionStore.all(subjectId).filter((c) => c.contentType === 'state');
   const items: Array<{ id: string; state: string; text: string; at: string }> = [];
   const windowEvidence = new Set<string>();

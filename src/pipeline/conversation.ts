@@ -16,7 +16,7 @@ import type { LLMClient } from '../llm/client.ts';
 import { WorkingMemory, type Turn } from './workingMemory.ts';
 import { perceive, type PerceiveOptions } from './perceive.ts';
 import { reply, type RelevantCognition } from './action.ts';
-import { effectiveConfidence } from '../background/decay.ts';
+import { recallCognitions } from '../retrieval/recall.ts';
 
 export interface ConversationDeps {
   store: EvidenceStore;
@@ -37,6 +37,8 @@ export interface ConversationDeps {
 /** 召回到、注入了回话的一条（含相似度，供透视）。 */
 export interface RecalledCognition extends RelevantCognition {
   score: number;
+  /** 认知 id（批次2 增量：共享召回函数随手带回，供管理/透视反查）。可选以兼容旧构造处。 */
+  id?: string;
 }
 
 export interface TurnOutcome {
@@ -66,21 +68,11 @@ export class Conversation {
     const stored = store.put(perceive(userMsg, opts, cfg));
 
     // 2) 召回相关认知（阶段 1b）。失败不挡回话。
-    const recall: RecalledCognition[] = [];
+    // 召回段已抽为共享函数 retrieval/recall.ts（批次2）：门槛顺序与判断条件原样搬走、语义零变化，
+    // Conversation 与 core.recall 共用同一段；这里只保留"失败不挡回话"的容错壳。
+    let recall: RecalledCognition[] = [];
     try {
-      const hits = await retriever.search(userMsg, cfg.retrieval.topK);
-      for (const h of hits) {
-        // 相似度门控（cell 7 / STATE.md）：这一轮问题跟这条认知不够像 → 别硬塞（防 top-k 召回不相关认知）。
-        // 默认阈值 0 = 不筛（行为同旧）；调成非零后，低于阈值的召回直接跳过。
-        if (h.score < cfg.retrieval.minSimilarity) continue;
-        const c = cognitionStore.get(h.id);
-        if (!c || c.invalidAt) continue; // 失效的不注入（即便索引还没重建，也别把过期/被纠正的塞回话）
-        if (c.subjectId !== stored.subjectId) continue; // 越界召回硬过滤（多 subject 隐私止血）：索引可能混入其他 subject 的条目，不是本人的认知绝不注入。契约见地图「召回边界」。
-        // 衰减门控（cell 8 规则 8）：把握度用【有效置信】，淡了的情绪/过气的假设直接不注入。
-        const eff = effectiveConfidence(c, new Date(), cfg);
-        if (eff < cfg.retrieval.minEffectiveConfidence) continue;
-        recall.push({ content: c.content, confidence: eff, credStatus: c.credStatus, score: h.score });
-      }
+      recall = await recallCognitions(userMsg, stored.subjectId, { retriever, cognitionStore }, cfg);
     } catch {
       /* 召回失败 → 当作无召回，照常回话 */
     }
