@@ -1,0 +1,59 @@
+# MemoWeft CI · 三绿护栏（typecheck + test + build）
+#
+# 触发：push 到默认分支 / 任何 PR。
+# 作用：把 AGENTS.md 里的「三绿才算完成」变成合并门——任何改动跑不过就挡在 PR 外。
+#
+# 为什么锁 Node 24：
+#   - 代码直接 import 'node:sqlite'（DatabaseSync），该模块到 Node 24 才转正（22/23 上可用、但只打实验警告、不保证稳定）。
+#   - 测试与 build 直接跑 .ts 文件（node --test tests/**/*.test.ts、tsc），依赖 Node 原生跑 TypeScript（同样 22/23 带实验警告）。
+#   锁 24 是为稳定；别随手放宽。
+#
+# 零 runtime 依赖：项目 dependencies 为空（见 package.json / 地图 cell 11），
+# 所以这里不缓存 node_modules 也没必要——npm ci 只装 devDependencies（typescript、@types/node），秒级完成。
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 同一分支上新推送自动取消旧的在跑任务，省 CI 额度。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guardrails:
+    name: 三绿护栏 (Node 24)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          # 锁 24 为稳定：node:sqlite 到 24 转正 + 原生跑 .ts 到 24 才稳（22/23 只打实验警告）。别随手放宽。
+          node-version: '24'
+          cache: 'npm'
+
+      # 有 lockfile 用 npm ci（可复现）；没有就退回 npm install。
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      # 三绿，逐步跑：任一步非零退出，job 即红，PR 被挡。
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
