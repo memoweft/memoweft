@@ -10,6 +10,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07
+
+Durable schema: your `0.1.0` database upgrades losslessly on first open, with an automatic backup taken before any schema-changing migration.
+
 ### Added
 
 - **Schema versioning & migrations** — the database now carries a `PRAGMA user_version`; `openStores` runs an ordered migration runner on open. New databases are stamped to the latest version; existing ones (e.g. a `0.1.0` database) are migrated forward, each migration in its own transaction (rolls back on failure), with an automatic pre-migration backup for schema-changing migrations and a dry-run mode. Exposed as `runMigrations` / `getSchemaVersion` / `LATEST_SCHEMA_VERSION`.
@@ -36,5 +40,6 @@ First tidied pre-release. Core, a reference host, and the first plugins are in p
 - `MEMOWEFT_*` environment variables are the primary names; the legacy `DLA_*` prefix remains supported for backward compatibility.
 - Not yet: memory-graph front-end, schema versioning / migration hardening.
 
-[Unreleased]: https://github.com/memoweft/memoweft/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/memoweft/memoweft/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/memoweft/memoweft/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/memoweft/memoweft/releases/tag/v0.1.0
