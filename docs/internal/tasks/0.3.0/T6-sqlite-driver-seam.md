@@ -29,7 +29,7 @@ Node ≥24 硬门槛（`node:sqlite` 到 24 才转正）把仍大量在产的 No
 
 **验收步 1**：
 - [ ] 全部现有测试**断言零改动**全绿；三绿。
-- [ ] `grep -rn "from 'node:sqlite'" src/` 只剩驱动文件 1 处命中。
+- [ ] `node:sqlite` 只在 `src/store/nodeSqliteDriver.ts` 一处被 **require 触达**（接缝用 `createRequire` 同步 require，不是静态 `import`——所以 `grep -rn "from 'node:sqlite'" src/` 命中的是 **0** 处代码，不是 1；`grep -rn "require('node:sqlite')" src/` 才是那唯一的 1 处）。其余源码里出现的 `node:sqlite` 都只在注释/文档字符串里，非代码引用。
 - [ ] 注意：`tests/migrations.test.ts:10`、`tests/memoryApi.test.ts:13`、`tests/retrieval.test.ts:10` 三个测试文件自己也静态 import node:sqlite（拿原生连接做 setup）——**允许**把它们的 setup 改走驱动或测试 helper（只动拿连接的方式，断言一行不动），否则步 2 的多版本矩阵永远跑不起来。
 
 ## 步 2 · better-sqlite3 实现 + 触达面打开

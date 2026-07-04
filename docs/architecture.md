@@ -295,7 +295,7 @@ MemoWeft 把"外部依赖"都收进可替换的 seam，宿主按需切换：
 
 ## 10. 存储与可观测
 
-- **存储**：三层各一个 `Sqlite*Store`（`node:sqlite`，零第三方 DB 依赖）。默认库文件 `./dla.db`（品牌改名但**默认库名不改**，避免脱离已有数据文件）；测试传 `':memory:'`。旧库自动做幂等迁移（补 `asked_at` / `consolidated` 列）。
+- **存储**：三层各一个 `Sqlite*Store`，底层 SQLite 走一个**驱动接缝**（`src/store/driver.ts` 定接口，`src/store/nodeSqliteDriver.ts` 顶层急切选驱动）：Node ≥24 默认用内置 `node:sqlite`（零第三方 DB 依赖），不可用时回落到可选的 `better-sqlite3`（`src/store/betterSqlite3Driver.ts`，Node 20/22 需 `npm i` 装它）。默认库文件 `./dla.db`（品牌改名但**默认库名不改**，避免脱离已有数据文件）；测试传 `':memory:'`。旧库自动做幂等迁移（补 `asked_at` / `consolidated` 列）。
 - **可观测**：`src/obs/runLog.ts` 的 `RunLogger` 把每轮对话、每次画像更新（含各步 `timings`）落盘，供诊断"慢在哪步"。
 
 ---

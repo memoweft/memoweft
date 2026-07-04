@@ -4,8 +4,10 @@
  *
  * 用户可查/改/删（cell 8 规则 10）。consolidate 用 removeBySubject 做"重算替换"（merge 留阶段 2）。
  */
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import { DatabaseSync } from '../store/nodeSqliteDriver.ts';
+import type { SQLInputValue } from '../store/driver.ts';
 import { randomUUID } from 'node:crypto';
+import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';
 import type {
   Cognition,
   CognitionInput,
@@ -120,6 +122,8 @@ export class SqliteCognitionStore implements CognitionStore {
   constructor(db: string | DatabaseSync = './dla.db') {
     this.ownsDb = typeof db === 'string';
     this.db = typeof db === 'string' ? new DatabaseSync(db) : db;
+    // 自开连接才设并发保底；共享连接由 openStores 已设过，别重复设。
+    if (this.ownsDb) this.db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
     this.db.exec(SCHEMA);
     this.migrate();
   }
@@ -163,21 +167,23 @@ export class SqliteCognitionStore implements CognitionStore {
         ) VALUES ($id,$subject_id,$content,$content_type,$formed_by,
           $confidence,$cred_status,$scope,$valid_at,$invalid_at,$asked_at,$archived_at,$created_at,$updated_at)`,
       )
+      // 绑定用【裸键】（无 $ 前缀）：node:sqlite 裸键 / $ 前缀都收，行为不变；
+      // 与 evidence store 统一，且为步2 的 better-sqlite3（只认裸键）铺路。
       .run({
-        $id: cog.id,
-        $subject_id: cog.subjectId,
-        $content: cog.content,
-        $content_type: cog.contentType,
-        $formed_by: cog.formedBy,
-        $confidence: cog.confidence,
-        $cred_status: cog.credStatus,
-        $scope: cog.scope,
-        $valid_at: cog.validAt,
-        $invalid_at: cog.invalidAt,
-        $asked_at: cog.askedAt,
-        $archived_at: cog.archivedAt,
-        $created_at: cog.createdAt,
-        $updated_at: cog.updatedAt,
+        id: cog.id,
+        subject_id: cog.subjectId,
+        content: cog.content,
+        content_type: cog.contentType,
+        formed_by: cog.formedBy,
+        confidence: cog.confidence,
+        cred_status: cog.credStatus,
+        scope: cog.scope,
+        valid_at: cog.validAt,
+        invalid_at: cog.invalidAt,
+        asked_at: cog.askedAt,
+        archived_at: cog.archivedAt,
+        created_at: cog.createdAt,
+        updated_at: cog.updatedAt,
       } as unknown as Record<string, SQLInputValue>);
 
     const links = input.evidence ?? [];
@@ -262,21 +268,22 @@ export class SqliteCognitionStore implements CognitionStore {
         ) VALUES ($id,$subject_id,$content,$content_type,$formed_by,
           $confidence,$cred_status,$scope,$valid_at,$invalid_at,$asked_at,$archived_at,$created_at,$updated_at)`,
       )
+      // 裸键绑定（同 put）：node:sqlite 两种键都收，为步2 better-sqlite3 铺路，行为零变化。
       .run({
-        $id: cognition.id,
-        $subject_id: cognition.subjectId,
-        $content: cognition.content,
-        $content_type: cognition.contentType,
-        $formed_by: cognition.formedBy,
-        $confidence: cognition.confidence,
-        $cred_status: cognition.credStatus,
-        $scope: cognition.scope,
-        $valid_at: cognition.validAt,
-        $invalid_at: cognition.invalidAt,
-        $asked_at: cognition.askedAt,
-        $archived_at: cognition.archivedAt ?? null, // 旧包没有此字段 → null（未归档）
-        $created_at: cognition.createdAt,
-        $updated_at: cognition.updatedAt,
+        id: cognition.id,
+        subject_id: cognition.subjectId,
+        content: cognition.content,
+        content_type: cognition.contentType,
+        formed_by: cognition.formedBy,
+        confidence: cognition.confidence,
+        cred_status: cognition.credStatus,
+        scope: cognition.scope,
+        valid_at: cognition.validAt,
+        invalid_at: cognition.invalidAt,
+        asked_at: cognition.askedAt,
+        archived_at: cognition.archivedAt ?? null, // 旧包没有此字段 → null（未归档）
+        created_at: cognition.createdAt,
+        updated_at: cognition.updatedAt,
       } as unknown as Record<string, SQLInputValue>);
     const stmt = this.db.prepare(
       'INSERT INTO cognition_evidence (cognition_id, evidence_id, relation) VALUES (?,?,?)',

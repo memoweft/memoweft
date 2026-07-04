@@ -1,15 +1,19 @@
-# MemoWeft CI · 三绿护栏（typecheck + test + build）
+# MemoWeft CI · 三绿护栏（typecheck + test + build）+ 多版本触达矩阵
 #
 # 触发：push 到默认分支 / 任何 PR。
 # 作用：把 AGENTS.md 里的「三绿才算完成」变成合并门——任何改动跑不过就挡在 PR 外。
 #
-# 为什么锁 Node 24：
-#   - 代码直接 import 'node:sqlite'（DatabaseSync），该模块到 Node 24 才转正（22/23 上可用、但只打实验警告、不保证稳定）。
-#   - 测试与 build 直接跑 .ts 文件（node --test tests/**/*.test.ts、tsc），依赖 Node 原生跑 TypeScript（同样 22/23 带实验警告）。
-#   锁 24 是为稳定；别随手放宽。
+# 两块：
+#   1) guardrails（Node 24）：主护栏。Core 三绿 + Host/插件 workspace 测试。
+#      —— 顺带验「零依赖路径」：删掉 better-sqlite3 后跑全测试，确认默认走的是内置 node:sqlite。
+#   2) 触达矩阵（Node 22 / Node 20）：T6 步2 加了 better-sqlite3 可选驱动，让 Node 20/22 也能跑。
+#      这两个 job 证明第二驱动在旧 Node 上真能把 memoweft 跑通。
 #
-# 零 runtime 依赖：项目 dependencies 为空（见 package.json / 地图 cell 11），
-# 所以这里不缓存 node_modules 也没必要——npm ci 只装 devDependencies（typescript、@types/node），秒级完成。
+# 驱动与依赖：
+#   - Node ≥24 默认走内置 `node:sqlite`（该模块到 24 转正），**零 runtime 依赖**。
+#   - Node 20/22 走可选的 `better-sqlite3`（peerDependencies + optional）。它在 devDependencies 里，
+#     所以 `npm ci` 会装上——Node 24 job 要验「不装它也能跑」，就得先 rm 掉再测。
+#   - runtime dependencies 仍为空（见 package.json / 地图 cell 11）：可选 peer 不算破戒。
 
 name: CI
 
@@ -25,7 +29,7 @@ concurrency:
 
 jobs:
   guardrails:
-    name: 三绿护栏 (Node 24)
+    name: 三绿护栏 (Node 24 · 零依赖路径)
     runs-on: ubuntu-latest
 
     steps:
@@ -35,7 +39,7 @@ jobs:
       - name: Setup Node 24
         uses: actions/setup-node@v4
         with:
-          # 锁 24 为稳定：node:sqlite 到 24 转正 + 原生跑 .ts 到 24 才稳（22/23 只打实验警告）。别随手放宽。
+          # Node 24：node:sqlite 转正 + 原生跑 .ts 稳定。这是「开箱即用、零依赖」的主目标平台。
           node-version: '24'
           cache: 'npm'
 
@@ -47,6 +51,11 @@ jobs:
           else
             npm install --no-audit --no-fund
           fi
+
+      # 验零依赖路径：better-sqlite3 在 devDependencies 里、npm ci 会装上；删掉它，
+      # 确认 Node 24 上不靠任何可选原生模块、只用内置 node:sqlite 也能全绿。
+      - name: Remove optional better-sqlite3 (assert zero-dep path)
+        run: rm -rf node_modules/better-sqlite3
 
       # 三绿，逐步跑：任一步非零退出，job 即红，PR 被挡。
       # 顺序（架构归位·批次5 步0 · docs/host-migration.md §1.5）：
@@ -75,3 +84,68 @@ jobs:
 
       - name: Collector Plugin Test
         run: npm test -w @memoweft/collector-active-window
+
+  # ── 触达矩阵：Node 22 走 better-sqlite3 驱动跑全套 .ts 测试 ──────────────────
+  better-sqlite3-node22:
+    name: 触达 (Node 22.18+ · better-sqlite3 驱动)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          # 22.18+：原生剥 .ts 类型默认开（低于此版本 `node --test tests/**/*.ts` 起不来）。
+          node-version: '22.18'
+          cache: 'npm'
+
+      - name: Install dependencies (含可选 better-sqlite3)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      # 强制走 better-sqlite3 驱动：Node 22 上 node:sqlite 仅实验可用，这里用环境变量把驱动钉死到
+      # better-sqlite3，验第二驱动在全套 Core 测试下与 node:sqlite 逐字等价。
+      - name: Core Test (强制 better-sqlite3)
+        run: npm test
+        env:
+          MEMOWEFT_TEST_DRIVER: better-sqlite3
+
+  # ── 触达矩阵：Node 20 没有原生剥 .ts 能力，用 dist 冒烟脚本验 ─────────────────
+  better-sqlite3-node20:
+    name: 触达 (Node 20 · dist 冒烟 · better-sqlite3)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          # Node 20 无原生剥类型：全套 .ts 测试物理上跑不了，改走 build 后的纯 JS 冒烟。
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (含可选 better-sqlite3)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      # Node 20 上 build 需要 typescript 能跑（tsc 本身跑在 Node 20 上没问题）。
+      - name: Core Build
+        run: npm run build
+
+      # dist 冒烟：开库→存证据+认知→读回→查迁移版本→关库，全走 better-sqlite3。
+      - name: Dist Smoke (better-sqlite3)
+        run: npm run smoke:dist
+        env:
+          MEMOWEFT_TEST_DRIVER: better-sqlite3

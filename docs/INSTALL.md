@@ -10,14 +10,13 @@
 
 | 要求 | 说明 |
 | --- | --- |
-| **Node ≥ 24**（推荐） | 库直接跑 `.ts`，使用 Node 内置 `node:sqlite`。作者实测 Node 24，CI 也锁 24。 |
-| **TypeScript 消费者：`@types/node` ≥ 24** | 库的公开类型里出现 `node:sqlite`。TS 项目若没装（或装了太旧的）`@types/node`，`import 'memoweft'` 会报 `Cannot find module 'node:sqlite'`——装上 `@types/node@^24` 即可。Node 24 项目一般本就有。 |
+| **Node ≥ 24（开箱即用）或 Node 20/22 + `better-sqlite3`（后备）** | 存储底层是 SQLite。驱动**优先用内置 `node:sqlite`**、加载不到才回退可选的 `better-sqlite3`。Node ≥24 上 `node:sqlite` 转正稳定、零额外依赖；Node 20 上没有它、必须装 `better-sqlite3`（`npm i better-sqlite3`，见下方 §1.2）；Node 22 视你的版本 / flag 是否已提供 `node:sqlite` 而定，用不上时才需装 `better-sqlite3`。 |
 | **一个 OpenAI-compatible 对话模型端点** | 默认推荐云端端点：最省事、最容易让开发者跑起来。只要兼容 `/chat/completions` 即可。 |
 | **可选：写路径小快模型端点** | 用于 `distill → consolidate → attribute`，缺配会回退对话模型。 |
 | **可选：嵌入端点** | 用于语义召回。缺配时召回降级为空，画像照写，只是不注入长期认知。 |
-| **零运行时依赖** | `dependencies` 为空，存储 / HTTP / 向量计算均用 Node 内置。 |
+| **零运行时依赖** | runtime `dependencies` 为空，存储 / HTTP / 向量计算均用 Node 内置。`better-sqlite3` 只是**可选 peer 依赖**，Node ≥24 用户根本不需要装它。 |
 
-> ⚙️ **Node 22 也许能跑（非官方，不保证）。** 装出来的包是编译后的 `.js`，本身不挑 `.ts`——真正卡的是 `node:sqlite`。Node 22.5+ 加 `--experimental-sqlite` 能开 `node:sqlite`；要直接跑仓库里的 `.ts`（示例 / 测试台）还得加 `--experimental-strip-types`（22.6+）。两个都是实验特性，行为可能随小版本变、也可能有坑，**出问题请先升到 Node 24 复现**。CI 与官方支持只认 Node ≥ 24。
+> ⚙️ **`node:sqlite` 加载不到时，装可选驱动 `better-sqlite3` 兜底。** MemoWeft **优先用内置 `node:sqlite`**、加载不到才回退 `better-sqlite3`（原生模块，见 §1.2）。`node:sqlite` 到 Node 24 才转正稳定；Node 20 上没有它，**必须**装 `better-sqlite3`；Node 22 是否可用取决于你的 Node 版本 / flag——用不上时才需装 `better-sqlite3`（装了也只在 `node:sqlite` 加载不到时才会被选中，不会顶替已可用的内置驱动）。开发库本身（跑仓库里的 `.ts` 示例 / 测试台）另有门槛：Node 22 需 22.18+ 才默认支持原生剥 `.ts` 类型，Node 20 没有此能力——想跑 `.ts` 请用 Node ≥24；只是**当库用**（`import 'memoweft'` 吃编译后的 `.js`）则装好可用驱动即可。
 
 > ℹ️ **云端优先，不是无脑上云。** MemoWeft 推荐开发者用云端端点快速开始，但每条证据仍有 `allowCloudRead` 等授权位。宿主负责隐私政策和同意 UI；MemoWeft 负责保留模型切换和过滤钩子。完整模式见 [`deployment.md`](./deployment.md)。
 
@@ -33,9 +32,22 @@ MemoWeft 已发布到 npm。宿主开发者直接装：
 npm install memoweft
 ```
 
-然后 `import { createMemoWeftCore } from 'memoweft'`（用法见 README「当库用」/ [`integration.md`](./integration.md)）。TypeScript 项目另需 `@types/node@^24`（库的公开类型里有 `node:sqlite`）。
+然后 `import { createMemoWeftCore } from 'memoweft'`（用法见 README「当库用」/ [`integration.md`](./integration.md)）。装出来**零 runtime 依赖**（Node ≥24 用内置 `node:sqlite`）。TypeScript 项目按常规装 `@types/node` 即可。
 
-### 1.2 从源码跑（开发库本身 / 跑参考宿主与测试台）
+### 1.2 Node 20/22：装可选驱动 `better-sqlite3`
+
+Node ≥24 到此为止就够了。**Node 20/22** 上内置 `node:sqlite` 不可用，需额外装可选驱动：
+
+```bash
+npm i better-sqlite3
+```
+
+装上后 MemoWeft 会在开库时自动选它当底层，其余用法完全一致。几点说明：
+
+- `better-sqlite3` 是**原生模块**，一般走 prebuilt 二进制、秒装；若你的平台 / Node 版本没有匹配的 prebuilt，会回落到 `node-gyp` 现编译（需要 Python + C++ 工具链）。所以**不承诺一定装得上**——装不上时最稳的出路是把 Node 升到 ≥24（内置驱动、零依赖）。
+- 没装它、又不在 Node ≥24 上时，`import 'memoweft'` 会直接报一句人话错误，列出两条出路（升 Node ≥24 / 装 `better-sqlite3`）。
+
+### 1.3 从源码跑（开发库本身 / 跑参考宿主与测试台）
 
 ```bash
 git clone https://github.com/memoweft/memoweft.git

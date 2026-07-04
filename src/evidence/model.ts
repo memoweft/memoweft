@@ -42,6 +42,8 @@ export interface Evidence {
 /**
  * 写入证据的入参。id / recordedAt 由存储层生成；
  * occurredAt / summary / 授权位 缺省时由存储层按规则补默认。
+ * 授权缺省按 sourceKind 分流：observed 缺省授权 = observedDefaults（local✓/cloud✗/infer✓）；
+ *   spoken/inferred 走通用默认（evidenceDefaults + cloud 跟随 privacyMode）。显式传值永远优先。
  */
 export interface EvidenceInput {
   subjectId: string;

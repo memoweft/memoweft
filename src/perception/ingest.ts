@@ -76,7 +76,7 @@ export function ingestObservations(
       originId: obs.originId ?? null,
       occurredAt: obs.occurredAt,
       rawContent: obs.content,
-      // 授权：显式 > observed 保守默认。不套 put 的通用默认（那是 spoken 用的、会默认上云）。
+      // 授权：显式 > observed 保守默认（双保险：put 已按 sourceKind='observed' 兜底不上云，这里再显式传一次等价）。
       allowLocalRead: obs.allowLocalRead ?? def.allowLocalRead,
       allowCloudRead: obs.allowCloudRead ?? def.allowCloudRead,
       allowInference: obs.allowInference ?? def.allowInference,

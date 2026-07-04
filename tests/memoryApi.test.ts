@@ -10,7 +10,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync } from '../src/store/nodeSqliteDriver.ts';
 import { openStores, type StoreBundle } from '../src/store/openStores.ts';
 import { createMemoryManagementAPI } from '../src/memory/managementApi.ts';
 import { SqliteCognitionStore } from '../src/cognition/store.ts';

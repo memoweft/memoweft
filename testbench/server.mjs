@@ -531,6 +531,10 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/gen-env') {
       const b = await readJson(req);
       const s = (v) => String(v ?? '').trim(); // 统一去空白；不落库、不缓存
+      // dotenv 值转义：含 '#'/空格/引号的值加双引号并转义内部引号——否则 node --env-file / loadEnvFile
+      //   会把 '#' 及其后当行内注释截断（apiKey/base_url 含 '#' 会被悄悄截短 → 加载回来鉴权失败、
+      //   用户对着"看着完整"的 .env 难自查）。对齐 Host 已修好的 q()（apps/memoweft-host/src/server.ts:191）。
+      const q = (v) => (/[#\s"]/.test(v) ? '"' + v.replace(/"/g, '\\"') + '"' : v);
       // 对话大模型（必填三项）
       const llmBase = s(b.llmBaseUrl), llmKey = s(b.llmApiKey), llmModel = s(b.llmModel);
       // 写路径小模型（可选三项，整组空则整组省略）
@@ -545,23 +549,23 @@ const server = createServer(async (req, res) => {
       if (!llmKey) missing.push('MEMOWEFT_LLM_API_KEY');
       if (!llmModel) missing.push('MEMOWEFT_LLM_MODEL');
       if (missing.length) {
-        sendJson(res, 200, { error: `对话模型必填项缺失：${missing.join('、')}` });
+        sendJson(res, 400, { error: `对话模型必填项缺失：${missing.join('、')}` });
         return;
       }
 
       const lines = [];
       lines.push('# ── 对话大模型（chat · 必配）：质量优先 ──────────────');
-      lines.push(`MEMOWEFT_LLM_BASE_URL=${llmBase}`);
-      lines.push(`MEMOWEFT_LLM_API_KEY=${llmKey}`);
-      lines.push(`MEMOWEFT_LLM_MODEL=${llmModel}`);
+      lines.push(`MEMOWEFT_LLM_BASE_URL=${q(llmBase)}`);
+      lines.push(`MEMOWEFT_LLM_API_KEY=${q(llmKey)}`);
+      lines.push(`MEMOWEFT_LLM_MODEL=${q(llmModel)}`);
       lines.push('');
 
       // 写路径小模型：整组任一非空才写；整组空 → 省略 + 注释说明回退（回退对话大模型，行为同旧）
       if (wBase || wKey || wModel) {
         lines.push('# ── 写路径小快模型（write · 可选）：整理事件/画像/归因走它，不拖慢更新画像 ──');
-        lines.push(`MEMOWEFT_WRITE_LLM_BASE_URL=${wBase}`);
-        lines.push(`MEMOWEFT_WRITE_LLM_API_KEY=${wKey}`);
-        lines.push(`MEMOWEFT_WRITE_LLM_MODEL=${wModel}`);
+        lines.push(`MEMOWEFT_WRITE_LLM_BASE_URL=${q(wBase)}`);
+        lines.push(`MEMOWEFT_WRITE_LLM_API_KEY=${q(wKey)}`);
+        lines.push(`MEMOWEFT_WRITE_LLM_MODEL=${q(wModel)}`);
       } else {
         lines.push('# ── 写路径小快模型（write · 可选）：未配 → 写路径自动回退对话大模型（行为同旧，不崩）──');
       }
@@ -570,9 +574,9 @@ const server = createServer(async (req, res) => {
       // 向量嵌入：整组任一非空才写；整组空 → 省略 + 注释说明降级（召回降级为空，画像照写）
       if (eBase || eKey || eModel) {
         lines.push('# ── 嵌入器（embed · 可选）：语义召回用 ──');
-        lines.push(`MEMOWEFT_EMBED_BASE_URL=${eBase}`);
-        lines.push(`MEMOWEFT_EMBED_API_KEY=${eKey}`);
-        lines.push(`MEMOWEFT_EMBED_MODEL=${eModel}`);
+        lines.push(`MEMOWEFT_EMBED_BASE_URL=${q(eBase)}`);
+        lines.push(`MEMOWEFT_EMBED_API_KEY=${q(eKey)}`);
+        lines.push(`MEMOWEFT_EMBED_MODEL=${q(eModel)}`);
       } else {
         lines.push('# ── 嵌入器（embed · 可选）：未配 → 语义召回降级为空（画像照写，只是回话不注入偏好）──');
       }

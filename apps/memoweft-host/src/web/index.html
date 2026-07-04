@@ -1542,7 +1542,7 @@
       const d = await fetch('/api/sessions').then((x) => x.json());
       currentConvId = d.currentId || currentConvId;
       renderSessions(Array.isArray(d.sessions) ? d.sessions : []);
-    } catch (e) { /* 侧栏拉不到不影响聊天 */ }
+    } catch (e) { memToast('对话列表没拉到，稍后重试', 'danger'); } // 侧栏拉不到不影响聊天，只是提示一下
   }
 
   function renderSessions(sessions) {
@@ -1591,11 +1591,11 @@
       const d = await fetch('/api/session/open', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
       }).then((x) => x.json());
-      if (d.error) return;
+      if (d.error) { memToast('这段对话没打开，稍后重试', 'danger'); return; }
       currentConvId = d.conversationId || id;
       renderChat(d.turns || []); // 用返回的历史重铺聊天区
       loadSessions();            // 刷高亮
-    } catch (e) { /* 切换失败静默，保持原状 */ }
+    } catch (e) { memToast('这段对话没打开，稍后重试', 'danger'); } // 切换失败保持原状
   }
 
   // 新建对话：/api/reset → 换当前对话 id → 清空聊天区。
@@ -1606,7 +1606,7 @@
       renderChat([]);   // 清空聊天区
       loadSessions();   // 新对话此刻还没落盘（首条 chat 才落），列表里可能还没它——聊一句后 send() 再刷
       $('text').focus();
-    } catch (e) { /* 新建失败静默 */ }
+    } catch (e) { memToast('新对话没建成，稍后重试', 'danger'); }
   }
 
   // 归档对话：/api/session/archive → 从列表消失（数据留盘）。若归档的是当前对话，后端已自动切走 → 重载聊天区。
@@ -1615,14 +1615,14 @@
       const d = await fetch('/api/session/archive', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id }),
       }).then((x) => x.json());
-      if (d.error) return;
+      if (d.error) { memToast('没归档成，稍后重试', 'danger'); return; }
       if (d.archivedCurrent) {
         // 归档掉的是当前对话，后端切到了另一条 → 重载那条历史。
         currentConvId = d.currentId || currentConvId;
         await loadHistory();
       }
       loadSessions();
-    } catch (e) { /* 归档失败静默 */ }
+    } catch (e) { memToast('没归档成，稍后重试', 'danger'); }
   }
 
   $('sbNew').addEventListener('click', newSession);

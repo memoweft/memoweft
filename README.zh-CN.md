@@ -83,7 +83,7 @@ npm start -w @memoweft/host        # → http://localhost:7788
 - 🧩 **一套记忆，多张脸**——体验插件决定语气和人设（自带普通助手 + 星瑶两张脸），底层记忆共用。
 - ☁️ **云端优先，但不无脑上云**——模型调用可以走云端，但每条证据能单独控制「能不能上云」；桌面/行为观察默认不上云。
 - 👀 **能感知，不只会聊**——除了对话，还能吃「行为观察」（比如活动窗口采集插件），当作证据沉淀。
-- 🪶 **零运行时依赖（代价是要 Node ≥ 24）**——存储 / HTTP / 向量全用 Node 内置的 `node:sqlite` / `node:http` / `node:fs`，一个第三方包都不装。**为什么卡 Node 24**：`node:sqlite` 到 Node 24 才转正——用它换来的是干净部署、没有依赖地狱、`npm install` 不拖进一堆传递依赖。
+- 🪶 **零运行时依赖**——存储 / HTTP / 向量全用 Node 内置的 `node:sqlite` / `node:http` / `node:fs`，一个第三方包都不装，`npm install memoweft` 什么传递依赖都不拖。**Node ≥ 24 开箱即用**（`node:sqlite` 到 24 才转正）；**Node 20/22** 上内置模块不可用，装个可选驱动 `better-sqlite3`（`npm i better-sqlite3`）即可——它是可选 peer 依赖，不算进零依赖基线。
 
 ---
 
@@ -112,7 +112,7 @@ flowchart LR
 
 ## 🧩 当库用（几行代码，复制就能跑）
 
-**① 装**（需 Node ≥ 24）：
+**① 装**（Node ≥ 24 开箱即用；Node 20/22 另跑 `npm i better-sqlite3`）：
 
 ```bash
 npm install memoweft
@@ -156,7 +156,7 @@ console.log(turn.recall);  // 这轮召回并注入了哪些理解
 core.close();
 ```
 
-> TypeScript 项目另需 `@types/node@^24`（库的公开类型里有 `node:sqlite`）。没配嵌入器也能跑：召回自动降级为空，证据照写，只是回话不做语义召回。仓库内的可跑版本见 [`examples/minimal.ts`](./examples/minimal.ts)；想直接用底层部件（`openStores` / `Conversation` / `updateProfile` / 召回器）见 [`docs/integration.md`](./docs/integration.md)。
+> TypeScript 项目按常规装 `@types/node` 即可。Node 20/22 上另装可选驱动 `better-sqlite3`（`npm i better-sqlite3`）。没配嵌入器也能跑：召回自动降级为空，证据照写，只是回话不做语义召回。仓库内的可跑版本见 [`examples/minimal.ts`](./examples/minimal.ts)；想直接用底层部件（`openStores` / `Conversation` / `updateProfile` / 召回器）见 [`docs/integration.md`](./docs/integration.md)。
 
 ---
 
@@ -227,6 +227,8 @@ core.close();
 - 召回精化（如相似度阈值门控）。
 
 往哪走、以及为什么"库为主、Host 当演示",见 [`ROADMAP.md`](./ROADMAP.md)；当前在做什么见 [`CURRENT.md`](./CURRENT.md)。
+
+> **永远全开源。** 核心库现在是、将来也是 MIT 全开源——没有隐藏的企业版，也不会把功能拆成"开源一套、付费一套"。将来若有托管服务，卖的只会是省事，不会是被扣下的功能。
 
 ---
 

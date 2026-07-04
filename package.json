@@ -4,7 +4,7 @@
   "description": "换个模型，AI 就把用户忘光了。MemoWeft 给 AI 助手一块带得走的长期记忆——而且不把猜的当真的。Long-term memory for AI assistants: portable across models, and it keeps facts and guesses apart.",
   "keywords": ["llm", "agent", "memory", "cognition", "user-profile"],
   "license": "MIT",
-  "engines": { "node": ">=24" },
+  "engines": { "node": ">=20" },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/memoweft/memoweft.git"
@@ -32,12 +32,21 @@
     "collector": "node plugins/collector-active-window/run.mjs",
     "experience": "node testbench/server.mjs",
     "build": "tsc -p tsconfig.build.json",
-    "dev:core": "tsc -p tsconfig.build.json --watch"
+    "smoke:dist": "node tests/smoke/dist-smoke.mjs",
+    "dev:core": "tsc -p tsconfig.build.json --watch",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "dependencies": {},
+  "peerDependencies": {
+    "better-sqlite3": ">=9"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": { "optional": true }
+  },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@types/node": "^24.0.0"
+    "@types/node": "^24.0.0",
+    "better-sqlite3": ">=9"
   },
-  "_comment": "依赖刻意最小化（地图 cell 11）。存储 / HTTP / 日志均用 Node 内置（node:sqlite、node:http、node:fs）。新增依赖须有明确理由，默认拒绝。"
+  "_comment": "依赖最小化：runtime dependencies 必须为空——'零运行时依赖'指这个。better-sqlite3 是【可选 peer 依赖】（Node 20/22 才需要，装不装用户自己定），可选 peer 不算破戒。devDependencies 里的 better-sqlite3 仅供多版本测试矩阵用（Node 24 默认走内置 node:sqlite，测零依赖路径时会 rm 掉它）。存储 / HTTP / 日志优先 Node 内置（node:sqlite、node:http、node:fs）；新增 runtime 依赖须有明确理由，默认拒绝。"
 }

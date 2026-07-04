@@ -83,7 +83,7 @@ In a line: others "remember"; MemoWeft aims to **remember, and not misuse it**.
 - 🧩 **One memory, many faces** — experience plugins decide tone and persona (plain + 星瑶 ship in-box) over shared memory.
 - ☁️ **Cloud-first, not cloud-blind** — model calls can go to the cloud, but each evidence item controls whether it may be cloud-read; desktop/behavior observations default to local-only.
 - 👀 **It can sense, not just chat** — beyond conversation, it ingests behavior observations (e.g. an active-window collector plugin) as evidence.
-- 🪶 **Zero runtime dependencies (the price: Node ≥ 24)** — storage / HTTP / vectors all use Node built-ins (`node:sqlite` / `node:http` / `node:fs`), not a single third-party package. **Why Node 24**: `node:sqlite` stabilized in Node 24 — using it buys clean deploys, no dependency hell, and an `npm install` that drags in nothing.
+- 🪶 **Zero runtime dependencies** — storage / HTTP / vectors all use Node built-ins (`node:sqlite` / `node:http` / `node:fs`), not a single third-party package. `npm install memoweft` drags in nothing. On **Node ≥ 24** this works out of the box (`node:sqlite` stabilized there). On **Node 20 / 22** the built-in isn't available, so add the optional `better-sqlite3` driver (`npm i better-sqlite3`) — it's an optional peer dependency, not part of the zero-dep baseline.
 
 ---
 
@@ -112,7 +112,7 @@ Reads and writes are **decoupled**: reads are light and synchronous; writes are 
 
 ## 🧩 Use it as a library (copy-paste and run)
 
-**① Install** (needs Node ≥ 24):
+**① Install** (Node ≥ 24 works out of the box; on Node 20/22 also run `npm i better-sqlite3`):
 
 ```bash
 npm install memoweft
@@ -156,7 +156,7 @@ console.log(turn.recall);  // which understandings got recalled and injected thi
 core.close();
 ```
 
-> TypeScript projects also need `@types/node@^24` (the public types reference `node:sqlite`). No embedder configured? Recall falls back to empty automatically — writes still land as evidence, replies just skip semantic recall. A runnable in-repo version is in [`examples/minimal.ts`](./examples/minimal.ts); for direct access to the underlying parts (`openStores` / `Conversation` / `updateProfile` / retrievers), see [`docs/integration.md`](./docs/integration.md).
+> TypeScript projects just need the usual `@types/node`. On Node 20/22, also install the optional `better-sqlite3` driver (`npm i better-sqlite3`). No embedder configured? Recall falls back to empty automatically — writes still land as evidence, replies just skip semantic recall. A runnable in-repo version is in [`examples/minimal.ts`](./examples/minimal.ts); for direct access to the underlying parts (`openStores` / `Conversation` / `updateProfile` / retrievers), see [`docs/integration.md`](./docs/integration.md).
 
 ---
 
@@ -227,6 +227,8 @@ Main exports are in [`src/index.ts`](./src/index.ts); integration guide in [`doc
 - Recall-refinement follow-ups (e.g. similarity-threshold gating).
 
 Where it's headed — and why the library (not the host) is the product — is in [`ROADMAP.md`](./ROADMAP.md); the current working focus is in [`CURRENT.md`](./CURRENT.md).
+
+> **Open source, permanently.** The core library is and will remain fully open source under MIT — no hidden enterprise edition, no open-core split. If a hosted service ever exists, it will only sell convenience, never withheld features.
 
 ---
 

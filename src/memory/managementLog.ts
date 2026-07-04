@@ -5,7 +5,7 @@
  * "记录操作原因"）；不塞进 cognition/evidence 表——那两张表存的是记忆本体，不是操作历史。
  * 挂在 openStores 的共享连接上（与三个 store 同连接，管理操作的写+审计能包进一个事务）。
  */
-import { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync } from '../store/driver.ts';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS management_log (

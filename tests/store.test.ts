@@ -7,6 +7,43 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { openStores } from '../src/store/openStores.ts';
 import { consolidate } from '../src/consolidation/consolidate.ts';
+import { SqliteEvidenceStore } from '../src/evidence/store.ts';
+import { SqliteEventStore } from '../src/event/store.ts';
+import { SqliteCognitionStore } from '../src/cognition/store.ts';
+
+/** Node 24 实测：PRAGMA busy_timeout 的结果列名是 `timeout`，取 .timeout、别断言裸数字。 */
+function busyTimeout(db: { prepare(sql: string): { get(): unknown } }): number {
+  const row = db.prepare('PRAGMA busy_timeout').get() as { timeout: number };
+  return row.timeout;
+}
+
+test('busy_timeout：openStores 的共享连接设成 5000（多进程写冲突不立刻裸抛）', () => {
+  const s = openStores(':memory:');
+  try {
+    assert.equal(busyTimeout(s.db), 5000);
+  } finally {
+    s.close();
+  }
+});
+
+test('busy_timeout：三个 store 自开连接分支（传字符串路径）各自设成 5000', () => {
+  // 传字符串 → ownsDb=true → 自开连接、设 pragma；':memory:' 走的正是这条自开分支。
+  const ev = new SqliteEvidenceStore(':memory:');
+  const evt = new SqliteEventStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  try {
+    // @ts-expect-error 测试内探 private db（只读 pragma，不改行为）
+    assert.equal(busyTimeout(ev.db), 5000, 'evidence 自开连接');
+    // @ts-expect-error 同上
+    assert.equal(busyTimeout(evt.db), 5000, 'event 自开连接');
+    // @ts-expect-error 同上
+    assert.equal(busyTimeout(cog.db), 5000, 'cognition 自开连接');
+  } finally {
+    ev.close();
+    evt.close();
+    cog.close();
+  }
+});
 
 test('transaction：中途抛错 → 跨表写全回滚', () => {
   const s = openStores(':memory:');

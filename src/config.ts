@@ -11,7 +11,7 @@ export interface MemoWeftConfig {
   /** 证据授权默认值（cloud_read 跟随 privacyMode，见 cloudReadDefault）。 */
   evidenceDefaults: { allowLocalRead: boolean; allowInference: boolean };
   /** observed（行为观察）证据的保守默认授权（4-A）：本地可读、默认不上云、可推画像。
-   *  由摄入层 ingestObservations 套用并显式传给 put——不动 put 通用默认，故 spoken 行为不变。 */
+   *  由 put 按 sourceKind 套用（最后防线）；ingestObservations 显式传值属双保险。故 spoken 行为不变。 */
   observedDefaults: { allowLocalRead: boolean; allowCloudRead: boolean; allowInference: boolean };
   /** 回话带最近几轮（阶段 0：简单轮数窗口，非召回）。 */
   workingMemory: { maxTurns: number };

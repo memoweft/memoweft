@@ -11,7 +11,9 @@
  *   4) handleConversationTurn 处理下一条消息：召回相关画像 → 注入回话。
  *
  * 运行前提：
- *   - Node ≥ 24（原生跑 .ts、内置 node:sqlite）。
+ *   - Node ≥ 24（本例直接 `node examples/minimal.ts` 跑 .ts，需 Node 原生剥类型 + 内置 node:sqlite；
+ *     Node 22 需 22.18+，Node 20 跑不了 .ts）。当库用（import 编译后的包）时 Node 20/22 也行——
+ *     那时装可选驱动 better-sqlite3 即可，见 docs/INSTALL.md。
  *   - 项目根有 .env，至少配好对话模型（MEMOWEFT_LLM_* 或兼容旧名 DLA_LLM_*）。
  *     只配对话模型也能跑：没配 MEMOWEFT_EMBED_* 时召回自动降级为空（画像照写、只是回话不注入）。
  *

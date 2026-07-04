@@ -66,3 +66,71 @@ test('趋势：同一批证据已聚过 → 不重复聚（dedup）', async () =
     ev.close(); cog.close();
   }
 });
+
+/** 按队列依次吐回复的假模型；callCount 由外部读取（同 trends 里 deps.llm.callCount 的用法）。 */
+function queueStub(replies: string[]): { callCount: number; chat(): Promise<string> } {
+  let i = 0;
+  return {
+    callCount: 0,
+    async chat() {
+      this.callCount++;
+      return replies[i++] ?? '';
+    },
+  };
+}
+
+test('T3 趋势容错解析：脏 JSON（带围栏 + 前后废话）一次解出、llm 只调 1 次', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  const now = new Date('2026-06-30T00:00:00.000Z');
+  try {
+    const ids = seedStates(ev, cog, ['很烦', '又没睡好', '提不起劲']);
+    // 脏 JSON 会被 parseJsonObject 的容错一次解掉（走不到重试）——这条测的是容错，不是重试。
+    const dirty =
+      '好的：\n```json\n' +
+      `{"trends":[{"content":"用户最近持续低落","based_on_evidence_ids":${JSON.stringify(ids)}}]}` +
+      '\n```\n（完）';
+    const stub = queueStub([dirty]);
+    const r = await aggregateTrends('u', { evidenceStore: ev, cognitionStore: cog, llm: stub }, now);
+    assert.equal(r.trends.length, 1, '脏 JSON 也能直接解出趋势');
+    assert.equal(stub.callCount, 1, '容错一次解掉，未触发重试');
+    assert.equal(r.llmCalls, 1, 'llmCalls 计入 1 次');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('T3 趋势真重试：首次无花括号纯文字、二次合法 JSON → 产出趋势、llm 调 2 次', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  const now = new Date('2026-06-30T00:00:00.000Z');
+  try {
+    const ids = seedStates(ev, cog, ['很烦', '又没睡好', '提不起劲']);
+    const stub = queueStub([
+      '我不知道',
+      `{"trends":[{"content":"用户最近持续低落","based_on_evidence_ids":${JSON.stringify(ids)}}]}`,
+    ]);
+    const r = await aggregateTrends('u', { evidenceStore: ev, cognitionStore: cog, llm: stub }, now);
+    assert.equal(r.trends.length, 1, '重试拿到合法 JSON 后产出趋势');
+    assert.equal(stub.callCount, 2, '触发了一次重试');
+    assert.equal(r.llmCalls, 2, 'llmCalls 计入重试的 2 次');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('T3 趋势降级：连坏两次 → 空产出、不抛错', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  const now = new Date('2026-06-30T00:00:00.000Z');
+  try {
+    seedStates(ev, cog, ['很烦', '又没睡好', '提不起劲']);
+    const stub = queueStub(['我不知道', '还是不知道']);
+    const r = await aggregateTrends('u', { evidenceStore: ev, cognitionStore: cog, llm: stub }, now);
+    assert.equal(r.trends.length, 0, '两次都坏 → 降级为空');
+    assert.equal(stub.callCount, 2, '最多重试一次（共 2 次）');
+    assert.equal(r.llmCalls, 2, 'llmCalls 计入 2 次');
+  } finally {
+    ev.close(); cog.close();
+  }
+});

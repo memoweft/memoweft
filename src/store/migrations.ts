@@ -19,7 +19,7 @@
  *   2. **同时**把对应 store 的 `SCHEMA` 常量也改成带上新列——新库靠 store 直接建最新 schema，
  *      老库靠这条迁移升上来。两处都改，否则新库会缺列。
  */
-import { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync } from './driver.ts';
 import { copyFileSync, existsSync } from 'node:fs';
 
 export interface Migration {

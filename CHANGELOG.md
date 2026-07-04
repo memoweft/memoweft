@@ -10,6 +10,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Added
+
+- **Optional `better-sqlite3` driver — MemoWeft now runs on Node 20 / 22, not just Node ≥24.** The built-in `node:sqlite` module only stabilized in Node 24, which shut out the still-large Node 20/22 install base. There is now a second SQLite driver behind the same internal seam: on Node ≥24 the built-in `node:sqlite` is used by default (still **zero runtime dependencies**), and if it is unavailable MemoWeft falls back to `better-sqlite3` when installed. Node 20/22 users run `npm i better-sqlite3` to opt in. `better-sqlite3` is declared as an **optional peer dependency** (`peerDependenciesMeta.optional`), so `npm install memoweft` still pulls **no** runtime dependencies and no native module by default. When neither driver is available, `import 'memoweft'` fails with a plain-language error listing both fixes (upgrade Node to ≥24, or install `better-sqlite3`). It is a native module usually installed as a prebuilt binary; if no prebuilt matches your platform it falls back to a `node-gyp` compile, so installation is not guaranteed on every environment.
+
+### Changed
+
+- **`engines.node` relaxed from `>=24` to `>=20`** — reflecting the new optional `better-sqlite3` driver. Node ≥24 remains the zero-dependency, out-of-the-box path; Node 20/22 need the optional driver installed.
+- **SQLite `busy_timeout` now set to 5000ms on every self-opened connection** — when two processes write to the same database file (e.g. a host and a testbench pointed at the same `dla.db`), the later writer previously failed *immediately* with `SQLITE_BUSY`; it now waits up to 5 seconds for the write lock before erroring. Single-process use is unaffected (the synchronous SQLite API already serializes within a process). This is an infrastructure default, not a config knob. (WAL is intentionally *not* enabled in this change — it needs a matching backup-strategy change first.)
+- **Observed evidence never defaults to cloud-readable** — the non-cloud default for `sourceKind: 'observed'` evidence is now enforced in `SqliteEvidenceStore.put` itself (not just the observation ingest entry). Callers that write observed evidence directly through `put` without an explicit authorization bit now get `allowCloudRead: false` by default (previously it followed the general default and could be cloud-readable). To send observed evidence to the cloud you must now pass `allowCloudRead: true` explicitly. `spoken` / `inferred` defaults and any explicitly-passed bit are unchanged; imports via `insert` are unaffected (they preserve the bundled bits).
+
 ## [0.2.0] — 2026-07
 
 Durable schema: your `0.1.0` database upgrades losslessly on first open, with an automatic backup taken before any schema-changing migration.
