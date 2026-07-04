@@ -64,11 +64,19 @@ jobs:
       #   其 typecheck 靠 dist/*.d.ts、其 test 靠 dist/*.js —— dist 不先 build 出来，Host 步骤必红。
       # 用 `-w @memoweft/host` 显式点名（本步只有一个 Host 包）；未来插件包多了可换 `--workspaces --if-present`
       #   免维护清单，但 Core build 仍须在 Host 步骤之前。
+      # Lint 松档关卡（Q1）：只在本主 job 跑一次，node22 / node20 触达 job 不重复。
+      - name: Lint
+        run: npm run lint
+
       - name: Core Typecheck
         run: npm run typecheck
 
-      - name: Core Test
-        run: npm test
+      # Core Test 换成带原生覆盖率的版本（--experimental-test-coverage）：
+      #   是【替换】不是追加——追加会让同一批 .ts 被跑两遍（普通一遍 + coverage 一遍），白翻倍 CI 时长。
+      #   覆盖率只报数字、不设硬门（作者拍板）。此步仍排在 Remove optional better-sqlite3 之后，
+      #   覆盖的是 Node24 默认内置 node:sqlite 零依赖路径，语义不变。
+      - name: Core Test (with coverage)
+        run: npm run test:coverage
 
       - name: Core Build
         run: npm run build
