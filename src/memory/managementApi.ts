@@ -435,7 +435,7 @@ export function createMemoryManagementAPI(
       // ⚠ 粒度限制（v1 单人单宿主无碍）：indexAll([]) 清的是【整张 vectors 表】（所有 subject 的向量），
       //   不是只清本 subject。多 subject 化时这里要换成 subject 粒度清索引（届时 Retriever 需提供按 subject/id 清）。
       //   记入 docs/host-migration.md §6 已知限制。
-      if (retriever) void retriever.indexAll([]);
+      if (retriever) retriever.indexAll([]).catch((e) => console.error('resetSubject 清向量索引失败：', e));
       return counts;
     },
   };

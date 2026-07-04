@@ -9,6 +9,11 @@
  *  - 不污染：merge 写入包进一个事务（若传了 transaction），中途失败整体回滚。
  *
  * dryRun：只算不写，返回将写入 / 重复的条数。merge：实际写入。
+ *
+ * ⚠️ 事务风险（散装调用务必看）：merge 的所有写入只有在 deps.transaction **被传入**时才是原子的。
+ *   若不传 transaction 就调 merge，中途任一行失败会留下半截数据、无法回滚（异常收进 plan.errors，
+ *   并在 plan.warnings 提示，但残留已成事实）。core 正门（createCore）已固定传 openStores 的 transaction，
+ *   无此风险；仅当你绕过 core、手工拼 deps 时才需自己保证传 transaction。
  */
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { EventStore } from '../event/store.ts';
