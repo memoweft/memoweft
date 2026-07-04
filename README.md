@@ -228,6 +228,8 @@ Main exports are in [`src/index.ts`](./src/index.ts); integration guide in [`doc
 
 Where it's headed — and why the library (not the host) is the product — is in [`ROADMAP.md`](./ROADMAP.md); the current working focus is in [`CURRENT.md`](./CURRENT.md).
 
+> **Open source, permanently.** The core library is and will remain fully open source under MIT — no hidden enterprise edition, no open-core split. If a hosted service ever exists, it will only sell convenience, never withheld features.
+
 ---
 
 ## 📚 Documentation

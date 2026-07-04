@@ -40,3 +40,4 @@ Lead-gen material that can land alongside the contract work but isn't the defaul
 ## Non-goals (for now)
 
 - Turning the reference host into a shipped desktop product. It stays a demo; **the library is the product**. This keeps priorities on API stability, adapters, and evidence — not product UX.
+- Open-core split — the library stays fully open source.
