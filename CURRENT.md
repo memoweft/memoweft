@@ -2,33 +2,34 @@
 
 > 唯一的"现在该做什么"看板。只写**当前主线 + 允许做 + 不做 + 验收**。历史不写这儿——看 git 提交与 `CHANGELOG.md`。
 
-## 当前主线：0.3.0 — 补漏加固批次（先行）
+## 当前主线：Memory Surface Contract v1（记忆面契约 v1）· 总纲第 2 步
 
-2026-07-04 全库审计抓出的红灯修复：隐私红线 B 下沉 core、发布保险丝、JSON 解析统一、busy_timeout、扫尾、SQLite 驱动抽缝（Node 20/22 触达）、全开源承诺。**任务书七份，在 [`docs/internal/tasks/0.3.0/`](./docs/internal/tasks/0.3.0/README.md)，按总览顺序领任务，一次领一份。**
+把宿主接触记忆的公共接口（`src/index.ts` 171 个导出、`createMemoWeftCore` 门面、`core.*` 24 个宿主接触方法的入参与返回形状）定成一份带稳定性标签的契约——哪些 stable、哪些 experimental、破坏性变更怎么算怎么通知。**只加文档 + 类型/导出标注，不动核心运行时逻辑。** 是第 7 步插件契约、第 10 步 1.0 API 收口的地基。
 
-排序依据（作者 2026-07-04 拍板）：补漏是小刀先行；原 0.3.0 主线 **Memory Surface Contract v1** 顺延为下一主线（见文末），本批不做。
+**施工任务书两份，在 [`docs/internal/tasks/S2-surface-contract/`](./docs/internal/tasks/S2-surface-contract/README.md)**（S2-1 定级 + 写契约文档 → S2-2 `index.ts` 分组注释 + 政策成文，串行）。6 项设计选择作者已拍板（见 README）。
 
 ## 允许做
 
-- 七份任务书（T1–T7）写明的事，按任务书的"改哪里 / 不许动 / 验收"执行。
-- 任务书标注"随车快赢"的小项。
+- S2-1 / S2-2 两份任务书写明的事，按"改哪里 / 不许动 / 验收"执行。
+- 契约文档产出到对外 `docs/memory-surface-contract.md`（作者拍板 ⑤）。
 
-## 不做（本批明确不碰）
+## 不做（本主线明确不碰）
 
-- ❌ Memory Surface Contract v1 的接口重设计（顺延下一主线；T1/T4 涉及的行为变化以任务书为限）。
-- ❌ 完整插件平台 / weftmate / daemon / schema 重构 / tool 权限模型。
-- ❌ WAL、加密落盘、投毒防护、成本观测、i18n、MCP、eval——属后续批次。
-- ❌ 任务书之外动 `src/` 核心逻辑或认知纪律。
+- ❌ 删任何导出、重排导出结构、逐符号铺 `@stable` JSDoc（属第 10 步 1.0 收口）。
+- ❌ 改任何入参 / 返回的实际形状、运行时逻辑、认知纪律、隐私三红线。
+- ❌ 动 config 单例实现（P2-5 去单例是另一条线；本步只在契约里把它的取用方式标 experimental）。
+- ❌ `DLA_*` 回退、`'./dla.db'` 默认路径、两处现有 `@deprecated`——不许动。
 
 ## 验收
 
-- 每任务对应任务书的验收清单全勾 + `npm run typecheck && npm test && npm run build` 三绿。
-- 全批合完跑 `docs/internal/tasks/0.3.0/README.md` 的"批次完成验收"。
+- 两份任务书的验收清单全勾 + `npm run typecheck && npm test && npm run build` 三绿（本步不改运行时，三绿应无实质变化，跑是为兜"没误碰"）。
 
 ---
 
-## 下一主线（排队中）：Memory Surface Contract v1
+## 已完成上一主线：0.3.0 补漏加固批次 ✅（2026-07-05 · 已发布 memoweft@0.3.0）
 
-把宿主接触记忆的公共接口（`src/index.ts` 导出、`createMemoWeftCore`、`core.recall / ingest* / memory.*` 的入参与返回形状）定成一份写清楚、带版本的稳定契约——哪些字段算稳定、破坏性变更怎么算。子任务等补漏批次合完由 PM 拍板细化。
+T1–T7（隐私 B 下沉 put 层 / 发布保险丝 / JSON 加固 / busy_timeout / 扫尾 / 驱动抽缝 + better-sqlite3 可选 / 全开源承诺）已合 main（merge `758c129`）+ 发布 npm（`0.3.0` latest）。**发布尾巴（作者手动）**：main 推 origin、打 tag `v0.3.0`、建 GitHub Release；CI 矩阵在真 Node 20/22 上验 better-sqlite3 路径（本机仅 Node 24，那条支持声明靠 CI 兜底）。
 
-再往后的完整步骤（第 2 步接口契约 → … → 第 10 步收口 1.0，商用线+功能线合排共 11 步）见 [`docs/internal/tasks/后续批次总纲.md`](./docs/internal/tasks/后续批次总纲.md)——每步开工前才细化成施工任务书。
+## 后续总排序
+
+第 2 步（当前）→ … → 第 10 步收口 1.0，商用线 + 功能线合排共 11 步，见 [`docs/internal/tasks/后续批次总纲.md`](./docs/internal/tasks/后续批次总纲.md)——每步开工前才细化成施工任务书（`S2-surface-contract/` 这套即样板）。
