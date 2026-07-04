@@ -44,6 +44,15 @@ export { SqliteCognitionStore, type CognitionStore, type CognitionPatch } from '
 // 存储装配：一条共享连接 + 三个 store + 事务器（让写路径多步、多表写能原子化）
 export { openStores, type StoreBundle } from './store/openStores.ts';
 export { noopTransaction, type Transaction } from './store/transaction.ts';
+// Schema 版本化 / 迁移器（0.2.0）：openStores 自动跑；这里导出供诊断、dry-run 预检、迁移工具用。
+export {
+  runMigrations,
+  getSchemaVersion,
+  LATEST_SCHEMA_VERSION,
+  type Migration,
+  type MigrationResult,
+  type RunMigrationsOptions,
+} from './store/migrations.ts';
 
 // 画像生成（写路径）
 export { consolidate, type ConsolidateDeps, type ConsolidateResult } from './consolidation/consolidate.ts';

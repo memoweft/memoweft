@@ -219,11 +219,11 @@ Main exports are in [`src/index.ts`](./src/index.ts); integration guide in [`doc
 - **Experience plugin contract v1** — swappable personas over one core (plain + 星瑶).
 - **Collector plugin** — active-window collector in its own package (`@memoweft/collector-active-window`), feeding the host via `/api/observe`.
 - **Published to npm** — `npm install memoweft` (first release `0.1.0`).
+- **Schema versioning & migrations** — `PRAGMA user_version` + a migration runner (transactional, auto-backup, dry-run); a `0.1.0` database opens losslessly. On `main`, ships in `0.2.0`.
 
 **Not yet**
 
 - Memory-graph front-end (the backend payload is ready).
-- Schema versioning / migration hardening.
 - Recall-refinement follow-ups (e.g. similarity-threshold gating).
 
 Status is derived from [`docs/internal/STATE.md`](./docs/internal/STATE.md). Where it's headed — and why the library (not the host) is the product — is in [`ROADMAP.md`](./ROADMAP.md).

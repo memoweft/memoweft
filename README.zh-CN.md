@@ -219,11 +219,11 @@ core.close();
 - **体验插件契约 v1**——同一 core 上可换人设（普通助手 + 星瑶）。
 - **采集插件**——活动窗口采集器独立成包（`@memoweft/collector-active-window`），经宿主 `/api/observe` 落库。
 - **已发布到 npm**——`npm install memoweft`（首版 `0.1.0`）。
+- **Schema 版本化 + 迁移器**——`PRAGMA user_version` + 迁移运行器（事务化、自动备份、dry-run）；0.1.0 老库无损打开。已在 `main`，随 `0.2.0` 发布。
 
 **还没做**
 
 - 图谱前端（后端 payload 已就绪）。
-- Schema 版本 / 迁移加固。
 - 召回精化（如相似度阈值门控）。
 
 状态来源见 [`docs/internal/STATE.md`](./docs/internal/STATE.md)。往哪走、以及为什么"库为主、Host 当演示",见 [`ROADMAP.md`](./ROADMAP.md)。
