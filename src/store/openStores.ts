@@ -16,6 +16,7 @@ import { SqliteEventStore, type EventStore } from '../event/store.ts';
 import { SqliteCognitionStore, type CognitionStore } from '../cognition/store.ts';
 import { SqliteManagementLog, type ManagementLog } from '../memory/managementLog.ts';
 import { runMigrations } from './migrations.ts';
+import { BUSY_TIMEOUT_MS } from './busyTimeout.ts';
 import type { Transaction } from './transaction.ts';
 import type { MemoWeftConfig } from '../config.ts';
 
@@ -42,6 +43,9 @@ export function openStores(dbPath: string, cfg?: MemoWeftConfig): StoreBundle {
   //   已存在的老库（如 npm 上的 0.1.0 库）走 runMigrations 从 user_version 升上来（见 migrations.ts）。
   const fresh = dbPath === ':memory:' || !existsSync(dbPath);
   const db = new DatabaseSync(dbPath);
+  // 并发保底：写锁被别的进程占着时最多等 BUSY_TIMEOUT_MS 再报 SQLITE_BUSY，而不是立刻裸抛。
+  //   三个 store 共用这条连接，故只在此设一次；共享连接分支的 store 不重复设。
+  db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
   // 建库/迁移期间任何一步抛错（如降级防护拒绝打开未来版本的库），都要【关掉这条连接】再抛，
   //   否则连接泄漏——文件被锁、下次打不开也删不掉（Windows EPERM）。
   let evidenceStore: EvidenceStore, eventStore: EventStore, cognitionStore: CognitionStore, managementLog: ManagementLog;

@@ -188,6 +188,8 @@ console.log(res.stored, res.skipped);
 - 桌面 / 设备 / 健康 / 屏幕类观察：默认 `allowCloudRead=false`。
 - 用户显式授权后，宿主再把对应证据标为可上云。
 
+库内已设 busy_timeout=5000；仍不建议两个进程同时跑写路径。
+
 ---
 
 ## 7. 接入时别绕过的纪律

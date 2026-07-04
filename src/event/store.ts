@@ -4,6 +4,7 @@
  */
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
+import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';
 import type { Event, EventInput } from './model.ts';
 
 const SCHEMA = `
@@ -68,6 +69,8 @@ export class SqliteEventStore implements EventStore {
   constructor(db: string | DatabaseSync = './dla.db') {
     this.ownsDb = typeof db === 'string';
     this.db = typeof db === 'string' ? new DatabaseSync(db) : db;
+    // 自开连接才设并发保底；共享连接由 openStores 已设过，别重复设。
+    if (this.ownsDb) this.db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
     this.db.exec(SCHEMA);
     // 迁移：旧库 event 表可能缺 consolidated 列（增量消化追踪，阶段 2）。
     const cols = this.db.prepare('PRAGMA table_info(event)').all() as unknown as Array<{ name: string }>;

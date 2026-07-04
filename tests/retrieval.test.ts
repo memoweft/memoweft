@@ -46,6 +46,18 @@ test('VectorRetriever：余弦召回，最相关排第一', async () => {
   }
 });
 
+test('VectorRetriever：自开连接设 busy_timeout=5000（向量表与主库同文件，多进程写不裸抛）', () => {
+  const r = new VectorRetriever(':memory:', stubEmbedder());
+  try {
+    // Node 24 实测：PRAGMA busy_timeout 结果列名是 timeout，取 .timeout 别断言裸数字。
+    // @ts-expect-error 测试内探 private db（只读 pragma，不改行为）
+    const row = r.db.prepare('PRAGMA busy_timeout').get() as { timeout: number };
+    assert.equal(row.timeout, 5000);
+  } finally {
+    r.close();
+  }
+});
+
 test('VectorRetriever：indexAll 替换式重建（旧的清掉）', async () => {
   const r = new VectorRetriever(':memory:', stubEmbedder());
   try {

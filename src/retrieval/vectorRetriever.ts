@@ -11,6 +11,7 @@
  */
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';
 import type { Retriever, RetrievalHit } from './retriever.ts';
 import type { Embedder } from './embedder.ts';
 
@@ -43,6 +44,8 @@ export class VectorRetriever implements Retriever {
 
   constructor(dbPath: string, embedder: Embedder) {
     this.db = new DatabaseSync(dbPath);
+    // 并发保底：向量表缺省与主库同一个文件、又独开这第二条连接，多进程下写路径要靠它等锁而非裸抛。
+    this.db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
     this.migrateIfNeeded();
     this.db.exec(SCHEMA);
     this.embedder = embedder;

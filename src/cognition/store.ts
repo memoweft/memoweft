@@ -6,6 +6,7 @@
  */
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
+import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';
 import type {
   Cognition,
   CognitionInput,
@@ -120,6 +121,8 @@ export class SqliteCognitionStore implements CognitionStore {
   constructor(db: string | DatabaseSync = './dla.db') {
     this.ownsDb = typeof db === 'string';
     this.db = typeof db === 'string' ? new DatabaseSync(db) : db;
+    // 自开连接才设并发保底；共享连接由 openStores 已设过，别重复设。
+    if (this.ownsDb) this.db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
     this.db.exec(SCHEMA);
     this.migrate();
   }

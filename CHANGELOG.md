@@ -12,6 +12,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Changed
 
+- **SQLite `busy_timeout` now set to 5000ms on every self-opened connection** — when two processes write to the same database file (e.g. a host and a testbench pointed at the same `dla.db`), the later writer previously failed *immediately* with `SQLITE_BUSY`; it now waits up to 5 seconds for the write lock before erroring. Single-process use is unaffected (the synchronous SQLite API already serializes within a process). This is an infrastructure default, not a config knob. (WAL is intentionally *not* enabled in this change — it needs a matching backup-strategy change first.)
 - **Observed evidence never defaults to cloud-readable** — the non-cloud default for `sourceKind: 'observed'` evidence is now enforced in `SqliteEvidenceStore.put` itself (not just the observation ingest entry). Callers that write observed evidence directly through `put` without an explicit authorization bit now get `allowCloudRead: false` by default (previously it followed the general default and could be cloud-readable). To send observed evidence to the cloud you must now pass `allowCloudRead: true` explicitly. `spoken` / `inferred` defaults and any explicitly-passed bit are unchanged; imports via `insert` are unaffected (they preserve the bundled bits).
 
 ## [0.2.0] — 2026-07
