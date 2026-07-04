@@ -20,6 +20,9 @@ name: CI
 on:
   push:
     branches: [main]
+    # 版本 tag（如 v0.3.0）也触发——但只让下面的 publish job 认它（job 级 if 卡 refs/tags）。
+    # 与 branches: [main] 并存，不覆盖 main / PR 触发。
+    tags: ['v*']
   pull_request:
 
 # 同一分支上新推送自动取消旧的在跑任务，省 CI 额度。
@@ -157,3 +160,52 @@ jobs:
         run: npm run smoke:dist
         env:
           MEMOWEFT_TEST_DRIVER: better-sqlite3
+
+  # ── on-tag 发布：npm publish + provenance（供应链背书）──────────────────────
+  #
+  # 【执行前提·作者手动】发布前，作者需先往本 repo 的 GitHub secrets 托管一个
+  #   npm automation token（Publish 权限），存为 NPM_TOKEN。这步是供应链决策、归作者手动，
+  #   CI 只引用 secret 名、绝不写死 token 值。token 未托管前，本 job 会在 publish step 失败。
+  #
+  # 只在打版本 tag（v*）时跑：job 级 if 卡住 refs/tags/，push main / PR 都不触发本 job
+  #   （on.push.tags 负责让 tag 推送进入本 workflow，if 负责让只有本 job 认 tag）。
+  # provenance 靠 GitHub OIDC 身份签发来源证明，不靠长期密钥——所以要 id-token: write。
+  # 发布走 `npm publish --provenance`，会自动先跑 package.json 的 prepublishOnly
+  #   （typecheck && test && build）——发布前再过一遍三绿 + build 保险丝，不绕过、不 --ignore-scripts。
+  publish:
+    name: 发布 (on tag · npm publish --provenance)
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    permissions:
+      # provenance 必需：GitHub 用 OIDC 短期身份签发来源证明。
+      id-token: write
+      # 拉取仓库内容读权限。
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          # provenance 要求较新的 npm；显式指向公共 registry 供发布用。
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      # npm publish 会自动先跑 prepublishOnly（typecheck && test && build）当发布保险丝；
+      # --provenance 生成并附带来源证明。NODE_AUTH_TOKEN 取自作者托管的 secret，绝不写死。
+      - name: Publish to npm (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
