@@ -19,6 +19,7 @@ import type { Cognition } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
 import { filterCloudReadable } from '../evidence/privacy.ts';
+import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 
 export interface AttributeDeps {
   evidenceStore: EvidenceStore;
@@ -76,17 +77,6 @@ function buildMessages(
     { role: 'system', content: SYSTEM },
     { role: 'user', content: `【现象】：${phenomenon}\n\n【可能相关的行为/观察证据（只能从这里选原因）】：\n${list}` },
   ];
-}
-
-function parseOut(raw: string): LLMOut {
-  const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) return {};
-  try {
-    return JSON.parse(raw.slice(start, end + 1)) as LLMOut;
-  } catch {
-    return {};
-  }
 }
 
 /** 减去 windowHours 小时，返回 ISO（用于时间窗下界）。 */
@@ -164,7 +154,13 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
     }));
     const candidateIds = new Set(candidates.map((c) => c.id));
 
-    const out = parseOut(await deps.llm.chat(buildMessages(phenom.content, candidates)));
+    // 结构化输出加固（jsonRepair）：去围栏 → 解析对象；失败落日志 + 最多重试一次（提示"只输出 JSON"）。
+    // 仍失败 → null（按"本轮此现象无产出"处理，等价旧的返回空对象）。重试复用同一批已过滤 messages
+    // （隐私红线 C：只复用已过滤上下文 + 追加提示，不引入新证据文本）。
+    const out = (await parseJsonObjectWithRepair<LLMOut>({
+      llm: deps.llm,
+      messages: buildMessages(phenom.content, candidates),
+    })) ?? {};
     for (const raw of out.hypotheses ?? []) {
       const content = (raw.content ?? raw.hypothesis ?? '').trim();
       if (!content) continue;

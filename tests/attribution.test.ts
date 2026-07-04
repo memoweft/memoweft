@@ -228,3 +228,62 @@ test('接回闭环：用户回答否定假设 → consolidate correct → 旧假
     ev.close(); cog.close(); evt.close();
   }
 });
+
+/** 按队列依次吐回复的假模型；callCount 由外部读取（同 attribute/trends 里 deps.llm.callCount 的用法）。 */
+function queueStub(replies: string[]): { callCount: number; chat(): Promise<string> } {
+  let i = 0;
+  return {
+    callCount: 0,
+    async chat() {
+      this.callCount++;
+      return replies[i++] ?? '';
+    },
+  };
+}
+
+test('T3 归因容错解析：脏 JSON（带围栏 + 前后废话）一次解出、llm 只调 1 次', async () => {
+  const { ev, cog, eGame } = setupScenario();
+  try {
+    // 脏 JSON 会被 parseJsonObject 的容错一次解掉（走不到重试）——这条测的是容错，不是重试。
+    const dirty =
+      '好的，结果如下：\n```json\n' +
+      `{"hypotheses":[{"content":"可能因为玩游戏太晚导致没睡好","based_on_evidence_ids":["${eGame.id}"]}]}` +
+      '\n```\n（以上）';
+    const stub = queueStub([dirty]);
+    const r = await attribute('owner', { evidenceStore: ev, cognitionStore: cog, llm: stub });
+    assert.equal(r.hypotheses.length, 1, '脏 JSON 也能直接解出假设');
+    assert.equal(stub.callCount, 1, '容错一次解掉，未触发重试');
+    assert.equal(r.llmCalls, 1, 'llmCalls 计入 1 次');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('T3 归因真重试：首次无花括号纯文字、二次合法 JSON → 产出假设、llm 调 2 次', async () => {
+  const { ev, cog, eGame } = setupScenario();
+  try {
+    const stub = queueStub([
+      '我不知道',
+      `{"hypotheses":[{"content":"可能因为玩游戏太晚导致没睡好","based_on_evidence_ids":["${eGame.id}"]}]}`,
+    ]);
+    const r = await attribute('owner', { evidenceStore: ev, cognitionStore: cog, llm: stub });
+    assert.equal(r.hypotheses.length, 1, '重试拿到合法 JSON 后产出假设');
+    assert.equal(stub.callCount, 2, '触发了一次重试');
+    assert.equal(r.llmCalls, 2, 'llmCalls 计入重试的 2 次');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('T3 归因降级：连坏两次 → 空产出、不抛错', async () => {
+  const { ev, cog } = setupScenario();
+  try {
+    const stub = queueStub(['我不知道', '还是不知道']);
+    const r = await attribute('owner', { evidenceStore: ev, cognitionStore: cog, llm: stub });
+    assert.equal(r.hypotheses.length, 0, '两次都坏 → 降级为空');
+    assert.equal(stub.callCount, 2, '最多重试一次（共 2 次）');
+    assert.equal(r.llmCalls, 2, 'llmCalls 计入 2 次');
+  } finally {
+    ev.close(); cog.close();
+  }
+});

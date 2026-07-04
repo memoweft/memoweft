@@ -18,6 +18,7 @@ import type { Cognition } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
 import { filterCloudReadable } from '../evidence/privacy.ts';
+import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 
 export interface AggregateTrendsDeps {
   evidenceStore: EvidenceStore;
@@ -58,15 +59,8 @@ function buildMessages(items: Array<{ id: string; state: string; text: string; a
   ];
 }
 
-function parseOut(raw: string): { trends?: RawTrend[] } {
-  const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) return {};
-  try {
-    return JSON.parse(raw.slice(start, end + 1)) as { trends?: RawTrend[] };
-  } catch {
-    return {};
-  }
+interface LLMOut {
+  trends?: RawTrend[];
 }
 
 export async function aggregateTrends(
@@ -105,8 +99,14 @@ export async function aggregateTrends(
   }
   if ([...windowEvidence].every((id) => covered.has(id))) return empty;
 
+  // 结构化输出加固（jsonRepair）：去围栏 → 解析对象；失败落日志 + 最多重试一次（提示"只输出 JSON"）。
+  // 仍失败 → null（按"本轮无趋势产出"处理，等价旧的返回空对象）。重试复用同一批已过滤 messages
+  // （隐私红线 C：只复用已过滤上下文 + 追加提示，不引入新证据文本）。重试会多调一次模型，故计数取前后差。
   const before = deps.llm.callCount;
-  const out = parseOut(await deps.llm.chat(buildMessages(items)));
+  const out = (await parseJsonObjectWithRepair<LLMOut>({
+    llm: deps.llm,
+    messages: buildMessages(items),
+  })) ?? {};
   const llmCalls = deps.llm.callCount - before;
 
   const trends: Cognition[] = [];
