@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync } from '../src/store/nodeSqliteDriver.ts';
 import { VectorRetriever } from '../src/retrieval/vectorRetriever.ts';
 import { NullRetriever } from '../src/retrieval/nullRetriever.ts';
 

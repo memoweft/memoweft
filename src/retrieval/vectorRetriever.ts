@@ -10,7 +10,7 @@
  * search 嵌入 query 后算余弦取 top-k。
  */
 import { createHash } from 'node:crypto';
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync } from '../store/nodeSqliteDriver.ts';
 import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';
 import type { Retriever, RetrievalHit } from './retriever.ts';
 import type { Embedder } from './embedder.ts';

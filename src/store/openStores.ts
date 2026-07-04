@@ -9,7 +9,7 @@
  *   既不该攥着写锁等网络，交错的 await 还会踩坏事务边界。写路径的正确用法是：先 await 拿到模型输出，
  *   再把随后的【同步写一段】交给 transaction（见 consolidation/consolidate.ts）。
  */
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync } from './nodeSqliteDriver.ts';
 import { existsSync } from 'node:fs';
 import { SqliteEvidenceStore, type EvidenceStore } from '../evidence/store.ts';
 import { SqliteEventStore, type EventStore } from '../event/store.ts';

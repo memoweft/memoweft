@@ -6,7 +6,8 @@
  * 授权位、双时态时间在写入时按规则补默认（见 put）。
  * 幂等：带 originId 的重复写入只存一次（防重试重复落库）。
  */
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import { DatabaseSync } from '../store/nodeSqliteDriver.ts';
+import type { SQLInputValue } from '../store/driver.ts';
 import { randomUUID } from 'node:crypto';
 import { config, cloudReadDefault, type MemoWeftConfig } from '../config.ts';
 import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';

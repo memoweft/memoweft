@@ -2,7 +2,7 @@
  * 事件存储层（地图 cell 4）。参考 evidence/store.ts 的 node:sqlite 模式。
  * 两张表：event（事件）+ event_evidence（事件覆盖了哪些原话证据）。
  */
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import { DatabaseSync } from '../store/nodeSqliteDriver.ts';
 import { randomUUID } from 'node:crypto';
 import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';
 import type { Event, EventInput } from './model.ts';
