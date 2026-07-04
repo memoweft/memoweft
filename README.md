@@ -205,6 +205,27 @@ Main exports are in [`src/index.ts`](./src/index.ts); integration guide in [`doc
 
 ---
 
+## ⏱️ Performance
+
+Honest numbers, no thresholds. A benchmark loads **10,000 evidence rows** into a throwaway in-memory
+database, then measures one full `updateProfile` write pass (via the built-in `result.timings`) and
+average `recall` latency through the public entry — with an offline stub model so the store + orchestration
+cost is what you see. No CI gate (benchmarks are slow and jittery).
+
+<!-- 数字占位符：总控跑 `npm run build && npm run bench` 后，用真实数字替换下面的 __ -->
+
+**10,000 evidence rows:** `updateProfile` ≈ **__ ms** · `recall` ≈ **__ ms**
+_(run `npm run bench` to fill)_
+· measured on Node `__` · `__` (OS/arch) — this-machine numbers, not a guarantee.
+
+```bash
+npm run build && npm run bench   # build first: the script imports from dist/, not src
+```
+
+Details and knobs in [`docs/perf.md`](./docs/perf.md).
+
+---
+
 ## 📦 Project status
 
 **Early alpha.** The Core, a reference host, and the first two plugins are in place and tested; the algorithms and cognitive discipline are real. Interfaces may still move.
@@ -241,6 +262,7 @@ Where it's headed — and why the library (not the host) is the product — is i
 | [`docs/architecture.md`](./docs/architecture.md) | Three layers, read/write decoupling, swappable parts, cognitive-discipline details |
 | [`docs/integration.md`](./docs/integration.md) | Host integration guide + export table |
 | [`docs/naming.md`](./docs/naming.md) | Bilingual naming & positioning guide |
+| [`docs/perf.md`](./docs/perf.md) | Benchmark (10k evidence): measured `updateProfile` / `recall` numbers + how to reproduce |
 | [`plugins/collector-active-window/README.md`](./plugins/collector-active-window/README.md) | Active-window collector plugin (collector → host → core flow) |
 | [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | Packaging & npm release flow |
 | [`examples/minimal.ts`](./examples/minimal.ts) | Runnable minimal example |

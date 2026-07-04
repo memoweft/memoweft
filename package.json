@@ -32,6 +32,7 @@
     "collector": "node plugins/collector-active-window/run.mjs",
     "experience": "node testbench/server.mjs",
     "build": "tsc -p tsconfig.build.json",
+    "bench": "node bench/bulk-updateProfile.mjs",
     "smoke:dist": "node tests/smoke/dist-smoke.mjs",
     "dev:core": "tsc -p tsconfig.build.json --watch",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
