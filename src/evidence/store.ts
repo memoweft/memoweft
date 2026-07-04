@@ -132,6 +132,14 @@ export class SqliteEvidenceStore implements EvidenceStore {
     }
 
     const recordedAt = new Date().toISOString();
+    // 授权缺省按 sourceKind 分流（红线 B 下沉 put，最后防线）：
+    //   'observed' → 三个默认取自 observedDefaults（local✓/cloud✗/infer✓），任何入口落 observed 都一次性兜住不上云；
+    //   其余（spoken/inferred）→ 维持原通用默认（evidenceDefaults + cloudReadDefault 跟随 privacyMode）。
+    // 显式传值永远优先（下面 ?? 左侧）。
+    const isObserved = input.sourceKind === 'observed';
+    const localDefault = isObserved ? this.cfg.observedDefaults.allowLocalRead : this.cfg.evidenceDefaults.allowLocalRead;
+    const cloudDefault = isObserved ? this.cfg.observedDefaults.allowCloudRead : cloudReadDefault(this.cfg);
+    const inferDefault = isObserved ? this.cfg.observedDefaults.allowInference : this.cfg.evidenceDefaults.allowInference;
     const evidence: Evidence = {
       id: randomUUID(),
       subjectId: input.subjectId,
@@ -142,9 +150,9 @@ export class SqliteEvidenceStore implements EvidenceStore {
       recordedAt,
       rawContent: input.rawContent,
       summary: input.summary ?? input.rawContent, // v1：摘要先等于原文
-      allowLocalRead: input.allowLocalRead ?? this.cfg.evidenceDefaults.allowLocalRead,
-      allowCloudRead: input.allowCloudRead ?? cloudReadDefault(this.cfg), // 跟随（注入的）配置
-      allowInference: input.allowInference ?? this.cfg.evidenceDefaults.allowInference,
+      allowLocalRead: input.allowLocalRead ?? localDefault,
+      allowCloudRead: input.allowCloudRead ?? cloudDefault,
+      allowInference: input.allowInference ?? inferDefault,
       correctsEvidenceId: input.correctsEvidenceId ?? null,
     };
 
