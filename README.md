@@ -65,12 +65,16 @@ A plain memory store's logic is: stored = true, and newest wins. MemoWeft doesn'
 - **Moods fade, preferences stick.** "Bad day today" decays over time; "I don't eat cilantro" isn't auto-forgotten.
 - **No self-corroboration.** The assistant's own words and the user's silence are not evidence — otherwise it just talks itself into believing its own guesses.
 
-| | Typical vector / memory store | MemoWeft |
-| --- | --- | --- |
-| Conflicting info | overwrite / keep latest | **conflict exposed**, not silently merged |
-| Trust | stored = treated as true | **recorded ≠ believed** |
-| Model guesses | may slip in as fact | **low-confidence hypothesis** |
-| Expiry | permanent | **typed expiry** (moods fade, preferences stick) |
+| | Typical vector / memory store | MemoWeft | Eval backing |
+| --- | --- | --- | --- |
+| Conflicting info | overwrite / keep latest | **conflict exposed**, not silently merged | `EVAL-C01`–`C07` |
+| Trust | stored = treated as true | **recorded ≠ believed** | `EVAL-T01`, `T02` |
+| Model guesses | may slip in as fact | **low-confidence hypothesis** | `EVAL-T03`–`T05` |
+| Expiry | permanent | **typed expiry** (moods fade, preferences stick) | `EVAL-M01`–`M07` |
+
+*Every row above is backed by numbered eval cases* — the assertions live in
+[`tests/eval/cognition-discipline.eval.test.ts`](./tests/eval/cognition-discipline.eval.test.ts)
+and run inside `npm test`, so these aren't claims, they're checks.
 
 In a line: others "remember"; MemoWeft aims to **remember, and not misuse it**.
 
@@ -248,6 +252,8 @@ Details and knobs in [`docs/perf.md`](./docs/perf.md).
 Where it's headed — and why the library (not the host) is the product — is in [`ROADMAP.md`](./ROADMAP.md); the current working focus is in [`CURRENT.md`](./CURRENT.md).
 
 > **Open source, permanently.** The core library is and will remain fully open source under MIT — no hidden enterprise edition, no open-core split. If a hosted service ever exists, it will only sell convenience, never withheld features.
+
+> **How it's maintained.** MemoWeft is kept up by a **single author working alongside AI assistants**, on a **best-effort** basis — **no SLA**, no guaranteed response time. The one thing that jumps the queue: **security issues are triaged first**. See [`SECURITY.md`](./.github/SECURITY.md) for how to report one.
 
 ---
 
