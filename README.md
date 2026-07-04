@@ -226,7 +226,7 @@ Main exports are in [`src/index.ts`](./src/index.ts); integration guide in [`doc
 - Memory-graph front-end (the backend payload is ready).
 - Recall-refinement follow-ups (e.g. similarity-threshold gating).
 
-Status is derived from [`docs/internal/STATE.md`](./docs/internal/STATE.md). Where it's headed — and why the library (not the host) is the product — is in [`ROADMAP.md`](./ROADMAP.md).
+Where it's headed — and why the library (not the host) is the product — is in [`ROADMAP.md`](./ROADMAP.md); the current working focus is in [`CURRENT.md`](./CURRENT.md).
 
 ---
 
@@ -243,19 +243,19 @@ Status is derived from [`docs/internal/STATE.md`](./docs/internal/STATE.md). Whe
 | [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | Packaging & npm release flow |
 | [`examples/minimal.ts`](./examples/minimal.ts) | Runnable minimal example |
 
-Internal design notes and the dev whiteboard (project map, roadmap, `STATE` / `LOG`) live in [`docs/internal/`](./docs/internal/) — background on how the project is built, not needed to use the library.
+Internal design notes and archived dev whiteboards (project map, `STATE`) live in [`docs/internal/`](./docs/internal/) — historical background on how the project was built, not required to use the library or to contribute.
 
 ---
 
 ## 🤝 Contributing
 
-MemoWeft is mostly **AI-maintained**; the layered docs exist so the AI (and humans) taking over can get up to speed cheaply and change things by the same rules. Any code change must keep three checks green:
+Any code change must keep three checks green:
 
 ```bash
 npm run typecheck && npm test && npm run build
 ```
 
-Working contract in [`AGENTS.md`](./AGENTS.md), hard rules in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+New here, AI or human? Start with [`AGENTS.md`](./AGENTS.md) and [`CURRENT.md`](./CURRENT.md); the hard rules are in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## License
 

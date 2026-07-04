@@ -226,7 +226,7 @@ core.close();
 - 图谱前端（后端 payload 已就绪）。
 - 召回精化（如相似度阈值门控）。
 
-状态来源见 [`docs/internal/STATE.md`](./docs/internal/STATE.md)。往哪走、以及为什么"库为主、Host 当演示",见 [`ROADMAP.md`](./ROADMAP.md)。
+往哪走、以及为什么"库为主、Host 当演示",见 [`ROADMAP.md`](./ROADMAP.md)；当前在做什么见 [`CURRENT.md`](./CURRENT.md)。
 
 ---
 
@@ -243,19 +243,19 @@ core.close();
 | [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | 打包和 npm 发布流程 |
 | [`examples/minimal.ts`](./examples/minimal.ts) | 可运行最小示例 |
 
-内部设计笔记与开发白板（项目地图、路线、`STATE` / `LOG`）在 [`docs/internal/`](./docs/internal/)——是「项目怎么造的」背景，用库不需要读。
+内部设计笔记与历史白板（项目地图、`STATE`）在 [`docs/internal/`](./docs/internal/)——是「项目当初怎么造的」历史背景，用库或改代码都不需要读。
 
 ---
 
 ## 🤝 参与
 
-MemoWeft 主要**由 AI 维护**，文档分层就是为了让接手的 AI（和人）低成本读懂、按同一套规矩改。任何代码改动都要保持三绿：
+任何代码改动都要保持三绿：
 
 ```bash
 npm run typecheck && npm test && npm run build
 ```
 
-工作契约见 [`AGENTS.md`](./AGENTS.md)，硬规矩见 [`CONTRIBUTING.md`](./CONTRIBUTING.md)。
+刚接手（AI 或人）？先读 [`AGENTS.md`](./AGENTS.md) 和 [`CURRENT.md`](./CURRENT.md)；硬规矩在 [`CONTRIBUTING.md`](./CONTRIBUTING.md)。
 
 ## License
 

@@ -13,12 +13,22 @@ The one blocking item is done. Adding a schema change now means: add a `Migratio
 - ✅ Migration test: a `0.1.0`-shaped database (with data) opens losslessly and keeps every row (`tests/migrations.test.ts`).
 - Still open: a small CLI wrapper (`migrate` / `migrate --dry-run`) and orphan-row checks — nice-to-have, not blocking.
 
-## 0.3.x — evidence & quality
+## 0.3.0 — hardening batch (current)
+
+Small-knife fixes from a full-repo audit — no new features. Privacy red-line B pushed into Core (observed evidence stays off-cloud by default, enforced at the write layer), a `prepublishOnly` release fuse, unified hardened JSON parsing, SQLite `busy_timeout`, repo cleanup, a SQLite **driver seam** (an optional `better-sqlite3` adapter so the library also runs on Node 20/22), and a public "always fully open-source" pledge. Current working scope lives in [`CURRENT.md`](./CURRENT.md).
+
+## Next — Memory Surface Contract v1
+
+The main theme after 0.3.0. Turn the surface a host actually touches — how it reads memory, writes evidence, and manages what's stored (`src/index.ts` exports, `createMemoWeftCore`, and the `core.recall` / `ingest*` / `memory.*` inputs and return shapes) — into a **documented, versioned contract**: what a host may depend on, which fields are stable, and how a breaking change is counted.
+
+### Adoption pre-package (rides along, not the version theme)
+
+Lead-gen material that can land alongside the contract work but isn't the default dev task:
 
 - **Minimal eval suite** (~20 conversation fixtures) asserting the discipline: conflicts exposed not overwritten, transient moods confidence-capped, recorded ≠ believed.
 - A **"vs. plain memory store" behavior comparison table** in the README, backed by the eval.
-- **Test coverage** (`node --experimental-test-coverage`) + a coverage badge.
-- **ESLint / Prettier / editorconfig**, `SECURITY.md`, issue & PR templates — the bar for accepting outside contributions.
+- A short **demo GIF** for the README.
+- **Test coverage** + badge, **ESLint / Prettier / editorconfig**, `SECURITY.md`, issue & PR templates.
 
 ## Later
 
