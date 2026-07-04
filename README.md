@@ -9,6 +9,7 @@
 [![npm](https://img.shields.io/npm/v/memoweft)](https://www.npmjs.com/package/memoweft)
 ![status](https://img.shields.io/badge/status-alpha-orange)
 [![CI](https://github.com/memoweft/memoweft/actions/workflows/ci.yml/badge.svg)](https://github.com/memoweft/memoweft/actions/workflows/ci.yml)
+![coverage](https://img.shields.io/badge/coverage-97.42%25-brightgreen)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)
 ![Node](https://img.shields.io/badge/Node-%E2%89%A524-339933)
 ![deps](https://img.shields.io/badge/runtime%20deps-zero-success)
@@ -64,12 +65,16 @@ A plain memory store's logic is: stored = true, and newest wins. MemoWeft doesn'
 - **Moods fade, preferences stick.** "Bad day today" decays over time; "I don't eat cilantro" isn't auto-forgotten.
 - **No self-corroboration.** The assistant's own words and the user's silence are not evidence — otherwise it just talks itself into believing its own guesses.
 
-| | Typical vector / memory store | MemoWeft |
-| --- | --- | --- |
-| Conflicting info | overwrite / keep latest | **conflict exposed**, not silently merged |
-| Trust | stored = treated as true | **recorded ≠ believed** |
-| Model guesses | may slip in as fact | **low-confidence hypothesis** |
-| Expiry | permanent | **typed expiry** (moods fade, preferences stick) |
+| | Typical vector / memory store | MemoWeft | Eval backing |
+| --- | --- | --- | --- |
+| Conflicting info | overwrite / keep latest | **conflict exposed**, not silently merged | `EVAL-C01`–`C07` |
+| Trust | stored = treated as true | **recorded ≠ believed** | `EVAL-T01`, `T02` |
+| Model guesses | may slip in as fact | **low-confidence hypothesis** | `EVAL-T03`–`T05` |
+| Expiry | permanent | **typed expiry** (moods fade, preferences stick) | `EVAL-M01`–`M07` |
+
+*Every row above is backed by numbered eval cases* — the assertions live in
+[`tests/eval/cognition-discipline.eval.test.ts`](./tests/eval/cognition-discipline.eval.test.ts)
+and run inside `npm test`, so these aren't claims, they're checks.
 
 In a line: others "remember"; MemoWeft aims to **remember, and not misuse it**.
 
@@ -205,6 +210,24 @@ Main exports are in [`src/index.ts`](./src/index.ts); integration guide in [`doc
 
 ---
 
+## ⏱️ Performance
+
+Honest numbers, no thresholds. A benchmark loads **10,000 evidence rows** into a throwaway in-memory
+database, then measures one full `updateProfile` write pass (via the built-in `result.timings`) and
+average `recall` latency through the public entry — with an offline stub model so the store + orchestration
+cost is what you see. No CI gate (benchmarks are slow and jittery).
+
+**10,000 evidence rows:** `updateProfile` ≈ **462 ms** · `recall` ≈ **~0 ms** (`NullRetriever` path — real recall latency is your embedder's cost)
+· measured on Node `24.15.0` · `win32/x64`, model stubbed out — this-machine numbers, not a guarantee. Full breakdown in [`docs/perf.md`](./docs/perf.md).
+
+```bash
+npm run build && npm run bench   # build first: the script imports from dist/, not src
+```
+
+Details and knobs in [`docs/perf.md`](./docs/perf.md).
+
+---
+
 ## 📦 Project status
 
 **Early alpha.** The Core, a reference host, and the first two plugins are in place and tested; the algorithms and cognitive discipline are real. Interfaces may still move.
@@ -230,6 +253,8 @@ Where it's headed — and why the library (not the host) is the product — is i
 
 > **Open source, permanently.** The core library is and will remain fully open source under MIT — no hidden enterprise edition, no open-core split. If a hosted service ever exists, it will only sell convenience, never withheld features.
 
+> **How it's maintained.** MemoWeft is kept up by a **single author working alongside AI assistants**, on a **best-effort** basis — **no SLA**, no guaranteed response time. The one thing that jumps the queue: **security issues are triaged first**. See [`SECURITY.md`](./.github/SECURITY.md) for how to report one.
+
 ---
 
 ## 📚 Documentation
@@ -241,6 +266,7 @@ Where it's headed — and why the library (not the host) is the product — is i
 | [`docs/architecture.md`](./docs/architecture.md) | Three layers, read/write decoupling, swappable parts, cognitive-discipline details |
 | [`docs/integration.md`](./docs/integration.md) | Host integration guide + export table |
 | [`docs/naming.md`](./docs/naming.md) | Bilingual naming & positioning guide |
+| [`docs/perf.md`](./docs/perf.md) | Benchmark (10k evidence): measured `updateProfile` / `recall` numbers + how to reproduce |
 | [`plugins/collector-active-window/README.md`](./plugins/collector-active-window/README.md) | Active-window collector plugin (collector → host → core flow) |
 | [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | Packaging & npm release flow |
 | [`examples/minimal.ts`](./examples/minimal.ts) | Runnable minimal example |
