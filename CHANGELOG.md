@@ -6,7 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > This file is the user-facing summary of notable changes; the full commit history has the fine detail.
-> While the API is pre-1.0, minor versions may include breaking changes.
+> While the API is pre-1.0, minor versions may include breaking changes. Stability tiers and the breaking-change policy are documented in [`docs/memory-surface-contract.md`](docs/memory-surface-contract.md).
+
+## [Unreleased]
+
+### Added
+
+- **Memory Surface Contract v1** — the public surface (`import 'memoweft'`) now carries a documented stability contract instead of 171 unlabelled exports. New [`docs/memory-surface-contract.md`](docs/memory-surface-contract.md) is the single source of truth for hosts: it lists every facade method and data shape with a `stable` / `experimental` / `internal` tier, the breaking-change policy (what counts as breaking, the three-part cost for breaking a `stable` symbol, and the "adding an enum value is not breaking, but hosts must keep a `default` branch" rule), and the implicit contracts hosts most often trip on. Each export group in `src/index.ts` is annotated with a matching `// [stable]` / `// [experimental]` / `// [internal]` line (grep-verifiable). This is documentation and annotation only — no runtime behaviour, exported symbol names, parameter shapes, or return shapes changed.
 
 ## [0.3.0] — 2026-07-05
 
@@ -52,6 +58,7 @@ First tidied pre-release. Core, a reference host, and the first plugins are in p
 - `MEMOWEFT_*` environment variables are the primary names; the legacy `DLA_*` prefix remains supported for backward compatibility.
 - Not yet: memory-graph front-end, schema versioning / migration hardening.
 
-[Unreleased]: https://github.com/memoweft/memoweft/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/memoweft/memoweft/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/memoweft/memoweft/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/memoweft/memoweft/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/memoweft/memoweft/releases/tag/v0.1.0
