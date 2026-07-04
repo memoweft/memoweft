@@ -8,11 +8,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 > This file is the user-facing summary of notable changes; the full commit history has the fine detail.
 > While the API is pre-1.0, minor versions may include breaking changes.
 
-## [Unreleased]
+## [0.3.0] — 2026-07-05
+
+补漏加固批次：隐私红线 B 下沉 Core、`prepublishOnly` 发布保险丝、加固版 JSON 解析、SQLite `busy_timeout`、可选 `better-sqlite3` 驱动（支持 Node 20/22）、扫尾、以及「永远全开源」公开承诺。
 
 ### Added
 
-- **Optional `better-sqlite3` driver — MemoWeft now runs on Node 20 / 22, not just Node ≥24.** The built-in `node:sqlite` module only stabilized in Node 24, which shut out the still-large Node 20/22 install base. There is now a second SQLite driver behind the same internal seam: on Node ≥24 the built-in `node:sqlite` is used by default (still **zero runtime dependencies**), and if it is unavailable MemoWeft falls back to `better-sqlite3` when installed. Node 20/22 users run `npm i better-sqlite3` to opt in. `better-sqlite3` is declared as an **optional peer dependency** (`peerDependenciesMeta.optional`), so `npm install memoweft` still pulls **no** runtime dependencies and no native module by default. When neither driver is available, `import 'memoweft'` fails with a plain-language error listing both fixes (upgrade Node to ≥24, or install `better-sqlite3`). It is a native module usually installed as a prebuilt binary; if no prebuilt matches your platform it falls back to a `node-gyp` compile, so installation is not guaranteed on every environment.
+- **Optional `better-sqlite3` driver — adds Node 20 / 22 support (Node ≥24 stays the tested, zero-dependency default).** The built-in `node:sqlite` module only stabilized in Node 24, which shut out the still-large Node 20/22 install base. There is now a second SQLite driver behind the same internal seam: on Node ≥24 the built-in `node:sqlite` is used by default (still **zero runtime dependencies**), and if it is unavailable MemoWeft falls back to `better-sqlite3` when installed. Node 20/22 users run `npm i better-sqlite3` to opt in. `better-sqlite3` is declared as an **optional peer dependency** (`peerDependenciesMeta.optional`), so `npm install memoweft` still pulls **no** runtime dependencies and no native module by default. When neither driver is available, `import 'memoweft'` fails with a plain-language error listing both fixes (upgrade Node to ≥24, or install `better-sqlite3`). It is a native module usually installed as a prebuilt binary; if no prebuilt matches your platform it falls back to a `node-gyp` compile, so installation is not guaranteed on every environment.
 
 ### Changed
 
