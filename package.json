@@ -27,7 +27,10 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"tests/**/*.test.ts\"",
+    "test:coverage": "node --test --experimental-test-coverage \"tests/**/*.test.ts\"",
     "test:e2e": "node --test \"tests/**/*.e2e.ts\"",
+    "lint": "eslint .",
+    "format": "prettier --check .",
     "testbench": "node testbench/server.mjs",
     "collector": "node plugins/collector-active-window/run.mjs",
     "experience": "node testbench/server.mjs",
@@ -47,7 +50,11 @@
   "devDependencies": {
     "typescript": "^5.7.0",
     "@types/node": "^24.0.0",
-    "better-sqlite3": ">=9"
+    "better-sqlite3": ">=9",
+    "eslint": "^9.0.0",
+    "@eslint/js": "^9.0.0",
+    "typescript-eslint": "^8.0.0",
+    "prettier": "^3.0.0"
   },
   "_comment": "依赖最小化：runtime dependencies 必须为空——'零运行时依赖'指这个。better-sqlite3 是【可选 peer 依赖】（Node 20/22 才需要，装不装用户自己定），可选 peer 不算破戒。devDependencies 里的 better-sqlite3 仅供多版本测试矩阵用（Node 24 默认走内置 node:sqlite，测零依赖路径时会 rm 掉它）。存储 / HTTP / 日志优先 Node 内置（node:sqlite、node:http、node:fs）；新增 runtime 依赖须有明确理由，默认拒绝。"
 }
