@@ -10,9 +10,23 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-05
+
+English-first defaults with a zero-dependency bilingual layer, model-compatibility knobs (configurable temperature + reasoning-model response handling), and the Memory Surface Contract v1.
+
 ### Added
 
-- **Memory Surface Contract v1** — the public surface (`import 'memoweft'`) now carries a documented stability contract instead of 171 unlabelled exports. New [`docs/memory-surface-contract.md`](docs/memory-surface-contract.md) is the single source of truth for hosts: it lists every facade method and data shape with a `stable` / `experimental` / `internal` tier, the breaking-change policy (what counts as breaking, the three-part cost for breaking a `stable` symbol, and the "adding an enum value is not breaking, but hosts must keep a `default` branch" rule), and the implicit contracts hosts most often trip on. Each export group in `src/index.ts` is annotated with a matching `// [stable]` / `// [experimental]` / `// [internal]` line (grep-verifiable). This is documentation and annotation only — no runtime behaviour, exported symbol names, parameter shapes, or return shapes changed.
+- **Bilingual layer (`config.language`)** — every prompt sent to the model and every host/user-facing message (errors, fallbacks, template questions) now resolves to English or Chinese through a zero-dependency constant table. Set `config.language` at runtime, or `MEMOWEFT_LANG=zh`; a new `type Lang` is exported. The cognitive-discipline instructions were translated with equivalent meaning (conflict exposure, no self-corroboration, hypothesis capping), with the offline eval suite kept green as the guard.
+- **Configurable generation temperature** — `LLMConfig.temperature`, read from `MEMOWEFT_LLM_TEMPERATURE` / `MEMOWEFT_WRITE_LLM_TEMPERATURE` so chat and write paths can differ. Unset keeps the previous default of `0.3` (no behaviour change); `0` is honoured. Temperature only enters the generation request — it never flows into MemoWeft's self-computed confidence.
+- **Reasoning-model response compatibility** — the client strips paired `<think>…</think>` segments from responses (an unclosed tag is left intact so a real answer is never dropped), and `extractJsonObject` now uses a brace-balanced scan instead of a greedy `lastIndexOf`, so a reasoning model's thinking (with stray braces) no longer poisons write-path JSON parsing.
+- **Memory Surface Contract v1** — the public surface (`import 'memoweft'`) now carries a documented stability contract instead of unlabelled exports. New [`docs/memory-surface-contract.md`](docs/memory-surface-contract.md) is the single source of truth for hosts: it lists every facade method and data shape with a `stable` / `experimental` / `internal` tier, the breaking-change policy, and the implicit contracts hosts most often trip on. Each export group in `src/index.ts` carries a matching `// [stable]` / `// [experimental]` / `// [internal]` line (grep-verifiable).
+- **Two more examples** — `examples/memory-management.ts` (controlled `core.memory.*`) and `examples/portable-bundle.ts` (portable-bundle round-trip, runs without a model). Examples now import by package name (`from 'memoweft'`; build first).
+- **English documentation** — `docs/INSTALL.md` and `docs/integration.md` are now English (with `.zh-CN.md` counterparts and cross-links), matching the English-first README. A new note records that data at rest is unencrypted — disk encryption is the host/OS responsibility.
+
+### Changed
+
+- **Default output language is now English (`en`).** Chinese hosts that relied on the implicit Chinese output will see event summaries / hypotheses / questions produced in English (the cognitive structure is unchanged). Set `config.language = 'zh'` or `MEMOWEFT_LANG=zh` to restore Chinese.
+- **Default `hostId` changed from `'testbench'` to `'local'`.** This affects only the `host_id` stamped on newly-written evidence (it is not a query key); existing databases read unchanged. The `subjectId` default (`'owner'`) is unchanged.
 
 ## [0.3.0] — 2026-07-05
 
@@ -58,7 +72,8 @@ First tidied pre-release. Core, a reference host, and the first plugins are in p
 - `MEMOWEFT_*` environment variables are the primary names; the legacy `DLA_*` prefix remains supported for backward compatibility.
 - Not yet: memory-graph front-end, schema versioning / migration hardening.
 
-[Unreleased]: https://github.com/memoweft/memoweft/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/memoweft/memoweft/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/memoweft/memoweft/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/memoweft/memoweft/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/memoweft/memoweft/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/memoweft/memoweft/releases/tag/v0.1.0
