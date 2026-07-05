@@ -18,7 +18,12 @@ export interface DistillDeps {
 
 export interface DistillResult {
   event: Event | null;
+  /** 本轮开始时未覆盖的证据数（起始待处理量）。 */
   pendingCount: number;
+  /** 【挂账信号·档2】当前写模型 tier 读不到、因而没被消化的证据数（= pending 里 tier 不可读的那些）。
+   *  >0 表示"有证据卡着、当前模型 tier 消化不了"——配本地写模型 / 授权上云可解（供向导/宿主提示用）。
+   *  只看读取权（云/本地），不含 inference=false（那是用户对某条证据的推理授权撤销，非配置缺口）。 */
+  tierBlockedCount: number;
   llmCalls: number;
 }
 
@@ -48,17 +53,19 @@ export async function distill(subjectId: string, deps: DistillDeps): Promise<Dis
     .filter((e) => !covered.has(e.id))
     .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
 
-  if (pending.length === 0) return { event: null, pendingCount: 0, llmCalls: 0 };
+  if (pending.length === 0) return { event: null, pendingCount: 0, tierBlockedCount: 0, llmCalls: 0 };
 
   // 隐私关（按当前写模型 tier 筛）+ 推理门（allowInference）：只把【当前模型可读】且【可推画像】的原话
   //   喂给 LLM 建事件。tier=cloud 筛 allowCloudRead；tier=local 筛 allowLocalRead（本地模型能读 observed）。
   //   inference 门：event summary 会喂进 consolidate 画像，故 inference=false 的证据连事件都不进
   //   （防其内容经 summary 间接渗进画像；与 consolidate/attribute 三处一致）。tier 绑在 deps.llm 上，缺省 'cloud'。
   const tier = deps.llm.tier ?? 'cloud';
-  const digestible = filterReadableByTier(pending, tier).filter((e) => e.allowInference);
+  const readable = filterReadableByTier(pending, tier); // 当前 tier 读得到的
+  const digestible = readable.filter((e) => e.allowInference); // 读得到且可推画像的 → 真喂给 LLM
+  const tierBlockedCount = pending.length - readable.length; // 挂账信号：tier 读不到的（配本地/授权可解）
   // 本批无一条【当前模型可消化】→ 不拿空材料调模型、不建 event。被挡的证据（tier 不可读 / inference=false）
   //   【不算已覆盖】、留在 pending 下轮再扫——换本地模型 / 授权上云 / 重开推理授权后才被补消化。
-  if (digestible.length === 0) return { event: null, pendingCount: pending.length, llmCalls: 0 };
+  if (digestible.length === 0) return { event: null, pendingCount: pending.length, tierBlockedCount, llmCalls: 0 };
 
   const lang = resolveLang();
   const lines = digestible.map((e) => `(${e.occurredAt.slice(0, 16)}) ${e.rawContent}`).join('\n');
@@ -81,5 +88,5 @@ export async function distill(subjectId: string, deps: DistillDeps): Promise<Dis
     evidenceIds: digestible.map((e) => e.id),
   });
 
-  return { event, pendingCount: pending.length, llmCalls };
+  return { event, pendingCount: pending.length, tierBlockedCount, llmCalls };
 }
