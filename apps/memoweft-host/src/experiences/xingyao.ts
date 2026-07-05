@@ -18,7 +18,7 @@
  *
  * 覆盖三场景（用户点名要有）：① 记忆唤起 ② 发现前后矛盾时温和确认 ③ 陪伴语调。
  */
-import type { MemoWeftPlugin } from './plugin.ts';
+import type { MemoWeftPlugin } from 'memoweft';
 
 /**
  * 星瑶人设脚本。给 LLM 的角色 prompt——此处允许拟人、第一人称、把记忆说成"我记得"。

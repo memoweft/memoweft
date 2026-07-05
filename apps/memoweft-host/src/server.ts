@@ -36,7 +36,7 @@ import { createMemoWeftCore, config, type MemoryBundle, type Observation } from 
 import { createProfileScheduler } from './scheduler.ts';
 import { createChatHistory, type HistoryTurn } from './chatHistory.ts';
 import { credBand } from './confBand.ts';
-import { getExperience, listExperiences, EXPERIENCE_IDS, DEFAULT_EXPERIENCE_ID } from './experiences/index.ts';
+import { getExperience, listExperiences, listPlugins, ALL_PLUGINS, EXPERIENCE_IDS, DEFAULT_EXPERIENCE_ID } from './experiences/index.ts';
 import { buildEnvResponse } from './genEnv.ts';
 
 // 先读 .env（Node 不加 --env-file 不会自动读）：确保下面 DB_PATH / 纯库开关 / Core 构造都拿得到 .env 配置。
@@ -85,7 +85,8 @@ const INDEX_HTML = join(import.meta.dirname, 'web', 'index.html');
 //   切换见 POST /api/experience：切完复用步4 的 activatedConvs.delete，让当前会话下一句重建实例、换上新人设。
 let activeExperienceId: string = DEFAULT_EXPERIENCE_ID;
 
-const core = createMemoWeftCore({ dbPath: DB_PATH });
+// plugins：把已注册插件传给 Core 让它烧 hook（experience 类无 hook 是 no-op；tool/collector 类在此生效）。
+const core = createMemoWeftCore({ dbPath: DB_PATH, plugins: ALL_PLUGINS });
 
 // 聊天历史（Host 自建落盘）：目录级多对话管理器（一对话一 jsonl，见 chatHistory.ts）。
 const history = createChatHistory(SESSIONS_DIR);
@@ -269,6 +270,18 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/experiences') {
       const experiences = listExperiences().map((e) => ({ ...e, current: e.id === activeExperienceId }));
       sendJson(res, 200, { experiences, current: activeExperienceId });
+      return;
+    }
+
+    // 插件管理（第 7 步 v2）：列出全部已注册插件 + 类型 + 声明的权限（供插件管理面板只读展示）。
+    //   experience 类的"启用"= 当前激活的那个人设（activeExperienceId）；tool/collector 类注册即启用（v2 不做运行时装卸）。
+    if (req.method === 'GET' && url.pathname === '/api/plugins') {
+      const plugins = listPlugins().map((p) => ({
+        ...p,
+        // experience 的"启用"跟随当前人设；非 experience 注册即启用。
+        active: p.type === 'experience' ? p.id === activeExperienceId : true,
+      }));
+      sendJson(res, 200, { plugins, activeExperience: activeExperienceId });
       return;
     }
 

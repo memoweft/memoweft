@@ -6,13 +6,14 @@
  *   - listExperiences 至少含 plain + xingyao，且只透 id/name（不外泄 systemPrompt）。
  *   - 每个体验插件形状对：id/name/systemPrompt 非空、type==='experience'。
  *
- * 纯 Host 内模块，不 import 'memoweft'、不碰 Core dist——无需先 build，独立可跑。
+ * Host 内模块；只从 'memoweft' 引【类型】MemoWeftPlugin（运行时擦除，跑不需 dist；typecheck 需 Core 的 .d.ts）。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   getExperience,
   listExperiences,
+  listPlugins,
   EXPERIENCE_IDS,
   FALLBACK_EXPERIENCE,
 } from '../src/experiences/index.ts';
@@ -50,14 +51,27 @@ test('每个体验插件形状对：type/systemPrompt/name 非空', () => {
   for (const { id } of listExperiences()) {
     const p = getExperience(id);
     assert.equal(p.type, 'experience', `${id}.type 是 experience`);
-    assert.equal(typeof p.systemPrompt, 'string', `${id}.systemPrompt 是字符串`);
-    assert.ok(p.systemPrompt.trim().length > 0, `${id}.systemPrompt 非空`);
+    // v2 契约 systemPrompt 可选 → experience 类必带、用 && 窄化后校验非空字符串。
+    assert.ok(p.systemPrompt && p.systemPrompt.trim().length > 0, `${id}.systemPrompt 非空字符串`);
     assert.ok(p.name.trim().length > 0, `${id}.name 非空`);
+  }
+});
+
+test('listPlugins：列出 id/name/type/permissions（experience 类无声明权限）', () => {
+  const plugins = listPlugins();
+  assert.ok(plugins.length >= 2, '至少 plain + xingyao');
+  assert.ok(plugins.some((p) => p.id === 'plain') && plugins.some((p) => p.id === 'xingyao'), '含 plain + 星瑶');
+  for (const p of plugins) {
+    assert.equal(p.type, 'experience', 'v2 现注册的都是 experience 类');
+    assert.ok(Array.isArray(p.permissions), 'permissions 是数组');
+    assert.equal(p.permissions.length, 0, 'experience 类不声明 ctx 权限');
+    assert.ok(!('systemPrompt' in p), 'listPlugins 不外泄 systemPrompt 原文');
   }
 });
 
 test('星瑶人设守 naming 护栏：不出现过度承诺话术', () => {
   const prompt = getExperience('xingyao').systemPrompt;
+  assert.ok(prompt, 'xingyao 是 experience 类、必带 systemPrompt'); // v2 契约里 systemPrompt 可选 → 先窄化
   // 记 ≠ 信（naming.md §2）：星瑶可拟人，但不许替记忆层吹"真正理解/全方位掌握/永远不忘"。
   //   这些短语作为【被禁止说的示例】出现在 prompt 里（"别说…"），所以校验它们是否出现在"别说"的否定语境中，
   //   而不是作为正面承诺——这里退一步只做冒烟级检查：确认 prompt 显式带了"不要把话说满"的护栏措辞。

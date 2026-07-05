@@ -282,6 +282,10 @@
     border-radius: 10px; padding: 7px 16px; font: inherit; font-size: var(--fs-sm); font-weight: 600;
   }
   .mem-tab.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  /* 插件列表（步7·只读展示） */
+  .plugin-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .plugin-name { font-weight: 600; }
+  .plugin-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
 
   /* ══════════ 记忆图谱（步5-G2·手搓力导向图） ══════════ */
   /* 节点/边基色（也在 JS 侧 GRAPH_COLORS 里同步用值渲染 canvas） */
@@ -598,6 +602,7 @@
       <button class="mem-tab on" id="tabCog" data-tab="cog">对你的理解</button>
       <button class="mem-tab" id="tabEv" data-tab="ev">你说过的（记忆线索）</button>
       <button class="mem-tab" id="tabGraph" data-tab="graph">记忆图谱</button>
+      <button class="mem-tab" id="tabPlugins" data-tab="plugins">插件</button>
       <button class="mem-tab" id="tabData" data-tab="data">数据 · 备份</button>
     </div>
 
@@ -607,6 +612,9 @@
     </label>
 
     <div id="memList"><div class="mem-empty">加载中…</div></div>
+
+    <!-- 插件区（步7 v2）：插件 tab 时显示。列已注册插件 + 类型 + 声明权限（只读展示；换人设仍用顶栏选择器）。 -->
+    <div id="memPlugins" style="display:none;"></div>
 
     <!-- 数据 / 备份区（步5）：数据 tab 时显示。导出/导入/恢复出厂。 -->
     <div id="memData" style="display:none;">
@@ -1133,16 +1141,25 @@
     $('tabCog').classList.toggle('on', MEM.tab === 'cog');
     $('tabEv').classList.toggle('on', MEM.tab === 'ev');
     $('tabGraph').classList.toggle('on', MEM.tab === 'graph');
+    $('tabPlugins').classList.toggle('on', MEM.tab === 'plugins');
     $('tabData').classList.toggle('on', MEM.tab === 'data');
     // 过滤器只在理解 tab 显示
     $('cogFilter').style.display = MEM.tab === 'cog' ? '' : 'none';
     // 图谱 tab：显示图谱面板、藏其余；其余 tab 藏图谱面板。
     const isGraph = MEM.tab === 'graph';
+    const isPlugins = MEM.tab === 'plugins';
     $('memGraph').style.display = isGraph ? 'block' : 'none';
+    $('memPlugins').style.display = isPlugins ? 'block' : 'none';
     if (isGraph) {
       $('memData').style.display = 'none';
       $('memList').style.display = 'none';
       graphLoad(); // 按需拉（首次或勾选变化时；graphLoad 内部有守卫，切回来不重复冷启动）
+      return;
+    }
+    if (isPlugins) {
+      $('memData').style.display = 'none';
+      $('memList').style.display = 'none';
+      loadPluginsPanel();
       return;
     }
     // 数据 tab：显示数据面板、藏列表；其余 tab：显示列表、藏数据面板。
@@ -1152,6 +1169,35 @@
     if (isData) return; // 数据面板是静态的，不随列表数据重渲
     if (MEM.tab === 'cog') memRenderCognitions();
     else memRenderEvidences();
+  }
+
+  // ── 插件列表（步7 v2·只读展示；全 textContent 防 XSS）──
+  async function loadPluginsPanel() {
+    const box = $('memPlugins');
+    box.textContent = '';
+    let data;
+    try { data = await fetch('/api/plugins').then((x) => x.json()); }
+    catch { box.textContent = '插件列表加载失败。'; return; }
+    const plugins = Array.isArray(data.plugins) ? data.plugins : [];
+    const intro = document.createElement('p');
+    intro.className = 'desc';
+    intro.textContent = '已装插件（在代码里注册）。体验类换的是回话人设（用顶栏「聊天方式」切）；工具/采集类经受限接口观察，只请求、不改记忆规则。';
+    box.appendChild(intro);
+    if (!plugins.length) { const e = document.createElement('div'); e.className = 'mem-empty'; e.textContent = '没有已注册的插件。'; box.appendChild(e); return; }
+    const typeLabel = { experience: '体验（人设）', tool: '工具', collector: '采集' };
+    for (const p of plugins) {
+      const row = document.createElement('div');
+      row.className = 'plugin-row';
+      const name = document.createElement('div');
+      name.className = 'plugin-name';
+      name.textContent = p.name + (p.active ? ' · 使用中' : '');
+      const meta = document.createElement('div');
+      meta.className = 'plugin-meta';
+      const perms = (Array.isArray(p.permissions) && p.permissions.length) ? '权限：' + p.permissions.join('、') : '无特殊权限';
+      meta.textContent = `类型：${typeLabel[p.type] || p.type} · ${perms}`;
+      row.appendChild(name); row.appendChild(meta);
+      box.appendChild(row);
+    }
   }
 
   // ── 理解（认知）列表 ──
@@ -1415,6 +1461,7 @@
   $('tabCog').addEventListener('click', () => { MEM.tab = 'cog'; memRender(); });
   $('tabEv').addEventListener('click', () => { MEM.tab = 'ev'; memRender(); });
   $('tabGraph').addEventListener('click', () => { MEM.tab = 'graph'; memRender(); });
+  $('tabPlugins').addEventListener('click', () => { MEM.tab = 'plugins'; memRender(); });
   $('tabData').addEventListener('click', () => { MEM.tab = 'data'; importReset(); memRender(); });
   $('showDead').addEventListener('change', function () { MEM.showDead = this.checked; memRender(); });
 

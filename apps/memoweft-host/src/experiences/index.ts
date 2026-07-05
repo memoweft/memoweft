@@ -9,7 +9,7 @@
  * 加第三个体验插件时：新建 xxx.ts 导出一个 MemoWeftPlugin，再在下面 REGISTRY 里加一行即可，
  *   其余（前端列表、切换白名单、env 校验）全自动跟上——注册表是唯一事实源。
  */
-import type { MemoWeftPlugin } from './plugin.ts';
+import type { MemoWeftPlugin } from 'memoweft';
 import { plain } from './plain.ts';
 import { xingyao } from './xingyao.ts';
 
@@ -18,6 +18,9 @@ const REGISTRY: Record<string, MemoWeftPlugin> = {
   [plain.id]: plain,
   [xingyao.id]: xingyao,
 };
+
+/** 全部已注册插件（传给 createMemoWeftCore 让 Core 烧 hook；experience 类无 hook 是 no-op，供插件管理 UI 枚举）。 */
+export const ALL_PLUGINS: MemoWeftPlugin[] = Object.values(REGISTRY);
 
 /** 兜底体验：任何未知 id 都回退到它（普通助手最中性、最不会出错）。 */
 export const FALLBACK_EXPERIENCE = plain;
@@ -42,4 +45,14 @@ export function getExperience(id: string): MemoWeftPlugin {
 /** 列出全部体验插件（供前端选择器）：只透 id + name，不外泄 systemPrompt 原文。 */
 export function listExperiences(): Array<{ id: string; name: string }> {
   return Object.values(REGISTRY).map((p) => ({ id: p.id, name: p.name }));
+}
+
+/** 列出全部已注册插件（供插件管理 UI）：id/name/type + 声明的权限名。不外泄 systemPrompt 原文。 */
+export function listPlugins(): Array<{ id: string; name: string; type: string; permissions: string[] }> {
+  return Object.values(REGISTRY).map((p) => ({
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    permissions: p.permissions ? Object.keys(p.permissions).filter((k) => (p.permissions as Record<string, boolean>)[k]) : [],
+  }));
 }

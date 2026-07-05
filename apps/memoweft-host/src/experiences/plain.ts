@@ -11,7 +11,7 @@
  * naming.md 护栏：普通助手不拟人过度、不自称有情感、不说"真正理解你"。它只是一个
  *   "记得你、会把了解到的自然用上"的高效助手——把温柔拟人留给星瑶那一层。
  */
-import type { MemoWeftPlugin } from './plugin.ts';
+import type { MemoWeftPlugin } from 'memoweft';
 
 /**
  * 普通助手人设。原 server.ts 的 REPLY_PERSONA 提炼——朴素、克制：
