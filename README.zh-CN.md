@@ -250,7 +250,9 @@ core.close();
 | [`docs/naming.md`](./docs/naming.md) | 双语命名与定位口径 |
 | [`plugins/collector-active-window/README.md`](./plugins/collector-active-window/README.md) | 活动窗口采集插件（采集 → 宿主 → core 数据流） |
 | [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | 打包和 npm 发布流程 |
-| [`examples/minimal.ts`](./examples/minimal.ts) | 可运行最小示例 |
+| [`examples/minimal.ts`](./examples/minimal.ts) | 最小写→读闭环（需对话模型） |
+| [`examples/memory-management.ts`](./examples/memory-management.ts) | 受控记忆管理（`core.memory.*`，需对话模型） |
+| [`examples/portable-bundle.ts`](./examples/portable-bundle.ts) | 导出/导入便携记忆包（无需模型即可跑） |
 
 内部设计笔记与历史白板（项目地图、`STATE`）在 [`docs/internal/`](./docs/internal/)——是「项目当初怎么造的」历史背景，用库或改代码都不需要读。
 

@@ -269,7 +269,9 @@ Where it's headed — and why the library (not the host) is the product — is i
 | [`docs/perf.md`](./docs/perf.md) | Benchmark (10k evidence): measured `updateProfile` / `recall` numbers + how to reproduce |
 | [`plugins/collector-active-window/README.md`](./plugins/collector-active-window/README.md) | Active-window collector plugin (collector → host → core flow) |
 | [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | Packaging & npm release flow |
-| [`examples/minimal.ts`](./examples/minimal.ts) | Runnable minimal example |
+| [`examples/minimal.ts`](./examples/minimal.ts) | Minimal write→read loop (needs a chat model) |
+| [`examples/memory-management.ts`](./examples/memory-management.ts) | Controlled memory management (`core.memory.*`, needs a chat model) |
+| [`examples/portable-bundle.ts`](./examples/portable-bundle.ts) | Export/import a portable memory bundle (runs without a model) |
 
 Internal design notes and archived dev whiteboards (project map, `STATE`) live in [`docs/internal/`](./docs/internal/) — historical background on how the project was built, not required to use the library or to contribute.
 
