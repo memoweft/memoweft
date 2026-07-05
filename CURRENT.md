@@ -2,7 +2,7 @@
 
 > 唯一的"现在该做什么"看板。只写**当前主线 + 允许做 + 不做 + 验收**。历史不写这儿——看 git 提交与 `CHANGELOG.md`。
 
-## 当前状态：总纲第 1–6 步已完成（第 6 步已合 main 并推 origin），下一 = 第 7 步（开工中）
+## 当前状态：总纲第 1–7 步已完成（第 7 步已合 main 并推 origin），下一 = 第 8 步
 
 - **第 1 步 · 0.3.0 补漏加固** ✅ 已发布 `memoweft@0.3.0`（npm latest）。
 - **第 2 步 · 接口契约 Memory Surface Contract v1** ✅（合 `74b58c3`）。
@@ -12,7 +12,9 @@
 
 - **第 6 步 · 本地模型档 2（cloud/local tier 路由）** ✅ 已合 main 并推 origin（merge `ff92d33`·T1–T6·分支已删）：写路径隐私关 `filterCloudReadable`→`filterReadableByTier(items, tier)`（cloud 筛 `allowCloudRead` / local 筛 `allowLocalRead`）；`MEMOWEFT_WRITE_LLM_TIER=local` 让本地写模型消化 observed（默认不上云）成画像——采集线真闭环。含覆盖修复（distill 只覆盖真消化的、被挡留 pending 可再扫）+ `allowInference` 门三处一致 + 挂账信号 `tierBlockedCount` + 向导 tier 字段/风险提醒。**不动认知判定算法（confidence.ts/cognition 零改）**、零依赖。根 209/209 + Host 32/32 + lint 0。任务书 / 拍板 D1–D8 / 对抗校对纪要见 `docs/internal/tasks/step6-local-model-tier/`。
 
-**下一主线 = 总纲第 7 步：插件契约 v2（10-A）+ 采集器跨平台**——hooks / PluginContext 从"预留"转正式（踩第 2 步契约）；采集器现只 Windows，补 macOS/Linux 或明说不做。**待作者拍板开工后细化成施工任务书。**
+- **第 7 步 · 插件契约 v2（Core hooks + PluginContext）+ 采集器可插拔** ✅ 已合 main 并推 origin（merge `343a65e`·T1–T6·分支已删）：插件契约进 Core `src/plugin/`（导出·experimental）；`createMemoWeftCore({ plugins })` + 三 hook（`onLoad`/`onUserMessage`/`onObservation`）**在方法层烧、只观察不改管线**；受限 `PluginContext`（`submitObservation` 剥授权位 + `requestMemory`）**闭包给不持 store**、声明式权限门控；Host 迁 Core 契约 + 记忆管理页「插件」tab（`GET /api/plugins`）；采集器采样器按平台工厂化（现只 Windows·mac/Linux 留口子不写）；`examples/plugin-hook.ts` 活体 demo。**红线：`confidence.ts`/`cognition/`/`consolidation/`/`conversation.ts`/`ingest.ts` 全部零改动**、零依赖。三包全绿（Core 217/217 + Host 33/33 + Collector 10/10）。任务书 / 拍板 D1–D12 / 对抗校对纪要见 `docs/internal/tasks/step7-plugin-contract-v2/`；契约文档 `docs/plugin-contract.md`。
+
+**下一主线 = 总纲第 8 步：生态获客（0.5.0）**——MCP 服务器（做完提交 registry 收录）+ 一个适配器（Vercel AI SDK 或 LangChain JS 二选一，作者定）+ LLM token 用量观测（宿主能算钱）。**待作者拍板开工后细化成施工任务书。**
 
 ## 待作者手动（发布 / 平台侧尾巴，AI 做不了）
 
