@@ -124,6 +124,18 @@ export {
   loadLLMConfig,
 } from './llm/client.ts';
 export { loadLLMPool, type LLMPool, type LLMPurpose } from './llm/pool.ts';
+
+// 插件契约 v2（第 7 步）
+// [experimental] MemoWeftPlugin / PluginContext / 权限 / hook 类型：pre-1.0 契约，hook 签名可能演进。
+export {
+  type MemoWeftPlugin,
+  type PluginType,
+  type PluginContext,
+  type PluginPermissions,
+  type PluginObservationInput,
+  type PluginUserMessage,
+} from './plugin/contract.ts';
+
 // [internal] jsonRepair 散装函数：门面/算子内部用，宿主没理由直接拼。
 export {
   extractJsonObject,
