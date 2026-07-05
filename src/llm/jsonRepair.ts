@@ -25,9 +25,25 @@ function stripCodeFences(s: string): string {
 export function extractJsonObject(raw: string): string | null {
   const s = stripCodeFences(raw).trim();
   const start = s.indexOf('{');
-  const end = s.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) return null;
-  return s.slice(start, end + 1);
+  if (start === -1) return null;
+  // 从首个 { 起做括号配平扫描，取【第一个平衡闭合】的对象——比贪婪 lastIndexOf('}') 更抗
+  // reasoning 思考残留 / 尾随文本污染；跳过字符串内的花括号。无平衡闭合 → null。
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i]!;
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return s.slice(start, i + 1);
+  }
+  return null;
 }
 
 /** 抠出 JSON 对象文本并 parse；只认【对象】（数组 / 标量 / null 都算不合法），失败返回 null。 */

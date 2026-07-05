@@ -21,6 +21,19 @@ export interface LLMConfig {
   baseUrl: string;
   apiKey: string;
   model: string;
+  /** 生成温度（可选）：不配 = chat() 缺省 0.3（零行为变更）。按 prefix 自动分：
+   *  `MEMOWEFT_LLM_TEMPERATURE`（对话）/ `MEMOWEFT_WRITE_LLM_TEMPERATURE`（写路径），双前缀兼容 `DLA_*`。
+   *  仅进生成请求体，绝不流入置信度自算（confidence 由 MemoWeft 按规则算）。 */
+  temperature?: number;
+}
+
+/**
+ * 剥掉 reasoning 模型的思考段：只删【成对闭合】的 `<think>…</think>`（大小写不敏感、跨行）。
+ * 无闭合 `</think>` 的一概不动——防把真答案误剥（写路径靠这段之后的 JSON 解析出结构）。
+ * 主守在此（chat 层剥一次，chat/write 全用途受益）；jsonRepair 的括号配平是兜底。
+ */
+function stripReasoning(s: string): string {
+  return s.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 }
 
 function tryLoadEnv(): void {
@@ -57,7 +70,11 @@ export function loadLLMConfig(prefix = 'LLM'): LLMConfig {
       `LLM 配置缺失：请在 .env 设置 MEMOWEFT_${base}_BASE_URL / _API_KEY / _MODEL（或兼容旧名 DLA_${base}_*）`,
     );
   }
-  return { baseUrl, apiKey, model };
+  // temperature 可选：空 / 非数字 → undefined（chat() 里回落 0.3，零行为变更）。0 是合法值（写路径可要更稳）。
+  const tempRaw = readEnvWithFallback(`${base}_TEMPERATURE`);
+  const tempNum = Number(tempRaw);
+  const temperature = tempRaw !== '' && Number.isFinite(tempNum) ? tempNum : undefined;
+  return { baseUrl, apiKey, model, temperature };
 }
 
 /** OpenAI 兼容客户端——内置 fetch 直打 /chat/completions。 */
@@ -87,7 +104,7 @@ export class OpenAICompatClient implements LLMClient {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.config.apiKey}`,
         },
-        body: JSON.stringify({ model: this.config.model, messages, temperature: 0.3 }),
+        body: JSON.stringify({ model: this.config.model, messages, temperature: this.config.temperature ?? 0.3 }),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (err) {
@@ -108,6 +125,7 @@ export class OpenAICompatClient implements LLMClient {
     if (typeof content !== 'string') {
       throw new Error(`LLM 返回格式异常：${JSON.stringify(data).slice(0, 500)}`);
     }
-    return content;
+    // reasoning 兼容：剥掉混在 content 里的 <think>…</think> 思考段（只剥闭合对）。
+    return stripReasoning(content);
   }
 }
