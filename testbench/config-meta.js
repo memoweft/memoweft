@@ -24,7 +24,7 @@ export const CONFIG_META = [
   {
     path: 'identity.hostId',
     label: '宿主环境 ID',
-    hint: '这套记忆跑在哪个环境的标识；v1 恒为 testbench，多宿主时用来区分来源（本版只读）。',
+    hint: '这套记忆跑在哪个环境的标识；缺省 local，多宿主时用来区分来源（本版只读）。',
     group: 'identity',
     control: 'readonly',
   },

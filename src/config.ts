@@ -92,7 +92,7 @@ export interface MemoWeftConfig {
 }
 
 export const config: MemoWeftConfig = {
-  identity: { subjectId: 'owner', hostId: 'testbench' },
+  identity: { subjectId: 'owner', hostId: 'local' }, // hostId 默认 0.4.0 从 'testbench' 改中性 'local'（T4）；host_id 非查询键，老库照读、仅新证据用新名。
   // 缺省 en（A2·进英文市场）；只有 MEMOWEFT_LANG=zh 才切中文，其它值 / 未设 = en。
   language: process.env.MEMOWEFT_LANG === 'zh' ? 'zh' : 'en',
   privacyMode: false,
