@@ -283,6 +283,66 @@
   }
   .mem-tab.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 
+  /* ══════════ 记忆图谱（步5-G2·手搓力导向图） ══════════ */
+  /* 节点/边基色（也在 JS 侧 GRAPH_COLORS 里同步用值渲染 canvas） */
+  #memGraph {
+    --gc-subject: #7c4dff; --gc-evidence: #2f9e6e; --gc-event: #e08a2b; --gc-cognition: #2f6fed;
+    --ge-belongs: #b39ddb; --ge-distilled: #f0b26b; --ge-supports: #57b894; --ge-contradicts: #d9534f;
+  }
+  .gr-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .gr-node-filters, .gr-controls-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .gr-ctl-label { color: var(--muted); font-size: var(--fs-xs); font-weight: 600; }
+  .gr-chk { display: inline-flex; align-items: center; gap: 6px; color: var(--text); font-size: var(--fs-sm); cursor: pointer; }
+  .gr-chk input { margin: 0; }
+  .gr-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .gr-dot[data-ndot="subject"] { background: var(--gc-subject); }
+  .gr-dot[data-ndot="evidence"] { background: var(--gc-evidence); }
+  .gr-dot[data-ndot="event"] { background: var(--gc-event); }
+  .gr-dot[data-ndot="cognition"] { background: var(--gc-cognition); }
+  .gr-search {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    border-radius: 10px; padding: 6px 12px; font: inherit; font-size: var(--fs-sm); min-width: 180px;
+  }
+  .gr-btn, .gr-leg {
+    border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer;
+    border-radius: 10px; padding: 6px 13px; font: inherit; font-size: var(--fs-sm);
+  }
+  .gr-btn:hover, .gr-leg:hover { border-color: var(--accent); }
+  .gr-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .gr-leg { display: inline-flex; align-items: center; gap: 7px; opacity: .45; }
+  .gr-leg.on { opacity: 1; }
+  .gr-line { width: 20px; height: 0; border-top-width: 3px; border-top-style: solid; display: inline-block; }
+  .gr-line[data-eline="belongs_to_subject"] { border-top-color: var(--ge-belongs); }
+  .gr-line[data-eline="distilled_into"] { border-top-color: var(--ge-distilled); border-top-style: dashed; }
+  .gr-line[data-eline="supports"] { border-top-color: var(--ge-supports); }
+  .gr-line[data-eline="contradicts"] { border-top-color: var(--ge-contradicts); border-top-style: dashed; }
+  .gr-stats { color: var(--muted); font-size: var(--fs-xs); margin-bottom: 10px; min-height: 18px; }
+  .gr-stats b { color: var(--text); font-weight: 700; }
+  .gr-stage {
+    position: relative; width: 100%; height: 62vh; min-height: 360px;
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: #fbfcfe;
+  }
+  #graphCanvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  #graphCanvas.dragging { cursor: grabbing; }
+  .gr-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: var(--fs-sm); text-align: center; padding: 24px; pointer-events: none;
+  }
+  .gr-detail {
+    position: absolute; top: 12px; right: 12px; width: 260px; max-width: calc(100% - 24px);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 13px 15px; box-shadow: 0 6px 24px rgba(20,30,50,.14); font-size: var(--fs-sm);
+  }
+  .gr-detail .grd-title { font-size: var(--fs); font-weight: 700; margin-bottom: 4px; word-break: break-word; }
+  .gr-detail .grd-kind { color: var(--muted); font-size: var(--fs-xs); margin-bottom: 9px; }
+  .gr-detail .grd-summary { color: var(--text); margin-bottom: 10px; word-break: break-word; white-space: pre-wrap; }
+  .gr-detail .grd-row { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; color: var(--muted); font-size: var(--fs-xs); }
+  .gr-detail .grd-row span:last-child { color: var(--text); text-align: right; word-break: break-word; }
+  .gr-detail .grd-close {
+    position: absolute; top: 8px; right: 10px; border: none; background: none; cursor: pointer;
+    color: var(--muted); font-size: 18px; line-height: 1; padding: 0;
+  }
+
   /* 只显示活跃 / 含已失效 切换 */
   .mem-filter { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; color: var(--muted); font-size: var(--fs-xs); }
   .mem-filter input { margin: 0; }
@@ -529,6 +589,7 @@
     <div class="mem-tabs">
       <button class="mem-tab on" id="tabCog" data-tab="cog">对你的理解</button>
       <button class="mem-tab" id="tabEv" data-tab="ev">你说过的（记忆线索）</button>
+      <button class="mem-tab" id="tabGraph" data-tab="graph">记忆图谱</button>
       <button class="mem-tab" id="tabData" data-tab="data">数据 · 备份</button>
     </div>
 
@@ -572,6 +633,44 @@
         <h2>清空全部记忆 · 重新开始</h2>
         <p class="db-desc">把它记住你的一切都清空——所有记忆线索、经历片段、对你的理解，以及这些操作的记录，全部抹掉，回到刚认识你时的空白。当前的对话会被收起（不删）、并开一段新的空对话。<b style="color:#b4232a;">此操作不可恢复。</b>建议先"导出我的记忆包"留个备份。</p>
         <button class="data-btn" id="factoryReset">清空全部记忆 · 重新开始</button>
+      </div>
+    </div>
+
+    <!-- 记忆图谱区（步5-G2）：图谱 tab 时显示。手搓 canvas 力导向图，零外部依赖。 -->
+    <div id="memGraph" style="display:none;">
+      <!-- 顶部控件条：节点类型过滤 / 含失效归档 / 搜索 / 重置 -->
+      <div class="gr-controls">
+        <div class="gr-node-filters">
+          <span class="gr-ctl-label">节点类型</span>
+          <label class="gr-chk"><input type="checkbox" data-nkind="subject" checked /> <i class="gr-dot" data-ndot="subject"></i>主题</label>
+          <label class="gr-chk"><input type="checkbox" data-nkind="evidence" checked /> <i class="gr-dot" data-ndot="evidence"></i>记忆线索</label>
+          <label class="gr-chk"><input type="checkbox" data-nkind="event" checked /> <i class="gr-dot" data-ndot="event"></i>经历</label>
+          <label class="gr-chk"><input type="checkbox" data-nkind="cognition" checked /> <i class="gr-dot" data-ndot="cognition"></i>对你的理解</label>
+        </div>
+        <div class="gr-controls-row">
+          <label class="gr-chk"><input type="checkbox" id="grShowInvalid" /> 也显示已失效</label>
+          <label class="gr-chk"><input type="checkbox" id="grShowArchived" /> 也显示已归档</label>
+          <input type="search" id="grSearch" class="gr-search" placeholder="搜索（按内容高亮）…" />
+          <button id="grReset" class="gr-btn">重置视图</button>
+        </div>
+      </div>
+
+      <!-- 边类型图例（可点击 toggle 显隐） -->
+      <div class="gr-legend">
+        <button class="gr-leg on" data-ekind="belongs_to_subject"><i class="gr-line" data-eline="belongs_to_subject"></i>归属主题</button>
+        <button class="gr-leg on" data-ekind="distilled_into"><i class="gr-line" data-eline="distilled_into"></i>提炼成经历</button>
+        <button class="gr-leg on" data-ekind="supports"><i class="gr-line" data-eline="supports"></i>支持</button>
+        <button class="gr-leg on" data-ekind="contradicts"><i class="gr-line" data-eline="contradicts"></i>抵触</button>
+      </div>
+
+      <!-- stats 一行 -->
+      <div class="gr-stats" id="grStats"></div>
+
+      <!-- 画布 + 详情面板 -->
+      <div class="gr-stage">
+        <canvas id="graphCanvas"></canvas>
+        <div class="gr-empty" id="grEmpty" style="display:none;">还没有可画的记忆——多聊几句、等它整理一下。</div>
+        <div class="gr-detail" id="grDetail" style="display:none;"></div>
       </div>
     </div>
   </div>
@@ -935,7 +1034,7 @@
   };
 
   const MEM = {
-    tab: 'cog',        // 'cog' | 'ev'
+    tab: 'cog',        // 'cog' | 'ev' | 'graph' | 'data'
     showDead: false,   // 理解 tab 是否显示已失效
     cog: [],           // 认知列表缓存
     ev: [],            // 证据列表缓存
@@ -1024,9 +1123,19 @@
     // tab 高亮
     $('tabCog').classList.toggle('on', MEM.tab === 'cog');
     $('tabEv').classList.toggle('on', MEM.tab === 'ev');
+    $('tabGraph').classList.toggle('on', MEM.tab === 'graph');
     $('tabData').classList.toggle('on', MEM.tab === 'data');
     // 过滤器只在理解 tab 显示
     $('cogFilter').style.display = MEM.tab === 'cog' ? '' : 'none';
+    // 图谱 tab：显示图谱面板、藏其余；其余 tab 藏图谱面板。
+    const isGraph = MEM.tab === 'graph';
+    $('memGraph').style.display = isGraph ? 'block' : 'none';
+    if (isGraph) {
+      $('memData').style.display = 'none';
+      $('memList').style.display = 'none';
+      graphLoad(); // 按需拉（首次或勾选变化时；graphLoad 内部有守卫，切回来不重复冷启动）
+      return;
+    }
     // 数据 tab：显示数据面板、藏列表；其余 tab：显示列表、藏数据面板。
     const isData = MEM.tab === 'data';
     $('memData').style.display = isData ? 'block' : 'none';
@@ -1296,8 +1405,467 @@
   $('memBack').addEventListener('click', exitMemory);
   $('tabCog').addEventListener('click', () => { MEM.tab = 'cog'; memRender(); });
   $('tabEv').addEventListener('click', () => { MEM.tab = 'ev'; memRender(); });
+  $('tabGraph').addEventListener('click', () => { MEM.tab = 'graph'; memRender(); });
   $('tabData').addEventListener('click', () => { MEM.tab = 'data'; importReset(); memRender(); });
   $('showDead').addEventListener('change', function () { MEM.showDead = this.checked; memRender(); });
+
+  // ══════════════════ 记忆图谱（步5-G2·手搓 canvas 力导向图，零依赖） ══════════════════
+  // 数据来源：GET /api/memory-graph（走 core.graph.buildMemoryGraph 产 { nodes, edges, stats }）。
+  // 力模拟：spring-charge——节点间库仑斥力 + 边上弹簧引力 + 向中心弱聚拢；alpha 随时间衰减冷却，
+  //   稳定后停 rAF（不空转烧 CPU），拖拽/改过滤/重置时回暖重启。
+  // 客户端过滤（不重 fetch）：节点类型勾选 + 边类型图例 + 搜索高亮；含失效/归档 = 重 fetch。
+  // 坐标系：世界坐标存 node.x/y；屏幕 = world*scale + offset。命中检测/绘制/交互统一走同一变换，pan/zoom 一致。
+
+  const GRAPH_COLORS = {
+    node: { subject: '#7c4dff', evidence: '#2f9e6e', event: '#e08a2b', cognition: '#2f6fed' },
+    edge: {
+      belongs_to_subject: '#b39ddb', distilled_into: '#f0b26b', supports: '#57b894', contradicts: '#d9534f',
+    },
+  };
+  const GRAPH_EDGE_KINDS = ['belongs_to_subject', 'distilled_into', 'supports', 'contradicts'];
+  const GRAPH_NODE_KINDS = ['subject', 'evidence', 'event', 'cognition'];
+
+  const GRAPH = {
+    payload: null,          // 最近一次 fetch 的原始 payload
+    nodes: [],              // 带 x/y/vx/vy/fx/fy 的可变副本
+    edges: [],              // 引用 nodes（source/target 换成对象引用）
+    view: { scale: 1, ox: 0, oy: 0 }, // 世界→屏幕：screen = world*scale + o
+    nodeKinds: { subject: true, evidence: true, event: true, cognition: true }, // 类型显隐
+    edgeKinds: { belongs_to_subject: true, distilled_into: true, supports: true, contradicts: true },
+    query: '',              // 搜索关键词（小写）
+    lastFetchKey: '',       // 上次 fetch 的 include 组合，用于避免切回来白重拉
+    fetching: false,
+    // 力模拟
+    alpha: 0, raf: 0, running: false,
+    // 交互
+    ctx: null, canvas: null, dpr: 1,
+    hoverNode: null, dragNode: null, panning: false,
+    dragMoved: false, lastPtr: { x: 0, y: 0 },
+    selected: null,
+  };
+
+  // ── 拉数据 ──
+  async function graphLoad() {
+    const canvas = $('graphCanvas');
+    if (!canvas) return;
+    if (!GRAPH.ctx) graphInitCanvas(); // 首次：绑 canvas + 交互 + resize
+
+    const wantInvalid = $('grShowInvalid').checked;
+    const wantArchived = $('grShowArchived').checked;
+    const key = (wantInvalid ? 'I' : '') + (wantArchived ? 'A' : '');
+    // 已经拉过同款组合 → 只需确保在跑（切回 tab 时回暖一下让布局稳定），不重拉、不重撒点。
+    if (GRAPH.payload && GRAPH.lastFetchKey === key) { graphResize(); graphReheat(0.25); return; }
+    if (GRAPH.fetching) return;
+    GRAPH.fetching = true;
+
+    const qs = new URLSearchParams();
+    if (wantInvalid) qs.set('includeInvalid', 'true');
+    if (wantArchived) qs.set('includeArchived', 'true');
+    try {
+      const payload = await fetch('/api/memory-graph?' + qs.toString()).then((x) => x.json());
+      GRAPH.payload = payload;
+      GRAPH.lastFetchKey = key;
+      graphBuildSim(payload);
+      graphRenderStats(payload.stats);
+      graphResize();
+      graphReheat(1); // 新数据 → 全速回暖
+    } catch (err) {
+      memToast('图谱加载失败：' + String(err), 'danger');
+    } finally {
+      GRAPH.fetching = false;
+    }
+  }
+
+  // ── 把 payload 转成带坐标的模拟节点/边；随机撒开（别都叠原点） ──
+  function graphBuildSim(payload) {
+    const nodes = Array.isArray(payload.nodes) ? payload.nodes : [];
+    const edges = Array.isArray(payload.edges) ? payload.edges : [];
+    const R = Math.max(120, Math.sqrt(nodes.length) * 60); // 撒点半径随规模长
+    GRAPH.nodes = nodes.map((n) => {
+      const ang = Math.random() * Math.PI * 2;
+      const rad = Math.sqrt(Math.random()) * R; // 面积均匀
+      return { data: n, x: Math.cos(ang) * rad, y: Math.sin(ang) * rad, vx: 0, vy: 0, fx: null, fy: null };
+    });
+    const byId = new Map(GRAPH.nodes.map((sn) => [sn.data.id, sn]));
+    GRAPH.edges = edges.map((e) => ({ data: e, s: byId.get(e.source), t: byId.get(e.target) }))
+      .filter((e) => e.s && e.t); // 丢掉指向被过滤掉的节点的边（后端已保证，双保险）
+    GRAPH.selected = null;
+    graphHideDetail();
+  }
+
+  function graphRenderStats(stats) {
+    const el = $('grStats');
+    el.textContent = ''; // 清空后用 DOM 片段拼（stats 全是数字，安全；仍不用 innerHTML 保持纪律）
+    if (!stats) return;
+    const parts = [
+      ['节点', stats.nodeCount], ['边', stats.edgeCount], ['冲突', stats.conflictedCount],
+      ['假设', stats.hypothesisCount], ['观察证据', stats.observedEvidenceCount],
+    ];
+    parts.forEach(([label, n], i) => {
+      if (i) el.appendChild(document.createTextNode('　·　'));
+      el.appendChild(document.createTextNode(label + ' '));
+      const b = document.createElement('b');
+      b.textContent = String(n == null ? 0 : n);
+      el.appendChild(b);
+    });
+    if (stats.hiddenCount) {
+      el.appendChild(document.createTextNode('　（另有 '));
+      const b = document.createElement('b'); b.textContent = String(stats.hiddenCount);
+      el.appendChild(b); el.appendChild(document.createTextNode(' 项按默认规则未显示）'));
+    }
+  }
+
+  // ── canvas 初始化：拿 2d ctx、绑交互、监听 resize ──
+  function graphInitCanvas() {
+    const canvas = $('graphCanvas');
+    GRAPH.canvas = canvas;
+    GRAPH.ctx = canvas.getContext('2d');
+    graphBindInteractions(canvas);
+    // 窗口 resize 时重算 canvas 像素尺寸（配 dpr）并重绘一帧
+    window.addEventListener('resize', () => { if (MEM.tab === 'graph') { graphResize(); if (!GRAPH.running) graphDraw(); } });
+    // 控件绑定（一次）
+    graphBindControls();
+  }
+
+  // 按 stage 的 CSS 尺寸 × dpr 设 canvas 像素分辨率（清晰不糊）。世界坐标不变，仅像素画布随之。
+  function graphResize() {
+    const canvas = GRAPH.canvas; if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    GRAPH.dpr = dpr;
+    const w = Math.max(1, Math.round(rect.width * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    // 首次或未定位过 → 把世界原点摆到画布中心
+    if (!GRAPH.view._inited) {
+      GRAPH.view.ox = rect.width / 2; GRAPH.view.oy = rect.height / 2; GRAPH.view.scale = 1;
+      GRAPH.view._inited = true;
+    }
+  }
+
+  // 世界↔屏幕（CSS px；绘制时再乘 dpr）。
+  function worldToScreen(x, y) { const v = GRAPH.view; return { x: x * v.scale + v.ox, y: y * v.scale + v.oy }; }
+  function screenToWorld(sx, sy) { const v = GRAPH.view; return { x: (sx - v.ox) / v.scale, y: (sy - v.oy) / v.scale }; }
+
+  // 节点半径（世界单位）：按 val 或 confidence，主题/证据给基准。
+  function graphNodeRadius(sn) {
+    const d = sn.data;
+    let base = 10;
+    if (d.kind === 'subject') base = 16;
+    else if (d.kind === 'cognition') base = 9 + (typeof d.confidence === 'number' ? (d.confidence / 1000) * 8 : 3);
+    else if (typeof d.val === 'number') base = 8 + Math.min(10, d.val);
+    return base;
+  }
+
+  // ── 力模拟一步 ──
+  function graphTick() {
+    const nodes = GRAPH.nodes;
+    const a = GRAPH.alpha;
+    const CENTER_K = 0.015;   // 向中心聚拢
+    const REPULSE = 5200;     // 库仑斥力强度
+    const SPRING_K = 0.02;    // 弹簧劲度
+    const SPRING_LEN = 90;    // 弹簧自然长
+    const DAMP = 0.85;        // 阻尼
+
+    // 斥力（O(n^2)，节点量不大够用）
+    for (let i = 0; i < nodes.length; i++) {
+      const ni = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const nj = nodes[j];
+        let dx = ni.x - nj.x, dy = ni.y - nj.y;
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 0.01) { dx = (Math.random() - 0.5); dy = (Math.random() - 0.5); d2 = dx * dx + dy * dy + 0.01; }
+        const f = (REPULSE * a) / d2;
+        const d = Math.sqrt(d2);
+        const fx = (dx / d) * f, fy = (dy / d) * f;
+        ni.vx += fx; ni.vy += fy; nj.vx -= fx; nj.vy -= fy;
+      }
+    }
+    // 弹簧引力（沿边）
+    for (const e of GRAPH.edges) {
+      const dx = e.t.x - e.s.x, dy = e.t.y - e.s.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+      const f = SPRING_K * (d - SPRING_LEN) * a;
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      e.s.vx += fx; e.s.vy += fy; e.t.vx -= fx; e.t.vy -= fy;
+    }
+    // 向中心 + 积分 + 阻尼
+    for (const n of nodes) {
+      if (n.fx != null) { n.x = n.fx; n.y = n.fy; n.vx = 0; n.vy = 0; continue; } // 被钉住（拖拽中）
+      n.vx += -n.x * CENTER_K * a; n.vy += -n.y * CENTER_K * a;
+      n.vx *= DAMP; n.vy *= DAMP;
+      n.x += n.vx; n.y += n.vy;
+    }
+    GRAPH.alpha *= 0.985; // 冷却
+  }
+
+  function graphReheat(to) {
+    GRAPH.alpha = Math.max(GRAPH.alpha, to == null ? 1 : to);
+    if (!GRAPH.running) { GRAPH.running = true; graphLoop(); }
+  }
+
+  function graphLoop() {
+    if (MEM.tab !== 'graph') { GRAPH.running = false; return; } // 离开 tab 停跑
+    graphTick();
+    graphDraw();
+    if (GRAPH.alpha > 0.008 || GRAPH.dragNode) {
+      GRAPH.raf = requestAnimationFrame(graphLoop);
+    } else {
+      GRAPH.running = false; graphDraw(); // 稳定后停，最后定格一帧
+    }
+  }
+
+  // 某类型节点是否可见（客户端过滤）
+  function graphNodeVisible(sn) { return GRAPH.nodeKinds[sn.data.kind] !== false; }
+  // 某条边是否可见：边类型开着 + 两端节点都可见
+  function graphEdgeVisible(e) {
+    return GRAPH.edgeKinds[e.data.kind] !== false && graphNodeVisible(e.s) && graphNodeVisible(e.t);
+  }
+  // 搜索命中（label/summary 含关键词）
+  function graphNodeMatched(sn) {
+    if (!GRAPH.query) return true;
+    const d = sn.data;
+    return (d.label || '').toLowerCase().includes(GRAPH.query)
+      || (d.summary || '').toLowerCase().includes(GRAPH.query);
+  }
+
+  // ── 渲染一帧 ──
+  function graphDraw() {
+    const ctx = GRAPH.ctx; if (!ctx) return;
+    const dpr = GRAPH.dpr, v = GRAPH.view;
+    const W = GRAPH.canvas.width, H = GRAPH.canvas.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // 之后都用 CSS px 坐标绘制，dpr 交给变换
+
+    const searching = !!GRAPH.query;
+
+    // 先画边
+    for (const e of GRAPH.edges) {
+      if (!graphEdgeVisible(e)) continue;
+      const p1 = worldToScreen(e.s.x, e.s.y), p2 = worldToScreen(e.t.x, e.t.y);
+      const dim = searching && !(graphNodeMatched(e.s) || graphNodeMatched(e.t));
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+      ctx.strokeStyle = GRAPH_COLORS.edge[e.data.kind] || '#b8c0cc';
+      ctx.globalAlpha = dim ? 0.08 : 0.55;
+      ctx.lineWidth = 1.4;
+      if (e.data.dashed) ctx.setLineDash([5, 4]); else ctx.setLineDash([]);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+    // 再画节点
+    for (const sn of GRAPH.nodes) {
+      if (!graphNodeVisible(sn)) continue;
+      const d = sn.data;
+      const p = worldToScreen(sn.x, sn.y);
+      const r = graphNodeRadius(sn) * v.scale;
+      const matched = graphNodeMatched(sn);
+      const dead = !!d.invalidAt || !!d.archivedAt;
+      // 淡化：搜索未命中的、失效/归档的
+      let alpha = 1;
+      if (searching && !matched) alpha = 0.16;
+      else if (dead) alpha = 0.4;
+      ctx.globalAlpha = alpha;
+      // 圆
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = GRAPH_COLORS.node[d.kind] || '#8a94a6';
+      ctx.fill();
+      // cognition 冲突 → 红环强调
+      if (d.kind === 'cognition' && d.credStatus === 'conflicted') {
+        ctx.lineWidth = 2.5; ctx.strokeStyle = '#d9534f'; ctx.stroke();
+      } else if (sn === GRAPH.selected) {
+        ctx.lineWidth = 2.5; ctx.strokeStyle = '#1d2733'; ctx.stroke();
+      } else {
+        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.stroke();
+      }
+      // label（缩得太小时略）
+      if (v.scale > 0.55 && (!searching || matched)) {
+        const label = (d.label || '').slice(0, 22);
+        if (label) {
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = '#33404f';
+          ctx.font = '11px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+          ctx.fillText(label, p.x, p.y + r + 2);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // 空/稀疏优雅处理
+    const anyVisible = GRAPH.nodes.some(graphNodeVisible);
+    $('grEmpty').style.display = (GRAPH.nodes.length === 0) ? 'flex' : 'none';
+    if (GRAPH.nodes.length === 0) {
+      $('grEmpty').textContent = '还没有可画的记忆——多聊几句、等它整理一下。';
+    } else if (!anyVisible) {
+      $('grEmpty').style.display = 'flex';
+      $('grEmpty').textContent = '当前过滤把所有节点都藏起来了——勾回几个节点类型看看。';
+    }
+  }
+
+  // ── 命中检测：屏幕坐标 → 最近节点（考虑半径） ──
+  function graphNodeAt(sx, sy) {
+    for (let i = GRAPH.nodes.length - 1; i >= 0; i--) { // 后画的在上，倒序命中
+      const sn = GRAPH.nodes[i];
+      if (!graphNodeVisible(sn)) continue;
+      const p = worldToScreen(sn.x, sn.y);
+      const r = Math.max(6, graphNodeRadius(sn) * GRAPH.view.scale);
+      const dx = sx - p.x, dy = sy - p.y;
+      if (dx * dx + dy * dy <= (r + 3) * (r + 3)) return sn;
+    }
+    return null;
+  }
+
+  function graphPointer(ev) {
+    const rect = GRAPH.canvas.getBoundingClientRect();
+    return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+  }
+
+  // ── 交互绑定（pan/zoom/拖拽/点选） ──
+  function graphBindInteractions(canvas) {
+    canvas.addEventListener('mousedown', (ev) => {
+      const p = graphPointer(ev);
+      GRAPH.lastPtr = p; GRAPH.dragMoved = false;
+      const hit = graphNodeAt(p.x, p.y);
+      if (hit) {
+        GRAPH.dragNode = hit;
+        const w = screenToWorld(p.x, p.y);
+        hit.fx = w.x; hit.fy = w.y; // 拖时钉住
+        graphReheat(0.5);
+      } else {
+        GRAPH.panning = true;
+        canvas.classList.add('dragging');
+      }
+    });
+    window.addEventListener('mousemove', (ev) => {
+      if (!GRAPH.dragNode && !GRAPH.panning) return;
+      const p = graphPointer(ev);
+      const dx = p.x - GRAPH.lastPtr.x, dy = p.y - GRAPH.lastPtr.y;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) GRAPH.dragMoved = true;
+      if (GRAPH.dragNode) {
+        const w = screenToWorld(p.x, p.y);
+        GRAPH.dragNode.fx = w.x; GRAPH.dragNode.fy = w.y;
+        graphReheat(0.35);
+      } else if (GRAPH.panning) {
+        GRAPH.view.ox += dx; GRAPH.view.oy += dy;
+        if (!GRAPH.running) graphDraw();
+      }
+      GRAPH.lastPtr = p;
+    });
+    window.addEventListener('mouseup', (ev) => {
+      const wasDrag = GRAPH.dragNode, moved = GRAPH.dragMoved;
+      if (GRAPH.dragNode) { GRAPH.dragNode.fx = null; GRAPH.dragNode.fy = null; } // 松开释放
+      GRAPH.dragNode = null; GRAPH.panning = false;
+      GRAPH.canvas && GRAPH.canvas.classList.remove('dragging');
+      // 没怎么动 = 视作点击
+      if (!moved) {
+        const p = graphPointer(ev);
+        // mouseup 可能在 window 上，只处理落在 canvas 里的
+        const rect = GRAPH.canvas.getBoundingClientRect();
+        if (ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom) {
+          const hit = graphNodeAt(p.x, p.y);
+          if (hit) { GRAPH.selected = hit; graphShowDetail(hit); }
+          else { GRAPH.selected = null; graphHideDetail(); }
+          if (!GRAPH.running) graphDraw();
+        }
+      }
+    });
+    // 滚轮缩放（以鼠标为中心）
+    canvas.addEventListener('wheel', (ev) => {
+      ev.preventDefault();
+      const p = graphPointer(ev);
+      const before = screenToWorld(p.x, p.y);
+      const factor = ev.deltaY < 0 ? 1.1 : 1 / 1.1;
+      GRAPH.view.scale = Math.min(4, Math.max(0.2, GRAPH.view.scale * factor));
+      const after = worldToScreen(before.x, before.y);
+      // 让鼠标下的世界点缩放后仍在鼠标处
+      GRAPH.view.ox += p.x - after.x; GRAPH.view.oy += p.y - after.y;
+      if (!GRAPH.running) graphDraw();
+    }, { passive: false });
+  }
+
+  // ── 详情面板 ──
+  function graphShowDetail(sn) {
+    const d = sn.data;
+    const box = $('grDetail');
+    box.textContent = '';
+    const close = document.createElement('button');
+    close.className = 'grd-close'; close.textContent = '×'; close.title = '关闭';
+    close.onclick = () => { GRAPH.selected = null; graphHideDetail(); if (!GRAPH.running) graphDraw(); };
+    box.appendChild(close);
+
+    const title = document.createElement('div');
+    title.className = 'grd-title'; title.textContent = d.label || '(无标题)'; // 用户内容 → textContent
+    box.appendChild(title);
+
+    const kindLabel = { subject: '主题', evidence: '记忆线索', event: '经历', cognition: '对你的理解' };
+    const kind = document.createElement('div');
+    kind.className = 'grd-kind'; kind.textContent = kindLabel[d.kind] || d.kind;
+    box.appendChild(kind);
+
+    if (d.summary && d.summary !== d.label) {
+      const sum = document.createElement('div');
+      sum.className = 'grd-summary'; sum.textContent = d.summary;
+      box.appendChild(sum);
+    }
+
+    const rows = [];
+    if (typeof d.confidence === 'number') rows.push(['把握度', Math.round(d.confidence / 10) + '%']);
+    if (d.contentType) rows.push(['类型', String(d.contentType)]);
+    if (d.credStatus) rows.push(['状态', d.credStatus === 'conflicted' ? '冲突中' : String(d.credStatus)]);
+    if (d.sourceKind) rows.push(['来源', String(d.sourceKind)]);
+    if (typeof d.allowCloudRead === 'boolean') rows.push(['可用于云端', d.allowCloudRead ? '是' : '否']);
+    if (d.invalidAt) rows.push(['已失效', String(d.invalidAt).slice(0, 10)]);
+    if (d.archivedAt) rows.push(['已归档', String(d.archivedAt).slice(0, 10)]);
+    if (d.occurredAt) rows.push(['发生于', String(d.occurredAt).slice(0, 10)]);
+    else if (d.createdAt) rows.push(['记于', String(d.createdAt).slice(0, 10)]);
+    for (const [k, val] of rows) {
+      const row = document.createElement('div'); row.className = 'grd-row';
+      const a = document.createElement('span'); a.textContent = k;
+      const b = document.createElement('span'); b.textContent = val;
+      row.appendChild(a); row.appendChild(b); box.appendChild(row);
+    }
+    box.style.display = 'block';
+  }
+  function graphHideDetail() { const b = $('grDetail'); if (b) b.style.display = 'none'; }
+
+  // ── 控件绑定（一次） ──
+  function graphBindControls() {
+    // 节点类型勾选（客户端过滤，不重 fetch）
+    document.querySelectorAll('#memGraph input[data-nkind]').forEach((cb) => {
+      cb.addEventListener('change', function () {
+        GRAPH.nodeKinds[this.getAttribute('data-nkind')] = this.checked;
+        graphReheat(0.15); if (!GRAPH.running) graphDraw();
+      });
+    });
+    // 含失效 / 归档（重 fetch）
+    $('grShowInvalid').addEventListener('change', () => graphLoad());
+    $('grShowArchived').addEventListener('change', () => graphLoad());
+    // 搜索（客户端高亮）
+    $('grSearch').addEventListener('input', function () {
+      GRAPH.query = this.value.trim().toLowerCase();
+      if (!GRAPH.running) graphDraw();
+    });
+    // 边类型图例点击 toggle
+    document.querySelectorAll('#memGraph .gr-leg').forEach((btn) => {
+      btn.addEventListener('click', function () {
+        const k = this.getAttribute('data-ekind');
+        GRAPH.edgeKinds[k] = !GRAPH.edgeKinds[k];
+        this.classList.toggle('on', GRAPH.edgeKinds[k]);
+        if (!GRAPH.running) graphDraw();
+      });
+    });
+    // 重置视图：复位 pan/zoom + 回暖
+    $('grReset').addEventListener('click', () => {
+      GRAPH.view._inited = false; // 让 graphResize 重新居中
+      GRAPH.query = ''; $('grSearch').value = '';
+      graphResize();
+      graphReheat(1);
+    });
+  }
 
   // ══════════════════ 数据 / 备份区（步5） ══════════════════
   // 导出：GET /api/export-bundle 拿 { bundle } → 前端 Blob + a[download] 存盘（零外部依赖）。

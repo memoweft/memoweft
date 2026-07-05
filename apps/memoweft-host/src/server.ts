@@ -12,6 +12,8 @@
  *        POST /api/factory-reset（恢复出厂·破坏性·清空全部记忆）。全走 core.portable.* / core.memory.resetSubject。
  *   步6：S0/S1 用户正门——GET /api/cognition/count（记忆胶囊数）、POST /api/refresh（用户"立即整理记忆"，
  *        走 core.updateProfile；与后台调度共用单飞锁不并发）；S1 新理解信号经 bg-status 的 lastUpdate.newCognitions 透出。
+ *   步5-G2：记忆图谱——GET /api/memory-graph（走 core.graph.buildMemoryGraph 产 { nodes, edges, stats } payload，
+ *        供前端"记忆图谱" tab 手搓力导向图渲染；query 支持 includeEvidence/includeInvalid/includeArchived）。
  * 后台画像更新调度、聊天历史落盘、多对话编排 = Host 自实现（蓝图 §3.3）。
  * 记忆管理【全走 core.memory.*】（步0 已补齐的受控 API），绝不直接摸 store（Host 边界红线）。
  *
@@ -513,6 +515,19 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    // 记忆图谱（步5-G2）：产 { nodes, edges, stats } payload，供"记忆图谱" tab 手搓力导向图渲染。
+    //   全走 core.graph.buildMemoryGraph（门面收口，绝不直接摸 store）。
+    //   后端默认不含失效/归档；前端勾"也显示"时带 includeInvalid=true/includeArchived=true 重新 fetch。
+    if (req.method === 'GET' && url.pathname === '/api/memory-graph') {
+      const sp = url.searchParams;
+      sendJson(res, 200, core.graph.buildMemoryGraph({
+        includeEvidence: sp.get('includeEvidence') !== 'false',
+        includeInvalid: sp.get('includeInvalid') === 'true',
+        includeArchived: sp.get('includeArchived') === 'true',
+      }));
+      return;
+    }
+
     // 标失效一条理解（invalidAt=now，条目与溯源都保留、召回跳过；不是删除）。
     if (req.method === 'POST' && url.pathname === '/api/cognition/invalidate') {
       const body = await readJson(req);
@@ -663,5 +678,6 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log('  多对话 → POST /api/reset · GET /api/sessions · POST /api/session/{open,archive}');
   console.log('  体验 → GET /api/experiences · POST /api/experience（切人设：普通助手/星瑶）');
   console.log('  数据/备份 → GET /api/export-bundle · POST /api/import-bundle · POST /api/factory-reset');
-  console.log('  用户正门 → GET /api/cognition/count · POST /api/refresh（立即整理记忆）\n');
+  console.log('  用户正门 → GET /api/cognition/count · POST /api/refresh（立即整理记忆）');
+  console.log('  记忆图谱 → GET /api/memory-graph\n');
 });
