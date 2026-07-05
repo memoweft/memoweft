@@ -16,7 +16,7 @@ import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CredStatus } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
-import { filterCloudReadable } from '../evidence/privacy.ts';
+import { filterReadableByTier } from '../evidence/privacy.ts';
 
 /** 一条主动询问建议：针对哪条认知、建议怎么问、附了什么证据、有多大把握。 */
 export interface AskProposal {
@@ -144,11 +144,11 @@ export async function proposeAsk(
       .filter((e): e is NonNullable<typeof e> => e !== null)
       .sort((a, b) => (a.sourceKind === 'observed' ? -1 : 0) - (b.sourceKind === 'observed' ? -1 : 0));
     const evidence = supportEvidence.map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
-    // 隐私护栏：只把允许上云的证据喂给（云端）措辞模型；返回给宿主展示的 evidence 保持完整（展示归宿主）。
-    const cloudSafe = filterCloudReadable(supportEvidence).map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
+    // 隐私护栏（按当前措辞模型 tier）：只把该 tier 可读的证据喂给措辞模型；返回给宿主展示的 evidence 保持完整（展示归宿主）。
+    const readable = filterReadableByTier(supportEvidence, deps.llm?.tier ?? 'cloud').map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
 
     const question = deps.llm
-      ? await phraseQuestion(cog.content, cloudSafe, deps.llm, lang)
+      ? await phraseQuestion(cog.content, readable, deps.llm, lang)
       : templateQuestion(cog.content, evidence, lang);
 
     proposals.push({

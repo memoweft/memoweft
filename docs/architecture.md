@@ -275,11 +275,11 @@ MemoWeft 把"外部依赖"都收进可替换的 seam，宿主按需切换：
 隐私（用云端还是本地模型）是**宿主 + 用户的选择**，库不替宿主做安全策略，只做到"授权位真生效 + 留好切换口"。
 
 - **三个授权位挂在 evidence**：`allowLocalRead`（给本地 Agent）、`allowCloudRead`（发云端模型）、`allowInference`（据此推画像）。
-- **写路径的隐私关**：`filterCloudReadable` 把 `allowCloudRead=false` 的证据挡在【喂给云端模型的材料】之外。distill / consolidate / attribute 三处取证据喂 LLM 前都过这道关——被挡的证据既不进 prompt、也进不了合法支撑集合。
+- **写路径的隐私关**：`filterReadableByTier(items, tier)` 按当前写模型的 tier 把"该 tier 不许读"的证据挡在【喂给该模型的材料】之外（tier=cloud 筛 `allowCloudRead`、tier=local 筛 `allowLocalRead`）。distill / consolidate / attribute 等取证据喂 LLM 前都过这道关——被挡的证据既不进 prompt、也进不了合法支撑集合。另有 `allowInference` 门（distill / consolidate / attribute 三处一致）：`inference=false` 的证据不进画像，与 tier 无关。
 - **默认值跟随配置**：`cloudReadDefault` 跟 `privacyMode` 走（隐私模式下默认不上云）。
 - **行为观察更保守**：`observedDefaults = { local:true, cloud:false, inference:true }`——`ingestObservations` 摄入的 `observed` 证据默认**本地可读、不上云、可推画像**；`Observation` 显式给了授权位则尊重显式值。
 
-> ⚠️ 现状前提：`filterCloudReadable` **假设写路径的 LLM 是云端模型**，故按 `allowCloudRead` 筛。将来接入本地模型（本地模型可读 cloud=false 的证据）时，要改成"按当前模型是云端/本地决定筛不筛"——这正是 §7.1 llmPool 预留 tier 维度的用武之处。
+> ✅ 已落地（档2·第 6 步）：写路径隐私关升级为 `filterReadableByTier(items, tier)`——**按当前写模型的 tier 决定筛哪个授权位**，不再假设"永远云端"。tier 由 `MEMOWEFT_WRITE_LLM_TIER`（缺省 `cloud`）声明、绑在 `LLMClient` 实例上（`pool.for('write')` 缺配回退对话模型时自然继承其 tier，杜绝"标 local 实跑云端"）。tier=local 时本地写模型消化 `observed`（默认不上云）成画像——"行为观察"采集线由此真闭环。配套：distill 只覆盖当前 tier 真消化的证据（被挡的留 pending 可再扫）；`allowInference` 门在三处一致。
 
 ---
 
@@ -325,7 +325,7 @@ flowchart TB
 
   LLM["llmPool：chat 大模型 / write 小模型"] -.-> CONV
   LLM -.-> EVT
-  PRIV["filterCloudReadable：allowCloudRead 授权关"] -.-> EVT
+  PRIV["filterReadableByTier：按写模型 tier 筛 allowCloud/LocalRead"] -.-> EVT
 
   UP["updateProfile（写·异步重·攒批触发）"] -.-> EVT
 ```

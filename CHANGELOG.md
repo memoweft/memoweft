@@ -10,6 +10,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Added
+
+- **Local/cloud model tier for the write path (`ModelTier = 'cloud' | 'local'`)** — the write-path privacy gate is now `filterReadableByTier(items, tier)` instead of a fixed cloud filter. Set `MEMOWEFT_WRITE_LLM_TIER=local` (default `cloud`) so a **local write model digests `observed` behavioural evidence** (cloud=false by default) into the profile — the behavioural-observation collection path is now a real closed loop, not "authorize upload or it never gets digested." The tier is a new optional field on `LLMConfig` / `LLMClient` (`ModelTier` is exported; unset = cloud, non-breaking for hosts that inject their own `LLMClient`), bound to the client instance so a missing write model that falls back to the chat model inherits the chat tier (no "declared local, actually cloud" leak). The config wizard (`/api/gen-env`) emits `MEMOWEFT_WRITE_LLM_TIER` and warns when no local write model is configured.
+- **`DistillResult.tierBlockedCount`** — how many pending evidence the current write-model tier cannot read (surfaced via `updateProfile().distilled`), so a host can tell when `observed` evidence is waiting for a local model or cloud authorization.
+
+### Changed
+
+- **Coverage fix:** `distill` now marks as covered only the evidence it actually digested into the event. Previously, when `observed` (cloud=false) evidence shared a batch with cloud-readable evidence, it was marked covered without ever being digested and could not be recovered — switching to a local model or authorizing upload later would not re-process it. Blocked evidence now stays pending and re-scannable.
+- **`allowInference` gate is now enforced in `distill` and `consolidate`** (previously only in `attribute`), keeping all three write-path steps consistent. Consequence: evidence with `allowInference=false` **and** `allowCloudRead=true` no longer feeds the profile on the cloud path either (it used to). This state does not exist by default — it requires explicitly revoking inference on a specific piece of evidence — so most deployments see no change; where it applies, it is the authorization bit taking effect as documented.
+
 ## [0.4.0] — 2026-07-05
 
 English-first defaults with a zero-dependency bilingual layer, model-compatibility knobs (configurable temperature + reasoning-model response handling), and the Memory Surface Contract v1.

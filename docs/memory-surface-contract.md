@@ -205,7 +205,7 @@
 - **图谱 `conflicts_with` / `corrects` 边** — v1 未生成（cognition↔cognition 链数据未存）；枚举保留、等数据模型补齐再产。依据 `src/graph/model.ts:7-12`、`:23-24`。
 - **`Cognition.askedAt`（写入时机）** — 字段本身稳定，但"何时写"（M5 主动询问 `proposeAsk` 发问后写）属试验期能力。依据 `src/cognition/model.ts:53`、`src/asking/proposeAsk.ts`。
 - **`ManagementLogEntry`（读审计历史）** — 弱类型（`op`/`targetKind` 为 `string`），门面不暴露读路径；宿主经 `core.memory.*` 只写不经门面读审计历史。依据 `src/memory/managementLog.ts:23-33`。
-- **扩展点接口 `Retriever` / `Embedder` / `LLMClient`** — 可替换的注入点，接口签名以后可能演进。依据 `src/index.ts:88-105`。
+- **扩展点接口 `Retriever` / `Embedder` / `LLMClient`** — 可替换的注入点，接口签名以后可能演进。依据 `src/index.ts:88-105`。**新增（档2·非破坏）**：`LLMClient.tier?` 与 `LLMConfig.tier?`（`ModelTier='cloud'|'local'`，已导出）是可选字段，缺省视为 `cloud`；宿主自注入的 `LLMClient` 不带 tier 也照跑。
 - **config 的"取用方式"（单例访问）** — "有哪些配置项"是 stable，"怎么拿到 config（`config` 单例）"是 experimental（作者拍板 ⑥，预留 P2-5 去单例）。依据 `src/config.ts`。
 - **`EventInput` / `CognitionInput`** — 见"存疑定级"：宿主不直接构造的内部入参。
 

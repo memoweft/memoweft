@@ -527,6 +527,14 @@
         <label for="writeModel">模型名</label>
         <input id="writeModel" type="text" autocomplete="off" spellcheck="false" placeholder="不填则复用对话模型" />
       </div>
+      <div class="wiz-field">
+        <label for="writeTier">这个模型在哪运行</label>
+        <select id="writeTier">
+          <option value="cloud">云端（默认）</option>
+          <option value="local">本地（如 ollama / llama.cpp）</option>
+        </select>
+        <p class="desc">选「本地」，你的「行为观察」（默认不上云的那些记录）才会被本地私密消化成记忆；选「云端」，这些观察会挂着不被消化——除非你之后在记忆管理里对具体记录单独「授权上云」（会离开本机）。</p>
+      </div>
     </div>
 
     <!-- 第 3 组：嵌入模型（可选） -->
@@ -816,6 +824,7 @@
     const payload = {
       llmBaseUrl: llmBase, llmApiKey: llmKey, llmModel: llmModel,
       writeBaseUrl: $('writeBase').value.trim(), writeApiKey: $('writeKey').value.trim(), writeModel: $('writeModel').value.trim(),
+      writeTier: $('writeTier').value,
       embedBaseUrl: $('embedBase').value.trim(), embedApiKey: $('embedKey').value.trim(), embedModel: $('embedModel').value.trim(),
       withExperienceUI: $('expUI').checked,
     };

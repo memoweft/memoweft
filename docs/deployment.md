@@ -93,18 +93,19 @@ Trade-off:
 
 Use this for privacy-sensitive deployments.
 
-**Implementation status (today):** MemoWeft currently has a *single* write-path model tier (`chat` / `write`, selected by purpose) and a *single* global embedder. Per-evidence local/cloud model routing and per-memory embedder selection are planned but **not implemented yet** (see the notes in `src/llm/pool.ts` and `src/evidence/privacy.ts`). Two consequences:
+**Implementation status (today):** The write-path model now carries a **tier** — `MEMOWEFT_WRITE_LLM_TIER=cloud|local` (default `cloud`). The write-path privacy gate `filterReadableByTier` filters by that tier: a `cloud` write model only ever sees `allowCloudRead=true` evidence (unchanged); a `local` write model sees `allowLocalRead=true` evidence — including the `observed` behavioural evidence that is cloud=false by default. So **"sensitive observation → local model" is available**: point `MEMOWEFT_WRITE_LLM_*` at a local endpoint (e.g. Ollama / llama.cpp) and set `MEMOWEFT_WRITE_LLM_TIER=local`. Notes:
 
-- "Sensitive observation → local model" is not available yet. Sensitive evidence (`allowCloudRead=false`) is **excluded from the write-path prompt entirely** — `filterCloudReadable` runs before every write-path LLM call (distill / consolidate / attribute), even if the write model points at a local endpoint, so a local model does not yet receive the filtered-out evidence.
-- Embeddings use one endpoint (`MEMOWEFT_EMBED_*`); you choose local *or* cloud for the whole deployment, not per memory. To keep embeddings on-device, point that single embedder at a local endpoint.
+- Evidence a `cloud` write model can't read is **not silently consumed**: `distill` covers only what the current tier actually digested, so cloud=false observations stay pending and get digested later once a local write model — or per-memory cloud authorization — is configured. `updateProfile().distilled.tierBlockedCount` reports how many are waiting.
+- `WRITE_LLM_TIER` is a **declaration, not a probe** — MemoWeft does not inspect the endpoint. If you declare `local` but point the base URL at a cloud endpoint, sensitive evidence still leaves the machine; that is the deployment's responsibility.
+- Routing evidence to *two* models in one pass (cloud model for cloud-safe + local model for sensitive, then merged) is a possible future step; today a deployment picks one write model + tier. Embeddings still use one endpoint (`MEMOWEFT_EMBED_*`) — local *or* cloud for the whole deployment, not per memory.
 
 Routes available today:
 
 | Purpose | Route |
 | --- | --- |
 | Chat quality | cloud chat model |
-| Write path, non-sensitive evidence | cloud small/fast model (`MEMOWEFT_WRITE_LLM_*`) |
-| Write path, sensitive observations | excluded from the cloud prompt (local-model routing is planned, not built) |
+| Write path (`tier=cloud`, default) | cloud small/fast model, non-sensitive evidence only (`MEMOWEFT_WRITE_LLM_*`) |
+| Write path (`tier=local`) | local model privately digests `observed` (cloud=false) evidence (`MEMOWEFT_WRITE_LLM_TIER=local`) |
 | Embeddings | one embedder for the whole deployment — point it at a local endpoint to keep memory on-device |
 
 Best for:
@@ -115,7 +116,7 @@ Best for:
 
 Trade-off:
 
-- true per-evidence local/cloud model routing is not built yet; today "keep it private" means "kept out of cloud prompts", not "processed by a local model".
+- A local write model (`MEMOWEFT_WRITE_LLM_TIER=local`) now digests private `observed` evidence into the profile — "keep it private" can mean "processed by a local model", not only "kept out of cloud prompts". What is **not** built yet is *per-evidence routing across two models in one pass* (cloud model for cloud-safe evidence + local model for sensitive, merged): today a deployment picks one write model + tier.
 
 ---
 

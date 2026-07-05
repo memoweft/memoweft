@@ -13,7 +13,7 @@ import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import type { Evidence } from '../evidence/model.ts';
-import { filterCloudReadable } from '../evidence/privacy.ts';
+import { filterReadableByTier } from '../evidence/privacy.ts';
 import type { AskProposal } from './proposeAsk.ts';
 
 export interface RevisitDeps {
@@ -118,9 +118,10 @@ export async function revisitConflicts(
     const contradictEv = evidenceByIds(links.filter((l) => l.relation === 'contradict').map((l) => l.evidenceId), deps.evidenceStore);
     const support = supportEv.map(brief);
     const contradict = contradictEv.map(brief);
-    // 隐私护栏：只把允许上云的两面证据喂给（云端）措辞模型；宿主展示的两面证据保持完整（展示归宿主）。
+    // 隐私护栏（按当前措辞模型 tier）：只把该 tier 可读的两面证据喂给措辞模型；宿主展示的两面证据保持完整（展示归宿主）。
+    const tier = deps.llm?.tier ?? 'cloud';
     const question = deps.llm
-      ? await phraseQuestion(cog.content, filterCloudReadable(supportEv).map(brief), filterCloudReadable(contradictEv).map(brief), deps.llm, lang)
+      ? await phraseQuestion(cog.content, filterReadableByTier(supportEv, tier).map(brief), filterReadableByTier(contradictEv, tier).map(brief), deps.llm, lang)
       : templateQuestion(cog.content, support, contradict, lang);
 
     proposals.push({

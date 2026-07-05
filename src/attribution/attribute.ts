@@ -18,7 +18,7 @@ import type { CognitionStore } from '../cognition/store.ts';
 import type { Cognition } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
-import { filterCloudReadable } from '../evidence/privacy.ts';
+import { filterReadableByTier } from '../evidence/privacy.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 
 export interface AttributeDeps {
@@ -153,14 +153,15 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
     const anchorEvidence = phenomEvidences[0] ?? null;
     const anchor = anchorEvidence?.occurredAt ?? phenom.createdAt;
 
-    // 候选【原因】：[anchor - windowHours, 此刻] 内、可推断、且【不支撑任何 state 现象】的证据（禁 state→state）。
-    // 隐私关：候选原因里只留"允许上云"的喂给（云端）LLM。
-    // deps.llm 假设是云端模型——接本地模型时需改（见 evidence/privacy.ts 前提注释）。
-    const causes = filterCloudReadable(
+    // 候选【原因】：[anchor - windowHours, 此刻] 内、可推断（allowInference）、且【不支撑任何 state 现象】的证据（禁 state→state）。
+    // 隐私关（按当前写模型 tier）：候选原因里只留【当前模型可读】的喂给 LLM（tier=cloud 筛 allowCloudRead / local 筛 allowLocalRead）。
+    // 推理门 allowInference 已在下方 .filter 里（本步与 distill/consolidate 三处一致）。
+    const causes = filterReadableByTier(
       deps.evidenceStore
         .byTimeRange(minusHours(anchor, cfg.windowHours), upperBound)
         .filter((e) => e.allowInference)
         .filter((e) => !stateEvidence.has(e.id)),
+      deps.llm.tier ?? 'cloud',
     );
     if (causes.length === 0) continue; // 没有行为/观察类原因可依据 → 不硬编
 

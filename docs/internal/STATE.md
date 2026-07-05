@@ -7,7 +7,7 @@
 **框架闭环**（总设计任务书）：**Phase 5-A 便携记忆包 ✅**（导入/导出/备份/恢复，保真）· **5-B 测试台导入导出 ✅**（`/api/export-bundle`、`/api/import-bundle?mode=dryRun|merge` + 备份/迁移面板）· **6-A 记忆管理页 ✅**（筛选/详情/改删/标失效/授权开关）· 6-B 图谱视图（**G1 后端 ✅** · G2 前端 ⬜）· **7-A Cloud Guard ✅**（trends/ask 路径补过滤）· **8-A 真采集器 ✅** · 9-A 星瑶最小宿主 · 10-A 插件契约 · 11-A 稳定性/迁移 · 12-A npm 发布
 **最后更新**：2026-07-03
 **架构归位**：三层边界（Core/Host/Plugin）已定稿——Core 管记忆怎么正确存在，Host 管使用和管理，Plugin 管扩展。边界与现状差距见 `boundaries.md`，实施路线见 `架构归位路线.md`。
-**模型部署口径**：文档已改为 **Cloud-first onboarding**（开发者先用 OpenAI-compatible 云端端点跑通）+ **evidence 级授权**（`allowCloudRead` 控制哪些证据可进云端 prompt）+ **Hybrid/local 作为高级选项**。详见 `docs/deployment.md`。
+**模型部署口径**：**Cloud-first onboarding**（开发者先用 OpenAI-compatible 云端端点跑通）+ **evidence 级授权**（`allowCloudRead` 控制哪些证据可进云端 prompt）+ **写模型 tier（档2·第 6 步已落地）**：`MEMOWEFT_WRITE_LLM_TIER=local` 让本地写模型私密消化 `observed`（默认不上云）成画像——采集线真闭环。详见 `docs/deployment.md`。
 **写路径**：原话 → 整理事件(distill) → 画像(consolidate) → 归因(attribute) → 索引(retriever.indexAll)　**读路径**：消息 → 召回相关认知 → 注入回话
 
 ## 当前可用接口（手上有什么 · 下个任务直接用，不必读实现）
@@ -16,7 +16,7 @@
 - **Schema 版本化 / 迁移器（0.2.0·2026-07-04）** `src/store/migrations.ts` → `runMigrations(db,{dbPath,fresh,migrations?,dryRun?,backup?,log?})`｜`getSchemaVersion(db)`｜`LATEST_SCHEMA_VERSION`｜`MIGRATIONS`（主入口也导出前三个）。全库版本号存 `PRAGMA user_version`。openStores 开库前判 `fresh`（文件不存在/:memory:）→ 新库盖最新版；老库（0.1.0=user_version 0）从版本号升，baseline(v1)对已有表 no-op、真改动从 v2 起。每条迁移独立事务（抛错整段回滚·user_version 事务内可回滚已实测）+ v2+ 迁移前自动 `.bak` 备份 + dry-run。**加新迁移约定：MIGRATIONS 追加一条 + 同步改对应 store 的 SCHEMA 常量（新库靠 store 建最新、老库靠迁移升），别再土 ALTER。** `tests/migrations.test.ts` 7 条（含"0.1.0 库无损升级数据不丢"）。
 - **证据层** `src/evidence/store.ts` → `SqliteEvidenceStore(dbPath?)`
   - `put(input)→Evidence`（带 originId 幂等；授权缺省按 sourceKind 分流：**observed 缺省授权已下沉 put 层**=observedDefaults local✓/cloud✗/infer✓，spoken/inferred 走通用默认，显式传值优先）｜ `get(id)` ｜ `all()` ｜ `byTimeRange(fromIso,toIso)` ｜ `update(id,{rawContent?,summary?,allowCloudRead?,allowInference?})`（6-A：授权位可改）｜ `remove(id)` ｜ `close()`
-  - **隐私过滤** `src/evidence/privacy.ts` → `filterCloudReadable(items)`：写路径喂【云端】LLM 前筛掉 `allowCloudRead=false` 的证据；observed 默认不上云，作为 Cloud-guarded 的安全阀。
+  - **隐私过滤** `src/evidence/privacy.ts` → `filterReadableByTier(items, tier)`：写路径喂 LLM 前按当前写模型 tier 筛（cloud 筛 `allowCloudRead`、local 筛 `allowLocalRead`）；observed 默认不上云，本地写模型（tier=local）才消化它。另 `allowInference` 门三处一致。
 - **观察摄入（4-A 档1）** `src/perception/ingest.ts` → `ingestObservations(subjectId,observations,{evidenceStore,hostId?})→{stored,skipped}`：`Observation{kind,occurredAt,content,originId?,meta?,授权位?}` → `observed` 证据；授权 **显式 > `config.observedDefaults`**(local✓/cloud✗/infer✓)。**observed 缺省授权已下沉 put 层（最后防线）**：任何入口经 put 落 observed 都默认不上云，本摄入口显式传值属双保险。骨架 `collectors/activeWindow.ts`：`activeWindowToObservation(sample)` + `ActiveWindowCollector` 契约。
 - **认知层** `src/cognition/store.ts` → `SqliteCognitionStore`：`put` ｜ `get` ｜ `all(subjectId?)` ｜ `active(subjectId)`（批次3 语义=未失效**且未归档**，写路径雪藏靠它）｜ `sourcesOf(id)` ｜ `update(id,patch)` ｜ `remove(id)` ｜ `removeBySubject(id)` ｜ `close()`
 - **事件层** `src/event/store.ts` → `SqliteEventStore`：`put` ｜ `get` ｜ `all(subjectId?)` ｜ `evidenceOf(id)` ｜ `coveredEvidenceIds(subjectId)` ｜ `remove` ｜ `removeBySubject` ｜ `close`

@@ -43,6 +43,8 @@ export interface UpdateProfileTimings {
 }
 
 export interface UpdateProfileResult {
+  /** distill 结果。含【挂账信号】`distilled.tierBlockedCount`：当前写模型 tier 读不到、没被消化的证据数——
+   *  >0 表示"有 observed 卡着、当前模型消化不了"，供向导/宿主提示（配本地写模型 / 授权上云可解）。 */
   distilled: DistillResult;
   consolidated: ConsolidateResult;
   /** M4 归因结果（自动并进）：对新现象产出的可解释假设。 */

@@ -5,8 +5,11 @@
  * 本版：按【用途】分流——对话(chat)用大模型、写路径(write)用独立配的小快模型（.env `MEMOWEFT_WRITE_LLM_*`，兼容旧名 `DLA_WRITE_LLM_*`）。
  *
  * 🧭 留口（重要，别做成一次性 hack）：不写死"俩固定 client"，而是"按维度选 client"。
- *   本版维度 = 用途(chat/write)。档2「按证据 allowCloudRead 路由本地/云端」在此之上加 tier 维度即可
- *   （如给 LLMPool 加 forEvidence(ev) → 按 ev.allowCloudRead 选 local/cloud client），不用重构本文件。
+ *   本版维度 = 用途(chat/write)。
+ *   档2（tier）已落 config 层：每个 client 从自己的 env 前缀读 `*_TIER`（见 client.ts LLMConfig.tier），
+ *   故写模型 client 天生带自己声明的 tier；写模型缺配回退成对话 client 时，自然继承对话 client 的 tier
+ *   （杜绝"标 local 实跑云端"）。写路径隐私关据 client.tier 决定按哪个授权位筛（见 evidence/privacy.ts）。
+ *   A2「同一次消化里按证据 allowCloudRead 分流到本地/云端两个 client」仍是后续可选：在此加 forEvidence(ev) 即可，不用重构本文件。
  */
 import { resolveLang } from '../config.ts';
 import { OpenAICompatClient, loadLLMConfig, type LLMClient } from './client.ts';

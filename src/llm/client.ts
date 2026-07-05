@@ -11,11 +11,24 @@ export interface ChatMessage {
   content: string;
 }
 
+/**
+ * 模型部署位置（隐私分流维度·档2）：
+ *   'cloud' = 云端模型（只能读 allowCloudRead=true 的证据）；
+ *   'local' = 本地模型（可读 allowLocalRead=true 的证据，含 observed 默认不上云的那些）。
+ * 谁云谁本地由宿主/用户【显式声明】（向导选 / env `*_TIER`）——库不按 baseUrl 猜（守"库不替宿主做安全策略"）。
+ * 缺省视为 'cloud'（最保守：不误把敏感证据当本地放行）。见 evidence/privacy.ts filterReadableByTier。
+ */
+export type ModelTier = 'cloud' | 'local';
+
 /** 大模型客户端抽象——调用方只依赖此接口，不关心背后是哪家模型。 */
 export interface LLMClient {
   chat(messages: ChatMessage[]): Promise<string>;
   /** 至今累计调用次数（用于统计本轮调了几次）。 */
   readonly callCount: number;
+  /** 部署位置（可选·档2）：缺省 = 'cloud'（写路径隐私关据此决定按哪个授权位筛）。
+   *  宿主自注入的 client 不带此字段也照跑（缺省当 cloud，非破坏）。tier 绑在 client 实例上，
+   *  故 pool 缺配回退成对话模型时自然继承对话模型的 tier——杜绝"标 local 实跑云端"。 */
+  readonly tier?: ModelTier;
 }
 
 export interface LLMConfig {
@@ -26,6 +39,10 @@ export interface LLMConfig {
    *  `MEMOWEFT_LLM_TEMPERATURE`（对话）/ `MEMOWEFT_WRITE_LLM_TEMPERATURE`（写路径），双前缀兼容 `DLA_*`。
    *  仅进生成请求体，绝不流入置信度自算（confidence 由 MemoWeft 按规则算）。 */
   temperature?: number;
+  /** 部署位置（可选·档2）：`MEMOWEFT_<prefix>_TIER=local|cloud`（双前缀兼容 `DLA_*`）。
+   *  缺省 / 非法值 → undefined（下游按 'cloud' 处理，最保守）。仅决定写路径隐私关按哪个授权位筛，
+   *  不进生成请求体、不流入置信度。 */
+  tier?: ModelTier;
 }
 
 /**
@@ -77,7 +94,11 @@ export function loadLLMConfig(prefix = 'LLM'): LLMConfig {
   const tempRaw = readEnvWithFallback(`${base}_TEMPERATURE`);
   const tempNum = Number(tempRaw);
   const temperature = tempRaw !== '' && Number.isFinite(tempNum) ? tempNum : undefined;
-  return { baseUrl, apiKey, model, temperature };
+  // tier 可选（档2）：只认精确 'local' / 'cloud'（大小写不敏感）；其余（空 / 拼错 / 未知）→ undefined。
+  //   保守：拼错绝不误当 'local'（否则敏感证据会被当本地放行）。下游 filterReadableByTier 用 `?? 'cloud'` 兜。
+  const tierRaw = readEnvWithFallback(`${base}_TIER`).trim().toLowerCase();
+  const tier: ModelTier | undefined = tierRaw === 'local' ? 'local' : tierRaw === 'cloud' ? 'cloud' : undefined;
+  return { baseUrl, apiKey, model, temperature, tier };
 }
 
 /** OpenAI 兼容客户端——内置 fetch 直打 /chat/completions。 */
@@ -91,6 +112,11 @@ export class OpenAICompatClient implements LLMClient {
 
   get callCount(): number {
     return this._callCount;
+  }
+
+  /** 部署位置（档2）：透传配置里的 tier；未配 = undefined（下游按 'cloud' 处理）。 */
+  get tier(): ModelTier | undefined {
+    return this.config.tier;
   }
 
   async chat(messages: ChatMessage[]): Promise<string> {

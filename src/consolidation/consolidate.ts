@@ -16,7 +16,7 @@ import type { Cognition, ContentType, FormedBy } from '../cognition/model.ts';
 import type { Evidence } from '../evidence/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from './confidence.ts';
-import { filterCloudReadable } from '../evidence/privacy.ts';
+import { filterReadableByTier } from '../evidence/privacy.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 import { noopTransaction, type Transaction } from '../store/transaction.ts';
 import { resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
@@ -170,18 +170,21 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   // 事件视图 + 合法原话集合：把每个新事件覆盖的原话（带 id+原文）摊开给 LLM 引用；
   // 只有这些 id 是合法支撑（防 LLM 编造/自证，证据级溯源）。
   const validEvidence = new Set<string>();
+  // 隐私关（按当前写模型 tier）+ 推理门：事件覆盖的原话里，只把【当前模型可读】且【可推画像】的喂给 LLM、
+  //   也只让它们当合法支撑——被挡的既不进 prompt、也进不了 validEvidence（不成为所生认知的依据）。
+  //   tier=cloud 筛 allowCloudRead / tier=local 筛 allowLocalRead；inference=false 不进画像（distill/attribute 三处一致）。
+  const tier = deps.llm.tier ?? 'cloud';
   const events: EventView[] = newEvents.map((ev) => {
-    // 隐私关：事件覆盖的原话里，只把"允许上云"的喂给（云端）LLM，也只让它们当合法支撑——
-    // cloud=false 既不进 prompt、也进不了 validEvidence（不会成为云端所生认知的依据）。
-    // deps.llm 假设是云端模型——接本地模型时需改（见 evidence/privacy.ts 前提注释）。
     const evidences = deps.eventStore
       .evidenceOf(ev.id)
       .map((id) => deps.evidenceStore.get(id))
       .filter((e): e is Evidence => e !== null);
-    const utterances = filterCloudReadable(evidences).map((e) => {
-      validEvidence.add(e.id);
-      return { id: e.id, text: e.rawContent };
-    });
+    const utterances = filterReadableByTier(evidences, tier)
+      .filter((e) => e.allowInference)
+      .map((e) => {
+        validEvidence.add(e.id);
+        return { id: e.id, text: e.rawContent };
+      });
     return { summary: ev.summary, occurredAt: ev.occurredAt, utterances };
   });
   /** 取候选引的原话 id，只留合法的、去重（无合法引用 → 空，调用方按"跳过"处理）。 */

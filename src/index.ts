@@ -119,6 +119,7 @@ export {
 export {
   type LLMClient,
   type ChatMessage,
+  type ModelTier,
   OpenAICompatClient,
   loadLLMConfig,
 } from './llm/client.ts';
