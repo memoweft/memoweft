@@ -19,7 +19,7 @@ import { computeConfidence, deriveCredStatus } from './confidence.ts';
 import { filterCloudReadable } from '../evidence/privacy.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 import { noopTransaction, type Transaction } from '../store/transaction.ts';
-import type { MemoWeftConfig } from '../config.ts';
+import { resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
 
 export interface ConsolidateDeps {
   eventStore: EventStore;
@@ -89,25 +89,46 @@ function pickCognition(c: RawCog): { content: string; contentType: ContentType; 
   return { content, contentType, formedBy };
 }
 
-const SYSTEM = [
-  '你在维护对用户的认知画像。给你【现有画像】和【新材料】（事件 + 其下逐条原话，每条原话带 id）。',
-  '判断新材料对画像意味着什么，输出四类：',
-  '- new：新材料里有、现有画像没有的新认知。',
-  '- reinforce：新原话印证了某条现有认知（给 cognition_id + 支撑的原话 id）。',
-  '- correct：用户【明确纠正/否定】了某条现有认知（给被纠正的 cognition_id + 纠正后的新内容）。',
-  '  注意：画像里 (hypothesis) 类型是【待验证的假设】；若用户的新话否定/澄清了某条假设，也归入 correct——',
-  '  给被否定的 cognition_id，新内容写用户澄清出来的【事实】（content_type 用 fact/preference 等，不要再写 hypothesis）。',
-  '- conflict：新原话与某条现有认知矛盾，但【不是用户明确纠正】（如行为观察 vs 旧偏好）→ 只标冲突，不替换。',
-  '【关键】每条认知必须给 support_evidence_ids = 真正支撑它的【那几条原话 id】；',
-  '  只挑真正相关的，别把同一事件里无关的原话也算上；引不出确切原话就【不要给这条】。',
-  'formed_by：用户明确说过=stated；你推断出来的=inferred（如从"怎么找女朋友"推"单身"）。性格/特质多为 inferred 且保守。',
-  'content_type ∈ fact|preference|goal|project|state|trait。',
-  '严格按下面示例的字段名输出一个 JSON 对象，空的给 []，不要解释：',
-  '{"new":[{"content":"用户喜欢咖啡","content_type":"preference","formed_by":"stated","support_evidence_ids":["ev-1"]}],' +
-    '"reinforce":[{"cognition_id":"cog-x","support_evidence_ids":["ev-2"]}],' +
-    '"correct":[{"cognition_id":"cog-tea","content":"用户现在不喝茶了","content_type":"preference","formed_by":"stated","support_evidence_ids":["ev-1"]}],' +
-    '"conflict":[{"cognition_id":"cog-y","support_evidence_ids":["ev-3"]}]}',
-].join('\n');
+const SYSTEM: Record<Lang, string> = {
+  zh: [
+    '你在维护对用户的认知画像。给你【现有画像】和【新材料】（事件 + 其下逐条原话，每条原话带 id）。',
+    '判断新材料对画像意味着什么，输出四类：',
+    '- new：新材料里有、现有画像没有的新认知。',
+    '- reinforce：新原话印证了某条现有认知（给 cognition_id + 支撑的原话 id）。',
+    '- correct：用户【明确纠正/否定】了某条现有认知（给被纠正的 cognition_id + 纠正后的新内容）。',
+    '  注意：画像里 (hypothesis) 类型是【待验证的假设】；若用户的新话否定/澄清了某条假设，也归入 correct——',
+    '  给被否定的 cognition_id，新内容写用户澄清出来的【事实】（content_type 用 fact/preference 等，不要再写 hypothesis）。',
+    '- conflict：新原话与某条现有认知矛盾，但【不是用户明确纠正】（如行为观察 vs 旧偏好）→ 只标冲突，不替换。',
+    '【关键】每条认知必须给 support_evidence_ids = 真正支撑它的【那几条原话 id】；',
+    '  只挑真正相关的，别把同一事件里无关的原话也算上；引不出确切原话就【不要给这条】。',
+    'formed_by：用户明确说过=stated；你推断出来的=inferred（如从"怎么找女朋友"推"单身"）。性格/特质多为 inferred 且保守。',
+    'content_type ∈ fact|preference|goal|project|state|trait。',
+    '严格按下面示例的字段名输出一个 JSON 对象，空的给 []，不要解释：',
+    '{"new":[{"content":"用户喜欢咖啡","content_type":"preference","formed_by":"stated","support_evidence_ids":["ev-1"]}],' +
+      '"reinforce":[{"cognition_id":"cog-x","support_evidence_ids":["ev-2"]}],' +
+      '"correct":[{"cognition_id":"cog-tea","content":"用户现在不喝茶了","content_type":"preference","formed_by":"stated","support_evidence_ids":["ev-1"]}],' +
+      '"conflict":[{"cognition_id":"cog-y","support_evidence_ids":["ev-3"]}]}',
+  ].join('\n'),
+  en: [
+    'You maintain a cognitive profile of the user. You are given the [Existing profile] and [New material] (events, each with its individual source utterances, every utterance carrying an id).',
+    'Decide what the new material means for the profile, and output four categories:',
+    '- new: a new cognition present in the new material but not in the existing profile.',
+    '- reinforce: a new utterance corroborates an existing cognition (give the cognition_id + the supporting utterance ids).',
+    '- correct: the user has [explicitly corrected/negated] an existing cognition (give the corrected cognition_id + the new content after correction).',
+    '  Note: a (hypothesis)-type item in the profile is an [unverified guess]; if the user\'s new words negate/clarify such a hypothesis, that also goes under correct—',
+    '  give the negated cognition_id, and write the new content as the [fact] the user clarified (use content_type fact/preference etc., not hypothesis again).',
+    '- conflict: a new utterance contradicts an existing cognition but is [not an explicit user correction] (e.g., an observed behavior vs. a stated old preference) → only flag the conflict, do not replace.',
+    '[Key] Every cognition must give support_evidence_ids = the [specific utterance ids] that genuinely support it;',
+    '  pick only the truly relevant ones, do not count unrelated utterances from the same event; if you cannot cite a definite utterance, [do not emit that item].',
+    'formed_by: what the user explicitly said = stated; what you inferred = inferred (e.g., inferring "single" from "how do I find a girlfriend"). Personality/traits are mostly inferred and should be conservative.',
+    'content_type ∈ fact|preference|goal|project|state|trait.',
+    'Output a single JSON object strictly using the field names in the example below; use [] for empties; no explanation:',
+    '{"new":[{"content":"The user likes coffee","content_type":"preference","formed_by":"stated","support_evidence_ids":["ev-1"]}],' +
+      '"reinforce":[{"cognition_id":"cog-x","support_evidence_ids":["ev-2"]}],' +
+      '"correct":[{"cognition_id":"cog-tea","content":"The user no longer drinks tea","content_type":"preference","formed_by":"stated","support_evidence_ids":["ev-1"]}],' +
+      '"conflict":[{"cognition_id":"cog-y","support_evidence_ids":["ev-3"]}]}',
+  ].join('\n'),
+};
 
 /** 喂给 LLM 的事件视图：事件摘要 + 其下逐条原话（带证据 id 供引用）。 */
 interface EventView {
@@ -116,20 +137,24 @@ interface EventView {
   utterances: Array<{ id: string; text: string }>;
 }
 
-function buildMessages(existing: Cognition[], events: EventView[]): ChatMessage[] {
+function buildMessages(existing: Cognition[], events: EventView[], lang: Lang): ChatMessage[] {
+  const zh = lang === 'zh';
   const profile = existing.length
     ? existing.map((c) => `- [${c.id}] (${c.contentType}) ${c.content}`).join('\n')
-    : '（空）';
+    : zh ? '（空）' : '(none)';
   const material = events
     .map((e) => {
-      const head = `· 事件 (${e.occurredAt.slice(0, 16)}) ${e.summary}`;
+      const head = `· ${zh ? '事件' : 'Event'} (${e.occurredAt.slice(0, 16)}) ${e.summary}`;
       const lines = e.utterances.map((u) => `    - [${u.id}] ${u.text}`).join('\n');
       return lines ? `${head}\n${lines}` : head;
     })
     .join('\n');
+  const body = zh
+    ? `【现有画像】：\n${profile}\n\n【新材料】：\n${material}`
+    : `[Existing profile]:\n${profile}\n\n[New material]:\n${material}`;
   return [
-    { role: 'system', content: SYSTEM },
-    { role: 'user', content: `【现有画像】：\n${profile}\n\n【新材料】：\n${material}` },
+    { role: 'system', content: SYSTEM[lang] },
+    { role: 'user', content: body },
   ];
 }
 
@@ -165,12 +190,14 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   // 结构化输出加固（jsonRepair）：去代码块围栏 → 解析对象；失败落日志 + 最多重试一次（提示"只输出 JSON"）。
   // 仍失败 → null（按"本轮无产出"处理，等价旧的返回空对象；下方各 `?? []` 兜住）。重试会多调一次模型，故计数取前后差。
   // 写路径仪表（D4 只观测）：先把 messages 存下来量 prompt 字符数，再原样喂给解析器——行为零变化，只加计量。
-  const messages = buildMessages(existing, events);
+  const lang = resolveLang(deps.config);
+  const messages = buildMessages(existing, events, lang);
   const promptChars = messages.reduce((n, m) => n + m.content.length, 0);
   const before = deps.llm.callCount;
   const out = (await parseJsonObjectWithRepair<LLMOut>({
     llm: deps.llm,
     messages,
+    lang,
   })) ?? {};
   const llmCalls = deps.llm.callCount - before;
 

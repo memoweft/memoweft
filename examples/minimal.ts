@@ -1,82 +1,86 @@
 /**
- * MemoWeft 最小可跑示例（写路径 → 读路径的一整个闭环，走【统一入口】createMemoWeftCore）。
+ * MemoWeft minimal runnable example — the full write→read loop via the unified entry createMemoWeftCore.
  *
- * createMemoWeftCore 一行装配好三层 store + 召回器 + 模型池（都从 .env 读，缺配自动降级、不崩），
- * 是集成 MemoWeft 的【推荐路径】——宿主不必散装拼底层 store（见 src/index.ts 注释、docs/integration.md）。
+ * createMemoWeftCore assembles the three-layer stores + retriever + model pool in one line
+ * (all read from .env; missing config degrades gracefully instead of crashing). It is the
+ * recommended way to integrate MemoWeft — hosts need not wire the low-level stores by hand.
  *
- * 这段演示 4 件事：
- *   1) 一行建 core。
- *   2) 写一条“用户亲口”证据（ingestUserMessage）。
- *   3) updateProfile 把它沉淀成画像（distill → consolidate → 归因 → 建索引）。
- *   4) handleConversationTurn 处理下一条消息：召回相关画像 → 注入回话。
+ * This demonstrates four things:
+ *   1) Build a core in one line.
+ *   2) Ingest one "user-spoken" piece of evidence (ingestUserMessage).
+ *   3) updateProfile distills it into the profile (distill → consolidate → attribute → index).
+ *   4) handleConversationTurn handles the next message: recall the relevant profile → inject into the reply.
  *
- * 运行前提：
- *   - Node ≥ 24（本例直接 `node examples/minimal.ts` 跑 .ts，需 Node 原生剥类型 + 内置 node:sqlite；
- *     Node 22 需 22.18+，Node 20 跑不了 .ts）。当库用（import 编译后的包）时 Node 20/22 也行——
- *     那时装可选驱动 better-sqlite3 即可，见 docs/INSTALL.md。
- *   - 项目根有 .env，至少配好对话模型（MEMOWEFT_LLM_* 或兼容旧名 DLA_LLM_*）。
- *     只配对话模型也能跑：没配 MEMOWEFT_EMBED_* 时召回自动降级为空（画像照写、只是回话不注入）。
+ * Prerequisites:
+ *   - Build the package first (examples import by package name): `npm run build`.
+ *   - A .env at the repo root with at least a chat model (MEMOWEFT_LLM_*, or legacy DLA_LLM_*).
+ *     A chat model alone is enough: without MEMOWEFT_EMBED_*, recall degrades to empty
+ *     (the profile is still written; only reply-time injection is skipped).
+ *   - Node >= 20 to import the built package. (Node >= 24 also runs .ts directly with the
+ *     built-in node:sqlite; on Node 20/22 install the optional driver better-sqlite3 — see docs/INSTALL.md.)
  *
- * 运行（在仓库根目录）：
+ * Run (from the repo root, after building):
  *   node examples/minimal.ts
  *
- * 注意：本例用独立的 ./example.db，不碰你正式的库文件。
+ * Note: this example uses its own ./example.db and never touches your real memory file.
  */
-import { createMemoWeftCore, MEMOWEFT_VERSION } from '../src/index.ts';
+import { createMemoWeftCore, MEMOWEFT_VERSION } from 'memoweft';
 
-const DB = './example.db'; // 独立示例库
-const SUBJECT = 'demo-user'; // 这条画像属于谁
+const DB = './example.db'; // standalone example db
+const SUBJECT = 'demo-user'; // whose profile this is
 
 async function main() {
-  console.log(`MemoWeft ${MEMOWEFT_VERSION} · 最小示例（createMemoWeftCore）\n`);
+  console.log(`MemoWeft ${MEMOWEFT_VERSION} · minimal example (createMemoWeftCore)\n`);
 
-  // 1) 一行装配：三层 store + 召回器 + 模型池全从 .env 读，缺配降级不崩。
+  // 1) One-line assembly: three stores + retriever + model pool, all from .env, degrade without crashing.
   const core = createMemoWeftCore({ dbPath: DB });
 
   const { llmReady, embedReady } = core.health();
-  if (!llmReady) console.log('⚠️  未配对话模型（MEMOWEFT_LLM_* / 兼容 DLA_LLM_*）：真调用才会报错，写库部分照跑。');
-  if (!embedReady) console.log('⚠️  未配嵌入器（MEMOWEFT_EMBED_*）：召回降级为空，仅演示写路径。');
+  if (!llmReady) console.log('!  No chat model configured (MEMOWEFT_LLM_* / legacy DLA_LLM_*): a real call will error; the write-to-db part still runs.');
+  if (!embedReady) console.log('!  No embedder configured (MEMOWEFT_EMBED_*): recall degrades to empty; write path still runs.');
   console.log();
 
-  // 2) 写一条“用户亲口”证据（授权位、时间由 Core 按规则补默认）。
+  // 2) Ingest one "user-spoken" piece of evidence (authorization flags & time defaulted by Core).
   await core.ingestUserMessage({
     subjectId: SUBJECT,
     hostId: 'example',
-    content: '我晚上写代码效率最高，白天开会太多根本静不下来。',
+    content: 'I focus best coding at night; daytime meetings make it hard to settle down.',
   });
-  console.log('已写入 1 条证据，开始 updateProfile（整理事件 → 画像 → 归因 → 建索引）…');
+  console.log('Wrote 1 piece of evidence. Running updateProfile (distill event -> profile -> attribute -> index)...');
 
-  // 3) updateProfile = 一键写路径。真调模型，耗时取决于你配的模型（返回 timings 可看慢在哪步）。
+  // 3) updateProfile = the one-shot write path. Real model calls; latency depends on your model
+  //    (the returned timings show which step is slow).
   const result = await core.updateProfile({ subjectId: SUBJECT });
   console.log(
-    `画像更新完成：新增认知 ${result.consolidated.created.length} 条` +
-      `（强化 ${result.consolidated.reinforced} / 纠正 ${result.consolidated.corrected} / 冲突 ${result.consolidated.conflicted}），` +
-      `索引 ${result.indexed} 条，耗时 ${result.timings.totalMs}ms` +
-      (result.indexError ? `（索引降级：${result.indexError}）` : ''),
+    `Profile updated: ${result.consolidated.created.length} new cognition(s) ` +
+      `(reinforced ${result.consolidated.reinforced} / corrected ${result.consolidated.corrected} / conflicted ${result.consolidated.conflicted}), ` +
+      `indexed ${result.indexed}, took ${result.timings.totalMs}ms` +
+      (result.indexError ? ` (index degraded: ${result.indexError})` : ''),
   );
 
-  // 看看生成了什么画像（走受控只读接口 memory.listCognitions，不散装碰底层 store）。
+  // Inspect the profile via the controlled read-only API (memory.listCognitions) — no direct store access.
   const profile = core.memory.listCognitions({ subjectId: SUBJECT });
-  console.log(`\n当前画像（${profile.length} 条）：`);
+  console.log(`\nCurrent profile (${profile.length}):`);
   for (const c of profile) {
-    console.log(`  · [${c.contentType}/${c.credStatus}] ${c.content}  (置信 ${c.confidence})`);
+    console.log(`  - [${c.contentType}/${c.credStatus}] ${c.content}  (confidence ${c.confidence})`);
   }
 
-  // 4) 读路径：处理下一条消息，看它会不会召回上面那条画像并注入回话。
-  const turn = await core.handleConversationTurn({ subjectId: SUBJECT, message: '帮我安排一下明天的日程。' });
-  console.log(`\n用户：帮我安排一下明天的日程。`);
-  console.log(`助手：${turn.reply}`);
+  // 4) Read path: handle the next message and see whether it recalls & injects the profile above.
+  const message = "Help me plan tomorrow's schedule.";
+  const turn = await core.handleConversationTurn({ subjectId: SUBJECT, message });
+  console.log(`\nUser: ${message}`);
+  console.log(`Assistant: ${turn.reply}`);
   if (turn.recall.length) {
-    console.log(`（召回并注入的画像：${turn.recall.map((r) => r.content).join(' / ')}）`);
+    console.log(`(recalled & injected: ${turn.recall.map((r) => r.content).join(' / ')})`);
   }
-  if (turn.error) console.log(`（回话出错：${turn.error} —— 但你的话已存为证据）`);
+  if (turn.error) console.log(`(reply error: ${turn.error} — but your message was stored as evidence)`);
 
-  // 5) 收尾（关库 + 关召回器）。
+  // 5) Clean up (close db + retriever).
   core.close();
-  console.log('\n完成。示例数据在 ./example.db，可删。');
+  console.log('\nDone. Example data is in ./example.db — safe to delete.');
 }
 
 main().catch((e) => {
-  console.error('示例出错：', e instanceof Error ? e.message : e);
+  console.error('Example error:', e instanceof Error ? e.message : e);
   process.exit(1);
 });

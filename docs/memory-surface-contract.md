@@ -176,7 +176,7 @@
 ### 2.8 版本 / 配置
 
 57. **`MEMOWEFT_VERSION`** — stable 常量。`DLA_VERSION` 是 `@deprecated` 别名（保留、勿删）。依据 `src/index.ts:208-211`。
-58. **`MemoWeftConfig`（有哪些配置项）** — stable：identity / privacyMode / observedDefaults / consolidation / retrieval / attribution / background 等字段结构。**但"怎么拿到 config"（`config` 单例访问）标 experimental**（作者拍板 ⑥，预留 P2-5 去单例）。`DlaConfig` 是 `@deprecated` 别名。`cloudReadDefault()` stable。依据 `src/config.ts`、`:132-137`。
+58. **`MemoWeftConfig`（有哪些配置项）** — stable：identity / privacyMode / observedDefaults / consolidation / retrieval / attribution / background 等字段结构。**0.4.0 加可选 `language: 'zh' | 'en'`（additive 非破坏——旧宿主不传照跑；缺省 `'en'`，env `MEMOWEFT_LANG=zh` 或运行期设 `config.language` 切中文）+ 导出 `type Lang`（stable，供宿主设值）**。**但"怎么拿到 config"（`config` 单例访问）标 experimental**（作者拍板 ⑥，预留 P2-5 去单例）。`DlaConfig` 是 `@deprecated` 别名。`cloudReadDefault()` / `resolveLang()` stable（后者取当前库语言，只决定文本产出、绝不进置信度自算）。依据 `src/config.ts`。
 
 ---
 

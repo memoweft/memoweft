@@ -11,7 +11,7 @@
  *   - 禁止系统自证（规则 4）：提问本身不入证据库；只有用户的【回答】才是证据（走阶段 2 闭环）。
  *   - 不烦用户：问过的（askedAt 已写）不再问；一轮最多 maxAsks 个。
  */
-import { config, type MemoWeftConfig } from '../config.ts';
+import { config, resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CredStatus } from '../cognition/model.ts';
@@ -62,31 +62,46 @@ export interface ProposeAskResult {
   llmCalls: number;
 }
 
-const PHRASE_SYSTEM = [
-  '你在帮助理解用户。下面是一条关于用户的【低置信假设】和支撑它的【证据】。',
-  '请生成一句简短、真诚、不武断的提问，亮出证据、向用户求证这条假设是否成立。',
-  '只输出这一句问话本身，不要解释、不要引号。',
-].join('\n');
+const PHRASE_SYSTEM: Record<Lang, string> = {
+  zh: [
+    '你在帮助理解用户。下面是一条关于用户的【低置信假设】和支撑它的【证据】。',
+    '请生成一句简短、真诚、不武断的提问，亮出证据、向用户求证这条假设是否成立。',
+    '只输出这一句问话本身，不要解释、不要引号。',
+  ].join('\n'),
+  en: [
+    'You are helping to understand the user. Below is a [low-confidence hypothesis] about the user and the [evidence] supporting it.',
+    'Generate one short, sincere, non-assertive question that presents the evidence and asks the user to confirm whether this hypothesis holds.',
+    'Output only this one question itself, with no explanation and no quotation marks.',
+  ].join('\n'),
+};
 
 /** 模板兜底：带证据、留余地的朴素问法。 */
-function templateQuestion(hypothesis: string, evidence: { summary: string }[]): string {
-  const shown = evidence.map((e) => `「${e.summary}」`).join('、');
-  if (!shown) return `我有个不太确定的猜测：${hypothesis}。是这样吗？`;
-  return `我看到${shown}，所以在想：${hypothesis}。是这样吗？`;
+function templateQuestion(hypothesis: string, evidence: { summary: string }[], lang: Lang): string {
+  if (lang === 'zh') {
+    const shown = evidence.map((e) => `「${e.summary}」`).join('、');
+    if (!shown) return `我有个不太确定的猜测：${hypothesis}。是这样吗？`;
+    return `我看到${shown}，所以在想：${hypothesis}。是这样吗？`;
+  }
+  const shown = evidence.map((e) => `"${e.summary}"`).join(', ');
+  if (!shown) return `I have a hunch I'm not too sure about: ${hypothesis}. Is that right?`;
+  return `I noticed ${shown}, which got me wondering: ${hypothesis}. Is that right?`;
 }
 
 async function phraseQuestion(
   hypothesis: string,
   evidence: { summary: string }[],
   llm: LLMClient,
+  lang: Lang,
 ): Promise<string> {
   const shown = evidence.map((e) => `- ${e.summary}`).join('\n');
+  const user =
+    lang === 'zh' ? `【假设】${hypothesis}\n【证据】\n${shown}` : `[Hypothesis] ${hypothesis}\n[Evidence]\n${shown}`;
   const messages: ChatMessage[] = [
-    { role: 'system', content: PHRASE_SYSTEM },
-    { role: 'user', content: `【假设】${hypothesis}\n【证据】\n${shown}` },
+    { role: 'system', content: PHRASE_SYSTEM[lang] },
+    { role: 'user', content: user },
   ];
   const text = (await llm.chat(messages)).trim();
-  return text || templateQuestion(hypothesis, evidence);
+  return text || templateQuestion(hypothesis, evidence, lang);
 }
 
 export async function proposeAsk(
@@ -95,6 +110,7 @@ export async function proposeAsk(
   opts: ProposeAskOptions = {},
 ): Promise<ProposeAskResult> {
   const cfg = deps.config ?? config; // 可注入配置（缺省=单例）
+  const lang = resolveLang(cfg);
   const policy: AskPolicy = {
     maxAsks: opts.policy?.maxAsks ?? cfg.asking.maxAsks,
     confidenceBand: opts.policy?.confidenceBand ?? cfg.asking.confidenceBand,
@@ -132,8 +148,8 @@ export async function proposeAsk(
     const cloudSafe = filterCloudReadable(supportEvidence).map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
 
     const question = deps.llm
-      ? await phraseQuestion(cog.content, cloudSafe, deps.llm)
-      : templateQuestion(cog.content, evidence);
+      ? await phraseQuestion(cog.content, cloudSafe, deps.llm, lang)
+      : templateQuestion(cog.content, evidence, lang);
 
     proposals.push({
       cognitionId: cog.id,

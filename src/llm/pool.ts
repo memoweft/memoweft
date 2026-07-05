@@ -8,6 +8,7 @@
  *   本版维度 = 用途(chat/write)。档2「按证据 allowCloudRead 路由本地/云端」在此之上加 tier 维度即可
  *   （如给 LLMPool 加 forEvidence(ev) → 按 ev.allowCloudRead 选 local/cloud client），不用重构本文件。
  */
+import { resolveLang } from '../config.ts';
 import { OpenAICompatClient, loadLLMConfig, type LLMClient } from './client.ts';
 
 /** 模型用途。档2 会在此之上再叠 tier(local/cloud) 路由维度。 */
@@ -33,7 +34,13 @@ export function loadLLMPool(): LLMPool {
     }
   };
 
-  const chat = make('LLM') ?? failStub('对话模型未配（.env MEMOWEFT_LLM_*，或兼容 DLA_LLM_*）');
+  const chat =
+    make('LLM') ??
+    failStub(
+      resolveLang() === 'zh'
+        ? '对话模型未配（.env MEMOWEFT_LLM_*，或兼容 DLA_LLM_*）'
+        : 'Chat model not configured (.env MEMOWEFT_LLM_*, or legacy DLA_LLM_*)',
+    );
   const write = make('WRITE_LLM') ?? chat; // 没配写路径小模型 → 回退对话模型（行为同旧、不强制）
   const clients: Record<LLMPurpose, LLMClient> = { chat, write };
 

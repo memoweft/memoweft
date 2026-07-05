@@ -17,7 +17,7 @@
 
 ## 明确不做（防顺手）
 
-- **不改** `identity.hostId` 默认值 `'testbench'`（`src/config.ts:89`）：改默认影响新落库证据的 host_id 语义，需作者定名并评估兼容，已列 0.4 决策。
+- **不改** `identity.hostId` 默认值 `'testbench'`（`src/config.ts:89`）：改默认影响新落库证据的 host_id 语义，需作者定名并评估兼容，已列 0.4 决策。（✅ 已于 **0.4.0 T4** 兑现：默认改 `'local'`、host_id 非查询键故不迁移老数据。）
 - **不改** `'./dla.db'` 默认路径、`DLA_*` 前缀回退——CONTRIBUTING.md §环境变量/配置 明文保留：DLA_* 双认前缀在 96-98 行、"./dla.db 不改"在 99 行、提交前自查清单 111 行再次点名。
 - **不动** logs/、testbench 其他端点、dist/。
 

@@ -3,9 +3,15 @@
  * 阶段 0：身份、隐私默认、回话窗口。
  */
 
+/** 库产出与文案的语言。缺省 'en'（进英文市场默认）。 */
+export type Lang = 'zh' | 'en';
+
 export interface MemoWeftConfig {
   /** v1 单人单宿主，恒定值；多用户 / 多宿主时由调用方传入覆盖。 */
   identity: { subjectId: string; hostId: string };
+  /** 库产出语言（提示词 / 兜底文案 / 事件摘要等）：缺省 'en'；env `MEMOWEFT_LANG=zh` 切中文；宿主可运行期改 `config.language`。
+   *  只影响文本产出，绝不进置信度自算（confidence.ts 不吃它）。 */
+  language?: Lang;
   /** 隐私模式：true → 证据默认不允许上云端模型。 */
   privacyMode: boolean;
   /** 证据授权默认值（cloud_read 跟随 privacyMode，见 cloudReadDefault）。 */
@@ -86,7 +92,9 @@ export interface MemoWeftConfig {
 }
 
 export const config: MemoWeftConfig = {
-  identity: { subjectId: 'owner', hostId: 'testbench' },
+  identity: { subjectId: 'owner', hostId: 'local' }, // hostId 默认 0.4.0 从 'testbench' 改中性 'local'（T4）；host_id 非查询键，老库照读、仅新证据用新名。
+  // 缺省 en（A2·进英文市场）；只有 MEMOWEFT_LANG=zh 才切中文，其它值 / 未设 = en。
+  language: process.env.MEMOWEFT_LANG === 'zh' ? 'zh' : 'en',
   privacyMode: false,
   evidenceDefaults: { allowLocalRead: true, allowInference: true },
   observedDefaults: { allowLocalRead: true, allowCloudRead: false, allowInference: true },
@@ -131,6 +139,12 @@ export const config: MemoWeftConfig = {
 /** allow_cloud_read 的默认值：跟随配置——隐私模式下默认不上云。 */
 export function cloudReadDefault(c: MemoWeftConfig = config): boolean {
   return !c.privacyMode;
+}
+
+/** 取当前库语言（缺省=全局单例；singleton 默认 'en'，`MEMOWEFT_LANG=zh` 切中文）。
+ *  语言只决定文本产出用哪套常量，绝不流入置信度自算 / 认知判定。 */
+export function resolveLang(c: MemoWeftConfig = config): Lang {
+  return c.language ?? 'en';
 }
 
 /** @deprecated 用 MemoWeftConfig；保留旧名兼容已引用 DlaConfig 的宿主。 */

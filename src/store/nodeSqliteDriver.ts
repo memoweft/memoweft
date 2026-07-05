@@ -22,6 +22,7 @@
  *   （多版本测试矩阵的 Node 22 job 用它验第二驱动）。仅测试用，生产别设。
  */
 import { createRequire } from 'node:module';
+import { resolveLang } from '../config.ts';
 import type { DatabaseSyncConstructor, DatabaseSync as DbConn } from './driver.ts';
 import { makeBetterSqlite3Constructor } from './betterSqlite3Driver.ts';
 
@@ -76,13 +77,17 @@ interface DriverPick {
  */
 function pickDriver(): DriverPick {
   const forced = process.env.MEMOWEFT_TEST_DRIVER;
+  const lang = resolveLang();
 
   if (forced === 'better-sqlite3') {
     const better = tryLoadBetterSqlite3();
     if (better) return { ctor: better, name: 'better-sqlite3' };
     throw new Error(
-      `MEMOWEFT_TEST_DRIVER=better-sqlite3 强制走 better-sqlite3，但它加载不到` +
-        `（没装或原生模块未编译）。请先 \`npm i better-sqlite3\`。`,
+      lang === 'zh'
+        ? `MEMOWEFT_TEST_DRIVER=better-sqlite3 强制走 better-sqlite3，但它加载不到` +
+            `（没装或原生模块未编译）。请先 \`npm i better-sqlite3\`。`
+        : `MEMOWEFT_TEST_DRIVER=better-sqlite3 forces the better-sqlite3 driver, but it cannot be loaded` +
+            ` (not installed, or the native module is not built). Run \`npm i better-sqlite3\` first.`,
     );
   }
 
@@ -94,11 +99,17 @@ function pickDriver(): DriverPick {
 
   const ver = process.versions.node;
   throw new Error(
-    `MemoWeft 需要一个 SQLite 驱动，但当前 Node ${ver} 两个都拿不到：` +
-      `内置 node:sqlite 加载不到（它到 Node 24 才转正），可选的 better-sqlite3 也没装。\n` +
-      `两条出路（任选其一）：\n` +
-      `  1. 把 Node 升到 ≥24——node:sqlite 转正，零额外依赖开箱即用；\n` +
-      `  2. 保持当前 Node，装可选驱动：\`npm i better-sqlite3\`（原生模块，一般走 prebuilt 二进制）。`,
+    lang === 'zh'
+      ? `MemoWeft 需要一个 SQLite 驱动，但当前 Node ${ver} 两个都拿不到：` +
+          `内置 node:sqlite 加载不到（它到 Node 24 才转正），可选的 better-sqlite3 也没装。\n` +
+          `两条出路（任选其一）：\n` +
+          `  1. 把 Node 升到 ≥24——node:sqlite 转正，零额外依赖开箱即用；\n` +
+          `  2. 保持当前 Node，装可选驱动：\`npm i better-sqlite3\`（原生模块，一般走 prebuilt 二进制）。`
+      : `MemoWeft needs a SQLite driver, but neither is available on the current Node ${ver}: ` +
+          `the built-in node:sqlite cannot be loaded (it only becomes stable in Node 24), and the optional better-sqlite3 is not installed.\n` +
+          `Two ways out (pick either):\n` +
+          `  1. Upgrade Node to >=24 — node:sqlite becomes stable and works out of the box with zero extra dependencies;\n` +
+          `  2. Keep the current Node and install the optional driver: \`npm i better-sqlite3\` (a native module, usually via a prebuilt binary).`,
   );
 }
 

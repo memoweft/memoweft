@@ -73,5 +73,5 @@ test('validateBundle：包内重复 id → 致命 error（防 merge 撞主键）
   const dup: MemoryBundle = { ...b, data: { ...b.data, evidence: [b.data.evidence[0]!, b.data.evidence[0]!] } };
   const r = validateBundle(dup);
   assert.equal(r.valid, false);
-  assert.ok(r.errors.some((e) => e.includes('重复 id')), '报出重复 id');
+  assert.ok(r.errors.some((e) => e.includes('duplicate ids')), '报出重复 id（缺省 en 文案）');
 });

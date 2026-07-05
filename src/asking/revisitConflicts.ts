@@ -8,7 +8,7 @@
  * 纪律：MemoWeft 只产"该问什么 + 两面证据"，是否开口、怎么措辞归宿主（cell 9）；
  *   提问不入证据库、用户回答才是证据（规则 4）；问过的（askedAt）不再问。
  */
-import { config, type MemoWeftConfig } from '../config.ts';
+import { config, resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
@@ -29,11 +29,18 @@ export interface RevisitResult {
   llmCalls: number;
 }
 
-const PHRASE_SYSTEM = [
-  '下面是一条关于用户的认知，它【同时有支撑和反对的证据】，处于矛盾状态。',
-  '请生成一句简短、真诚、不预设立场的提问，把两边都点一下、请用户澄清到底是哪样。',
-  '只输出这一句问话本身，不要解释、不要引号。',
-].join('\n');
+const PHRASE_SYSTEM: Record<Lang, string> = {
+  zh: [
+    '下面是一条关于用户的认知，它【同时有支撑和反对的证据】，处于矛盾状态。',
+    '请生成一句简短、真诚、不预设立场的提问，把两边都点一下、请用户澄清到底是哪样。',
+    '只输出这一句问话本身，不要解释、不要引号。',
+  ].join('\n'),
+  en: [
+    'Below is a cognition about the user that [has both supporting and opposing evidence] and is in a conflicted state.',
+    'Generate one short, sincere, non-presumptive question that touches on both sides and asks the user to clarify which is actually the case.',
+    'Output only this one question itself, with no explanation and no quotation marks.',
+  ].join('\n'),
+};
 
 /** 取回一批证据（保留完整对象，供隐私过滤用）。 */
 function evidenceByIds(ids: string[], ev: EvidenceStore): Evidence[] {
@@ -49,11 +56,18 @@ function templateQuestion(
   content: string,
   support: { summary: string }[],
   contradict: { summary: string }[],
+  lang: Lang,
 ): string {
-  const s = support.map((e) => `「${e.summary}」`).join('、');
-  const c = contradict.map((e) => `「${e.summary}」`).join('、');
-  if (s && c) return `关于"${content}"——一方面${s}，另一方面又${c}。现在到底是哪样呢？`;
-  return `关于"${content}"，我这边的信息有点对不上，能帮我确认下现在是怎样吗？`;
+  if (lang === 'zh') {
+    const s = support.map((e) => `「${e.summary}」`).join('、');
+    const c = contradict.map((e) => `「${e.summary}」`).join('、');
+    if (s && c) return `关于"${content}"——一方面${s}，另一方面又${c}。现在到底是哪样呢？`;
+    return `关于"${content}"，我这边的信息有点对不上，能帮我确认下现在是怎样吗？`;
+  }
+  const s = support.map((e) => `"${e.summary}"`).join(', ');
+  const c = contradict.map((e) => `"${e.summary}"`).join(', ');
+  if (s && c) return `About "${content}" — on one hand ${s}, but on the other hand ${c}. Which is it actually now?`;
+  return `About "${content}", the signals on my end don't quite line up. Could you help me confirm how it stands now?`;
 }
 
 async function phraseQuestion(
@@ -61,20 +75,20 @@ async function phraseQuestion(
   support: { summary: string }[],
   contradict: { summary: string }[],
   llm: LLMClient,
+  lang: Lang,
 ): Promise<string> {
+  const s = support.map((e) => `- ${e.summary}`).join('\n');
+  const c = contradict.map((e) => `- ${e.summary}`).join('\n');
+  const user =
+    lang === 'zh'
+      ? `【认知】${content}\n【支撑证据】\n${s}\n【反对证据】\n${c}`
+      : `[Cognition] ${content}\n[Supporting evidence]\n${s}\n[Opposing evidence]\n${c}`;
   const messages: ChatMessage[] = [
-    { role: 'system', content: PHRASE_SYSTEM },
-    {
-      role: 'user',
-      content:
-        `【认知】${content}\n【支撑证据】\n` +
-        support.map((e) => `- ${e.summary}`).join('\n') +
-        `\n【反对证据】\n` +
-        contradict.map((e) => `- ${e.summary}`).join('\n'),
-    },
+    { role: 'system', content: PHRASE_SYSTEM[lang] },
+    { role: 'user', content: user },
   ];
   const text = (await llm.chat(messages)).trim();
-  return text || templateQuestion(content, support, contradict);
+  return text || templateQuestion(content, support, contradict, lang);
 }
 
 export async function revisitConflicts(
@@ -82,7 +96,9 @@ export async function revisitConflicts(
   deps: RevisitDeps,
   opts: { maxAsks?: number; markAsked?: boolean } = {},
 ): Promise<RevisitResult> {
-  const maxAsks = opts.maxAsks ?? (deps.config ?? config).asking.maxAsks;
+  const cfg = deps.config ?? config;
+  const lang = resolveLang(cfg);
+  const maxAsks = opts.maxAsks ?? cfg.asking.maxAsks;
   const markAsked = opts.markAsked ?? true;
 
   // 候选 = active 的冲突认知里、没复看问过的。
@@ -104,8 +120,8 @@ export async function revisitConflicts(
     const contradict = contradictEv.map(brief);
     // 隐私护栏：只把允许上云的两面证据喂给（云端）措辞模型；宿主展示的两面证据保持完整（展示归宿主）。
     const question = deps.llm
-      ? await phraseQuestion(cog.content, filterCloudReadable(supportEv).map(brief), filterCloudReadable(contradictEv).map(brief), deps.llm)
-      : templateQuestion(cog.content, support, contradict);
+      ? await phraseQuestion(cog.content, filterCloudReadable(supportEv).map(brief), filterCloudReadable(contradictEv).map(brief), deps.llm, lang)
+      : templateQuestion(cog.content, support, contradict, lang);
 
     proposals.push({
       cognitionId: cog.id,

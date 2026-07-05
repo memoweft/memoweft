@@ -6,6 +6,7 @@
  * 请求超时可经 MEMOWEFT_EMBED_TIMEOUT_MS 配置（兼容旧名 DLA_EMBED_TIMEOUT_MS），默认 60s；
  * 失败由上游容错（召回失败不挡回话、indexError 不回滚画像）。
  */
+import { resolveLang } from '../config.ts';
 
 export interface Embedder {
   /** 把一组文本编码成向量。 */
@@ -63,18 +64,30 @@ export class OpenAICompatEmbedder implements Embedder {
     } catch (err) {
       // 超时（TimeoutError）给清楚 message，让其走既有降级链（召回失败不挡回话、indexError 不回滚画像）。
       if (err instanceof Error && err.name === 'TimeoutError') {
-        throw new Error(`嵌入请求超时（超过 ${timeoutMs}ms）`);
+        throw new Error(
+          resolveLang() === 'zh'
+            ? `嵌入请求超时（超过 ${timeoutMs}ms）`
+            : `Embedding request timed out (exceeded ${timeoutMs}ms)`,
+        );
       }
       throw err;
     }
     if (!res.ok) {
       const t = await res.text().catch(() => '');
-      throw new Error(`嵌入请求失败 ${res.status}: ${t.slice(0, 300)}`);
+      throw new Error(
+        resolveLang() === 'zh'
+          ? `嵌入请求失败 ${res.status}: ${t.slice(0, 300)}`
+          : `Embedding request failed ${res.status}: ${t.slice(0, 300)}`,
+      );
     }
     const data = (await res.json()) as { data?: Array<{ embedding?: number[] }> };
     const out = (data.data ?? []).map((d) => d.embedding ?? []);
     if (out.length !== texts.length) {
-      throw new Error(`嵌入返回数量不符：期望 ${texts.length}，得到 ${out.length}`);
+      throw new Error(
+        resolveLang() === 'zh'
+          ? `嵌入返回数量不符：期望 ${texts.length}，得到 ${out.length}`
+          : `Embedding count mismatch: expected ${texts.length}, got ${out.length}`,
+      );
     }
     return out;
   }

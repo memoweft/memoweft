@@ -8,7 +8,7 @@
  * 什么都没改，不落行（审计表回答"我的记忆被怎么了"，不是操作尝试日志）。
  * checkIntegrity 只读不改，同理不落审计、也不需要 reason（路线 §5.3 的签名就没带参）。
  */
-import { config, type MemoWeftConfig } from '../config.ts';
+import { config, resolveLang, type MemoWeftConfig } from '../config.ts';
 import type { StoreBundle } from '../store/openStores.ts';
 import type { Cognition, EvidenceLink } from '../cognition/model.ts';
 import type { Evidence } from '../evidence/model.ts';
@@ -284,17 +284,46 @@ export function createMemoryManagementAPI(
     },
 
     mergeCognition({ sourceId, targetId, reason }) {
+      const lang = resolveLang(cfg);
       const source = cognitionStore.get(sourceId);
       const target = cognitionStore.get(targetId);
-      if (!source || !target) throw new Error(`合并失败：认知不存在（source=${sourceId}, target=${targetId}）`);
-      if (sourceId === targetId) throw new Error('合并失败：source 与 target 是同一条认知');
+      if (!source || !target) {
+        throw new Error(
+          lang === 'zh'
+            ? `合并失败：认知不存在（source=${sourceId}, target=${targetId}）`
+            : `Merge failed: cognition not found (source=${sourceId}, target=${targetId})`,
+        );
+      }
+      if (sourceId === targetId) {
+        throw new Error(
+          lang === 'zh'
+            ? '合并失败：source 与 target 是同一条认知'
+            : 'Merge failed: source and target are the same cognition',
+        );
+      }
       // 跨 subject 拒绝（PM 拍板）：不同人的认知合并 = 串线，隐私红线。
       if (source.subjectId !== target.subjectId) {
-        throw new Error(`合并失败：跨 subject 不允许（source=${source.subjectId}, target=${target.subjectId}）`);
+        throw new Error(
+          lang === 'zh'
+            ? `合并失败：跨 subject 不允许（source=${source.subjectId}, target=${target.subjectId}）`
+            : `Merge failed: cross-subject merge not allowed (source=${source.subjectId}, target=${target.subjectId})`,
+        );
       }
       // 死目标拒绝（PM 拍板）：活链搬进已失效/已归档的 target，这段记忆会从召回里静默消失。
-      if (target.invalidAt) throw new Error(`合并失败：target 已失效（${targetId}），先恢复再合并`);
-      if (target.archivedAt) throw new Error(`合并失败：target 已归档（${targetId}），先恢复再合并`);
+      if (target.invalidAt) {
+        throw new Error(
+          lang === 'zh'
+            ? `合并失败：target 已失效（${targetId}），先恢复再合并`
+            : `Merge failed: target is invalidated (${targetId}); restore it before merging`,
+        );
+      }
+      if (target.archivedAt) {
+        throw new Error(
+          lang === 'zh'
+            ? `合并失败：target 已归档（${targetId}），先恢复再合并`
+            : `Merge failed: target is archived (${targetId}); restore it before merging`,
+        );
+      }
       return transaction(() => {
         // 1) 链搬家：source 的 cognition_evidence 搬到 target，按 (evidenceId, relation) 去重。
         const targetKeys = new Set(cognitionStore.sourcesOf(targetId).map((l) => `${l.evidenceId}|${l.relation}`));
@@ -435,7 +464,16 @@ export function createMemoryManagementAPI(
       // ⚠ 粒度限制（v1 单人单宿主无碍）：indexAll([]) 清的是【整张 vectors 表】（所有 subject 的向量），
       //   不是只清本 subject。多 subject 化时这里要换成 subject 粒度清索引（届时 Retriever 需提供按 subject/id 清）。
       //   记入 docs/host-migration.md §6 已知限制。
-      if (retriever) retriever.indexAll([]).catch((e) => console.error('resetSubject 清向量索引失败：', e));
+      if (retriever) {
+        retriever.indexAll([]).catch((e) =>
+          console.error(
+            resolveLang(cfg) === 'zh'
+              ? 'resetSubject 清向量索引失败：'
+              : 'resetSubject failed to clear the vector index:',
+            e,
+          ),
+        );
+      }
       return counts;
     },
   };

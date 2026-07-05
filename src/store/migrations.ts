@@ -21,6 +21,7 @@
  */
 import type { DatabaseSync } from './driver.ts';
 import { copyFileSync, existsSync } from 'node:fs';
+import { resolveLang } from '../config.ts';
 
 export interface Migration {
   /** 这条迁移把库带到的目标版本号（从 1 递增，连续）。 */
@@ -50,7 +51,9 @@ export function getSchemaVersion(db: DatabaseSync): number {
 
 function setSchemaVersion(db: DatabaseSync, v: number): void {
   // PRAGMA 不能参数化；v 校验成非负整数后再拼进去，杜绝注入。
-  if (!Number.isInteger(v) || v < 0) throw new Error(`非法 schema 版本号：${v}`);
+  if (!Number.isInteger(v) || v < 0) {
+    throw new Error(resolveLang() === 'zh' ? `非法 schema 版本号：${v}` : `Invalid schema version number: ${v}`);
+  }
   db.exec(`PRAGMA user_version = ${v}`);
 }
 
@@ -96,8 +99,11 @@ export function runMigrations(db: DatabaseSync, opts: RunMigrationsOptions = {})
   //   真·新库文件 from=0，触发不了；只挡"未来版本建的库被旧代码打开"。
   if (from > latest) {
     throw new Error(
-      `数据库 schema 版本 v${from} 高于本版 memoweft 支持的 v${latest}：` +
-      `这个库由更新版本的 memoweft 创建，请先升级 memoweft 再打开（拒绝用旧代码读写不认识的 schema，防写坏数据）。`,
+      resolveLang() === 'zh'
+        ? `数据库 schema 版本 v${from} 高于本版 memoweft 支持的 v${latest}：` +
+            `这个库由更新版本的 memoweft 创建，请先升级 memoweft 再打开（拒绝用旧代码读写不认识的 schema，防写坏数据）。`
+        : `Database schema version v${from} is higher than the v${latest} supported by this memoweft: ` +
+            `this database was created by a newer version of memoweft. Please upgrade memoweft before opening it (old code refuses to read/write a schema it doesn't recognize, to avoid corrupting data).`,
     );
   }
 
@@ -138,7 +144,11 @@ export function runMigrations(db: DatabaseSync, opts: RunMigrationsOptions = {})
       db.exec('COMMIT');
     } catch (e) {
       db.exec('ROLLBACK');
-      throw new Error(`迁移 v${m.version}（${m.name}）失败，已回滚：${e instanceof Error ? e.message : String(e)}`);
+      throw new Error(
+        resolveLang() === 'zh'
+          ? `迁移 v${m.version}（${m.name}）失败，已回滚：${e instanceof Error ? e.message : String(e)}`
+          : `Migration v${m.version} (${m.name}) failed and was rolled back: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
     applied.push(m.version);
     log(`[migrate] 已应用 v${m.version} ${m.name}`);

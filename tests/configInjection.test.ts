@@ -56,7 +56,7 @@ test('config 注入 · 端到端：同进程两套配置跑 consolidate，把握
   }
 });
 
-test('config 注入 · perceive 用注入的 identity（缺省=单例的 owner/testbench）', () => {
+test('config 注入 · perceive 用注入的 identity（缺省=单例的 owner/local）', () => {
   assert.equal(perceive('hi').subjectId, config.identity.subjectId, '缺省走单例 identity');
   const cfg = structuredClone(config);
   cfg.identity.subjectId = 'alice';

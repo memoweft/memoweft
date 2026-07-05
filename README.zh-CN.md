@@ -161,7 +161,7 @@ console.log(turn.recall);  // 这轮召回并注入了哪些理解
 core.close();
 ```
 
-> TypeScript 项目按常规装 `@types/node` 即可。Node 20/22 上另装可选驱动 `better-sqlite3`（`npm i better-sqlite3`）。没配嵌入器也能跑：召回自动降级为空，证据照写，只是回话不做语义召回。仓库内的可跑版本见 [`examples/minimal.ts`](./examples/minimal.ts)；想直接用底层部件（`openStores` / `Conversation` / `updateProfile` / 召回器）见 [`docs/integration.md`](./docs/integration.md)。
+> TypeScript 项目按常规装 `@types/node` 即可。Node 20/22 上另装可选驱动 `better-sqlite3`（`npm i better-sqlite3`）。没配嵌入器也能跑：召回自动降级为空，证据照写，只是回话不做语义召回。仓库内的可跑版本见 [`examples/minimal.ts`](./examples/minimal.ts)；想直接用底层部件（`openStores` / `Conversation` / `updateProfile` / 召回器）见 [`docs/integration.zh-CN.md`](./docs/integration.zh-CN.md)。
 
 ---
 
@@ -194,7 +194,7 @@ core.close();
 | 写路径模型 | `MEMOWEFT_WRITE_LLM_BASE_URL` · `MEMOWEFT_WRITE_LLM_API_KEY` · `MEMOWEFT_WRITE_LLM_MODEL` |
 | 嵌入器 | `MEMOWEFT_EMBED_BASE_URL` · `MEMOWEFT_EMBED_API_KEY` · `MEMOWEFT_EMBED_MODEL` |
 
-三组都接受 OpenAI 兼容接口。云端最省事；Ollama、LM Studio 等本地端点也支持。完整 env 说明见 [`docs/INSTALL.md`](./docs/INSTALL.md)。
+三组都接受 OpenAI 兼容接口。云端最省事；Ollama、LM Studio 等本地端点也支持。完整 env 说明见 [`docs/INSTALL.zh-CN.md`](./docs/INSTALL.zh-CN.md)。
 
 ---
 
@@ -206,7 +206,7 @@ core.close();
 | 保留模型可切换，记录 evidence 级授权 | 隐私政策、同意 UI、到底存不存 |
 | 按请求把相关用户上下文递回去 | 决定怎么用（回话 / 工具调用 / 桌面助手 / Agent） |
 
-主要导出见 [`src/index.ts`](./src/index.ts)，接入说明见 [`docs/integration.md`](./docs/integration.md)。
+主要导出见 [`src/index.ts`](./src/index.ts)，接入说明见 [`docs/integration.zh-CN.md`](./docs/integration.zh-CN.md)。
 
 ---
 
@@ -243,14 +243,16 @@ core.close();
 
 | 文档 | 内容 |
 | --- | --- |
-| [`docs/INSTALL.md`](./docs/INSTALL.md) | 安装、配 `.env`、跑测试、起宿主 / 测试台 |
+| [`docs/INSTALL.zh-CN.md`](./docs/INSTALL.zh-CN.md) | 安装、配 `.env`、跑测试、起宿主 / 测试台 |
 | [`docs/deployment.md`](./docs/deployment.md) | 云端 / 云守护 / 混合部署与隐私模式 |
 | [`docs/architecture.md`](./docs/architecture.md) | 三层数据、读写解耦、认知纪律、可替换点 |
-| [`docs/integration.md`](./docs/integration.md) | 宿主接入指南 + 导出表 |
+| [`docs/integration.zh-CN.md`](./docs/integration.zh-CN.md) | 宿主接入指南 + 导出表 |
 | [`docs/naming.md`](./docs/naming.md) | 双语命名与定位口径 |
 | [`plugins/collector-active-window/README.md`](./plugins/collector-active-window/README.md) | 活动窗口采集插件（采集 → 宿主 → core 数据流） |
 | [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) | 打包和 npm 发布流程 |
-| [`examples/minimal.ts`](./examples/minimal.ts) | 可运行最小示例 |
+| [`examples/minimal.ts`](./examples/minimal.ts) | 最小写→读闭环（需对话模型） |
+| [`examples/memory-management.ts`](./examples/memory-management.ts) | 受控记忆管理（`core.memory.*`，需对话模型） |
+| [`examples/portable-bundle.ts`](./examples/portable-bundle.ts) | 导出/导入便携记忆包（无需模型即可跑） |
 
 内部设计笔记与历史白板（项目地图、`STATE`）在 [`docs/internal/`](./docs/internal/)——是「项目当初怎么造的」历史背景，用库或改代码都不需要读。
 

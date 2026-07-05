@@ -21,6 +21,7 @@ import type { CognitionStore } from '../cognition/store.ts';
 import type { Transaction } from '../store/transaction.ts';
 import type { EvidenceLink } from '../cognition/model.ts';
 import { validateBundle } from './validateBundle.ts';
+import { resolveLang } from '../config.ts';
 import type { ImportMode, ImportPlan, MemoryBundle } from './model.ts';
 
 export interface ImportDeps {
@@ -37,6 +38,7 @@ export interface ImportOptions {
 
 export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: ImportOptions): ImportPlan {
   const { evidenceStore, eventStore, cognitionStore } = deps;
+  const lang = resolveLang();
 
   const validation = validateBundle(bundle);
   const plan: ImportPlan = {
@@ -63,7 +65,11 @@ export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: Impor
     if (e.originId != null && evidenceStore.findByOrigin(e.originId)) {
       plan.duplicates.evidence++;
       unresolvedEvidence.add(e.id);
-      plan.warnings.push(`evidence ${e.id} 的 originId 已被库中另一条占用，跳过（其溯源引用一并丢弃）`);
+      plan.warnings.push(
+        lang === 'zh'
+          ? `evidence ${e.id} 的 originId 已被库中另一条占用，跳过（其溯源引用一并丢弃）`
+          : `evidence ${e.id} originId is already taken by another record in the database; skipping (its provenance links are dropped too)`,
+      );
       return false;
     }
     return true;
@@ -115,7 +121,11 @@ export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: Impor
   const evidenceToInsert = newEvidence.map((e) => {
     const cid = e.correctsEvidenceId;
     if (cid != null && !evidenceStore.get(cid) && !newEvidenceIds.has(cid)) {
-      plan.warnings.push(`evidence ${e.id} 的 correctsEvidenceId(${cid}) 在目标库无法解析，导入时置空`);
+      plan.warnings.push(
+        lang === 'zh'
+          ? `evidence ${e.id} 的 correctsEvidenceId(${cid}) 在目标库无法解析，导入时置空`
+          : `evidence ${e.id} correctsEvidenceId(${cid}) cannot be resolved in the target database; cleared on import`,
+      );
       return { ...e, correctsEvidenceId: null };
     }
     return e;
@@ -147,8 +157,18 @@ export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: Impor
     else write();
   } catch (e) {
     plan.valid = false;
-    plan.errors.push(`导入写入失败：${e instanceof Error ? e.message : String(e)}`);
-    if (!deps.transaction) plan.warnings.push('未提供 transaction，写入中途失败可能已残留部分数据（建议用 openStores 的 transaction）');
+    plan.errors.push(
+      lang === 'zh'
+        ? `导入写入失败：${e instanceof Error ? e.message : String(e)}`
+        : `Import write failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
+    if (!deps.transaction) {
+      plan.warnings.push(
+        lang === 'zh'
+          ? '未提供 transaction，写入中途失败可能已残留部分数据（建议用 openStores 的 transaction）'
+          : 'No transaction provided; a mid-write failure may have left partial data (use the transaction from openStores)',
+      );
+    }
     plan.counts = { evidence: 0, events: 0, cognitions: 0, eventEvidence: 0, cognitionEvidence: 0 };
     return plan;
   }

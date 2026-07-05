@@ -13,6 +13,7 @@
  * 纪律：不做重 schema 校验——字段级容错留在各调用处（如 consolidate 的 pickCognition）。这里只保证"能拿到一个对象"。
  */
 import type { LLMClient, ChatMessage } from './client.ts';
+import { resolveLang, type Lang } from '../config.ts';
 
 /** 去掉 ```json … ``` / ``` … ``` 代码块围栏，返回里面的内容（没有围栏则原样返回）。 */
 function stripCodeFences(s: string): string {
@@ -24,9 +25,25 @@ function stripCodeFences(s: string): string {
 export function extractJsonObject(raw: string): string | null {
   const s = stripCodeFences(raw).trim();
   const start = s.indexOf('{');
-  const end = s.lastIndexOf('}');
-  if (start === -1 || end === -1 || end < start) return null;
-  return s.slice(start, end + 1);
+  if (start === -1) return null;
+  // 从首个 { 起做括号配平扫描，取【第一个平衡闭合】的对象——比贪婪 lastIndexOf('}') 更抗
+  // reasoning 思考残留 / 尾随文本污染；跳过字符串内的花括号。无平衡闭合 → null。
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i]!;
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return s.slice(start, i + 1);
+  }
+  return null;
 }
 
 /** 抠出 JSON 对象文本并 parse；只认【对象】（数组 / 标量 / null 都算不合法），失败返回 null。 */
@@ -51,10 +68,14 @@ export interface ParseWithRepairDeps {
    * 注入自己的 log 即可。
    */
   log?: (msg: string) => void;
+  /** 重试提示语言（缺省=全局单例）：写路径调用方传各自 language，让"只输出 JSON"的纠偏提示跟随对话语言。 */
+  lang?: Lang;
 }
 
-const JSON_ONLY_NUDGE =
-  '你上一条回复不是合法的 JSON 对象。请【只】输出一个 JSON 对象，不要任何解释、不要 Markdown 代码块围栏。';
+const JSON_ONLY_NUDGE: Record<Lang, string> = {
+  zh: '你上一条回复不是合法的 JSON 对象。请【只】输出一个 JSON 对象，不要任何解释、不要 Markdown 代码块围栏。',
+  en: 'Your previous reply was not a valid JSON object. Output [only] a single JSON object, with no explanation and no Markdown code fences.',
+};
 
 /**
  * 调模型 → 解析出一个 JSON 对象；失败则【落日志 + 最多重试一次】（追加"只输出 JSON"提示）；仍失败返回 null。
@@ -65,21 +86,26 @@ export async function parseJsonObjectWithRepair<T = Record<string, unknown>>(
   deps: ParseWithRepairDeps,
 ): Promise<T | null> {
   const log = deps.log ?? ((m: string) => console.warn(`[memoweft/jsonRepair] ${m}`));
+  const lang = deps.lang ?? resolveLang();
 
   const first = await deps.llm.chat(deps.messages);
   const parsed = parseJsonObject<T>(first);
   if (parsed !== null) return parsed;
 
   log(
-    `首次输出非合法 JSON，重试一次。解析失败：长度=${first.length}、含代码围栏=${/```/.test(first)}、含花括号=${first.includes('{')}`,
+    lang === 'zh'
+      ? `首次输出非合法 JSON，重试一次。解析失败：长度=${first.length}、含代码围栏=${/```/.test(first)}、含花括号=${first.includes('{')}`
+      : `First output was not valid JSON, retrying once. Parse failed: length=${first.length}, hasCodeFence=${/```/.test(first)}, hasBrace=${first.includes('{')}`,
   );
-  const retryMessages: ChatMessage[] = [...deps.messages, { role: 'user', content: JSON_ONLY_NUDGE }];
+  const retryMessages: ChatMessage[] = [...deps.messages, { role: 'user', content: JSON_ONLY_NUDGE[lang] }];
   const second = await deps.llm.chat(retryMessages);
   const reparsed = parseJsonObject<T>(second);
   if (reparsed !== null) return reparsed;
 
   log(
-    `重试后仍非合法 JSON，放弃本轮。解析失败：长度=${second.length}、含代码围栏=${/```/.test(second)}、含花括号=${second.includes('{')}`,
+    lang === 'zh'
+      ? `重试后仍非合法 JSON，放弃本轮。解析失败：长度=${second.length}、含代码围栏=${/```/.test(second)}、含花括号=${second.includes('{')}`
+      : `Still not valid JSON after retry, giving up this round. Parse failed: length=${second.length}, hasCodeFence=${/```/.test(second)}, hasBrace=${second.includes('{')}`,
   );
   return null;
 }

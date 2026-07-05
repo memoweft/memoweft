@@ -1,35 +1,37 @@
-# MemoWeft 接入指南（Integration Guide）
+# MemoWeft Integration Guide
 
-> 面向宿主（Host）开发者：如何把 MemoWeft 这层「用户认知框架」接进你的应用 / Agent。
+**English** | [简体中文](./integration.zh-CN.md)
+
+> For host developers: how to integrate MemoWeft — the "user cognition framework" layer — into your app / agent.
 >
-> 默认接入路径是 **Cloud-first**：先用 OpenAI-compatible 云端端点跑通，再按数据敏感度升级到 Cloud-guarded 或 Hybrid / local-sensitive。
+> The default path is **Cloud-first**: get running with an OpenAI-compatible cloud endpoint, then upgrade to Cloud-guarded or Hybrid / local-sensitive by data sensitivity.
 
 ---
 
-## 1. MemoWeft 和宿主的边界
+## 1. The boundary between MemoWeft and the host
 
-MemoWeft 是一个**被宿主 import 的库**。它自己不做聊天界面、不做人设、不管 UI，也不替宿主决定隐私政策。
+MemoWeft is a **library the host imports**. It does not do the chat UI, the persona, or the UI, and it does not decide the host's privacy policy.
 
-| MemoWeft | 宿主应用 |
+| MemoWeft | Host application |
 | --- | --- |
-| 存证据、生成事件、沉淀认知、计算把握度 | 负责聊天、人设、语气、UI |
-| 召回相关用户上下文 | 决定什么时候用、怎么表达 |
-| 提供 `allowCloudRead` 等 evidence 授权位 | 负责隐私政策、用户同意、可见设置 |
-| 保持模型 / 嵌入器可替换 | 决定云端、本地或混合部署 |
+| Store evidence, generate events, settle cognition, compute confidence | Owns chat, persona, tone, UI |
+| Recall relevant user context | Decides when to use it and how to phrase it |
+| Provide evidence authorization bits such as `allowCloudRead` | Owns privacy policy, user consent, visibility settings |
+| Keep the model / embedder swappable | Decides cloud, local, or hybrid deployment |
 
-一句话：**MemoWeft 给“对用户的理解”，宿主决定“怎么使用这份理解”。**
+In one line: **MemoWeft provides "the understanding of the user"; the host decides "how to use that understanding".**
 
 ---
 
-## 2. 安装与导入
+## 2. Install & import
 
-MemoWeft 已发布到 npm，宿主直接装：
+MemoWeft is published on npm; hosts install it directly:
 
 ```bash
 npm install memoweft
 ```
 
-（TypeScript 项目按常规装 `@types/node` 即可；Node 20/22 上另装可选驱动 `better-sqlite3`。）想从源码接（改库本身 / 跟最新提交）也行：
+(TypeScript projects just add `@types/node` as usual; on Node 20/22 also install the optional `better-sqlite3` driver.) Integrating from source (to modify the library itself / track the latest commits) also works:
 
 ```bash
 git clone https://github.com/memoweft/memoweft.git
@@ -38,212 +40,189 @@ npm install
 npm run typecheck && npm test && npm run build
 ```
 
-从源码接时，宿主可用：
+When integrating from source, a host can use:
 
-- git submodule；
-- `npm install <本地路径>`；
-- 直接引用 `../memoweft/src/index.ts`；
-- 或引用 build 后的 `dist/index.js`。
+- a git submodule;
+- `npm install <local-path>`;
+- referencing `../memoweft/src/index.ts` directly;
+- or referencing the built `dist/index.js`.
 
-> 要求：**Node ≥ 24 开箱即用**（存储用内置 `node:sqlite`）；**Node 20/22** 上内置模块不可用，需装可选驱动 `better-sqlite3`（`npm i better-sqlite3`）。开发 / 跑 `.ts` 测试仍以 Node ≥24 为准（Node 22 需 22.18+ 才默认支持原生剥 `.ts` 类型，Node 20 不支持）。
+> Requirement: **Node ≥ 24 works out of the box** (storage uses the built-in `node:sqlite`); on **Node 20/22** the built-in module is unavailable, so install the optional `better-sqlite3` driver (`npm i better-sqlite3`). Developing / running the `.ts` tests still requires Node ≥ 24 (Node 22 needs 22.18+ to strip `.ts` types natively; Node 20 cannot). See [`INSTALL.md`](./INSTALL.md) for install details.
 
 ---
 
-## 3. Cloud-first 配置
+## 3. Cloud-first config
 
-MemoWeft 读取 `.env`。推荐先用云端 OpenAI-compatible endpoint 跑通：
+MemoWeft reads `.env`. The recommended start is a cloud OpenAI-compatible endpoint:
 
 ```ini
 MEMOWEFT_LLM_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_LLM_API_KEY=sk-xxxx
 MEMOWEFT_LLM_MODEL=your-chat-model
 
-# 可选：写路径小快模型。缺配会回退对话模型。
+# Optional: small/fast write-path model. Falls back to the chat model if unset.
 MEMOWEFT_WRITE_LLM_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_WRITE_LLM_API_KEY=sk-xxxx
 MEMOWEFT_WRITE_LLM_MODEL=your-small-fast-model
 
-# 可选：语义召回。缺配则召回降级为空。
+# Optional: semantic recall. If unset, recall degrades to empty.
 MEMOWEFT_EMBED_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_EMBED_API_KEY=sk-xxxx
 MEMOWEFT_EMBED_MODEL=your-embedding-model
 ```
 
-旧前缀 `DLA_*` 仍兼容；新接入一律推荐 `MEMOWEFT_*`。
+The legacy `DLA_*` prefix still works; new integrations should always use `MEMOWEFT_*`.
 
-部署模式详见 [`deployment.md`](./deployment.md)：
+See the deployment modes in [`deployment.md`](./deployment.md):
 
-- **Cloud-first**：最快跑通，适合 demo / 原型 / 普通开发者接入。
-- **Cloud-guarded**：仍用云端模型，但 `allowCloudRead=false` 的证据不进云端 prompt。
-- **Hybrid / local-sensitive**：敏感观察走本地模型或本地嵌入器，低风险调用可走云端。
+- **Cloud-first**: fastest to run; good for demos / prototypes / general developer integration.
+- **Cloud-guarded**: still cloud models, but evidence with `allowCloudRead=false` never enters a cloud prompt.
+- **Hybrid / local-sensitive**: sensitive observations route to local models or a local embedder; low-risk calls can go to the cloud.
 
 ---
 
-## 4. 30 秒心智模型
+## 4. The 30-second mental model
 
 ```txt
-evidence（证据·原始事实） → event（事件·情境化） → cognition（认知·判断）
-用户说了/做了什么          一段对话的情境摘要       对用户的理解，带把握度和溯源
+evidence (raw fact)          → event (contextualized)      → cognition (judgment)
+what the user said/did         a situational summary of a    understanding of the user,
+                               conversation                  with confidence and provenance
 ```
 
-- **读路径**：一轮对话 → 存证据 → 召回相关认知 → 注入回话。
-- **写路径**：攒批整理证据 → 生成事件 → 更新认知 → 归因 → 重建索引。
-- **读写解耦**：聊天时不等画像更新；画像更新在后台或手动触发。
+- **Read path**: one conversation turn → store evidence → recall relevant cognition → inject into the reply.
+- **Write path**: batch and distill evidence → generate events → update cognition → attribute → reindex.
+- **Read/write decoupling**: chatting does not wait for a profile update; profile updates run in the background or on demand.
 
 ---
 
-## 5. 端到端最小接入
+## 5. End-to-end minimal integration
+
+Prefer going through the unified entry `createMemoWeftCore` for everything: one line assembles the three-layer stores + retriever + model pool (all read from `.env`, degrading gracefully instead of crashing when config is missing), so the host does not hand-wire the low-level parts.
 
 ```ts
-import {
-  SqliteEvidenceStore,
-  SqliteEventStore,
-  SqliteCognitionStore,
-  Conversation,
-  updateProfile,
-  loadLLMPool,
-  loadEmbedConfig,
-  OpenAICompatEmbedder,
-  VectorRetriever,
-  NullRetriever,
-  config,
-} from 'memoweft';
+import { createMemoWeftCore } from 'memoweft';
 
-const DB = './my-app.db';
+// One-line assembly: three-layer stores + retriever + model pool, all from .env,
+// degrading gracefully when config is missing.
+// If subjectId / hostId are omitted, the defaults apply (config.identity: 'owner' / 'local').
+const core = createMemoWeftCore({ dbPath: './my-app.db' });
 
-const evidenceStore = new SqliteEvidenceStore(DB);
-const eventStore = new SqliteEventStore(DB);
-const cognitionStore = new SqliteCognitionStore(DB);
+// Self-check: can it chat / can it recall (decides whether to prompt the user to fill in .env).
+const { llmReady, embedReady } = core.health();
 
-const llmPool = loadLLMPool();
-const chatLLM = llmPool.for('chat');
-const writeLLM = llmPool.for('write');
-
-const embedConfig = loadEmbedConfig();
-const retriever = embedConfig
-  ? new VectorRetriever(DB, new OpenAICompatEmbedder(embedConfig))
-  : new NullRetriever();
-
-const subjectId = config.identity.subjectId;
-
-const convo = new Conversation({
-  store: evidenceStore,
-  retriever,
-  cognitionStore,
-  llm: chatLLM,
+// Read path: a user sends a turn → store evidence → recall relevant cognition → inject into the reply.
+const turn = await core.handleConversationTurn({
+  message: "I'm crunching on a side project lately and staying up late every night",
 });
+console.log(turn.reply);
+console.log(turn.storedEvidence);
+console.log(turn.recall);
 
-// 读路径：用户发来一轮消息。
-const outcome = await convo.handle('我最近在赶一个副业项目，天天熬夜', {
-  subjectId,
-});
-
-console.log(outcome.reply);
-console.log(outcome.storedEvidence);
-console.log(outcome.recall);
-
-// 写路径：攒批或手动触发画像更新。
-const upd = await updateProfile(subjectId, {
-  evidenceStore,
-  eventStore,
-  cognitionStore,
-  retriever,
-  llm: writeLLM,
-});
-
+// Write path: batch or manually trigger a profile update (distill → consolidate → attribute → reindex).
+const upd = await core.updateProfile();
 console.log(upd.consolidated.created);
-console.log(upd.attributed.hypotheses);
 console.log(upd.timings);
+
+// Release connections when done (an injected retriever belongs to the caller and is not closed).
+core.close();
 ```
 
-> 真实宿主里不建议每轮都立刻 `updateProfile()`。写路径较重，应该攒批、空闲、定时或手动触发。
+> In a real host, do not call `updateProfile()` immediately every turn. The write path is heavy; batch it, or trigger it on idle, on a schedule, or manually.
+>
+> Need finer manual assembly (your own `new Sqlite*Store` / a custom injected retriever)? See [`examples/minimal.ts`](../examples/minimal.ts) and §8 "Swap points" — but the vast majority of hosts only need `createMemoWeftCore`.
 
 ---
 
-## 6. 摄入行为观察
+## 6. Ingesting behavior observations
 
-除了对话，宿主也可以把桌面、设备、窗口等观察统一灌进 evidence 层。
+Besides conversation, a host can also feed desktop, device, and window observations into the evidence layer. Core provides only a **generic observation ingest port**, `core.ingestObservation({ observations })`: it lands the host's normalized `Observation`s as `observed` evidence (not cloud-readable by default; idempotent by `originId`).
 
 ```ts
-import { ingestObservations, activeWindowToObservation } from 'memoweft';
+import type { Observation } from 'memoweft';
 
-const obs = activeWindowToObservation({
-  app: 'VS Code',
-  title: 'memoweft',
-  durationSec: 2400,
+// The host normalizes an external signal into an Observation (here, one active-window observation built by hand).
+const obs: Observation = {
+  kind: 'active_window',
   occurredAt: new Date().toISOString(),
-});
+  content: 'Stayed in VS Code (memoweft) for about 40 minutes',
+  originId: 'win-session-123',   // optional idempotency key: the same window session is not stored twice
+  // Omit the authorization bits → conservative observed defaults (local-readable / not cloud-readable / inference-allowed).
+};
 
-const res = ingestObservations(subjectId, [obs], {
-  evidenceStore,
-  hostId: 'my-desktop-host',
-});
-
-console.log(res.stored, res.skipped);
+const stored = await core.ingestObservation({ observations: [obs] });
+console.log(stored.length);   // number of new observed evidence rows written this time
 ```
 
-建议默认策略：
+> **The real collector is not in Core.** "How to capture the active window from the OS" is a collector-plugin job (the Plugin layer), not Core (`boundaries.md §4.1`). The real data flow is: the collector plugin samples windows → maps them to `Observation`s → POSTs to the host's `/api/observe` (the host reviews: collector master switch, force-stripping `allowCloudRead`) → the host calls `core.ingestObservation` to store them. See the reference implementation in [`plugins/collector-active-window/README.md`](../plugins/collector-active-window/README.md).
 
-- 用户聊天 / 明确输入：可由宿主设置为 cloud-readable。
-- 桌面 / 设备 / 健康 / 屏幕类观察：默认 `allowCloudRead=false`。
-- 用户显式授权后，宿主再把对应证据标为可上云。
+Recommended default policy:
 
-库内已设 busy_timeout=5000；仍不建议两个进程同时跑写路径。
+- User chat / explicit input: the host may mark it cloud-readable.
+- Desktop / device / health / screen observations: default `allowCloudRead=false`.
+- Only after explicit user authorization does the host mark the corresponding evidence as cloud-uploadable.
 
----
-
-## 7. 接入时别绕过的纪律
-
-- 只有**用户消息 / 用户授权观察**进入 evidence。
-- **助手回话不应当作证据**，避免系统自证。
-- LLM 推测只能进入低置信候选 / hypothesis。
-- 冲突先暴露，不自动覆盖。
-- 写路径喂云端模型前必须尊重 `allowCloudRead`。
-- 短期状态要走衰减 / 过期，不应永久注入。
+The library already sets `busy_timeout=5000`; even so, do not run the write path from two processes at once.
 
 ---
 
-## 8. 可替换点
+## 7. Discipline not to bypass on integration
 
-| 部分 | 默认实现 | 替换目的 |
+- Only **user messages / user-authorized observations** enter evidence.
+- **Assistant replies must not be treated as evidence**, to avoid the system self-confirming.
+- LLM guesses may only enter low-confidence candidates / hypotheses.
+- Surface conflicts first; do not auto-overwrite.
+- Respect `allowCloudRead` before feeding a cloud model on the write path.
+- Short-term state should decay / expire; do not inject it permanently.
+
+---
+
+## 8. Swap points
+
+The unified entry `createMemoWeftCore` already wires the defaults below; to swap an implementation, inject it through its options (e.g. `retriever` / `embedder` / `llm`), or assemble by hand from source (see [`examples/minimal.ts`](../examples/minimal.ts)).
+
+| Part | Default implementation | Purpose of swapping |
 | --- | --- | --- |
-| LLM client | `OpenAICompatClient` | 接不同云端 / 本地模型服务 |
-| LLM pool | `loadLLMPool()` | 区分 chat / write 模型 |
-| Embedder | `OpenAICompatEmbedder` | 接云端或本地 embedding endpoint |
-| Retriever | `VectorRetriever` / `NullRetriever` | 后续可替换为混合检索、图检索等 |
-| Stores | SQLite stores | 后续可迁移到其他存储后端 |
+| LLM client | `OpenAICompatClient` | Connect a different cloud / local model service |
+| LLM pool | `loadLLMPool()` | Distinguish chat / write models |
+| Embedder | `OpenAICompatEmbedder` | Connect a cloud or local embedding endpoint |
+| Retriever | `VectorRetriever` / `NullRetriever` | Later swap for hybrid / graph retrieval, etc. |
+| Stores | SQLite stores | Later migrate to another storage backend |
 
 ---
 
-## 9. 常用导出
+## 9. Common exports
 
-| 类别 | 导出 |
+The vast majority of hosts only need `createMemoWeftCore` + the facades it returns (`core.memory` / `core.portable` / `core.graph`) + the domain types. The common surface is listed below.
+
+| Category | Exports |
 | --- | --- |
-| 证据层 | `SqliteEvidenceStore`, `Evidence`, `EvidenceInput`, `ingestObservations` |
-| 事件层 | `SqliteEventStore`, `distill` |
-| 认知层 | `SqliteCognitionStore`, `Cognition`, `computeConfidence` |
-| 写路径 | `updateProfile`, `consolidate`, `attribute`, `aggregateTrends`, `expire` |
-| 读路径 | `Conversation`, `WorkingMemory`, `VectorRetriever`, `NullRetriever` |
-| 主动询问 | `proposeAsk`, `revisitConflicts`, `AskProposal` |
-| 模型 | `loadLLMPool`, `OpenAICompatClient`, `OpenAICompatEmbedder`, `loadEmbedConfig` |
-| 便携记忆包 | `exportBundle`, `validateBundle`, `importBundle`, `MemoryBundle`, `ImportPlan` |
-| 配置 | `config`, `MEMOWEFT_VERSION` |
+| Unified entry | `createMemoWeftCore`, `MemoWeftCore` |
+| Evidence layer | `Evidence`, `EvidenceInput`, `SourceKind` |
+| Event layer | `Event`, `EventWithEvidence` |
+| Cognition layer | `Cognition`, `CognitionWithSources`, `ContentType`, `CredStatus` |
+| Observation ingest | `Observation` (with `core.ingestObservation`) |
+| Conversation return shapes | `TurnOutcome`, `RecalledCognition` |
+| Controlled memory management | `MemoryManagementAPI` (facade `core.memory`) |
+| Portable memory bundle | `MemoryBundle`, `ImportPlan` (facade `core.portable`) |
+| Graph view | `MemoryGraphPayload` (facade `core.graph`) |
+| Models / recall (swappable injection points) | `OpenAICompatClient`, `OpenAICompatEmbedder`, `loadLLMPool`, `loadEmbedConfig`, `VectorRetriever`, `NullRetriever` |
+| Config / version | `config`, `MEMOWEFT_VERSION` |
 
-真实导出以 [`src/index.ts`](../src/index.ts) 为准。
+The authoritative export list is [`src/index.ts`](../src/index.ts).
 
-**便携记忆包（Phase 5-A）**：`exportBundle(subjectId, { evidenceStore, eventStore, cognitionStore })` 把某用户的完整三层记忆导出成可校验 JSON；`importBundle(bundle, { ...三个 store, transaction }, { mode: 'dryRun' | 'merge' })` 保真导入（保留原 id 与时间戳、按 id/originId 幂等去重、非法包不写库、可选事务防污染）。向量索引不入包，导入后调 `retriever.indexAll()` 重建召回。
+**Portable memory bundle (Phase 5-A)**: `core.portable.exportBundle({ subjectId })` exports a user's full three-layer memory as verifiable JSON; `core.portable.importBundle(bundle, { mode: 'dryRun' | 'merge' })` imports it faithfully (preserving original ids and timestamps, idempotently deduplicating by id/originId, refusing to write an invalid bundle, and optionally wrapping in a transaction to avoid pollution). The vector index is not part of the bundle; after import, a profile update (`core.updateProfile`) rebuilds the recall index. See the runnable example in [`examples/portable-bundle.ts`](../examples/portable-bundle.ts).
 
 ---
 
-## 10. 宿主最小责任清单
+## 10. The host's minimum responsibilities
 
-宿主至少要决定：
+At minimum, the host must decide:
 
-1. 哪些用户输入要存成 evidence；
-2. 哪些观察数据允许摄入；
-3. 哪些 evidence 可上云；
-4. 什么时候触发 `updateProfile()`；
-5. 如何展示 / 使用召回上下文；
-6. 用户如何查看、纠正、删除、导出自己的记忆。
+1. which user inputs to store as evidence;
+2. which observation data may be ingested;
+3. which evidence may go to the cloud;
+4. when to trigger `updateProfile()`;
+5. how to display / use recalled context;
+6. how the user can view, correct, delete, and export their own memory.
 
-MemoWeft 只提供底层认知能力，最终用户体验由宿主完成。
+MemoWeft only provides the underlying cognition capability; the final user experience is the host's job.

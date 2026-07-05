@@ -1,266 +1,270 @@
-# 安装与快速开始 · MemoWeft
+# Install & Quick Start · MemoWeft
 
-> MemoWeft 是套在大模型 / Agent **外部**的“用户认知层”。它是一个被宿主 `import` 的**库**，自己不做聊天 / 角色 / UI。
+**English** | [简体中文](./INSTALL.zh-CN.md)
+
+> MemoWeft is a "user cognition layer" that wraps **around** an LLM / agent. It is a **library** the host `import`s — it does not do chat, personas, or UI itself.
 >
-> 本文带你：**装上 → 配好 env → 15 分钟看到它工作**。默认推荐云端 OpenAI-compatible 端点快速跑通；本地 / 混合模型作为高级选项。
+> This guide takes you from **install → configure env → see it working in 15 minutes**. The recommended default is a cloud OpenAI-compatible endpoint for the fastest start; local / hybrid models are an advanced option.
 
 ---
 
-## 0. 前置条件
+## 0. Prerequisites
 
-| 要求 | 说明 |
+| Requirement | Notes |
 | --- | --- |
-| **Node ≥ 24（开箱即用）或 Node 20/22 + `better-sqlite3`（后备）** | 存储底层是 SQLite。驱动**优先用内置 `node:sqlite`**、加载不到才回退可选的 `better-sqlite3`。Node ≥24 上 `node:sqlite` 转正稳定、零额外依赖；Node 20 上没有它、必须装 `better-sqlite3`（`npm i better-sqlite3`，见下方 §1.2）；Node 22 视你的版本 / flag 是否已提供 `node:sqlite` 而定，用不上时才需装 `better-sqlite3`。 |
-| **一个 OpenAI-compatible 对话模型端点** | 默认推荐云端端点：最省事、最容易让开发者跑起来。只要兼容 `/chat/completions` 即可。 |
-| **可选：写路径小快模型端点** | 用于 `distill → consolidate → attribute`，缺配会回退对话模型。 |
-| **可选：嵌入端点** | 用于语义召回。缺配时召回降级为空，画像照写，只是不注入长期认知。 |
-| **零运行时依赖** | runtime `dependencies` 为空，存储 / HTTP / 向量计算均用 Node 内置。`better-sqlite3` 只是**可选 peer 依赖**，Node ≥24 用户根本不需要装它。 |
+| **Node ≥ 24 (works out of the box) or Node 20/22 + `better-sqlite3` (fallback)** | Storage is backed by SQLite. The driver **prefers the built-in `node:sqlite`** and only falls back to the optional `better-sqlite3` if that cannot be loaded. On Node ≥ 24 `node:sqlite` is stable and needs zero extra deps; on Node 20 it is absent, so you **must** install `better-sqlite3` (`npm i better-sqlite3`, see §1.2); on Node 22 it depends on whether your version / flags already expose `node:sqlite` — install `better-sqlite3` only when it is not available. |
+| **One OpenAI-compatible chat model endpoint** | The recommended default is a cloud endpoint: least setup, easiest for a developer to get running. Anything compatible with `/chat/completions` works. |
+| **Optional: a small/fast write-path model endpoint** | Used for `distill → consolidate → attribute`. If unset, it falls back to the chat model. |
+| **Optional: an embedding endpoint** | Used for semantic recall. If unset, recall degrades to empty — the profile is still written, only long-term cognition is not injected. |
+| **Zero runtime dependencies** | Runtime `dependencies` is empty; storage / HTTP / vector math all use Node built-ins. `better-sqlite3` is only an **optional peer dependency** — Node ≥ 24 users never need to install it. |
 
-> ⚙️ **`node:sqlite` 加载不到时，装可选驱动 `better-sqlite3` 兜底。** MemoWeft **优先用内置 `node:sqlite`**、加载不到才回退 `better-sqlite3`（原生模块，见 §1.2）。`node:sqlite` 到 Node 24 才转正稳定；Node 20 上没有它，**必须**装 `better-sqlite3`；Node 22 是否可用取决于你的 Node 版本 / flag——用不上时才需装 `better-sqlite3`（装了也只在 `node:sqlite` 加载不到时才会被选中，不会顶替已可用的内置驱动）。开发库本身（跑仓库里的 `.ts` 示例 / 测试台）另有门槛：Node 22 需 22.18+ 才默认支持原生剥 `.ts` 类型，Node 20 没有此能力——想跑 `.ts` 请用 Node ≥24；只是**当库用**（`import 'memoweft'` 吃编译后的 `.js`）则装好可用驱动即可。
+> ⚙️ **Install the optional `better-sqlite3` driver when `node:sqlite` cannot be loaded.** MemoWeft **prefers the built-in `node:sqlite`** and only falls back to `better-sqlite3` (a native module, see §1.2) when it cannot be loaded. `node:sqlite` only became stable in Node 24; on Node 20 it is absent, so you **must** install `better-sqlite3`; on Node 22 availability depends on your Node version / flags — install `better-sqlite3` only when it is not available (once installed it is picked only when `node:sqlite` cannot be loaded, and never overrides an already-usable built-in driver). Developing the library itself (running the `.ts` examples / testbench from the repo) has a stricter bar: Node 22 needs 22.18+ to strip `.ts` types natively and Node 20 cannot do it at all — use Node ≥ 24 to run `.ts`. **Using it as a library** (`import 'memoweft'`, which consumes the compiled `.js`) only needs a usable driver.
 
-> ℹ️ **云端优先，不是无脑上云。** MemoWeft 推荐开发者用云端端点快速开始，但每条证据仍有 `allowCloudRead` 等授权位。宿主负责隐私政策和同意 UI；MemoWeft 负责保留模型切换和过滤钩子。完整模式见 [`deployment.md`](./deployment.md)。
+> ℹ️ **Cloud-first, not cloud-blind.** MemoWeft recommends starting with a cloud endpoint for speed, but every piece of evidence still carries authorization bits such as `allowCloudRead`. The host owns the privacy policy and consent UI; MemoWeft keeps the model-swap and filtering hooks. See the full modes in [`deployment.md`](./deployment.md).
 
 ---
 
-## 1. 安装
+## 1. Install
 
-### 1.1 当库用（`npm install`）
+### 1.1 As a library (`npm install`)
 
-MemoWeft 已发布到 npm。宿主开发者直接装：
+MemoWeft is published on npm. Host developers install it directly:
 
 ```bash
 npm install memoweft
 ```
 
-然后 `import { createMemoWeftCore } from 'memoweft'`（用法见 README「当库用」/ [`integration.md`](./integration.md)）。装出来**零 runtime 依赖**（Node ≥24 用内置 `node:sqlite`）。TypeScript 项目按常规装 `@types/node` 即可。
+Then `import { createMemoWeftCore } from 'memoweft'` (usage in the README "As a library" section / [`integration.md`](./integration.md)). The install has **zero runtime dependencies** (Node ≥ 24 uses the built-in `node:sqlite`). TypeScript projects just add `@types/node` as usual.
 
-### 1.2 Node 20/22：装可选驱动 `better-sqlite3`
+### 1.2 Node 20/22: install the optional `better-sqlite3` driver
 
-Node ≥24 到此为止就够了。**Node 20/22** 上内置 `node:sqlite` 不可用，需额外装可选驱动：
+On Node ≥ 24 you are done. On **Node 20/22** the built-in `node:sqlite` may be unavailable, so install the optional driver:
 
 ```bash
 npm i better-sqlite3
 ```
 
-装上后 MemoWeft 会在开库时自动选它当底层，其余用法完全一致。几点说明：
+Once installed, MemoWeft picks it as the backing driver automatically when it opens the database; everything else is identical. A few notes:
 
-- `better-sqlite3` 是**原生模块**，一般走 prebuilt 二进制、秒装；若你的平台 / Node 版本没有匹配的 prebuilt，会回落到 `node-gyp` 现编译（需要 Python + C++ 工具链）。所以**不承诺一定装得上**——装不上时最稳的出路是把 Node 升到 ≥24（内置驱动、零依赖）。
-- 没装它、又不在 Node ≥24 上时，`import 'memoweft'` 会直接报一句人话错误，列出两条出路（升 Node ≥24 / 装 `better-sqlite3`）。
+- `better-sqlite3` is a **native module**. It usually installs a prebuilt binary in seconds; if there is no matching prebuilt for your platform / Node version, it falls back to compiling with `node-gyp` (which needs Python + a C++ toolchain). So a successful install is **not guaranteed** — the most reliable path when it fails is upgrading Node to ≥ 24 (built-in driver, zero deps).
+- If it is not installed and you are not on Node ≥ 24, `import 'memoweft'` throws a plain-language error listing the two ways out (upgrade to Node ≥ 24 / install `better-sqlite3`).
 
-### 1.3 从源码跑（开发库本身 / 跑参考宿主与测试台）
+### 1.3 From source (developing the library / running the reference host & testbench)
 
 ```bash
 git clone https://github.com/memoweft/memoweft.git
 cd memoweft
-npm install        # 只装 devDependencies，无运行时依赖
-npm run typecheck && npm test && npm run build   # 三绿 = 环境就绪
+npm install        # dev dependencies only; no runtime deps
+npm run typecheck && npm test && npm run build   # all green = environment ready
 ```
 
-参考宿主 `npm start -w @memoweft/host`（:7788）、测试台 `npm run testbench`（:7888）都从源码跑。发布流程见 [`PUBLISHING.md`](./PUBLISHING.md)。
+The reference host `npm start -w @memoweft/host` (:7788) and the testbench `npm run testbench` (:7888) both run from source. For the publish flow, see [`PUBLISHING.md`](./PUBLISHING.md).
 
 ---
 
-## 2. 配 `.env`
+## 2. Configure `.env`
 
-在仓库根目录创建 `.env`，与 `package.json` 同级。也可以复制 `.env.example`：
+Create a `.env` at the repo root, next to `package.json`. You can also copy `.env.example`:
 
 ```bash
 cp .env.example .env
 ```
 
-### 2.1 env 命名：新名主推、旧名兼容
+### 2.1 Env naming: new names primary, old names still work
 
-代码先读 `MEMOWEFT_*` 主名，读不到再回退旧名 `DLA_*`：
+The code reads the `MEMOWEFT_*` primary names first and falls back to the legacy `DLA_*` names:
 
-- **新装的人**：一律用 `MEMOWEFT_*`。
-- **老用户**：已有 `DLA_*` 的 `.env` 可继续用。
-- 两个前缀都没配：真调用模型时会报错。
+- **New installs**: always use `MEMOWEFT_*`.
+- **Existing users**: an existing `.env` with `DLA_*` keeps working.
+- If neither prefix is set: a real model call errors.
 
 ---
 
-## 3. 推荐配置：Cloud-first
+## 3. Recommended config: Cloud-first
 
-这是最推荐的新手 / 开发者接入方式：全部使用云端 OpenAI-compatible endpoint，先把链路跑通。
+This is the most recommended path for newcomers / developers: use cloud OpenAI-compatible endpoints for everything and get the pipeline running first.
 
 ```ini
-# ── 对话模型（必填）：读路径 / 回话质量优先 ────────────────
+# ── Chat model (required): read path / reply quality ─────────────
 MEMOWEFT_LLM_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_LLM_API_KEY=sk-xxxx
 MEMOWEFT_LLM_MODEL=your-chat-model
 
-# ── 写路径模型（可选）：整理事件 / 画像 / 归因 ─────────────
-# 缺配会回退对话模型；建议用小快模型，更新画像更省时。
+# ── Write-path model (optional): distill events / profile / attribution ─
+# Falls back to the chat model if unset; a small/fast model keeps profile updates cheap.
 MEMOWEFT_WRITE_LLM_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_WRITE_LLM_API_KEY=sk-xxxx
 MEMOWEFT_WRITE_LLM_MODEL=your-small-fast-model
 
-# ── 嵌入器（可选）：语义召回 ─────────────────────────────
-# 缺配则召回降级为空，不影响证据和画像写入。
+# ── Embedder (optional): semantic recall ────────────────────────
+# If unset, recall degrades to empty; evidence and profile writes are unaffected.
 MEMOWEFT_EMBED_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_EMBED_API_KEY=sk-xxxx
 MEMOWEFT_EMBED_MODEL=your-embedding-model
 ```
 
-这种模式最省事，适合：
+This mode has the least setup and is good for:
 
-- 快速体验测试台；
-- 让其他开发者最小成本接入；
-- 先验证 `聊天 → 记住 → 召回 → 注入回话` 主链路。
+- quickly trying out the testbench;
+- letting other developers integrate with minimal cost;
+- validating the main `chat → remember → recall → inject into reply` loop first.
 
 ---
 
-## 4. 隐私基线：Cloud-guarded
+## 4. Privacy baseline: Cloud-guarded
 
-真实应用建议在 Cloud-first 的基础上进入 Cloud-guarded：模型仍可用云端，但 evidence 级别控制哪些内容能进云端 prompt。
+For real applications, move from Cloud-first to Cloud-guarded: models can still be cloud-hosted, but you control at the evidence level what content is allowed into cloud prompts.
 
-建议默认：
+Recommended defaults:
 
-| 证据来源 | 默认云端策略 | 理由 |
+| Evidence source | Default cloud policy | Rationale |
 | --- | --- | --- |
-| 用户聊天 / 明确输入的记忆 | 宿主可默认 `allowCloudRead=true` | 用户本来就在和 AI 宿主交互。 |
-| 用户手动批准的观察 | 宿主决定 | 需要清晰同意开关。 |
-| 桌面窗口 / 设备观察 | 默认 `allowCloudRead=false` | 可能包含应用名、窗口标题、文件路径。 |
-| 屏幕 OCR / 剪贴板 / 文件内容 | 默认 `allowCloudRead=false` | 高风险隐私内容。 |
-| 睡眠 / 心率 / 健康数据 | 默认 `allowCloudRead=false` | 敏感个人数据。 |
+| User chat / explicitly entered memory | Host may default to `allowCloudRead=true` | The user is already interacting with the AI host. |
+| User-manually-approved observations | Host decides | Needs a clear consent toggle. |
+| Desktop window / device observations | Default `allowCloudRead=false` | May contain app names, window titles, file paths. |
+| Screen OCR / clipboard / file contents | Default `allowCloudRead=false` | High-risk private content. |
+| Sleep / heart rate / health data | Default `allowCloudRead=false` | Sensitive personal data. |
 
-> MemoWeft 只提供授权位和过滤能力；宿主必须把用户同意、撤销、查看和纠正做成明确体验。
+> MemoWeft only provides the authorization bits and filtering; the host must turn user consent, revocation, review, and correction into an explicit experience.
+
+> ⚠️ **Data at rest is unencrypted; disk encryption is the host/OS responsibility.** MemoWeft stores the three memory layers in a standard SQLite database (e.g. `./dla.db`), and the file itself is **not** encrypted. If the host needs "getting the disk ≠ getting the memory", rely on host- / OS-level disk encryption (BitLocker, FileVault, LUKS). `allowCloudRead` governs *what content may enter a cloud prompt*, which is not the same as local encryption at rest. See [`deployment.md`](./deployment.md) for the full policy.
 
 ---
 
-## 5. 高级配置：Hybrid / Local-sensitive
+## 5. Advanced config: Hybrid / Local-sensitive
 
-如果宿主更重视隐私，可以混合路由：
+If the host cares more about privacy, you can route in a mixed way:
 
 ```ini
-# 对话仍可用云端
+# Chat can still be cloud
 MEMOWEFT_LLM_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_LLM_API_KEY=sk-xxxx
 MEMOWEFT_LLM_MODEL=your-chat-model
 
-# 写路径也可以改成本地 OpenAI-compatible endpoint
+# The write path can point at a local OpenAI-compatible endpoint
 MEMOWEFT_WRITE_LLM_BASE_URL=http://localhost:1234/v1
 MEMOWEFT_WRITE_LLM_API_KEY=local
 MEMOWEFT_WRITE_LLM_MODEL=your-local-model
 
-# 嵌入器可用本地 Ollama / LM Studio / 其他兼容服务
+# The embedder can be a local Ollama / LM Studio / other compatible service
 MEMOWEFT_EMBED_BASE_URL=http://localhost:11435/v1
 MEMOWEFT_EMBED_API_KEY=ollama
 MEMOWEFT_EMBED_MODEL=bge-m3
 ```
 
-本地 / 混合适合：桌面助手、敏感行为观察、长期个人数据。代价是安装和排错成本更高，不建议作为默认新手路径。
+Local / hybrid suits desktop assistants, sensitive behavior observations, and long-term personal data. The trade-off is higher install and troubleshooting cost; it is not recommended as the default newcomer path.
 
 ---
 
-## 6. 九个 env 键一览
+## 6. The nine env keys at a glance
 
-| 用途 | 主名 | 兼容旧名 | 缺配时 |
+| Purpose | Primary name | Legacy alias | If unset |
 | --- | --- | --- | --- |
-| 对话模型 | `MEMOWEFT_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_LLM_*` | 真调用时报错 |
-| 写路径模型 | `MEMOWEFT_WRITE_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_WRITE_LLM_*` | 回退对话模型 |
-| 嵌入召回 | `MEMOWEFT_EMBED_{BASE_URL,API_KEY,MODEL}` | `DLA_EMBED_*` | 召回降级为空 |
+| Chat model | `MEMOWEFT_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_LLM_*` | Errors on a real call |
+| Write-path model | `MEMOWEFT_WRITE_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_WRITE_LLM_*` | Falls back to chat model |
+| Embedding recall | `MEMOWEFT_EMBED_{BASE_URL,API_KEY,MODEL}` | `DLA_EMBED_*` | Recall degrades to empty |
 
-> ⚠️ 不要提交 `.env`。它包含密钥，应被 `.gitignore` 忽略。
+> ⚠️ Do not commit `.env`. It contains secrets and should be ignored by `.gitignore`.
 
 ---
 
-## 7. 跑测试台
+## 7. Run the testbench
 
-测试台是本地网页：左边像正常聊天，右边是 MemoWeft 的“透视区”。你可以看到证据如何落库、如何整理成事件、如何沉淀成画像，以及系统想主动问什么。
+The testbench is a local web page: the left side is a normal chat, the right side is MemoWeft's "x-ray view". You can watch how evidence lands in the store, how it is distilled into events, how it settles into a profile, and what the system wants to proactively ask.
 
 ```bash
 npm run testbench
-# 打开 http://localhost:7888
+# open http://localhost:7888
 ```
 
-测试台特性：
+Testbench features:
 
-- 使用独立的 `testbench/testbench-evidence.db`，不污染正式数据库。
-- 配了 `MEMOWEFT_EMBED_*` 就用向量召回；没配则召回为空。
-- 每轮内幕落盘到 `logs/run-*.jsonl`，方便诊断。
-- 支持聊天、看证据 / 事件 / 画像、手动更新画像、归因、主动询问、注入活动窗口观察。
+- Uses a separate `testbench/testbench-evidence.db` so it never pollutes your real database.
+- Uses vector recall when `MEMOWEFT_EMBED_*` is configured; otherwise recall is empty.
+- Writes each turn's internals to `logs/run-*.jsonl` for diagnosis.
+- Supports chatting, inspecting evidence / events / profile, manual profile updates, attribution, proactive asks, and injecting active-window observations.
 
-> 看不到画像更新？测试台默认攒批：攒够 5 条新对话或空闲 30 分钟才自动 `updateProfile`。想立刻看效果，点“立即更新画像”。
+> Not seeing profile updates? The testbench batches by default: it only auto-runs `updateProfile` after 5 new conversations or 30 minutes idle. To see the effect immediately, click "Update profile now".
 
 ---
 
-## 8. 跑最小代码示例
+## 8. Run the minimal code example
 
-仓库带了一个可运行最小示例：[`examples/minimal.ts`](../examples/minimal.ts)。
+The repo ships a runnable minimal example: [`examples/minimal.ts`](../examples/minimal.ts). The example imports by **package name** (`import { createMemoWeftCore } from 'memoweft'`), so run `npm run build` to produce `dist/` first, then run it:
 
 ```bash
+npm run build
 node examples/minimal.ts
 ```
 
-它演示：
+It demonstrates (all via the unified entry `createMemoWeftCore`):
 
-1. 创建 `SqliteEvidenceStore` / `SqliteEventStore` / `SqliteCognitionStore`。
-2. 使用 `loadLLMPool()` 读取对话 / 写路径模型。
-3. 使用 `loadEmbedConfig()` 装配嵌入器，缺配则降级。
-4. 写入一条亲口证据。
-5. 调用 `updateProfile()` 生成画像。
-6. 调用 `Conversation.handle()` 召回相关画像并注入回话。
+1. One-line assembly with `createMemoWeftCore({ dbPath })`: the three-layer stores + retriever + model pool at once, all read from `.env`, degrading gracefully instead of crashing when config is missing.
+2. `core.ingestUserMessage()` writes one user-spoken piece of evidence.
+3. `core.updateProfile()` runs the full write path (distill → consolidate → attribute → reindex) to build the profile.
+4. `core.handleConversationTurn()` handles the next message: recall the relevant profile and inject it into the reply.
+5. `core.close()` releases connections.
+
+Two further examples are worth a look: [`examples/memory-management.ts`](../examples/memory-management.ts) (controlled memory management) and [`examples/portable-bundle.ts`](../examples/portable-bundle.ts) (portable memory bundle import / export).
 
 ---
 
-## 9. 核心 API 速览
+## 9. Core API at a glance
+
+Prefer going through the unified entry `createMemoWeftCore` for everything, instead of hand-wiring the low-level stores with `new Sqlite*Store`:
 
 ```ts
-import {
-  SqliteEvidenceStore,
-  SqliteEventStore,
-  SqliteCognitionStore,
-  VectorRetriever,
-  NullRetriever,
-  OpenAICompatEmbedder,
-  loadEmbedConfig,
-  loadLLMPool,
-  updateProfile,
-  Conversation,
-  ingestObservations,
-  MEMOWEFT_VERSION,
-} from 'memoweft';
+import { createMemoWeftCore, MEMOWEFT_VERSION } from 'memoweft';
+
+const core = createMemoWeftCore({ dbPath: './my-app.db' });
 ```
 
-| 你想做的事 | 用什么 |
+| What you want to do | What to use |
 | --- | --- |
-| 存三层数据 | `SqliteEvidenceStore` / `SqliteEventStore` / `SqliteCognitionStore` |
-| 装模型 | `loadLLMPool()` → `.for('chat' \| 'write')` |
-| 装嵌入器 | `loadEmbedConfig()` + `OpenAICompatEmbedder` |
-| 写路径 | `updateProfile(subjectId, deps)` |
-| 读路径 | `new Conversation(deps).handle(msg, opts)` |
-| 摄入行为观察 | `ingestObservations(subjectId, observations, deps)` |
+| Assemble a core in one line (stores + recall + models) | `createMemoWeftCore({ dbPath })` |
+| Check whether it can chat / recall | `core.health()` → `{ llmReady, embedReady }` |
+| Write a user-spoken piece of evidence | `core.ingestUserMessage({ content, subjectId?, hostId? })` |
+| Ingest behavior observations | `core.ingestObservation({ observations })` |
+| Write path (update profile) | `core.updateProfile({ subjectId? })` |
+| Read path (handle one conversation turn) | `core.handleConversationTurn({ message, subjectId? })` |
+| Recall relevant cognitions | `core.recall({ query, subjectId? })` |
+| Controlled memory management | `core.memory.*` |
+| Portable memory bundle | `core.portable.*` |
 
-完整导出清单见 [`src/index.ts`](../src/index.ts) 和 [`docs/integration.md`](./integration.md)。
+For the full export list, see [`src/index.ts`](../src/index.ts) and [`docs/integration.md`](./integration.md).
 
 ---
 
-## 10. 命令速查
+## 10. Command reference
 
-| 命令 | 作用 |
+| Command | Purpose |
 | --- | --- |
-| `npm run typecheck` | 类型检查 |
-| `npm test` | 跑测试 |
-| `npm run build` | 产出 `dist/` |
-| `npm run testbench` | 启动测试台 |
-| `npm run experience` | 测试台别名 |
+| `npm run typecheck` | Type check |
+| `npm test` | Run tests |
+| `npm run build` | Produce `dist/` |
+| `npm run testbench` | Start the testbench |
+| `npm run experience` | Testbench alias |
 
 ---
 
-## 11. 常见问题
+## 11. FAQ
 
-### 只配云端模型可以吗？
+### Can I configure only a cloud model?
 
-可以，而且这是推荐默认路径。先跑起来，再按数据敏感度决定哪些 evidence 不允许上云。
+Yes, and that is the recommended default path. Get it running first, then decide by data sensitivity which evidence is not allowed into the cloud.
 
-### 不配嵌入器可以吗？
+### Can I skip the embedder?
 
-可以。召回会降级为空，但证据仍会存，画像仍可写。只是回话里不会注入长期认知。
+Yes. Recall degrades to empty, but evidence is still stored and the profile is still written. The reply just will not have long-term cognition injected.
 
-### observed 行为数据会默认上云吗？
+### Does observed behavior data go to the cloud by default?
 
-不应该。桌面 / 设备 / 健康 / 屏幕类观察应默认 `allowCloudRead=false`，除非宿主明确征得用户同意。
+It should not. Desktop / device / health / screen observations should default to `allowCloudRead=false` unless the host has explicit user consent.
 
-### MemoWeft 替我处理隐私合规吗？
+### Is the memory database file encrypted?
 
-不。MemoWeft 是库，只提供授权位和过滤机制。宿主负责隐私政策、用户同意 UI、数据导出 / 删除等最终体验。
+No. Data at rest is currently unencrypted: the three memory layers live in a standard SQLite database and the file is not encrypted. Disk encryption is the host/OS responsibility (see §4).
+
+### Does MemoWeft handle privacy compliance for me?
+
+No. MemoWeft is a library; it only provides authorization bits and filtering. The host owns the privacy policy, consent UI, and the final data export / deletion experience.

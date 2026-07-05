@@ -103,14 +103,14 @@ test('mergeCognition：target 已失效/已归档 → 拒绝，零副作用', ()
     api.invalidateCognition({ cognitionId: deadTarget.id, reason: '先弄死目标' });
     assert.throws(
       () => api.mergeCognition({ sourceId: source.id, targetId: deadTarget.id, reason: '想合并' }),
-      /已失效/,
+      /invalidated/, // 缺省 en：'target is invalidated'（T2 英文化报错）
       '合并进已失效 target 应被拒绝',
     );
     const archivedTarget = seedCognition(bundle, { content: '用户喜欢喝可乐' });
     api.archiveCognition({ cognitionId: archivedTarget.id, reason: '先归档目标' });
     assert.throws(
       () => api.mergeCognition({ sourceId: source.id, targetId: archivedTarget.id, reason: '想合并' }),
-      /已归档/,
+      /archived/, // 缺省 en：'target is archived'（T2 英文化报错）
       '合并进已归档 target 应被拒绝',
     );
     // 零副作用：source 原样（链还在、没被标失效），拒绝不落 merge 审计。
@@ -270,7 +270,7 @@ test('mergeCognition：跨 subject 拒绝，双方原样、不落审计', () => 
     const b = seedCognition(bundle, { subjectId: 'subject-b' });
     assert.throws(
       () => api.mergeCognition({ sourceId: a.id, targetId: b.id, reason: '不该成' }),
-      /跨 subject/,
+      /cross-subject/, // 缺省 en：'cross-subject merge not allowed'（T2 英文化报错）
       '不同 subject 的认知不允许合并',
     );
     assert.equal(bundle.cognitionStore.get(a.id)?.invalidAt, null, 'source 没被动过');

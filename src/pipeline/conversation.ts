@@ -7,7 +7,7 @@
  *   - 召回的是【认知】（画像条目），由 retriever 在 updateProfile 时索引；这里只 search。
  *   - 召回 / 回话失败不影响证据已落库（先存后答）。
  */
-import { config, type MemoWeftConfig } from '../config.ts';
+import { config, resolveLang, type MemoWeftConfig } from '../config.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { Evidence } from '../evidence/model.ts';
 import type { CognitionStore } from '../cognition/store.ts';
@@ -88,7 +88,10 @@ export class Conversation {
       llmCalls = r.llmCalls;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
-      replyText = '（回话失败，但你的话已存为证据）';
+      replyText =
+        resolveLang(cfg) === 'zh'
+          ? '（回话失败，但你的话已存为证据）'
+          : '(Reply failed, but your message has been saved as evidence.)';
     }
 
     this.window.push({ role: 'user', content: userMsg });

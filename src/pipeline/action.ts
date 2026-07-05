@@ -7,8 +7,12 @@
  */
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import type { Turn } from './workingMemory.ts';
+import { resolveLang, type Lang } from '../config.ts';
 
-const SYSTEM_PROMPT = '你基于最近的对话，自然、简洁、真诚地回应用户。';
+const SYSTEM_PROMPT: Record<Lang, string> = {
+  zh: '你基于最近的对话，自然、简洁、真诚地回应用户。',
+  en: 'Respond to the user naturally, concisely, and sincerely, based on the recent conversation.',
+};
 
 /** 召回到、要注入回话的一条认知。 */
 export interface RelevantCognition {
@@ -22,15 +26,20 @@ export interface ReplyResult {
   llmCalls: number;
 }
 
-function knowledgeBlock(relevant: RelevantCognition[]): string {
+function knowledgeBlock(relevant: RelevantCognition[], lang: Lang): string {
   if (relevant.length === 0) return '';
   const lines = relevant
-    .map((c) => `- ${c.content}（把握度 ${c.confidence}/1000，${c.credStatus}）`)
+    .map((c) =>
+      lang === 'zh'
+        ? `- ${c.content}（把握度 ${c.confidence}/1000，${c.credStatus}）`
+        : `- ${c.content} (confidence ${c.confidence}/1000, ${c.credStatus})`,
+    )
     .join('\n');
-  return (
-    '\n\n你已了解关于这个用户的一些情况（带把握度；低置信的只是假设，别当定论、别生硬复述）：\n' +
-    lines
-  );
+  const head =
+    lang === 'zh'
+      ? '\n\n你已了解关于这个用户的一些情况（带把握度；低置信的只是假设，别当定论、别生硬复述）：\n'
+      : '\n\nHere is some of what you already understand about this user (with confidence; low-confidence items are only guesses—do not treat them as established facts, and do not recite them stiffly):\n';
+  return head + lines;
 }
 
 export async function reply(
@@ -38,10 +47,12 @@ export async function reply(
   recent: Turn[],
   relevant: RelevantCognition[],
   llm: LLMClient,
-  systemPrompt: string = SYSTEM_PROMPT, // 宿主可注入人设/框定（cell 9：语气·角色归宿主）；缺省=库内最朴素提示
+  systemPrompt?: string, // 宿主可注入人设/框定（cell 9：语气·角色归宿主）；缺省=库内最朴素提示（按语言取）
 ): Promise<ReplyResult> {
+  const lang = resolveLang();
+  const sys = systemPrompt ?? SYSTEM_PROMPT[lang];
   const messages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt + knowledgeBlock(relevant) },
+    { role: 'system', content: sys + knowledgeBlock(relevant, lang) },
     ...recent.map((t): ChatMessage => ({ role: t.role, content: t.content })),
     { role: 'user', content: userMsg },
   ];

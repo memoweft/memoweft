@@ -135,6 +135,10 @@ The model endpoint is not the privacy policy. The evidence layer is where MemoWe
 
 Cloud LLM calls must respect `allowCloudRead`. If an item is not cloud-readable, it should be excluded before cloud prompts are built.
 
+### Data at rest is unencrypted
+
+MemoWeft stores the three memory layers in a standard SQLite database file (e.g. `./dla.db`), and that file is not encrypted. `allowCloudRead` governs *what content may enter a cloud prompt*, not encryption on disk. Data at rest is unencrypted; disk encryption is the host/OS responsibility (BitLocker, FileVault, LUKS, or equivalent).
+
 ### Observed behavior should be conservative by default
 
 Behavior observations are powerful but sensitive. A host may ingest desktop, browser, device, or wearable signals, but those observations should default to local-readable and inference-allowed, not cloud-readable, unless the host explicitly asks the user.
