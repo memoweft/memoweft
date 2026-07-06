@@ -1,0 +1,16 @@
+{
+  // 发布构建档：出 dist（可发布包必须 emit，区别于 Host/collector 的 noEmit 类型检查档）。
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src"],
+  "exclude": ["tests", "node_modules", "**/*.test.ts"]
+}

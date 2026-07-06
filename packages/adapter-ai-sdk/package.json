@@ -1,0 +1,35 @@
+{
+  "name": "@memoweft/adapter-ai-sdk",
+  "version": "0.1.0",
+  "description": "Vercel AI SDK adapter for MemoWeft — inject long-term memory via middleware (recall) and persist the user's turn on finish (write).",
+  "keywords": ["vercel-ai-sdk", "ai-sdk", "memoweft", "memory", "llm", "middleware"],
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "files": ["dist/**/*.js", "dist/**/*.d.ts", "README.md", "README.zh-CN.md"],
+  "engines": { "node": ">=22" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoweft/memoweft.git",
+    "directory": "packages/adapter-ai-sdk"
+  },
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "peerDependencies": {
+    "ai": "^7",
+    "memoweft": "^0.5.0"
+  },
+  "devDependencies": {
+    "ai": "^7.0.15",
+    "memoweft": "*"
+  }
+}

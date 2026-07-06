@@ -96,6 +96,27 @@ jobs:
       - name: Collector Plugin Test
         run: npm test -w @memoweft/collector-active-window
 
+      # 生态集成包（0.5.0·可发布外部集成物）：MCP server / Vercel AI SDK 适配器。
+      #   都靠 import 'memoweft' 的 dist 做 typecheck/test（故排在 Core Build 之后），
+      #   各自带 build 出可发布 dist。第三方 SDK 只在各包 dependencies，Core 主包仍零依赖。
+      - name: MCP Server Typecheck
+        run: npm run typecheck -w @memoweft/mcp-server
+
+      - name: MCP Server Test
+        run: npm test -w @memoweft/mcp-server
+
+      - name: MCP Server Build
+        run: npm run build -w @memoweft/mcp-server
+
+      - name: AI SDK Adapter Typecheck
+        run: npm run typecheck -w @memoweft/adapter-ai-sdk
+
+      - name: AI SDK Adapter Test
+        run: npm test -w @memoweft/adapter-ai-sdk
+
+      - name: AI SDK Adapter Build
+        run: npm run build -w @memoweft/adapter-ai-sdk
+
   # ── 触达矩阵：Node 22 走 better-sqlite3 驱动跑全套 .ts 测试 ──────────────────
   better-sqlite3-node22:
     name: 触达 (Node 22.18+ · better-sqlite3 驱动)
@@ -203,9 +224,13 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
-      # npm publish 会自动先跑 prepublishOnly（typecheck && test && build）当发布保险丝；
-      # --provenance 生成并附带来源证明。NODE_AUTH_TOKEN 取自作者托管的 secret，绝不写死。
-      - name: Publish to npm (with provenance)
-        run: npm publish --provenance --access public
+      # --workspaces 发所有【非 private】workspace 包：memoweft（根）+ @memoweft/mcp-server +
+      #   @memoweft/adapter-ai-sdk；private:true 的 host / collector 自动跳过。按 workspaces 数组顺序
+      #   （"." 排第一）memoweft 先发，满足新包对 memoweft 的 peer ^0.5.0。每个包 publish 前各自跑
+      #   prepublishOnly（typecheck && test && build）当保险丝。--provenance 为每个包签发来源证明。
+      # 【注意·作者发布前实测】--workspaces 与 --provenance 组合在旧 npm 上曾有坑；用 Node 24 自带的
+      #   较新 npm，发布前先 `npm publish --workspaces --provenance --dry-run` 核一遍再去 token。
+      - name: Publish to npm (all publishable workspaces, with provenance)
+        run: npm publish --workspaces --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

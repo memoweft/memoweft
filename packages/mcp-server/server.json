@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.memoweft/memoweft",
+  "description": "Expose a portable AI memory (recall, read-only views, and one safe write) as Model Context Protocol tools. Read-only plus a single verbatim-message write; destructive and authorization-changing operations are intentionally not exposed.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/memoweft/memoweft",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/memoweft/memoweft/tree/main/packages/mcp-server",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@memoweft/mcp-server",
+      "version": "0.1.0",
+      "transport": { "type": "stdio" },
+      "runtimeHint": "npx",
+      "environmentVariables": [
+        {
+          "name": "MEMOWEFT_DB_PATH",
+          "description": "Path to the MemoWeft database file (or ':memory:' for an ephemeral in-memory database). Required.",
+          "isRequired": true,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

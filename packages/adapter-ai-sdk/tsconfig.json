@@ -1,0 +1,10 @@
+{
+  // Vercel AI SDK 适配器类型检查档：extends 根 base（NodeNext / strict / 带 .ts 后缀相对 import 等），
+  // include 本包 src/tests。ai / memoweft 类型解析靠 workspace 软链（devDependencies）——先 npm run build 出根 dist。
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src", "tests"]
+}
