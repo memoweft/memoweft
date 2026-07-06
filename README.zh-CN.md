@@ -8,9 +8,10 @@
 
 # MemoWeft
 
-**面向 AI 应用的长期记忆与用户理解层。**
+**Portable memory for AI apps — facts, guesses, conflicts, and stale states kept apart.**
 
-MemoWeft 是一个库，让 AI 应用能够保存可迁移、可追溯的用户长期记忆。它区分事实与猜测，遇到冲突时明确暴露而不是静默覆盖，也允许不同模型和宿主复用同一份记忆。
+面向 AI 应用的可迁移长期记忆层：让助手记住用户，并分清事实、猜测、冲突与过期状态。
+给 AI 应用一份带得走的长期记忆：换模型不失忆，记得住，也不乱信。
 
 [![npm](https://img.shields.io/npm/v/memoweft?style=flat-square&labelColor=14110B&color=E2A75E)](https://www.npmjs.com/package/memoweft)
 [![CI](https://img.shields.io/github/actions/workflow/status/memoweft/memoweft/ci.yml?style=flat-square&labelColor=14110B&label=CI)](https://github.com/memoweft/memoweft/actions/workflows/ci.yml)
