@@ -8,7 +8,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 > This file is the user-facing summary of notable changes; the full commit history has the fine detail.
 > While the API is pre-1.0, minor versions may include breaking changes. Stability tiers and the breaking-change policy are documented in [`docs/memory-surface-contract.md`](docs/memory-surface-contract.md).
 
-## [Unreleased]
+## [0.5.0] — 2026-07-06
+
+Ecosystem release: an MCP server, a Vercel AI SDK adapter, and LLM token usage accounting — plus the local/cloud model tiers and plugin-contract v2 that landed on `main` since 0.4.0. Core stays zero runtime dependencies.
 
 ### Added
 
@@ -87,7 +89,7 @@ First tidied pre-release. Core, a reference host, and the first plugins are in p
 - `MEMOWEFT_*` environment variables are the primary names; the legacy `DLA_*` prefix remains supported for backward compatibility.
 - Not yet: memory-graph front-end, schema versioning / migration hardening.
 
-[Unreleased]: https://github.com/memoweft/memoweft/compare/v0.4.0...HEAD
+[0.5.0]: https://github.com/memoweft/memoweft/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/memoweft/memoweft/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/memoweft/memoweft/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/memoweft/memoweft/compare/v0.1.0...v0.2.0
