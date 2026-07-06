@@ -1,3 +1,11 @@
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="assets/hero-light.svg">
+  <img alt="MemoWeft — long-term memory for AI apps, with facts and guesses kept apart" src="assets/hero-dark.svg" width="100%">
+</picture>
+
 # MemoWeft
 
 **Long-term memory and user-cognition layer for AI apps.**
@@ -10,7 +18,11 @@ MemoWeft is a library that lets AI apps keep portable, traceable long-term memor
 [![runtime deps](https://img.shields.io/badge/runtime%20deps-zero-4A4438?style=flat-square&labelColor=14110B)](#project-status)
 [![license](https://img.shields.io/badge/license-MIT-4A4438?style=flat-square&labelColor=14110B)](LICENSE)
 
+[Run the demo](#run-the-demo) · [Why it is different](#why-it-is-different) · [Use as a library](#use-it-as-a-library) · [Reference host](#reference-host-demo) · [Docs](#documentation)
+
 **English** · [简体中文](./README.zh-CN.md)
+
+</div>
 
 ## Run the demo
 
