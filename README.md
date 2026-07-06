@@ -11,6 +11,7 @@
 **Portable memory for AI apps — facts, guesses, conflicts, and stale states kept apart.**
 
 面向 AI 应用的可迁移长期记忆层：让助手记住用户，并分清事实、猜测、冲突与过期状态。
+给 AI 应用一份带得走的长期记忆：换模型不失忆，记得住，也不乱信。
 
 MemoWeft is a library that lets AI apps keep portable, traceable long-term memory about a user. It separates facts from guesses, exposes conflicts instead of silently overwriting them, and lets different hosts reuse the same memory.
 
