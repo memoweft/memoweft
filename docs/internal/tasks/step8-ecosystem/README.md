@@ -1,6 +1,6 @@
 # 第 8 步 · 生态获客（0.5.0）——MCP 服务器 + Vercel AI SDK 适配器 + token 用量观测 · 任务书
 
-> **状态：决策已定案、施工待开工（2026-07-06·作者四项拍板 + 一项默认口径）。** 三件事一起出 `0.5.0`，施工顺序 **token 观测（进 Core）→ MCP 服务器 → Vercel 适配器 → 横切收尾**。
+> **状态：施工完成 ✅（2026-07-06·分支 `step8/ecosystem-0.5.0`·两提交 `6d9d9a6` Part A + `82208b3` Part B/C+横切）。** 三件事全出 `0.5.0`：token 观测进 Core（`core.usage()` + Host `GET /api/usage`）、`@memoweft/mcp-server`（6 tool 白名单）、`@memoweft/adapter-ai-sdk`（读 middleware + 写 onEnd）。**五包三绿**（Core 222 + Host 33 + Collector 10 + mcp-server 5 + adapter 15）+ lint 0 error；**红线自证**（`confidence`/`cognition`/`consolidation`/`conversation`/`ingest` 全零改动、根 `dependencies` 仍 `{}`）。**未合 main**（待作者拍板）；**待作者手动**：npm 发布（`npm publish --workspaces`）+ MCP registry 收录 + `v0.5.0` tag（见下节）。
 > 依据：`后续批次总纲.md` 第 8 步（第 31–32 行）+ 四路现状勘察（token / MCP / 适配器 / 横切发布，2026-07-06）+ 四路对抗校对（关键外部 SDK 声称联网/官方 tarball 核实）。体例照 `tasks/step7-plugin-contract-v2/`。
 > 执行者：任何 AI 会话。开工前必读 `AGENTS.md`，然后只读本目录 + 自己领的那卡点名的源码文件。碰 Core `LLMClient` 接口（Part A）是 experimental 公开面、且与认知红线擦边——主线亲做。
 
