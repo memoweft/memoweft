@@ -145,7 +145,7 @@ core.close();
 
 从[公开文档导航](./docs/README.md)开始。
 
-核心文档包括[接入指南](./docs/integration.zh-CN.md)、[架构说明](./docs/architecture.md)、[部署说明](./docs/deployment.md)、[公开记忆面契约](./docs/memory-surface-contract.md)和[插件契约](./docs/plugin-contract.md)。
+核心文档包括[接入指南](./docs/integration.zh-CN.md)、[架构说明](./docs/architecture.zh-CN.md)、[部署说明](./docs/deployment.md)、[公开记忆面契约](./docs/memory-surface-contract.zh-CN.md)和[插件契约](./docs/plugin-contract.zh-CN.md)。
 
 ## 仓库结构
 
@@ -158,7 +158,7 @@ core.close();
 
 ## 项目状态
 
-MemoWeft 仍处于 1.0 之前，并坚持 library-first。Core 行为已经实现并有测试覆盖，但 minor 版本之间的接口仍可能调整。稳定、实验性与内部接口的边界见 [Memory Surface Contract](./docs/memory-surface-contract.md)。
+MemoWeft 仍处于 1.0 之前，并坚持 library-first。Core 行为已经实现并有测试覆盖，但 minor 版本之间的接口仍可能调整。稳定、实验性与内部接口的边界见 [Memory Surface Contract](./docs/memory-surface-contract.zh-CN.md)。
 
 最新版本：**0.5.0** — `npm install memoweft`。
 
