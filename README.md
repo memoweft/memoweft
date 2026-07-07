@@ -124,6 +124,8 @@ core.close();
 
 A runnable version is in [`examples/minimal.ts`](./examples/minimal.ts). See the [examples index](./examples/README.md) and [integration guide](./docs/integration.md) for the rest of the public surface.
 
+No API key handy? [`examples/no-key-demo.ts`](./examples/no-key-demo.ts) runs the same write path against an offline stub LLM — zero config, no network — so you can watch a conflict get exposed (not overwritten) and guesses stay apart from facts in ~30 seconds.
+
 ## Reference host demo
 
 The bundled host is a reference implementation that shows how an application can use Core without reaching into its stores. It demonstrates chat with recall, visible memory formation, evidence and cognition inspection, memory management, portable bundles, and plugin or observation flows.
