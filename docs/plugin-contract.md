@@ -1,77 +1,79 @@
-# MemoWeft 插件契约 v2
+# MemoWeft Plugin Contract v2
 
-> 稳定性：**experimental**（pre-1.0，签名可能演进——尤其 hook 参数以后可能增字段，插件作者留扩展余地）。
-> 类型定义：`src/plugin/contract.ts`，从包主入口 `memoweft` 导出。配套：[记忆面契约 `memory-surface-contract.md`](./memory-surface-contract.md)。
+**English** | [简体中文](./plugin-contract.zh-CN.md)
 
-## 一句话
+> Stability: **experimental** (pre-1.0, signatures may evolve — especially hook parameters may gain fields later, so plugin authors should leave room for extension).
+> Type definitions: `src/plugin/contract.ts`, exported from the package main entry `memoweft`. Companion: [memory surface contract `memory-surface-contract.md`](./memory-surface-contract.md).
 
-插件给同一套 MemoWeft 记忆底座加"脸 / 工具 / 感知"，**只能观察 + 经受限接口请求，绝不能改管线或绕过记忆规则**。
+## In one sentence
 
-## 三类插件
+Plugins add a "face / tools / perception" to the same MemoWeft memory substrate, and **can only observe + request through a restricted interface, never modify the pipeline or bypass the memory rules**.
 
-| type | 干什么 | 靠什么 |
+## The three plugin types
+
+| type | what it does | how |
 |---|---|---|
-| `experience` | 换回话人设 / 语气（普通助手 / 星瑶） | `systemPrompt`（Host 按会话选、每轮传给 `handleConversationTurn`） |
-| `tool` | 工具（如将来的 GitHub / 文件） | hook + `PluginContext` 请求式能力 |
-| `collector` | 感知采集（如活动窗口） | 采集器多是独立进程经 `/api/observe` 产观察；也可用 `onObservation` 反应 |
+| `experience` | swaps the conversational persona / tone (ordinary assistant / Xingyao) | `systemPrompt` (the Host picks it per session, and passes it every turn to `handleConversationTurn`) |
+| `tool` | tools (e.g. future GitHub / files) | hook + `PluginContext` request-style capabilities |
+| `collector` | perceptual collection (e.g. active window) | collectors are mostly standalone processes producing observations via `/api/observe`; can also react via `onObservation` |
 
 ## `MemoWeftPlugin`
 
 ```ts
 interface MemoWeftPlugin {
-  id: string;            // 稳定机器标识（注册表键）
-  name: string;          // 给用户看的名字
+  id: string;            // stable machine identifier (registry key)
+  name: string;          // user-facing name
   type: 'experience' | 'tool' | 'collector';
-  systemPrompt?: string; // experience 用
-  permissions?: PluginPermissions;                 // 声明式：要用 ctx 的哪些能力
+  systemPrompt?: string; // used by experience
+  permissions?: PluginPermissions;                 // declarative: which ctx capabilities it needs
   onLoad?(ctx: PluginContext): void | Promise<void>;
   onUserMessage?(msg: PluginUserMessage, ctx: PluginContext): void | Promise<void>;
   onObservation?(obs: Observation, ctx: PluginContext): void | Promise<void>;
 }
 ```
 
-注册：`createMemoWeftCore({ ..., plugins: [...] })`。不传 = 无插件，行为同旧。
+Registration: `createMemoWeftCore({ ..., plugins: [...] })`. Not passing it = no plugins, behaves as before.
 
-## Hook：只观察，不改管线（红线）
+## Hooks: observe only, don't modify the pipeline (red line)
 
-- **`onLoad`**：建 core 时烧一次（stores/retriever 已就绪）。**fire-and-forget**（不 await，保 `createMemoWeftCore` 同步返回）——插件的异步 onLoad 在后台跑、不保证在首次调用前完成。
-- **`onUserMessage`**：每轮对话**之后**烧（回话已生成）。拿到 `{ content, subjectId, reply }`——观察这轮说了啥 / 回了啥。
-- **`onObservation`**：每条经 `core.ingestObservation` 摄入的观察**落库后**烧。
+- **`onLoad`**: fired once when core is built (stores/retriever already ready). **fire-and-forget** (not awaited, to keep `createMemoWeftCore` returning synchronously) — a plugin's async onLoad runs in the background and is not guaranteed to complete before the first call.
+- **`onUserMessage`**: fired **after** each conversation turn (the reply has already been generated). Receives `{ content, subjectId, reply }` — observe what was said / what was replied this turn.
+- **`onObservation`**: fired **after each observation ingested via `core.ingestObservation` lands in the store**.
 
-铁律：
-- **返回值一律丢弃**——hook 返回"改过的回话/消息"也不回灌管线。
-- **不改**用户消息、不改回话文本。
-- 每个 hook `try/catch` 包裹：**插件抛错记日志、不崩会话 / 不崩摄入**（呼应"召回失败不挡回话"）。
-- hook 烧在 Core 的**方法层**（`createCore.ts`）——`conversation.ts` / `ingest.ts` 的纯逻辑一行不碰。
+Iron rules:
+- **Return values are always discarded** — even if a hook returns a "modified reply/message", it is not fed back into the pipeline.
+- **Do not modify** the user message, do not modify the reply text.
+- Each hook is wrapped in `try/catch`: **a plugin throwing is logged, and does not crash the conversation / does not crash ingestion** (echoing "recall failure does not block the reply").
+- Hooks fire at Core's **method layer** (`createCore.ts`) — the pure logic of `conversation.ts` / `ingest.ts` is not touched by a single line.
 
-## `PluginContext`：受限能力壳
+## `PluginContext`: the restricted-capability shell
 
 ```ts
 interface PluginContext {
-  submitObservation(input: PluginObservationInput): Promise<void>;  // 需 permissions.submitObservation
-  requestMemory(query: string): Promise<RecalledCognitionItem[]>;   // 需 permissions.requestMemory
+  submitObservation(input: PluginObservationInput): Promise<void>;  // needs permissions.submitObservation
+  requestMemory(query: string): Promise<RecalledCognitionItem[]>;   // needs permissions.requestMemory
 }
 ```
 
-- **闭包给、绝不交 store**：ctx 只是两个绑好的方法，插件够不到 `store` / `cognitionStore`。
-- **绑当次 subject**（v1 单人单宿主 = `config.identity.subjectId`）；方法不收 subjectId。
-- **`submitObservation`**：
-  - 入参 `PluginObservationInput` = `Observation` **去掉三个授权位**——插件**不能设** `allowCloudRead/Local/Inference`；Core 侧还会白名单重构一遍，就算插件运行时硬塞 `allowCloudRead:true` 也丢弃 → 一律走 `observed` 保守默认（**本地可读 / 不上云 / 可推画像**）。这是 Host `sanitizeObservation` 的 Core 侧等价。
-  - 走**纯函数 `ingestObservations`、不走烧 hook 的方法** → 插件提交的观察照常落库，但**不级联触发 `onObservation`**，杜绝"观察→提交→再观察"的重入死循环。
-  - 幂等：带稳定 `originId` 才去重（由插件负责）。
-- **`requestMemory`**：读"与 query 相关"的召回认知（走既有召回门控 topK / minSimilarity）。v2 不按 `contentType` 细分——**声明式权限只门控"能不能调"这个能力**；给了 `requestMemory` 权限的插件即信任它不滥用（信任模型，宿主选择装哪些插件时自负）。
+- **Given by closure, never hands over the store**: ctx is just two pre-bound methods; the plugin cannot reach `store` / `cognitionStore`.
+- **Bound to the current subject** (v1 single-person single-host = `config.identity.subjectId`); the methods do not take a subjectId.
+- **`submitObservation`**:
+  - The input `PluginObservationInput` = `Observation` **minus the three authorization fields** — the plugin **cannot set** `allowCloudRead/Local/Inference`; the Core side also re-constructs it via a whitelist, so even if the plugin hard-injects `allowCloudRead:true` at runtime it is discarded → it always goes through the `observed` conservative default (**locally readable / not uploaded to cloud / profile inference allowed**). This is the Core-side equivalent of the Host's `sanitizeObservation`.
+  - Goes through the **pure function `ingestObservations`, not the hook-firing method** → the plugin-submitted observation lands in the store as usual, but **does not cascade-trigger `onObservation`**, preventing the "observe → submit → observe again" reentrant infinite loop.
+  - Idempotent: dedup only happens if a stable `originId` is provided (the plugin is responsible for this).
+- **`requestMemory`**: reads the recalled cognition "relevant to query" (goes through the existing recall gating topK / minSimilarity). v2 does not subdivide by `contentType` — **the declarative permission only gates "whether this capability can be called"**; a plugin granted the `requestMemory` permission is trusted not to abuse it (a trust model; the host bears responsibility when choosing which plugins to install).
 
-## 声明式权限
+## Declarative permissions
 
-`permissions` 声明插件要用 ctx 的哪些能力（`submitObservation?` / `requestMemory?`）。**没声明 → 调它抛错、被挡**。Host 的插件管理 UI 据声明**展示 + 启停**。
+`permissions` declares which ctx capabilities the plugin needs (`submitObservation?` / `requestMemory?`). **Not declared → calling it throws, and it's blocked**. The Host's plugin management UI **displays + enables/disables** based on the declaration.
 
-## UI 在 Host，不在 Core
+## The UI is in the Host, not in Core
 
-Core 是**无头库**、不画界面。插件管理界面（列已注册插件 / 类型 / 权限 / 换人设）在 Host——参考实现见 `apps/memoweft-host` 的记忆管理页「插件」tab + `GET /api/plugins`。草案 §7.1 的 `requestPermission` / `emitUIEvent` **不进 Core 的 `PluginContext`**（那是 Host/UI 的事）。
+Core is a **headless library** and draws no interface. The plugin management interface (list registered plugins / types / permissions / swap persona) is in the Host — for a reference implementation see the "Plugins" tab of the memory management page in `apps/memoweft-host` + `GET /api/plugins`. The draft §7.1 `requestPermission` / `emitUIEvent` **do not enter Core's `PluginContext`** (that's the Host/UI's business).
 
-## 现状与边界（v2 诚实交底）
+## Current state and boundaries (v2 honest disclosure)
 
-- v2 铺的是**基础设施**：现有 experience 插件靠 `systemPrompt`（无 hook）、活动窗口采集器走 `/api/observe`（不消费 `onObservation`）——**hook 目前没有生产消费者**，真实的 tool / hook 型采集器待后续。活体 demo 见 `examples/plugin-hook.ts`。
-- **不做**：运行时动态装卸外部插件包（模块加载 / 插件市场 / 沙箱）；会改管线的 hook；动态权限弹窗。
+- What v2 lays down is **infrastructure**: the current experience plugin relies on `systemPrompt` (no hook), the active-window collector goes through `/api/observe` (does not consume `onObservation`) — **hooks currently have no production consumer**, real tool / hook-type collectors are pending later. A live demo is in `examples/plugin-hook.ts`.
+- **Not doing**: runtime dynamic install/uninstall of external plugin packages (module loading / plugin marketplace / sandbox); pipeline-modifying hooks; dynamic permission popups.
 
-关联：[记忆面契约](./memory-surface-contract.md) · [三层边界](./internal/boundaries.md) · 示例 `examples/plugin-hook.ts`。
+Related: [memory surface contract](./memory-surface-contract.md) · [three-layer boundaries](./internal/boundaries.md) · example `examples/plugin-hook.ts`.
