@@ -39,6 +39,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # lockfile 护栏：package-lock.json 必须指向官方 registry。镜像源 URL（npmmirror）会让海外用户
+      #   `npm ci` 按锁定 URL 撞镜像源失败 / 被企业安全策略拒——这是国际用户的第一道墙。任何把 lockfile
+      #   写回镜像源的改动，都在这里被挡在 PR 外。放在 Checkout 之后、装依赖之前，第一时间拦下。
+      - name: lockfile registry guard
+        run: |
+          if grep -q "npmmirror" package-lock.json; then
+            echo "::error::package-lock.json 含镜像源 URL，请用官方 registry 重新生成（npm_config_registry=https://registry.npmjs.org npm install）"
+            exit 1
+          fi
+
       - name: Setup Node 24
         uses: actions/setup-node@v4
         with:
