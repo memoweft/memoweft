@@ -134,11 +134,19 @@ Read [what the reference host is and is not](./docs/reference-host.md).
 
 ![MemoWeft reference host demo — chatting, watching memory form, and the memory graph of evidence, events, and cognitions](assets/reference-host-demo.gif)
 
+*End to end: chat with the assistant → watch memory form → open the memory graph.*
+
 ![MemoWeft reference host chat with memory recall and memory controls](assets/screenshot-chat.png)
+
+*Chat with recall — the top bar shows what it remembers and a one-click "organize memory".*
 
 ![MemoWeft reference host memory graph connecting evidence, events, and cognitions](assets/screenshot-memory-graph.png)
 
+*Memory graph — how evidence becomes events becomes cognitions, including conflict and correction edges.*
+
 ![MemoWeft reference host cognition cards with confidence and source traces](assets/screenshot-memory-manage.png)
+
+*Cognition cards — each carries a MemoWeft-computed confidence and traces back to its source evidence.*
 
 ## Ecosystem adapters
 

@@ -130,11 +130,19 @@ core.close();
 
 ![MemoWeft reference host 演示——聊天、记忆实时成形、以及连接证据/事件/认知的记忆图谱](assets/reference-host-demo.gif)
 
+*端到端演示：跟助手聊天 → 记忆实时成形 → 打开记忆图谱。*
+
 ![MemoWeft reference host 聊天界面，包含记忆召回与记忆控制](assets/screenshot-chat.png)
+
+*带记忆召回的聊天——顶栏可见它记住了你哪些事，还有一键「立即整理记忆」。*
 
 ![MemoWeft reference host 记忆图谱，连接证据、事件与认知](assets/screenshot-memory-graph.png)
 
+*记忆图谱——证据如何沉淀成事件、再凝成认知，含冲突与纠正的连线。*
+
 ![MemoWeft reference host 认知卡片，展示置信度与来源追溯](assets/screenshot-memory-manage.png)
+
+*认知卡片——每条都带 MemoWeft 自算的置信度，并可追溯回形成它的证据。*
 
 ## 生态适配器
 
