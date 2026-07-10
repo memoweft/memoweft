@@ -4,7 +4,14 @@
 
 > 总纲 `PROJECT_PLAN.md`;决策 `DECISIONS.md`;固化质量报告 `bench/consolidation-baseline.md`。
 
-## 正在进行
+## ⏸ 会话已暂停(2026-07-10),下次换新窗口继续
+
+**下次开局先读**:`AGENTS.md`(Integrator 章程)→ 本文件 → `DECISIONS.md`(D-0001…D-0009)→ 需要时 `docs/internal/phase0-calibration.md`。
+**新窗口的好处**:`.claude/` 的 6 子代理 + hooks 会随会话启动**自动激活**(本会话是热加载不生效的,见 D-0004)——即角色写入限制 + 铁律机器强制届时全生效。
+**接的地方**:Phase 2 质量线已建成、出了基线、并**真修好一个问题**(闲聊过度记忆)。从下面「下一步」的 A/B/C 里挑一个继续。
+**环境**:本地 Ollama(bge-m3 @ 11435)是本会话起的后台进程,若还在跑、不用了可 `Get-Process ollama | Stop-Process` 关掉;要跑真实固化/embed 评测则保持它起着。真实臂/固化用 `.env`(gitignored,DLA_* 前缀,mimo + bge-m3)。
+
+## 正在进行(暂停前)
 
 - Phase 2 质量线已用于**真修了一个质量问题**(闲聊过度记忆,实测治好)。下一步:15.3 提示词版本化收尾 / 15.4 live+nightly,待人类定向。
 
