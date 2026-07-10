@@ -37,6 +37,7 @@
     "build": "tsc -p tsconfig.build.json",
     "api:update": "node scripts/api-snapshot.mjs",
     "api:check": "node scripts/api-snapshot.mjs --check",
+    "prompts:update": "node scripts/prompt-hashes.mjs",
     "bench": "node bench/bulk-updateProfile.mjs",
     "bench:retrieval": "node bench/eval-retrieval.mjs",
     "bench:consolidation": "node bench/eval-consolidation.mjs",

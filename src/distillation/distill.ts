@@ -8,7 +8,8 @@ import type { EventStore } from '../event/store.ts';
 import type { Event } from '../event/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
-import { resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
+import { resolveLang, type MemoWeftConfig } from '../config.ts';
+import { DISTILL_PROMPT } from './prompts.ts';
 
 export interface DistillDeps {
   evidenceStore: EvidenceStore;
@@ -29,25 +30,6 @@ export interface DistillResult {
   tierBlockedCount: number;
   llmCalls: number;
 }
-
-const SYSTEM: Record<Lang, string> = {
-  zh: [
-    '你把用户的几句话总结成一段带情境的"事件"描述。',
-    '规则：',
-    '1. 只总结用户表达的内容和情境，按时间顺序串起来。',
-    '2. 不要加入你的推测、评价或建议；不要出现"助手"的话。',
-    '3. 一段话，简洁、具体，点出关键信息（在做什么、什么状态、提到什么）。',
-    '4. 只输出这段总结文本，不要解释。',
-  ].join('\n'),
-  en: [
-    'You summarize a few of the user\'s remarks into a single situated "event" description.',
-    'Rules:',
-    '1. Summarize only what the user expressed and its context, strung together in chronological order.',
-    '2. Do not add your own guesses, judgments, or advice; do not include any "assistant" remarks.',
-    '3. One paragraph, concise and concrete, highlighting the key information (what they are doing, what state they are in, what they mention).',
-    '4. Output only this summary text, with no explanation.',
-  ].join('\n'),
-};
 
 export async function distill(subjectId: string, deps: DistillDeps): Promise<DistillResult> {
   const evidence = deps.evidenceStore.all().filter((e) => e.subjectId === subjectId);
@@ -74,7 +56,7 @@ export async function distill(subjectId: string, deps: DistillDeps): Promise<Dis
   const lines = digestible.map((e) => `(${e.occurredAt.slice(0, 16)}) ${e.rawContent}`).join('\n');
   const userHead = lang === 'zh' ? '用户依次说了：' : 'The user said, in order:';
   const messages: ChatMessage[] = [
-    { role: 'system', content: SYSTEM[lang] },
+    { role: 'system', content: DISTILL_PROMPT.text[lang] },
     { role: 'user', content: `${userHead}\n${lines}` },
   ];
 

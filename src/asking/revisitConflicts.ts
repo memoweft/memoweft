@@ -15,6 +15,7 @@ import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import type { Evidence } from '../evidence/model.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
 import type { AskProposal } from './proposeAsk.ts';
+import { REVISIT_CONFLICTS_PROMPT } from './prompts.ts';
 
 export interface RevisitDeps {
   cognitionStore: CognitionStore;
@@ -28,19 +29,6 @@ export interface RevisitResult {
   proposals: AskProposal[];
   llmCalls: number;
 }
-
-const PHRASE_SYSTEM: Record<Lang, string> = {
-  zh: [
-    '下面是一条关于用户的认知，它【同时有支撑和反对的证据】，处于矛盾状态。',
-    '请生成一句简短、真诚、不预设立场的提问，把两边都点一下、请用户澄清到底是哪样。',
-    '只输出这一句问话本身，不要解释、不要引号。',
-  ].join('\n'),
-  en: [
-    'Below is a cognition about the user that [has both supporting and opposing evidence] and is in a conflicted state.',
-    'Generate one short, sincere, non-presumptive question that touches on both sides and asks the user to clarify which is actually the case.',
-    'Output only this one question itself, with no explanation and no quotation marks.',
-  ].join('\n'),
-};
 
 /** 取回一批证据（保留完整对象，供隐私过滤用）。 */
 function evidenceByIds(ids: string[], ev: EvidenceStore): Evidence[] {
@@ -84,7 +72,7 @@ async function phraseQuestion(
       ? `【认知】${content}\n【支撑证据】\n${s}\n【反对证据】\n${c}`
       : `[Cognition] ${content}\n[Supporting evidence]\n${s}\n[Opposing evidence]\n${c}`;
   const messages: ChatMessage[] = [
-    { role: 'system', content: PHRASE_SYSTEM[lang] },
+    { role: 'system', content: REVISIT_CONFLICTS_PROMPT.text[lang] },
     { role: 'user', content: user },
   ];
   const text = (await llm.chat(messages)).trim();

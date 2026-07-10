@@ -8,11 +8,7 @@
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import type { Turn } from './workingMemory.ts';
 import { resolveLang, type Lang } from '../config.ts';
-
-const SYSTEM_PROMPT: Record<Lang, string> = {
-  zh: '你基于最近的对话，自然、简洁、真诚地回应用户。',
-  en: 'Respond to the user naturally, concisely, and sincerely, based on the recent conversation.',
-};
+import { REPLY_PROMPT } from './prompts.ts';
 
 /** 召回到、要注入回话的一条认知。 */
 export interface RelevantCognition {
@@ -50,7 +46,7 @@ export async function reply(
   systemPrompt?: string, // 宿主可注入人设/框定（cell 9：语气·角色归宿主）；缺省=库内最朴素提示（按语言取）
 ): Promise<ReplyResult> {
   const lang = resolveLang();
-  const sys = systemPrompt ?? SYSTEM_PROMPT[lang];
+  const sys = systemPrompt ?? REPLY_PROMPT.text[lang];
   const messages: ChatMessage[] = [
     { role: 'system', content: sys + knowledgeBlock(relevant, lang) },
     ...recent.map((t): ChatMessage => ({ role: t.role, content: t.content })),

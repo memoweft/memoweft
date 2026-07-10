@@ -19,6 +19,7 @@ import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
+import { TRENDS_PROMPT } from './prompts.ts';
 
 export interface AggregateTrendsDeps {
   evidenceStore: EvidenceStore;
@@ -41,27 +42,6 @@ interface RawTrend {
   based_on_evidence_ids?: string[];
 }
 
-const SYSTEM: Record<Lang, string> = {
-  zh: [
-    '给你用户近期【反复出现的状态片段】（每条带证据 id）。判断它们有没有汇成某种【持续趋势】。',
-    '铁律：',
-    '- 只有当多条状态确实指向同一个持续模式时才给（如多次烦/累/没睡好 → "最近持续情绪低落/压力大"）。',
-    '- 一句话描述这个趋势；注明依据了哪些证据 id；凑不出明确趋势就给空数组。',
-    '- 别把"一次性的情绪"说成趋势；趋势是【一段时间反复】。',
-    '严格按示例字段名输出一个 JSON 对象，不要解释：',
-    '{"trends":[{"content":"用户最近这段时间持续情绪低落","based_on_evidence_ids":["ev-1","ev-2","ev-3"]}]}',
-  ].join('\n'),
-  en: [
-    'You are given the user\'s recent [recurring state fragments] (each with an evidence id). Decide whether they add up to some [sustained trend].',
-    'Iron rules:',
-    '- Only give one when multiple states genuinely point to the same sustained pattern (e.g., repeated irritable/tired/slept-badly → "persistently low mood / under stress lately").',
-    '- Describe the trend in one sentence; note which evidence ids it relies on; give an empty array if no clear trend can be formed.',
-    '- Do not call a "one-off emotion" a trend; a trend is [recurring over a period of time].',
-    'Output a single JSON object strictly using the example field names; no explanation:',
-    '{"trends":[{"content":"The user has been persistently low in mood lately","based_on_evidence_ids":["ev-1","ev-2","ev-3"]}]}',
-  ].join('\n'),
-};
-
 function buildMessages(items: Array<{ id: string; state: string; text: string; at: string }>, lang: Lang): ChatMessage[] {
   const zh = lang === 'zh';
   const list = items
@@ -73,7 +53,7 @@ function buildMessages(items: Array<{ id: string; state: string; text: string; a
     .join('\n');
   const body = zh ? `【近期反复出现的状态】：\n${list}` : `[Recent recurring states]:\n${list}`;
   return [
-    { role: 'system', content: SYSTEM[lang] },
+    { role: 'system', content: TRENDS_PROMPT.text[lang] },
     { role: 'user', content: body },
   ];
 }

@@ -17,6 +17,7 @@ import type { EvidenceStore } from '../evidence/store.ts';
 import type { CredStatus } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
+import { PROPOSE_ASK_PROMPT } from './prompts.ts';
 
 /** 一条主动询问建议：针对哪条认知、建议怎么问、附了什么证据、有多大把握。 */
 export interface AskProposal {
@@ -62,19 +63,6 @@ export interface ProposeAskResult {
   llmCalls: number;
 }
 
-const PHRASE_SYSTEM: Record<Lang, string> = {
-  zh: [
-    '你在帮助理解用户。下面是一条关于用户的【低置信假设】和支撑它的【证据】。',
-    '请生成一句简短、真诚、不武断的提问，亮出证据、向用户求证这条假设是否成立。',
-    '只输出这一句问话本身，不要解释、不要引号。',
-  ].join('\n'),
-  en: [
-    'You are helping to understand the user. Below is a [low-confidence hypothesis] about the user and the [evidence] supporting it.',
-    'Generate one short, sincere, non-assertive question that presents the evidence and asks the user to confirm whether this hypothesis holds.',
-    'Output only this one question itself, with no explanation and no quotation marks.',
-  ].join('\n'),
-};
-
 /** 模板兜底：带证据、留余地的朴素问法。 */
 function templateQuestion(hypothesis: string, evidence: { summary: string }[], lang: Lang): string {
   if (lang === 'zh') {
@@ -97,7 +85,7 @@ async function phraseQuestion(
   const user =
     lang === 'zh' ? `【假设】${hypothesis}\n【证据】\n${shown}` : `[Hypothesis] ${hypothesis}\n[Evidence]\n${shown}`;
   const messages: ChatMessage[] = [
-    { role: 'system', content: PHRASE_SYSTEM[lang] },
+    { role: 'system', content: PROPOSE_ASK_PROMPT.text[lang] },
     { role: 'user', content: user },
   ];
   const text = (await llm.chat(messages)).trim();

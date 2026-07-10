@@ -14,6 +14,7 @@
  */
 import type { LLMClient, ChatMessage } from './client.ts';
 import { resolveLang, type Lang } from '../config.ts';
+import { JSON_REPAIR_NUDGE_PROMPT } from './prompts.ts';
 
 /** 去掉 ```json … ``` / ``` … ``` 代码块围栏，返回里面的内容（没有围栏则原样返回）。 */
 function stripCodeFences(s: string): string {
@@ -72,11 +73,6 @@ export interface ParseWithRepairDeps {
   lang?: Lang;
 }
 
-const JSON_ONLY_NUDGE: Record<Lang, string> = {
-  zh: '你上一条回复不是合法的 JSON 对象。请【只】输出一个 JSON 对象，不要任何解释、不要 Markdown 代码块围栏。',
-  en: 'Your previous reply was not a valid JSON object. Output [only] a single JSON object, with no explanation and no Markdown code fences.',
-};
-
 /**
  * 调模型 → 解析出一个 JSON 对象；失败则【落日志 + 最多重试一次】（追加"只输出 JSON"提示）；仍失败返回 null。
  * 调用方拿到 null 时按"本轮无产出"处理（与旧的"返回空对象"行为等价）。
@@ -97,7 +93,7 @@ export async function parseJsonObjectWithRepair<T = Record<string, unknown>>(
       ? `首次输出非合法 JSON，重试一次。解析失败：长度=${first.length}、含代码围栏=${/```/.test(first)}、含花括号=${first.includes('{')}`
       : `First output was not valid JSON, retrying once. Parse failed: length=${first.length}, hasCodeFence=${/```/.test(first)}, hasBrace=${first.includes('{')}`,
   );
-  const retryMessages: ChatMessage[] = [...deps.messages, { role: 'user', content: JSON_ONLY_NUDGE[lang] }];
+  const retryMessages: ChatMessage[] = [...deps.messages, { role: 'user', content: JSON_REPAIR_NUDGE_PROMPT.text[lang] }];
   const second = await deps.llm.chat(retryMessages);
   const reparsed = parseJsonObject<T>(second);
   if (reparsed !== null) return reparsed;
