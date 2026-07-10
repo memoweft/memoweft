@@ -447,13 +447,14 @@ function printConsole(summaries, agg, meta) {
 // 真实模式
 // ══════════════════════════════════════════════════════════════════════════
 
-async function mainReal({ limit }) {
+async function mainReal({ limit, discipline }) {
   if (!existsSync(CORPUS_PATH)) {
     console.error(`\n[eval-consolidation] 语料未就绪（test-author 并行产出中），无法起跑真实评测。\n  期望路径: ${CORPUS_PATH}`);
     process.exit(1);
   }
   const corpus = JSON.parse(readFileSync(CORPUS_PATH, 'utf8'));
   let scenarios = corpus.scenarios;
+  if (discipline) scenarios = scenarios.filter((s) => s.discipline === discipline);
   if (limit && limit > 0) scenarios = scenarios.slice(0, limit);
 
   // LLM 配置探测：无 key → 说明卡在哪，不算失败（退出 0，供 CI/无 key 环境）。
@@ -668,13 +669,15 @@ const args = process.argv.slice(2);
 const isSelftest = args.includes('--selftest');
 const limitIdx = args.indexOf('--limit');
 const limit = limitIdx >= 0 && args[limitIdx + 1] ? parseInt(args[limitIdx + 1], 10) : null;
+const discIdx = args.indexOf('--discipline');
+const discipline = discIdx >= 0 && args[discIdx + 1] ? args[discIdx + 1] : null;
 
 async function main() {
   if (isSelftest) {
     await selftest();
     return;
   }
-  await mainReal({ limit });
+  await mainReal({ limit, discipline });
 }
 
 main().catch((err) => {

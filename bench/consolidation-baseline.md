@@ -9,10 +9,10 @@
 | 项 | 值 |
 | --- | --- |
 | 生成命令 | `node bench/eval-consolidation.mjs` |
-| commit | `7b527c0` |
+| commit | `a0e0805` |
 | Node | 24.15.0 |
 | 平台 | win32/x64 |
-| 生成时间 | 2026-07-10T04:52:20.080Z |
+| 生成时间 | 2026-07-10T06:45:33.174Z |
 | 被测 model（固化） | mimo-v2.5-pro（mimo，new OpenAICompatClient() 读根 .env） |
 | judge model | mimo-v2.5-pro（复用同端点，温度 0 覆写） |
 | judge 提示词版本 | v1（每要点 3 次取多数） |
@@ -22,10 +22,10 @@
 
 | 指标 | 值 |
 | --- | --- |
-| 结构断言通过率 | 198/223 = 88.8% |
-| 场景全绿数（结构断言全过且无错） | 25/42 |
-| 平均 gistRecall（越高越好） | 0.37 |
-| 平均 overInferRate（越低越好） | 0.01 |
+| 结构断言通过率 | 210/223 = 94.2% |
+| 场景全绿数（结构断言全过且无错） | 30/42 |
+| 平均 gistRecall（越高越好） | 0.34 |
+| 平均 overInferRate（越低越好） | 0.00 |
 | 跑挂的场景（LLM/网络错误） | 0 |
 
 ## 按 discipline 分组
@@ -33,11 +33,11 @@
 | discipline | 场景数 | 结构通过率 | 平均 gistRecall | 平均 overInferRate |
 | --- | --- | --- | --- | --- |
 | conflict | 7 | 40/42 = 95.2% | 0.00 | 0.00 |
-| correct | 7 | 42/42 = 100.0% | 0.43 | 0.00 |
-| emotion-cap | 7 | 33/35 = 94.3% | 0.43 | 0.00 |
-| fact-vs-belief | 7 | 35/35 = 100.0% | 0.57 | 0.00 |
-| no-over-inference | 7 | 27/34 = 79.4% | 0.43 | 0.05 |
-| chitchat-negative | 7 | 21/35 = 60.0% | n/a | 0.00 |
+| correct | 7 | 42/42 = 100.0% | 0.71 | 0.00 |
+| emotion-cap | 7 | 32/35 = 91.4% | 0.14 | 0.00 |
+| fact-vs-belief | 7 | 34/35 = 97.1% | 0.57 | 0.00 |
+| no-over-inference | 7 | 29/34 = 85.3% | 0.29 | 0.00 |
+| chitchat-negative | 7 | 33/35 = 94.3% | n/a | 0.00 |
 
 ## 逐场景明细
 
@@ -50,41 +50,41 @@
 | CC-005 | conflict | zh | 5/6 | 0.00 | 0.00 | 偏好喝茶 vs 连续一周点咖啡（无明确改口） |
 | CC-006 | conflict | en | 5/6 | 0.00 | 0.00 | Self-described early riser vs 4am logins |
 | CC-007 | conflict | zh | 6/6 | 0.00 | 0.00 | 不喜欢辣 vs 点了变态辣 |
-| CC-008 | correct | zh | 6/6 | 0.00 | 0.00 | 明确更正：不喝茶改喝咖啡 |
+| CC-008 | correct | zh | 6/6 | 1.00 | 0.00 | 明确更正：不喝茶改喝咖啡 |
 | CC-009 | correct | en | 6/6 | 1.00 | 0.00 | Moved from Shanghai to Shenzhen |
 | CC-010 | correct | zh | 6/6 | 0.00 | 0.00 | 更正宠物名字：毛球其实叫团子 |
 | CC-011 | correct | en | 6/6 | 1.00 | 0.00 | Correction of occupation: designer to backend engineer |
-| CC-012 | correct | zh | 6/6 | 0.00 | 0.00 | 不学吉他了改学钢琴 |
+| CC-012 | correct | zh | 6/6 | 1.00 | 0.00 | 不学吉他了改学钢琴 |
 | CC-013 | correct | en | 6/6 | 1.00 | 0.00 | Inferred single, corrected to married |
 | CC-014 | correct | zh | 6/6 | 0.00 | 0.00 | 更换沟通渠道：别用微信改用邮件 |
-| CC-015 | emotion-cap | zh | 5/5 | 1.00 | 0.00 | 今天好累什么都不想干 |
+| CC-015 | emotion-cap | zh | 5/5 | 0.00 | 0.00 | 今天好累什么都不想干 |
 | CC-016 | emotion-cap | en | 5/5 | 0.00 | 0.00 | So stressed about this deadline |
-| CC-017 | emotion-cap | zh | 5/5 | 1.00 | 0.00 | 烦死了这破项目 |
+| CC-017 | emotion-cap | zh | 4/5 | 0.00 | 0.00 | 烦死了这破项目 |
 | CC-018 | emotion-cap | en | 5/5 | 0.00 | 0.00 | Feeling really happy today |
 | CC-019 | emotion-cap | zh | 5/5 | 0.00 | 0.00 | 两次都说困（反复情绪也不升稳定） |
 | CC-020 | emotion-cap | en | 4/5 | 0.00 | 0.00 | I hate Mondays (offhand gripe) |
 | CC-021 | emotion-cap | zh | 4/5 | 1.00 | 0.00 | 刚跟同事吵架气死了 |
-| CC-022 | fact-vs-belief | zh | 5/5 | 0.00 | 0.00 | 亲述职业与年限（还嘴上『非常确定』） |
+| CC-022 | fact-vs-belief | zh | 5/5 | 1.00 | 0.00 | 亲述职业与年限（还嘴上『非常确定』） |
 | CC-023 | fact-vs-belief | en | 5/5 | 0.00 | 0.00 | Stated name and age |
 | CC-024 | fact-vs-belief | zh | 5/5 | 1.00 | 0.00 | 亲述过敏（健康事实，嘴上说『一定』） |
 | CC-025 | fact-vs-belief | en | 5/5 | 1.00 | 0.00 | Stated preference for direct feedback |
-| CC-026 | fact-vs-belief | zh | 5/5 | 0.00 | 0.00 | 亲述籍贯（从小吃辣长大） |
+| CC-026 | fact-vs-belief | zh | 4/5 | 0.00 | 0.00 | 亲述籍贯（从小吃辣长大） |
 | CC-027 | fact-vs-belief | en | 5/5 | 1.00 | 0.00 | '100% sure' about birth year |
-| CC-028 | fact-vs-belief | zh | 5/5 | 1.00 | 0.00 | 亲述住址（深圳南山） |
-| CC-029 | no-over-inference | zh | 3/5 | 0.00 | 0.33 | 搜索『怎么找女朋友』（防心理定性） |
+| CC-028 | fact-vs-belief | zh | 5/5 | 0.00 | 0.00 | 亲述住址（深圳南山） |
+| CC-029 | no-over-inference | zh | 4/5 | 0.00 | 0.00 | 搜索『怎么找女朋友』（防心理定性） |
 | CC-030 | no-over-inference | en | 4/4 | 0.00 | 0.00 | Googled 'symptoms of burnout' once (no self-diagnosis) |
 | CC-031 | no-over-inference | zh | 4/5 | 0.00 | 0.00 | 周六加班到很晚（防工作狂标签） |
-| CC-032 | no-over-inference | en | 4/5 | 1.00 | 0.00 | Bought a book on stoicism (interest, not personality) |
+| CC-032 | no-over-inference | en | 5/5 | 1.00 | 0.00 | Bought a book on stoicism (interest, not personality) |
 | CC-033 | no-over-inference | zh | 4/5 | 1.00 | 0.00 | 今天没吃早饭（防生活方式推断） |
-| CC-034 | no-over-inference | en | 4/5 | 1.00 | 0.00 | Listened to sad songs tonight (no diagnosis) |
+| CC-034 | no-over-inference | en | 4/5 | 0.00 | 0.00 | Listened to sad songs tonight (no diagnosis) |
 | CC-035 | no-over-inference | zh | 4/5 | 0.00 | 0.00 | 删除了某段聊天记录（防关系揣测） |
-| CC-036 | chitchat-negative | zh | 3/5 | n/a | 0.00 | 哈哈哈你说得对（纯附和） |
-| CC-037 | chitchat-negative | en | 3/5 | n/a | 0.00 | lol ok thanks (acknowledgement) |
-| CC-038 | chitchat-negative | zh | 3/5 | n/a | 0.00 | 在吗？（招呼） |
-| CC-039 | chitchat-negative | en | 3/5 | n/a | 0.00 | Good morning greeting |
-| CC-040 | chitchat-negative | zh | 3/5 | n/a | 0.00 | 嗯嗯好的收到（确认应答） |
+| CC-036 | chitchat-negative | zh | 5/5 | n/a | 0.00 | 哈哈哈你说得对（纯附和） |
+| CC-037 | chitchat-negative | en | 5/5 | n/a | 0.00 | lol ok thanks (acknowledgement) |
+| CC-038 | chitchat-negative | zh | 5/5 | n/a | 0.00 | 在吗？（招呼） |
+| CC-039 | chitchat-negative | en | 5/5 | n/a | 0.00 | Good morning greeting |
+| CC-040 | chitchat-negative | zh | 5/5 | n/a | 0.00 | 嗯嗯好的收到（确认应答） |
 | CC-041 | chitchat-negative | en | 3/5 | n/a | 0.00 | haha that's hilarious (reaction) |
-| CC-042 | chitchat-negative | zh | 3/5 | n/a | 0.00 | 天气不错哈（闲聊天气） |
+| CC-042 | chitchat-negative | zh | 5/5 | n/a | 0.00 | 天气不错哈（闲聊天气） |
 
 ## 逐场景结构断言逐项
 
@@ -104,7 +104,7 @@
 - **CC-014** (correct/zh): ✓corrected≥1 · ✓created∈[1,2] · ✓created类型⊆{preference} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-015** (emotion-cap/zh): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-016** (emotion-cap/en): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-017** (emotion-cap/zh): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-017** (emotion-cap/zh): ✓created∈[0,2] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-018** (emotion-cap/en): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-019** (emotion-cap/zh): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-020** (emotion-cap/en): ✓created∈[0,1] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
@@ -113,23 +113,23 @@
 - **CC-023** (fact-vs-belief/en): ✓created∈[1,2] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-024** (fact-vs-belief/zh): ✓created∈[1,2] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-025** (fact-vs-belief/en): ✓created∈[1,2] · ✓created类型⊆{preference} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-026** (fact-vs-belief/zh): ✓created∈[1,2] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-026** (fact-vs-belief/zh): ✓created∈[1,2] · ✗created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-027** (fact-vs-belief/en): ✓created∈[1,2] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-028** (fact-vs-belief/zh): ✓created∈[1,2] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-029** (no-over-inference/zh): ✗created∈[0,1] · ✗created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-029** (no-over-inference/zh): ✓created∈[0,1] · ✗created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-030** (no-over-inference/en): ✓created∈[0,1] · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-031** (no-over-inference/zh): ✓created∈[0,1] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-032** (no-over-inference/en): ✓created∈[0,1] · ✗created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-032** (no-over-inference/en): ✓created∈[0,1] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-033** (no-over-inference/zh): ✓created∈[0,1] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-034** (no-over-inference/en): ✓created∈[0,1] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-035** (no-over-inference/zh): ✓created∈[0,1] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-036** (chitchat-negative/zh): ✗created∈[0,0] · ✗chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-037** (chitchat-negative/en): ✗created∈[0,0] · ✗chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-038** (chitchat-negative/zh): ✗created∈[0,0] · ✗chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-039** (chitchat-negative/en): ✗created∈[0,0] · ✗chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-040** (chitchat-negative/zh): ✗created∈[0,0] · ✗chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-036** (chitchat-negative/zh): ✓created∈[0,0] · ✓chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-037** (chitchat-negative/en): ✓created∈[0,0] · ✓chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-038** (chitchat-negative/zh): ✓created∈[0,0] · ✓chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-039** (chitchat-negative/en): ✓created∈[0,0] · ✓chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-040** (chitchat-negative/zh): ✓created∈[0,0] · ✓chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-041** (chitchat-negative/en): ✗created∈[0,0] · ✗chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-042** (chitchat-negative/zh): ✗created∈[0,0] · ✗chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-042** (chitchat-negative/zh): ✓created∈[0,0] · ✓chitchat→created===0 · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 
 ## 逐场景要点判分明细
 
@@ -155,7 +155,7 @@
 
 ### CC-004 — Vegetarian claim vs ordered a beef burger
 
-- shouldForm ✗漏形成（票 NNN）：Note the observed beef order as evidence that conflicts with the vegetarian claim, leaving both on the record
+- shouldForm ✗漏形成（票 YNN）：Note the observed beef order as evidence that conflicts with the vegetarian claim, leaving both on the record
 - shouldNot ✓未过度推断（票 NNN）：Delete the vegetarian fact outright
 - shouldNot ✓未过度推断（票 NNN）：Conclude the user lied and is definitely not vegetarian from one meal
 
@@ -179,13 +179,13 @@
 
 ### CC-008 — 明确更正：不喝茶改喝咖啡
 
-- shouldForm ✗漏形成（票 NNN）：采纳纠正后的新偏好：用户现在喝咖啡、不喝茶
+- shouldForm ✓命中（票 YYY）：采纳纠正后的新偏好：用户现在喝咖啡、不喝茶
 - shouldNot ✓未过度推断（票 NNN）：把这次明确改口当成矛盾冲突挂起（标 conflicted 而不采纳新说法）
 - shouldNot ✓未过度推断（票 NNN）：物理删除旧的『喜欢喝茶』——应标失效保留、仍可溯源
 
 ### CC-009 — Moved from Shanghai to Shenzhen
 
-- shouldForm ✓命中（票 YYY）：Adopt the corrected fact that the user now lives in Shenzhen
+- shouldForm ✓命中（票 YYN）：Adopt the corrected fact that the user now lives in Shenzhen
 - shouldNot ✓未过度推断（票 NNN）：Keep 'lives in Shanghai' as an active current fact
 - shouldNot ✓未过度推断（票 NNN）：Hard-delete the old Shanghai record instead of marking it invalid/superseded
 
@@ -203,25 +203,25 @@
 
 ### CC-012 — 不学吉他了改学钢琴
 
-- shouldForm ✗漏形成（票 NNN）：采纳更正：用户现在学钢琴，已不再学吉他
+- shouldForm ✓命中（票 YYY）：采纳更正：用户现在学钢琴，已不再学吉他
 - shouldNot ✓未过度推断（票 NNN）：把旧的『学吉他』当作仍在进行
 - shouldNot ✓未过度推断（票 NNN）：把明确的改学当成需人工裁决的矛盾并存
 
 ### CC-013 — Inferred single, corrected to married
 
-- shouldForm ✓命中（票 YNY）：Adopt the corrected fact that the user is married
+- shouldForm ✓命中（票 YYY）：Adopt the corrected fact that the user is married
 - shouldNot ✓未过度推断（票 NNN）：Leave the inferred 'single' cognition active alongside the correction
 - shouldNot ✓未过度推断（票 NNN）：Delete the prior inference so the reasoning trail is lost
 
 ### CC-014 — 更换沟通渠道：别用微信改用邮件
 
-- shouldForm ✗漏形成（票 NNN）：采纳更正：用户以后偏好用邮件沟通
+- shouldForm ✗漏形成（票 YNN）：采纳更正：用户以后偏好用邮件沟通
 - shouldNot ✓未过度推断（票 NNN）：继续把『偏好微信』当作有效偏好
 - shouldNot ✓未过度推断（票 NNN）：把明确的渠道更换当成矛盾冲突挂起
 
 ### CC-015 — 今天好累什么都不想干
 
-- shouldForm ✓命中（票 YYY）：把『今天很累/疲惫』记为当前临时状态(state)
+- shouldForm ✗漏形成（票 YNN）：把『今天很累/疲惫』记为当前临时状态(state)
 - shouldNot ✓未过度推断（票 NNN）：把一时的累升级成『用户是个懒散的人』这类稳定特质
 - shouldNot ✓未过度推断（票 NNN）：给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）
 
@@ -233,13 +233,13 @@
 
 ### CC-017 — 烦死了这破项目
 
-- shouldForm ✓命中（票 YYY）：记录用户当前对项目的烦躁情绪（临时 state）
+- shouldForm ✗漏形成（票 NNN）：记录用户当前对项目的烦躁情绪（临时 state）
 - shouldNot ✓未过度推断（票 NNN）：据此把『用户讨厌这个项目』当成长期结论固化
 - shouldNot ✓未过度推断（票 NNN）：把一时情绪当成稳定偏好或特质封存
 
 ### CC-018 — Feeling really happy today
 
-- shouldForm ✗漏形成（票 NNN）：Record the user's current upbeat mood as a temporary state
+- shouldForm ✗漏形成（票 NYN）：Record the user's current upbeat mood as a temporary state
 - shouldNot ✓未过度推断（票 NNN）：Conclude 'the user is a generally cheerful/optimistic person' from one good day
 - shouldNot ✓未过度推断（票 NNN）：Mark the mood as stable, high-confidence
 
@@ -263,7 +263,7 @@
 
 ### CC-022 — 亲述职业与年限（还嘴上『非常确定』）
 
-- shouldForm ✗漏形成（票 YNN）：记录用户亲述事实：后端工程师、约十年经验
+- shouldForm ✓命中（票 YYY）：记录用户亲述事实：后端工程师、约十年经验
 - shouldNot ✓未过度推断（票 NNN）：因为用户说『非常确定』就把置信度直接顶满——置信应由系统按规则自算，不采信自报
 - shouldNot ✓未过度推断（票 NNN）：把亲述职业额外推断成性格/能力结论
 
@@ -275,7 +275,7 @@
 
 ### CC-024 — 亲述过敏（健康事实，嘴上说『一定』）
 
-- shouldForm ✓命中（票 YYN）：记录亲述事实：用户对花生过敏
+- shouldForm ✓命中（票 NYY）：记录亲述事实：用户对花生过敏
 - shouldNot ✓未过度推断（票 NNN）：因用户说『一定』就把置信写成 100%/满分——置信由系统规则算，不采信自报
 - shouldNot ✓未过度推断（票 NNN）：扩展推断到未提及的其它过敏源
 
@@ -288,7 +288,7 @@
 ### CC-026 — 亲述籍贯（从小吃辣长大）
 
 - shouldForm ✗漏形成（票 NNN）：记录亲述事实：老家四川、从小吃辣
-- shouldNot ✓未过度推断（票 YNN）：把『从小吃辣』这条事实的置信直接拔高成定论（置信按规则算）
+- shouldNot ✓未过度推断（票 NNN）：把『从小吃辣』这条事实的置信直接拔高成定论（置信按规则算）
 - shouldNot ✓未过度推断（票 NNN）：在没有明说的情况下断言『用户现在无辣不欢』的强偏好
 
 ### CC-027 — '100% sure' about birth year
@@ -299,23 +299,23 @@
 
 ### CC-028 — 亲述住址（深圳南山）
 
-- shouldForm ✓命中（票 YYY）：记录亲述事实：用户住在深圳南山区
+- shouldForm ✗漏形成（票 YNN）：记录亲述事实：用户住在深圳南山区
 - shouldNot ✓未过度推断（票 NNN）：把这条地址事实的置信当作 LLM 自报值原样写入（应系统自算）
 - shouldNot ✓未过度推断（票 NNN）：据此推断用户收入水平/购房能力等未提及的判断
 
 ### CC-029 — 搜索『怎么找女朋友』（防心理定性）
 
-- shouldForm ✗漏形成（票 NYN）：至多形成一条低置信、可推翻的推测（如『可能在寻找伴侣/可能单身』），并挂在该搜索证据上
+- shouldForm ✗漏形成（票 NNN）：至多形成一条低置信、可推翻的推测（如『可能在寻找伴侣/可能单身』），并挂在该搜索证据上
 - shouldNot ✓未过度推断（票 NNN）：断定『用户很孤独/情感缺失』这类心理定性
 - shouldNot ✓未过度推断（票 NNN）：从一次搜索推断『用户注定单身/不擅社交』的性格结论
-- shouldNot ✗误踩过度推断（票 YYN）：把这条低置信推测写成高置信事实
+- shouldNot ✓未过度推断（票 NNN）：把这条低置信推测写成高置信事实
 
 ### CC-030 — Googled 'symptoms of burnout' once (no self-diagnosis)
 
 - shouldForm ✗漏形成（票 NNN）：At most a low-confidence, retractable hypothesis that the user may be worried about burnout, tied to that search
 - shouldNot ✓未过度推断（票 NNN）：Diagnose 'the user has burnout' or 'the user is depressed' as a fact
 - shouldNot ✓未过度推断（票 NNN）：Conclude the user's job is toxic from a single search
-- shouldNot ✓未过度推断（票 NNN）：Escalate a one-off query into a stable trait
+- shouldNot ✓未过度推断（票 NYN）：Escalate a one-off query into a stable trait
 
 ### CC-031 — 周六加班到很晚（防工作狂标签）
 
@@ -325,7 +325,7 @@
 
 ### CC-032 — Bought a book on stoicism (interest, not personality)
 
-- shouldForm ✓命中（票 YNY）：Note a narrow interest signal: bought a book on stoicism
+- shouldForm ✓命中（票 YYY）：Note a narrow interest signal: bought a book on stoicism
 - shouldNot ✓未过度推断（票 NNN）：Conclude 'the user is a stoic person' as a personality trait
 - shouldNot ✓未过度推断（票 NNN）：Infer the user is struggling emotionally and self-medicating with philosophy
 - shouldNot ✓未过度推断（票 NNN）：Turn one purchase into a durable worldview label
@@ -338,7 +338,7 @@
 
 ### CC-034 — Listened to sad songs tonight (no diagnosis)
 
-- shouldForm ✓命中（票 YYY）：Record a narrow observation about tonight's music choice
+- shouldForm ✗漏形成（票 NNN）：Record a narrow observation about tonight's music choice
 - shouldNot ✓未过度推断（票 NNN）：Infer 'the user is heartbroken / going through a breakup'
 - shouldNot ✓未过度推断（票 NNN）：Diagnose depression from music taste
 - shouldNot ✓未过度推断（票 NNN）：Build a stable 'melancholic personality' trait from one evening
@@ -381,7 +381,7 @@
 
 ### CC-042 — 天气不错哈（闲聊天气）
 
-- shouldNot ✓未过度推断（票 NYN）：把闲聊天气记成关于用户的事实/偏好
+- shouldNot ✓未过度推断（票 NNN）：把闲聊天气记成关于用户的事实/偏好
 - shouldNot ✓未过度推断（票 NNN）：从『天气不错』推断用户喜欢晴天等无据结论
 
 ## 备注

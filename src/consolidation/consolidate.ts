@@ -89,6 +89,9 @@ function pickCognition(c: RawCog): { content: string; contentType: ContentType; 
   return { content, contentType, formedBy };
 }
 
+// CONSOLIDATE_PROMPT v2（2026-07-10，Phase 2.3）：v1 基线上加「闲聊无信息 → 零新增」守卫，
+//   治 chitchat 过度记忆（基线 chitchat 结构仅 21/35；只丢无实质寒暄，情绪/事实/偏好照常记，不削弱其它纪律）。
+//   改此提示词须重跑 bench/eval-consolidation.mjs 全量、附前后分数对比（§15.3）。
 const SYSTEM: Record<Lang, string> = {
   zh: [
     '你在维护对用户的认知画像。给你【现有画像】和【新材料】（事件 + 其下逐条原话，每条原话带 id）。',
@@ -99,6 +102,8 @@ const SYSTEM: Record<Lang, string> = {
     '  注意：画像里 (hypothesis) 类型是【待验证的假设】；若用户的新话否定/澄清了某条假设，也归入 correct——',
     '  给被否定的 cognition_id，新内容写用户澄清出来的【事实】（content_type 用 fact/preference 等，不要再写 hypothesis）。',
     '- conflict：新原话与某条现有认知矛盾，但【不是用户明确纠正】（如行为观察 vs 旧偏好）→ 只标冲突，不替换。',
+    '【重要】只为关于用户、值得长期记住的信息形成认知。若新材料只是寒暄或无实质信息（问候如"你好/在吗"、天气闲聊、"哈哈/好的/嗯"这类附和、与用户无关的即时评论），四类全部输出 []，不要硬凑认知。' +
+      '注意：真实的情绪状态、事实、偏好、目标仍要照常记（别把它们当闲聊丢掉）。',
     '【关键】每条认知必须给 support_evidence_ids = 真正支撑它的【那几条原话 id】；',
     '  只挑真正相关的，别把同一事件里无关的原话也算上；引不出确切原话就【不要给这条】。',
     'formed_by：用户明确说过=stated；你推断出来的=inferred（如从"怎么找女朋友"推"单身"）。性格/特质多为 inferred 且保守。',
@@ -118,6 +123,8 @@ const SYSTEM: Record<Lang, string> = {
     '  Note: a (hypothesis)-type item in the profile is an [unverified guess]; if the user\'s new words negate/clarify such a hypothesis, that also goes under correct—',
     '  give the negated cognition_id, and write the new content as the [fact] the user clarified (use content_type fact/preference etc., not hypothesis again).',
     '- conflict: a new utterance contradicts an existing cognition but is [not an explicit user correction] (e.g., an observed behavior vs. a stated old preference) → only flag the conflict, do not replace.',
+    '[Important] Only form cognitions for information worth remembering about the user. If the new material is mere small talk with no substantive information (greetings like "hi/are you there", weather chit-chat, fillers like "haha/ok/sure", off-topic remarks unrelated to the user), output [] for all four categories—do not force it. ' +
+      'Note: genuine emotional states, facts, preferences, and goals must still be recorded as usual (do not discard those as small talk).',
     '[Key] Every cognition must give support_evidence_ids = the [specific utterance ids] that genuinely support it;',
     '  pick only the truly relevant ones, do not count unrelated utterances from the same event; if you cannot cite a definite utterance, [do not emit that item].',
     'formed_by: what the user explicitly said = stated; what you inferred = inferred (e.g., inferring "single" from "how do I find a girlfriend"). Personality/traits are mostly inferred and should be conservative.',
