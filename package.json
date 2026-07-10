@@ -35,6 +35,8 @@
     "collector": "node plugins/collector-active-window/run.mjs",
     "experience": "node testbench/server.mjs",
     "build": "tsc -p tsconfig.build.json",
+    "api:update": "node scripts/api-snapshot.mjs",
+    "api:check": "node scripts/api-snapshot.mjs --check",
     "bench": "node bench/bulk-updateProfile.mjs",
     "smoke:dist": "node tests/smoke/dist-smoke.mjs",
     "dev:core": "tsc -p tsconfig.build.json --watch",

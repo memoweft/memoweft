@@ -1,0 +1,184 @@
+// MemoWeft 公共 API 快照 —— 机读冻结基准(PROJECT_PLAN.md 第 13 章)。
+// 禁止手改;合法变更走 `npm run api:update`(需影响面说明 + 人类批准 + D-xxxx)。
+
+class Conversation { handle: (userMsg: string, opts?: PerceiveOptions) => Promise<TurnOutcome>; }
+class NullRetriever { indexAll: (_items: Array<{ id: string; text: string; }>) => Promise<void>; search: (_query: string, _topK: number) => Promise<RetrievalHit[]>; }
+class OpenAICompatClient { callCount: number; chat: (messages: ChatMessage[]) => Promise<string>; tier: ModelTier | undefined; usage: UsageStats; }
+class OpenAICompatEmbedder { callCount: number; embed: (texts: string[]) => Promise<number[][]>; usage: UsageStats; }
+class RunLogger { appendProfileUpdate: (rec: Partial<Omit<ProfileUpdateRecord, 'kind' | 'ts' | 'sessionId'>>) => ProfileUpdateRecord; appendTurn: (rec: Partial<TurnRecord>) => TurnRecord; file: string; readRecent: (n?: number) => TurnRecord[]; }
+class SqliteCognitionStore { active: (subjectId: string) => Cognition[]; addEvidence: (cognitionId: string, links: EvidenceLink[]) => void; all: (subjectId?: string) => Cognition[]; close: () => void; get: (id: string) => Cognition | null; insert: (cognition: Cognition, sources: EvidenceLink[]) => void; put: (input: CognitionInput) => Cognition; remove: (id: string) => boolean; removeBySubject: (subjectId: string) => number; sourcesOf: (cognitionId: string) => EvidenceLink[]; update: (id: string, patch: CognitionPatch) => Cognition | null; }
+class SqliteEventStore { all: (subjectId?: string) => Event[]; close: () => void; coveredEvidenceIds: (subjectId: string) => string[]; evidenceOf: (eventId: string) => string[]; get: (id: string) => Event | null; insert: (event: Event, evidenceIds: string[], opts?: { consolidated?: boolean; }) => void; markConsolidated: (ids: string[]) => void; put: (input: EventInput) => Event; remove: (id: string) => boolean; removeBySubject: (subjectId: string) => number; unconsolidated: (subjectId: string) => Event[]; }
+class SqliteEvidenceStore { all: () => Evidence[]; byTimeRange: (fromIso: string, toIso: string) => Evidence[]; close: () => void; findByOrigin: (originId: string) => Evidence | null; get: (id: string) => Evidence | null; insert: (evidence: Evidence) => void; put: (input: EvidenceInput) => Evidence; remove: (id: string) => boolean; update: (id: string, patch: { rawContent?: string; summary?: string; allowCloudRead?: boolean; allowInference?: boolean; }) => Evidence | null; }
+class SqliteManagementLog { append: (e: Omit<ManagementLogEntry, 'createdAt'>) => ManagementLogEntry; clear: () => number; list: (targetId?: string) => ManagementLogEntry[]; }
+class VectorRetriever { close: () => void; indexAll: (items: Array<{ id: string; text: string; }>) => Promise<void>; search: (query: string, topK: number) => Promise<RetrievalHit[]>; }
+class WorkingMemory { context: () => Turn[]; push: (turn: Turn) => void; size: number; }
+const BUNDLE_FORMAT: 'memoweft-bundle'
+const BUNDLE_SCHEMA_VERSION: 1
+const DLA_VERSION: '0.5.1'
+const LATEST_SCHEMA_VERSION: number
+const MEMOWEFT_VERSION: '0.5.1'
+const config: { asking: { maxAsks: number; confidenceBand: { min: number; max: number; }; askableStatuses: string[]; }; attribution: { windowHours: number; hypothesisCap: number; maxPhenomenaPerRun: number; maxCausesPerHypothesis: number; minPhenomenonSupport: number; }; background: { halfLifeDays: Record<string, number>; expireAfterDays: Record<string, number>; trendWindowDays: number; trendMinCount: number; }; consolidation: { baseByFormedBy: { stated: number; observed: number; ruled: number; inferred: number; }; supportStep: number; supportCap: number; contradictPenalty: number; minConfidence: number; credThresholds: { stable: number; limited: number; low: number; }; transientTypes: string[]; transientCap: number; }; evidenceDefaults: { allowLocalRead: boolean; allowInference: boolean; }; identity: { subjectId: string; hostId: string; }; language?: Lang | undefined; observedDefaults: { allowLocalRead: boolean; allowCloudRead: boolean; allowInference: boolean; }; privacyMode: boolean; profileUpdate: { batchSize: number; idleMinutes: number; }; retrieval: { topK: number; minEffectiveConfidence: number; minSimilarity: number; }; workingMemory: { maxTurns: number; }; }
+const noopTransaction: { <T>(fn: () => T): T; }
+function aggregateTrends: { (subjectId: string, deps: AggregateTrendsDeps, now?: Date): Promise<TrendResult>; }
+function attribute: { (subjectId: string, deps: AttributeDeps): Promise<AttributeResult>; }
+function buildMemoryGraph: { (subjectId: string, deps: BuildGraphDeps, opts?: BuildGraphOptions): MemoryGraphPayload; }
+function cloudReadDefault: { (c?: MemoWeftConfig): boolean; }
+function computeConfidence: { (i: ConfidenceInputs, cfg?: MemoWeftConfig): number; }
+function consolidate: { (subjectId: string, deps: ConsolidateDeps): Promise<ConsolidateResult>; }
+function createMemoWeftCore: { (options: CreateCoreOptions): MemoWeftCore; }
+function createMemoryManagementAPI: { (bundle: StoreBundle, cfg?: MemoWeftConfig, deps?: MemoryManagementDeps): MemoryManagementAPI; }
+function createRunLogger: { (opts: RunLoggerOptions): RunLogger; }
+function decayFactor: { (halfLifeDays: number, ageMs: number): number; }
+function deriveCredStatus: { (confidence: number, contradictCount: number, contentType: ContentType, cfg?: MemoWeftConfig): CredStatus; }
+function distill: { (subjectId: string, deps: DistillDeps): Promise<DistillResult>; }
+function effectiveConfidence: { (cog: Pick<Cognition, 'confidence' | 'contentType' | 'updatedAt'>, now?: Date, cfg?: MemoWeftConfig): number; }
+function expire: { (subjectId: string, deps: ExpireDeps, now?: Date): ExpireResult; }
+function exportBundle: { (subjectId: string, deps: ExportDeps, opts?: ExportOptions): MemoryBundle; }
+function extractJsonObject: { (raw: string): string | null; }
+function getSchemaVersion: { (db: DatabaseSync): number; }
+function halfLifeOf: { (contentType: ContentType, cfg?: MemoWeftConfig): number; }
+function importBundle: { (bundle: MemoryBundle, deps: ImportDeps, opts: ImportOptions): ImportPlan; }
+function ingestObservations: { (subjectId: string, observations: Observation[], deps: IngestDeps): IngestResult; }
+function loadEmbedConfig: { (): EmbedConfig | null; }
+function loadLLMConfig: { (prefix?: string): LLMConfig; }
+function loadLLMPool: { (): LLMPool; }
+function openStores: { (dbPath: string, cfg?: MemoWeftConfig): StoreBundle; }
+function parseJsonObject: { <T = Record<string, unknown>>(raw: string): T | null; }
+function parseJsonObjectWithRepair: { <T = Record<string, unknown>>(deps: ParseWithRepairDeps): Promise<T | null>; }
+function perceive: { (rawContent: string, opts?: PerceiveOptions, cfg?: MemoWeftConfig): EvidenceInput; }
+function proposeAsk: { (subjectId: string, deps: ProposeAskDeps, opts?: ProposeAskOptions): Promise<ProposeAskResult>; }
+function recallCognitions: { (query: string, subjectId: string, deps: RecallDeps, cfg?: MemoWeftConfig, now?: Date): Promise<RecalledCognitionItem[]>; }
+function revisitConflicts: { (subjectId: string, deps: RevisitDeps, opts?: { maxAsks?: number; markAsked?: boolean; }): Promise<RevisitResult>; }
+function runMigrations: { (db: DatabaseSync, opts?: RunMigrationsOptions): MigrationResult; }
+function updateProfile: { (subjectId: string, deps: UpdateProfileDeps): Promise<UpdateProfileResult>; }
+function validateBundle: { (bundle: unknown): ValidateResult; }
+interface AggregateTrendsDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm: LLMClient; }
+interface ArchiveCognitionInput { cognitionId: string; reason: string; }
+interface AskPolicy { askableStatuses: Array<string>; confidenceBand: { min: number; max: number; }; maxAsks: number; }
+interface AskProposal { cognitionId: string; confidence: number; contradictEvidence?: Array<{ id: string; summary: string; }> | undefined; credStatus: CredStatus; evidence: Array<{ id: string; summary: string; }>; hypothesis: string; kind: 'hypothesis' | 'conflict'; question: string; }
+interface AttributeDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm: LLMClient; }
+interface AttributeResult { consideredPhenomena: number; hypotheses: Array<AttributedHypothesis>; llmCalls: number; }
+interface AttributedHypothesis { basedOnEvidenceIds: Array<string>; cognition: Cognition; phenomenon: string; }
+interface BuildGraphDeps { cognitionStore: CognitionStore; eventStore: EventStore; evidenceStore: EvidenceStore; }
+interface BuildGraphOptions { contentType?: ContentType | Array<ContentType> | undefined; credStatus?: CredStatus | Array<CredStatus> | undefined; depth?: number | undefined; includeArchived?: boolean | undefined; includeEvidence?: boolean | undefined; includeInvalid?: boolean | undefined; now?: string | undefined; onlyCloudBlocked?: boolean | undefined; onlyConflicts?: boolean | undefined; onlyHypotheses?: boolean | undefined; q?: string | undefined; scope?: 'local' | 'global' | undefined; sourceKind?: SourceKind | Array<SourceKind> | undefined; }
+interface ChatMessage { content: string; role: 'system' | 'user' | 'assistant'; }
+interface Cognition { archivedAt?: string | null | undefined; askedAt: string | null; confidence: number; content: string; contentType: ContentType; createdAt: string; credStatus: CredStatus; formedBy: FormedBy; id: string; invalidAt: string | null; scope: string | null; subjectId: string; updatedAt: string; validAt: string | null; }
+interface CognitionEvidenceLink { cognitionId: string; evidenceId: string; relation: EvidenceRelation; }
+interface CognitionInput { confidence: number; content: string; contentType: ContentType; credStatus: CredStatus; evidence?: Array<EvidenceLink> | undefined; formedBy: FormedBy; invalidAt?: string | null | undefined; scope?: string | null | undefined; subjectId: string; validAt?: string | null | undefined; }
+interface CognitionPatch { archivedAt?: string | null | undefined; askedAt?: string | null | undefined; confidence?: number | undefined; content?: string | undefined; credStatus?: CredStatus | undefined; invalidAt?: string | null | undefined; scope?: string | null | undefined; }
+interface CognitionStore { active: (subjectId: string) => Cognition[]; addEvidence: (cognitionId: string, links: EvidenceLink[]) => void; all: (subjectId?: string) => Cognition[]; close: () => void; get: (id: string) => Cognition | null; insert: (cognition: Cognition, sources: EvidenceLink[]) => void; put: (input: CognitionInput) => Cognition; remove: (id: string) => boolean; removeBySubject: (subjectId: string) => number; sourcesOf: (cognitionId: string) => EvidenceLink[]; update: (id: string, patch: CognitionPatch) => Cognition | null; }
+interface CognitionWithMeta { archivedAt?: string | null | undefined; askedAt: string | null; confidence: number; content: string; contentType: ContentType; createdAt: string; credStatus: CredStatus; effectiveConfidence: number; formedBy: FormedBy; id: string; invalidAt: string | null; scope: string | null; sources: Array<EvidenceLink>; subjectId: string; updatedAt: string; validAt: string | null; }
+interface CognitionWithSources { archivedAt?: string | null | undefined; askedAt: string | null; confidence: number; content: string; contentType: ContentType; createdAt: string; credStatus: CredStatus; formedBy: FormedBy; id: string; invalidAt: string | null; scope: string | null; sources: Array<EvidenceLink>; subjectId: string; updatedAt: string; validAt: string | null; }
+interface ConfidenceInputs { contentType: ContentType; contradictCount: number; formedBy: FormedBy; supportCount: number; }
+interface ConsolidateDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; eventStore: EventStore; evidenceStore: EvidenceStore; llm: LLMClient; transaction?: Transaction | undefined; }
+interface ConsolidateResult { conflicted: number; corrected: number; created: Array<Cognition>; llmCalls: number; processedEvents: number; profileSize: number; promptChars: number; reinforced: number; }
+interface ConversationDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; llm: LLMClient; retriever: Retriever; seedTurns?: Array<Turn> | undefined; store: EvidenceStore; systemPrompt?: string | undefined; }
+interface ConversationInput { conversationId?: string | undefined; hostId?: string | undefined; message: string; occurredAt?: string | undefined; originId?: string | null | undefined; seedTurns?: Array<Turn> | undefined; subjectId?: string | undefined; systemPrompt?: string | undefined; }
+interface CreateCoreOptions { config?: MemoWeftConfig | undefined; dbPath: string; embedder?: Embedder | undefined; llm?: LLMClient | LLMPool | undefined; plugins?: Array<MemoWeftPlugin> | undefined; retriever?: Retriever | undefined; vectorDbPath?: string | undefined; }
+interface DistillDeps { config?: MemoWeftConfig | undefined; eventStore: EventStore; evidenceStore: EvidenceStore; llm: LLMClient; }
+interface DistillResult { event: Event | null; llmCalls: number; pendingCount: number; tierBlockedCount: number; }
+interface EmbedConfig { apiKey: string; baseUrl: string; model: string; }
+interface Embedder { callCount?: number | undefined; embed: (texts: string[]) => Promise<number[][]>; usage?: UsageStats | undefined; }
+interface Event { createdAt: string; id: string; occurredAt: string; subjectId: string; summary: string; }
+interface EventEvidenceLink { eventId: string; evidenceId: string; }
+interface EventInput { evidenceIds: Array<string>; occurredAt: string; subjectId: string; summary: string; }
+interface EventStore { all: (subjectId?: string) => Event[]; close: () => void; coveredEvidenceIds: (subjectId: string) => string[]; evidenceOf: (eventId: string) => string[]; get: (id: string) => Event | null; insert: (event: Event, evidenceIds: string[], opts?: { consolidated?: boolean; }) => void; markConsolidated: (ids: string[]) => void; put: (input: EventInput) => Event; remove: (id: string) => boolean; removeBySubject: (subjectId: string) => number; unconsolidated: (subjectId: string) => Event[]; }
+interface EventWithEvidence { createdAt: string; evidenceIds: Array<string>; id: string; occurredAt: string; subjectId: string; summary: string; }
+interface Evidence { allowCloudRead: boolean; allowInference: boolean; allowLocalRead: boolean; correctsEvidenceId: string | null; hostId: string; id: string; occurredAt: string; originId: string | null; rawContent: string; recordedAt: string; sourceKind: SourceKind; subjectId: string; summary: string; }
+interface EvidenceInput { allowCloudRead?: boolean | undefined; allowInference?: boolean | undefined; allowLocalRead?: boolean | undefined; correctsEvidenceId?: string | null | undefined; hostId: string; occurredAt?: string | undefined; originId?: string | null | undefined; rawContent: string; sourceKind: SourceKind; subjectId: string; summary?: string | undefined; }
+interface EvidenceLink { evidenceId: string; relation: EvidenceRelation; }
+interface EvidenceStore { all: () => Evidence[]; byTimeRange: (fromIso: string, toIso: string) => Evidence[]; close: () => void; findByOrigin: (originId: string) => Evidence | null; get: (id: string) => Evidence | null; insert: (evidence: Evidence) => void; put: (input: EvidenceInput) => Evidence; remove: (id: string) => boolean; update: (id: string, patch: { rawContent?: string; summary?: string; allowCloudRead?: boolean; allowInference?: boolean; }) => Evidence | null; }
+interface ExpireDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; }
+interface ExpireResult { expired: number; }
+interface ExportDeps { cognitionStore: CognitionStore; eventStore: EventStore; evidenceStore: EvidenceStore; }
+interface ExportOptions { hostId?: string | undefined; memoWeftVersion?: string | undefined; notes?: Array<string> | undefined; now?: string | undefined; }
+interface HealthReport { embedReady: boolean; llmReady: boolean; }
+interface Hypothesis { confidence: number; credStatus: string; text: string; }
+interface ImportDeps { cognitionStore: CognitionStore; eventStore: EventStore; evidenceStore: EvidenceStore; transaction?: Transaction | undefined; }
+interface ImportOptions { mode: ImportMode; }
+interface ImportPlan { counts: { evidence: number; events: number; cognitions: number; eventEvidence: number; cognitionEvidence: number; }; duplicates: { evidence: number; events: number; cognitions: number; }; errors: Array<string>; mode: ImportMode; valid: boolean; warnings: Array<string>; }
+interface IngestDeps { config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; hostId?: string | undefined; }
+interface IngestResult { skipped: number; stored: Array<Evidence>; }
+interface IntegrityIssue { cognitionId?: string | undefined; eventId?: string | undefined; evidenceId: string; kind: 'orphan_event_evidence' | 'orphan_cognition_evidence'; missing: 'event' | 'cognition' | 'evidence'; }
+interface IntegrityReport { checkedAt: string; issues: Array<IntegrityIssue>; ok: boolean; }
+interface InvalidateCognitionInput { cognitionId: string; reason: string; }
+interface LLMClient { callCount: number; chat: (messages: ChatMessage[]) => Promise<string>; tier?: ModelTier | undefined; usage?: UsageStats | undefined; }
+interface LLMPool { for: (purpose: LLMPurpose) => LLMClient; }
+interface ListMemoryInput { subjectId?: string | undefined; }
+interface LogRecallItem { score?: number | undefined; summary: string; }
+interface ManagementLog { append: (e: Omit<ManagementLogEntry, 'createdAt'>) => ManagementLogEntry; clear: () => number; list: (targetId?: string) => ManagementLogEntry[]; }
+interface ManagementLogEntry { createdAt: string; detail: Record<string, unknown> | null; op: string; reason: string; targetId: string; targetKind: string; }
+interface MemoWeftConfig { asking: { maxAsks: number; confidenceBand: { min: number; max: number; }; askableStatuses: string[]; }; attribution: { windowHours: number; hypothesisCap: number; maxPhenomenaPerRun: number; maxCausesPerHypothesis: number; minPhenomenonSupport: number; }; background: { halfLifeDays: Record<string, number>; expireAfterDays: Record<string, number>; trendWindowDays: number; trendMinCount: number; }; consolidation: { baseByFormedBy: { stated: number; observed: number; ruled: number; inferred: number; }; supportStep: number; supportCap: number; contradictPenalty: number; minConfidence: number; credThresholds: { stable: number; limited: number; low: number; }; transientTypes: string[]; transientCap: number; }; evidenceDefaults: { allowLocalRead: boolean; allowInference: boolean; }; identity: { subjectId: string; hostId: string; }; language?: Lang | undefined; observedDefaults: { allowLocalRead: boolean; allowCloudRead: boolean; allowInference: boolean; }; privacyMode: boolean; profileUpdate: { batchSize: number; idleMinutes: number; }; retrieval: { topK: number; minEffectiveConfidence: number; minSimilarity: number; }; workingMemory: { maxTurns: number; }; }
+interface MemoWeftCore { close: () => void; dropConversation: (conversationId: string) => void; graph: MemoryGraphAPI; handleConversationTurn: (input: ConversationInput) => Promise<TurnOutcome>; health: () => HealthReport; ingestObservation: (input: ObservationInput) => Promise<Evidence[]>; ingestUserMessage: (input: UserMessageInput) => Promise<Evidence>; memory: MemoryManagementAPI; portable: PortableAPI; recall: (input: RecallInput) => Promise<RecalledCognition[]>; updateProfile: (input?: UpdateProfileInput) => Promise<UpdateProfileResult>; usage: () => UsageReport; }
+interface MemoWeftPlugin { id: string; name: string; onLoad?: ((ctx: PluginContext) => void | Promise<void>) | undefined; onObservation?: ((obs: Observation, ctx: PluginContext) => void | Promise<void>) | undefined; onUserMessage?: ((msg: PluginUserMessage, ctx: PluginContext) => void | Promise<void>) | undefined; permissions?: PluginPermissions | undefined; systemPrompt?: string | undefined; type: PluginType; }
+interface MemoryBundle { data: { evidence: Evidence[]; events: Event[]; eventEvidence: EventEvidenceLink[]; cognitions: Cognition[]; cognitionEvidence: CognitionEvidenceLink[]; unconsolidatedEventIds: string[]; }; exportedAt: string; format: string; memoWeftVersion: string; metadata: { counts: { evidence: number; events: number; cognitions: number; }; notes: string[]; }; schemaVersion: number; source: { hostId: string; exportMode: 'full'; }; subjectId: string; }
+interface MemoryGraphAPI { buildMemoryGraph: (opts?: BuildGraphOptions & { subjectId?: string; }) => MemoryGraphPayload; }
+interface MemoryGraphEdge { dashed?: boolean | undefined; id: string; kind: MemoryGraphEdgeKind; label?: string | undefined; source: string; target: string; }
+interface MemoryGraphNode { allowCloudRead?: boolean | undefined; allowInference?: boolean | undefined; archivedAt?: string | null | undefined; colorKey?: string | undefined; confidence?: number | undefined; contentType?: ContentType | undefined; createdAt?: string | undefined; credStatus?: CredStatus | undefined; formedBy?: FormedBy | undefined; id: string; invalidAt?: string | null | undefined; kind: MemoryGraphNodeKind; label: string; occurredAt?: string | undefined; sourceKind?: SourceKind | undefined; summary?: string | undefined; updatedAt?: string | undefined; val?: number | undefined; }
+interface MemoryGraphPayload { depth: number; edges: Array<MemoryGraphEdge>; generatedAt: string; nodes: Array<MemoryGraphNode>; scope: 'local' | 'global'; stats: MemoryGraphStats; subjectId: string; }
+interface MemoryGraphStats { activeCognitionCount: number; conflictedCount: number; edgeCount: number; hiddenCount: number; hypothesisCount: number; nodeCount: number; observedEvidenceCount: number; }
+interface MemoryManagementAPI { archiveCognition: (input: ArchiveCognitionInput) => Cognition | null; checkIntegrity: () => IntegrityReport; invalidateCognition: (input: InvalidateCognitionInput) => Cognition | null; listCognitions: (input?: ListMemoryInput) => CognitionWithMeta[]; listEvents: (input?: ListMemoryInput) => EventWithEvidence[]; listEvidence: (input?: ListMemoryInput) => Evidence[]; mergeCognition: (input: MergeCognitionInput) => MergeCognitionResult; removeCognitionSafely: (input: RemoveCognitionSafelyInput) => RemoveCognitionResult; removeEvidenceSafely: (input: RemoveEvidenceSafelyInput) => RemoveEvidenceResult; resetSubject: (input: ResetSubjectInput) => ResetSubjectResult; updateEvidenceAuthorization: (input: UpdateEvidenceAuthorizationInput) => Evidence | null; }
+interface MemoryManagementDeps { retriever?: Retriever | undefined; }
+interface MergeCognitionInput { reason: string; sourceId: string; targetId: string; }
+interface MergeCognitionResult { duplicateLinks: number; merged: boolean; movedLinks: number; source: Cognition; target: Cognition; }
+interface Migration { name: string; up: (db: DatabaseSync) => void; version: number; }
+interface MigrationResult { applied: Array<number>; backupPath?: string | undefined; dryRun: boolean; from: number; to: number; }
+interface Observation { allowCloudRead?: boolean | undefined; allowInference?: boolean | undefined; allowLocalRead?: boolean | undefined; content: string; kind: string; meta?: Record<string, unknown> | undefined; occurredAt: string; originId?: string | null | undefined; }
+interface ObservationInput { hostId?: string | undefined; observations: Array<Observation>; subjectId?: string | undefined; }
+interface ParseWithRepairDeps { lang?: Lang | undefined; llm: LLMClient; log?: ((msg: string) => void) | undefined; messages: Array<ChatMessage>; }
+interface PerceiveOptions { hostId?: string | undefined; occurredAt?: string | undefined; originId?: string | null | undefined; sourceKind?: SourceKind | undefined; subjectId?: string | undefined; }
+interface PluginContext { requestMemory: (query: string) => Promise<RecalledCognitionItem[]>; submitObservation: (input: PluginObservationInput) => Promise<void>; }
+interface PluginPermissions { requestMemory?: boolean | undefined; submitObservation?: boolean | undefined; }
+interface PluginUserMessage { content: string; reply: string; subjectId: string; }
+interface PortableAPI { exportBundle: (opts?: ExportOptions & { subjectId?: string; }) => MemoryBundle; importBundle: (bundle: MemoryBundle, opts: ImportOptions) => ImportPlan; validateBundle: (bundle: unknown) => ValidateResult; }
+interface ProfileUpdateRecord { error: string | null; indexError: string | null; kind: 'profile_update'; llmCalls: number; sessionId: string; summary: { pendingCount: number; created: number; reinforced: number; corrected: number; conflicted: number; hypotheses: number; trends: number; expired: number; profileSize?: number; promptChars?: number; }; timings: ProfileUpdateTimings; trigger: 'manual' | 'background'; ts: string; }
+interface ProfileUpdateTimings { attributeMs: number; consolidateMs: number; distillMs: number; indexMs: number; totalMs: number; }
+interface ProposeAskDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm?: LLMClient | undefined; }
+interface ProposeAskOptions { markAsked?: boolean | undefined; policy?: Partial<AskPolicy> | undefined; }
+interface ProposeAskResult { llmCalls: number; proposals: Array<AskProposal>; }
+interface RecallDeps { cognitionStore: CognitionStore; retriever: Retriever; }
+interface RecallInput { query: string; subjectId?: string | undefined; }
+interface RecalledCognition { confidence: number; content: string; credStatus: string; id?: string | undefined; score: number; }
+interface RecalledCognitionItem { confidence: number; content: string; credStatus: string; id: string; score: number; }
+interface RemovalBlocker { id: string; kind: 'event' | 'cognition'; relation?: string | undefined; }
+interface RemoveCognitionResult { removed: boolean; removedLinks: Array<EvidenceLink>; }
+interface RemoveCognitionSafelyInput { cognitionId: string; reason: string; }
+interface RemoveEvidenceResult { blockers: Array<RemovalBlocker>; removed: boolean; }
+interface RemoveEvidenceSafelyInput { evidenceId: string; force?: boolean | undefined; reason: string; }
+interface ResetSubjectInput { reason?: string | undefined; subjectId?: string | undefined; }
+interface ResetSubjectResult { auditRemoved: number; cognitionRemoved: number; eventRemoved: number; evidenceRemoved: number; }
+interface RetrievalHit { id: string; score: number; }
+interface Retriever { indexAll: (items: Array<{ id: string; text: string; }>) => Promise<void>; search: (query: string, topK: number) => Promise<RetrievalHit[]>; }
+interface RevisitDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm?: LLMClient | undefined; }
+interface RevisitResult { llmCalls: number; proposals: Array<AskProposal>; }
+interface RunLoggerOptions { dir: string; sessionId: string; }
+interface RunMigrationsOptions { backup?: boolean | undefined; dbPath?: string | undefined; dryRun?: boolean | undefined; fresh?: boolean | undefined; log?: ((msg: string) => void) | undefined; migrations?: Array<Migration> | undefined; }
+interface StoreBundle { close: () => void; cognitionStore: CognitionStore; db: DatabaseSync; eventStore: EventStore; evidenceStore: EvidenceStore; managementLog: ManagementLog; transaction: Transaction; }
+interface TrendResult { consideredCount: number; llmCalls: number; trends: Array<Cognition>; }
+interface Turn { content: string; role: 'user' | 'assistant'; }
+interface TurnOutcome { error: string | null; llmCalls: number; recall: Array<RecalledCognition>; reply: string; storedEvidence: Evidence; }
+interface TurnRecord { conflicts: Array<ConflictItem>; error: string | null; evidence: Array<{ id: string; summary: string; }>; hypotheses: Array<Hypothesis>; kind?: 'turn' | undefined; llmCalls: number; proactiveQuestion: string | null; profileChanges: Array<ProfileChange>; recall: Array<RecallItem>; reply: string; sessionId: string; ts: string; turn: number; userInput: string; }
+interface UpdateEvidenceAuthorizationInput { allowCloudRead?: boolean | undefined; allowInference?: boolean | undefined; evidenceId: string; reason: string; }
+interface UpdateProfileDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; eventStore: EventStore; evidenceStore: EvidenceStore; llm: LLMClient; retriever: Retriever; transaction?: Transaction | undefined; }
+interface UpdateProfileInput { subjectId?: string | undefined; }
+interface UpdateProfileResult { attributed: AttributeResult; consolidated: ConsolidateResult; distilled: DistillResult; indexError: string | null; indexed: number; metrics: { profileSize: number; promptChars: number; }; timings: UpdateProfileTimings; }
+interface UpdateProfileTimings { attributeMs: number; consolidateMs: number; distillMs: number; indexMs: number; totalMs: number; }
+interface UsageReport { embed: UsageStats; llm: UsageStats; total: UsageStats; }
+interface UsageStats { callsWithUsage: number; completionTokens: number; promptTokens: number; totalTokens: number; }
+interface UserMessageInput { content: string; hostId?: string | undefined; occurredAt?: string | undefined; originId?: string | null | undefined; sourceKind?: SourceKind | undefined; subjectId?: string | undefined; }
+interface ValidateResult { errors: Array<string>; valid: boolean; warnings: Array<string>; }
+type ContentType = ContentType
+type CredStatus = CredStatus
+type DlaConfig = { asking: { maxAsks: number; confidenceBand: { min: number; max: number; }; askableStatuses: string[]; }; attribution: { windowHours: number; hypothesisCap: number; maxPhenomenaPerRun: number; maxCausesPerHypothesis: number; minPhenomenonSupport: number; }; background: { halfLifeDays: Record<string, number>; expireAfterDays: Record<string, number>; trendWindowDays: number; trendMinCount: number; }; consolidation: { baseByFormedBy: { stated: number; observed: number; ruled: number; inferred: number; }; supportStep: number; supportCap: number; contradictPenalty: number; minConfidence: number; credThresholds: { stable: number; limited: number; low: number; }; transientTypes: string[]; transientCap: number; }; evidenceDefaults: { allowLocalRead: boolean; allowInference: boolean; }; identity: { subjectId: string; hostId: string; }; language?: Lang | undefined; observedDefaults: { allowLocalRead: boolean; allowCloudRead: boolean; allowInference: boolean; }; privacyMode: boolean; profileUpdate: { batchSize: number; idleMinutes: number; }; retrieval: { topK: number; minEffectiveConfidence: number; minSimilarity: number; }; workingMemory: { maxTurns: number; }; }
+type EvidenceRelation = EvidenceRelation
+type FormedBy = FormedBy
+type ImportMode = ImportMode
+type LLMPurpose = LLMPurpose
+type Lang = Lang
+type MemoryGraphEdgeKind = MemoryGraphEdgeKind
+type MemoryGraphNodeKind = MemoryGraphNodeKind
+type ModelTier = ModelTier
+type PluginObservationInput = { content: string; kind: string; meta?: Record<string, unknown> | undefined; occurredAt: string; originId?: string | null | undefined; }
+type PluginType = PluginType
+type SourceKind = SourceKind
+type Transaction = { <T>(fn: () => T): T; }
