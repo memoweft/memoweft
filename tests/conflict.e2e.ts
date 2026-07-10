@@ -44,11 +44,16 @@ test('conflict 端到端 · 真模型 dogfood：早睡偏好 vs 凌晨3点打游
 
     // 新证据：一条【观察】到的行为，与『喜欢早睡』矛盾，但用户【没有明确纠正/否定】自己的偏好。
     // 这正是 conflict 该覆盖的情形（行为观察 vs 旧偏好）——期望模型标 conflict、不当成 correct。
+    // allowCloudRead: true —— observed 默认【不上云】（config.observedDefaults.allowCloudRead=false，隐私设计：
+    //   偷窥类行为观察默认不喂云模型）。被测 mimo 是云 tier，不显式授权则这条证据会被 distill 的
+    //   filterReadableByTier 滤掉 → 无可消化材料、不建 event → 主断言（r.distilled.event）失败。
+    //   本 dogfood 的意图就是让云模型真读到这条 observed 跑 conflict，故显式选择上云（与 bench/eval-consolidation 同做法）。
     ev.put({
       subjectId: 'owner',
       sourceKind: 'observed',
       hostId: 'h',
       rawContent: '凌晨3点还在打游戏',
+      allowCloudRead: true,
     });
 
     // 一键 distill + consolidate + attribute + 索引（索引用 NullRetriever，不打嵌入器）。
