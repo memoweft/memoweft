@@ -9,22 +9,23 @@
 | 项 | 值 |
 | --- | --- |
 | 生成命令 | `node bench/eval-consolidation.mjs` |
-| commit | `a0e0805` |
+| commit | `bf8242e` |
 | Node | 24.15.0 |
 | 平台 | win32/x64 |
-| 生成时间 | 2026-07-10T06:45:33.174Z |
+| 生成时间 | 2026-07-10T15:38:47.587Z |
 | 被测 model（固化） | mimo-v2.5-pro（mimo，new OpenAICompatClient() 读根 .env） |
 | judge model | mimo-v2.5-pro（复用同端点，温度 0 覆写） |
 | judge 提示词版本 | v1（每要点 3 次取多数） |
+| 被测提示词版本 | attribute@v1 · consolidate@v2 · distill@v1 · jsonRepairNudge@v1 · proposeAsk@v1 · reply@v1 · revisitConflicts@v1 · trends@v1 |
 | 语料 | tests/consolidation-corpus/corpus.json（跑 42/42 场景） |
 
 ## 总分
 
 | 指标 | 值 |
 | --- | --- |
-| 结构断言通过率 | 210/223 = 94.2% |
-| 场景全绿数（结构断言全过且无错） | 30/42 |
-| 平均 gistRecall（越高越好） | 0.34 |
+| 结构断言通过率 | 212/223 = 95.1% |
+| 场景全绿数（结构断言全过且无错） | 32/42 |
+| 平均 gistRecall（越高越好） | 0.37 |
 | 平均 overInferRate（越低越好） | 0.00 |
 | 跑挂的场景（LLM/网络错误） | 0 |
 
@@ -33,8 +34,8 @@
 | discipline | 场景数 | 结构通过率 | 平均 gistRecall | 平均 overInferRate |
 | --- | --- | --- | --- | --- |
 | conflict | 7 | 40/42 = 95.2% | 0.00 | 0.00 |
-| correct | 7 | 42/42 = 100.0% | 0.71 | 0.00 |
-| emotion-cap | 7 | 32/35 = 91.4% | 0.14 | 0.00 |
+| correct | 7 | 42/42 = 100.0% | 0.57 | 0.00 |
+| emotion-cap | 7 | 34/35 = 97.1% | 0.43 | 0.00 |
 | fact-vs-belief | 7 | 34/35 = 97.1% | 0.57 | 0.00 |
 | no-over-inference | 7 | 29/34 = 85.3% | 0.29 | 0.00 |
 | chitchat-negative | 7 | 33/35 = 94.3% | n/a | 0.00 |
@@ -54,23 +55,23 @@
 | CC-009 | correct | en | 6/6 | 1.00 | 0.00 | Moved from Shanghai to Shenzhen |
 | CC-010 | correct | zh | 6/6 | 0.00 | 0.00 | 更正宠物名字：毛球其实叫团子 |
 | CC-011 | correct | en | 6/6 | 1.00 | 0.00 | Correction of occupation: designer to backend engineer |
-| CC-012 | correct | zh | 6/6 | 1.00 | 0.00 | 不学吉他了改学钢琴 |
+| CC-012 | correct | zh | 6/6 | 0.00 | 0.00 | 不学吉他了改学钢琴 |
 | CC-013 | correct | en | 6/6 | 1.00 | 0.00 | Inferred single, corrected to married |
 | CC-014 | correct | zh | 6/6 | 0.00 | 0.00 | 更换沟通渠道：别用微信改用邮件 |
-| CC-015 | emotion-cap | zh | 5/5 | 0.00 | 0.00 | 今天好累什么都不想干 |
+| CC-015 | emotion-cap | zh | 5/5 | 1.00 | 0.00 | 今天好累什么都不想干 |
 | CC-016 | emotion-cap | en | 5/5 | 0.00 | 0.00 | So stressed about this deadline |
-| CC-017 | emotion-cap | zh | 4/5 | 0.00 | 0.00 | 烦死了这破项目 |
+| CC-017 | emotion-cap | zh | 5/5 | 1.00 | 0.00 | 烦死了这破项目 |
 | CC-018 | emotion-cap | en | 5/5 | 0.00 | 0.00 | Feeling really happy today |
 | CC-019 | emotion-cap | zh | 5/5 | 0.00 | 0.00 | 两次都说困（反复情绪也不升稳定） |
 | CC-020 | emotion-cap | en | 4/5 | 0.00 | 0.00 | I hate Mondays (offhand gripe) |
-| CC-021 | emotion-cap | zh | 4/5 | 1.00 | 0.00 | 刚跟同事吵架气死了 |
+| CC-021 | emotion-cap | zh | 5/5 | 1.00 | 0.00 | 刚跟同事吵架气死了 |
 | CC-022 | fact-vs-belief | zh | 5/5 | 1.00 | 0.00 | 亲述职业与年限（还嘴上『非常确定』） |
 | CC-023 | fact-vs-belief | en | 5/5 | 0.00 | 0.00 | Stated name and age |
-| CC-024 | fact-vs-belief | zh | 5/5 | 1.00 | 0.00 | 亲述过敏（健康事实，嘴上说『一定』） |
+| CC-024 | fact-vs-belief | zh | 5/5 | 0.00 | 0.00 | 亲述过敏（健康事实，嘴上说『一定』） |
 | CC-025 | fact-vs-belief | en | 5/5 | 1.00 | 0.00 | Stated preference for direct feedback |
 | CC-026 | fact-vs-belief | zh | 4/5 | 0.00 | 0.00 | 亲述籍贯（从小吃辣长大） |
 | CC-027 | fact-vs-belief | en | 5/5 | 1.00 | 0.00 | '100% sure' about birth year |
-| CC-028 | fact-vs-belief | zh | 5/5 | 0.00 | 0.00 | 亲述住址（深圳南山） |
+| CC-028 | fact-vs-belief | zh | 5/5 | 1.00 | 0.00 | 亲述住址（深圳南山） |
 | CC-029 | no-over-inference | zh | 4/5 | 0.00 | 0.00 | 搜索『怎么找女朋友』（防心理定性） |
 | CC-030 | no-over-inference | en | 4/4 | 0.00 | 0.00 | Googled 'symptoms of burnout' once (no self-diagnosis) |
 | CC-031 | no-over-inference | zh | 4/5 | 0.00 | 0.00 | 周六加班到很晚（防工作狂标签） |
@@ -104,11 +105,11 @@
 - **CC-014** (correct/zh): ✓corrected≥1 · ✓created∈[1,2] · ✓created类型⊆{preference} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-015** (emotion-cap/zh): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-016** (emotion-cap/en): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-017** (emotion-cap/zh): ✓created∈[0,2] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-017** (emotion-cap/zh): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-018** (emotion-cap/en): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-019** (emotion-cap/zh): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-020** (emotion-cap/en): ✓created∈[0,1] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
-- **CC-021** (emotion-cap/zh): ✓created∈[0,2] · ✗created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
+- **CC-021** (emotion-cap/zh): ✓created∈[0,2] · ✓created类型⊆{state} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-022** (fact-vs-belief/zh): ✓created∈[1,2] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-023** (fact-vs-belief/en): ✓created∈[1,2] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
 - **CC-024** (fact-vs-belief/zh): ✓created∈[1,2] · ✓created类型⊆{fact} · ✓不变量·confidence∈(0,1000] · ✓不变量·state封顶∈{candidate,low} · ✓不变量·证据链引用真实存在
@@ -149,13 +150,13 @@
 
 ### CC-003 — 喜欢安静 vs 放很吵的音乐
 
-- shouldForm ✗漏形成（票 NNN）：记录『外放很吵的音乐』这一与『喜欢安静』相矛盾的行为观察
+- shouldForm ✗漏形成（票 YNN）：记录『外放很吵的音乐』这一与『喜欢安静』相矛盾的行为观察
 - shouldNot ✓未过度推断（票 NNN）：撤销或覆盖『喜欢安静』的旧偏好
 - shouldNot ✓未过度推断（票 NNN）：武断判定用户其实喜欢吵闹环境
 
 ### CC-004 — Vegetarian claim vs ordered a beef burger
 
-- shouldForm ✗漏形成（票 YNN）：Note the observed beef order as evidence that conflicts with the vegetarian claim, leaving both on the record
+- shouldForm ✗漏形成（票 NNN）：Note the observed beef order as evidence that conflicts with the vegetarian claim, leaving both on the record
 - shouldNot ✓未过度推断（票 NNN）：Delete the vegetarian fact outright
 - shouldNot ✓未过度推断（票 NNN）：Conclude the user lied and is definitely not vegetarian from one meal
 
@@ -185,7 +186,7 @@
 
 ### CC-009 — Moved from Shanghai to Shenzhen
 
-- shouldForm ✓命中（票 YYN）：Adopt the corrected fact that the user now lives in Shenzhen
+- shouldForm ✓命中（票 YYY）：Adopt the corrected fact that the user now lives in Shenzhen
 - shouldNot ✓未过度推断（票 NNN）：Keep 'lives in Shanghai' as an active current fact
 - shouldNot ✓未过度推断（票 NNN）：Hard-delete the old Shanghai record instead of marking it invalid/superseded
 
@@ -197,13 +198,13 @@
 
 ### CC-011 — Correction of occupation: designer to backend engineer
 
-- shouldForm ✓命中（票 YYY）：Adopt the corrected occupation: backend engineer
+- shouldForm ✓命中（票 YYN）：Adopt the corrected occupation: backend engineer
 - shouldNot ✓未过度推断（票 NNN）：Treat an explicit correction as an unresolved conflict
 - shouldNot ✓未过度推断（票 NNN）：Retain 'designer' as still-true rather than superseded
 
 ### CC-012 — 不学吉他了改学钢琴
 
-- shouldForm ✓命中（票 YYY）：采纳更正：用户现在学钢琴，已不再学吉他
+- shouldForm ✗漏形成（票 NNN）：采纳更正：用户现在学钢琴，已不再学吉他
 - shouldNot ✓未过度推断（票 NNN）：把旧的『学吉他』当作仍在进行
 - shouldNot ✓未过度推断（票 NNN）：把明确的改学当成需人工裁决的矛盾并存
 
@@ -215,13 +216,13 @@
 
 ### CC-014 — 更换沟通渠道：别用微信改用邮件
 
-- shouldForm ✗漏形成（票 YNN）：采纳更正：用户以后偏好用邮件沟通
+- shouldForm ✗漏形成（票 NNN）：采纳更正：用户以后偏好用邮件沟通
 - shouldNot ✓未过度推断（票 NNN）：继续把『偏好微信』当作有效偏好
 - shouldNot ✓未过度推断（票 NNN）：把明确的渠道更换当成矛盾冲突挂起
 
 ### CC-015 — 今天好累什么都不想干
 
-- shouldForm ✗漏形成（票 YNN）：把『今天很累/疲惫』记为当前临时状态(state)
+- shouldForm ✓命中（票 YYN）：把『今天很累/疲惫』记为当前临时状态(state)
 - shouldNot ✓未过度推断（票 NNN）：把一时的累升级成『用户是个懒散的人』这类稳定特质
 - shouldNot ✓未过度推断（票 NNN）：给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）
 
@@ -233,13 +234,13 @@
 
 ### CC-017 — 烦死了这破项目
 
-- shouldForm ✗漏形成（票 NNN）：记录用户当前对项目的烦躁情绪（临时 state）
+- shouldForm ✓命中（票 YYY）：记录用户当前对项目的烦躁情绪（临时 state）
 - shouldNot ✓未过度推断（票 NNN）：据此把『用户讨厌这个项目』当成长期结论固化
 - shouldNot ✓未过度推断（票 NNN）：把一时情绪当成稳定偏好或特质封存
 
 ### CC-018 — Feeling really happy today
 
-- shouldForm ✗漏形成（票 NYN）：Record the user's current upbeat mood as a temporary state
+- shouldForm ✗漏形成（票 NNN）：Record the user's current upbeat mood as a temporary state
 - shouldNot ✓未过度推断（票 NNN）：Conclude 'the user is a generally cheerful/optimistic person' from one good day
 - shouldNot ✓未过度推断（票 NNN）：Mark the mood as stable, high-confidence
 
@@ -257,13 +258,13 @@
 
 ### CC-021 — 刚跟同事吵架气死了
 
-- shouldForm ✓命中（票 YYY）：记录当前『生气/情绪激动』的临时状态
+- shouldForm ✓命中（票 YNY）：记录当前『生气/情绪激动』的临时状态
 - shouldNot ✓未过度推断（票 NNN）：据此推断『用户脾气暴躁/爱与人冲突』的性格标签
 - shouldNot ✓未过度推断（票 NNN）：把一次争执后的愤怒定为稳定特质
 
 ### CC-022 — 亲述职业与年限（还嘴上『非常确定』）
 
-- shouldForm ✓命中（票 YYY）：记录用户亲述事实：后端工程师、约十年经验
+- shouldForm ✓命中（票 YYN）：记录用户亲述事实：后端工程师、约十年经验
 - shouldNot ✓未过度推断（票 NNN）：因为用户说『非常确定』就把置信度直接顶满——置信应由系统按规则自算，不采信自报
 - shouldNot ✓未过度推断（票 NNN）：把亲述职业额外推断成性格/能力结论
 
@@ -275,7 +276,7 @@
 
 ### CC-024 — 亲述过敏（健康事实，嘴上说『一定』）
 
-- shouldForm ✓命中（票 NYY）：记录亲述事实：用户对花生过敏
+- shouldForm ✗漏形成（票 NNN）：记录亲述事实：用户对花生过敏
 - shouldNot ✓未过度推断（票 NNN）：因用户说『一定』就把置信写成 100%/满分——置信由系统规则算，不采信自报
 - shouldNot ✓未过度推断（票 NNN）：扩展推断到未提及的其它过敏源
 
@@ -287,19 +288,19 @@
 
 ### CC-026 — 亲述籍贯（从小吃辣长大）
 
-- shouldForm ✗漏形成（票 NNN）：记录亲述事实：老家四川、从小吃辣
-- shouldNot ✓未过度推断（票 NNN）：把『从小吃辣』这条事实的置信直接拔高成定论（置信按规则算）
+- shouldForm ✗漏形成（票 YNN）：记录亲述事实：老家四川、从小吃辣
+- shouldNot ✓未过度推断（票 NYN）：把『从小吃辣』这条事实的置信直接拔高成定论（置信按规则算）
 - shouldNot ✓未过度推断（票 NNN）：在没有明说的情况下断言『用户现在无辣不欢』的强偏好
 
 ### CC-027 — '100% sure' about birth year
 
-- shouldForm ✓命中（票 YYY）：Record the stated birth year 1996
+- shouldForm ✓命中（票 YYN）：Record the stated birth year 1996
 - shouldNot ✓未过度推断（票 NNN）：Copy the user's '100% sure' into the stored confidence value verbatim (confidence must be rule-computed)
 - shouldNot ✓未过度推断（票 NNN）：Emit derived current-age assumptions as separate high-confidence facts the user did not state
 
 ### CC-028 — 亲述住址（深圳南山）
 
-- shouldForm ✗漏形成（票 YNN）：记录亲述事实：用户住在深圳南山区
+- shouldForm ✓命中（票 YYY）：记录亲述事实：用户住在深圳南山区
 - shouldNot ✓未过度推断（票 NNN）：把这条地址事实的置信当作 LLM 自报值原样写入（应系统自算）
 - shouldNot ✓未过度推断（票 NNN）：据此推断用户收入水平/购房能力等未提及的判断
 
@@ -315,7 +316,7 @@
 - shouldForm ✗漏形成（票 NNN）：At most a low-confidence, retractable hypothesis that the user may be worried about burnout, tied to that search
 - shouldNot ✓未过度推断（票 NNN）：Diagnose 'the user has burnout' or 'the user is depressed' as a fact
 - shouldNot ✓未过度推断（票 NNN）：Conclude the user's job is toxic from a single search
-- shouldNot ✓未过度推断（票 NYN）：Escalate a one-off query into a stable trait
+- shouldNot ✓未过度推断（票 NNN）：Escalate a one-off query into a stable trait
 
 ### CC-031 — 周六加班到很晚（防工作狂标签）
 
@@ -387,7 +388,7 @@
 ## 备注
 
 - **真实模型非确定**：被测 mimo 与 judge 均为真实 LLM，重跑分数会抖；judge 已用温度 0 + 3 次多数压抖，但仍非逐位可复现。
-- **慢 + 耗 token**：每场景约 30s 固化（distill+consolidate+attribute 三次真调）；judge 另需 3×(要点数) 次短调用。全量跑由 Integrator 在 nightly / 本地执行。
+- **慢 + 耗 token**：每场景实测 82–141s 固化（distill+consolidate+attribute 三次真调，见 bench/consolidation-baseline-run.log）；judge 另需 3×(要点数) 次短调用。全量 42 场景约 77 分钟，由 Integrator 在 nightly / 本地执行。
 - **结构断言是硬判**（程序判、与模型无关），可信度高；**要点判分是软判**（LLM-as-judge），仅供趋势参考，改 judge 提示词版本后不可跨版本比。
 - **置信度由系统按规则自算**，语料从不给期望置信数值；不变量②/③ 正是守"记≠信 / 证据白名单"这两条纪律。
 - **先入库基线，才谈优化**：本报告是 §15.2 优化前的对照基准；任何提示词 / 参数改动后，重跑本命令产出 after 报告对比。
