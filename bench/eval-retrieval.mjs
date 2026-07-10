@@ -1,9 +1,13 @@
 /**
- * 检索基线评测（Phase 1 · §14.2）。手动跑、不进 CI、不设门。
+ * 检索评测（Phase 1 · §14.2 基线 + §14.6 三臂消融）。手动跑、不进 CI、不设门。
  *
- * 量什么：当前 **vector-only** 系统（VectorRetriever + 确定性 HashEmbedder）在黄金集
- *   `tests/retrieval/golden.json` 上的召回。这是 §14.3/14.4 加 BM25+RRF hybrid 之后
- *   做对比的基准——「先测量后优化」，基线入库是后续优化的前提。
+ * 两种模式：
+ *   1) 默认 `node bench/eval-retrieval.mjs`：量【当前 vector-only 系统】（VectorRetriever + 确定性
+ *      HashEmbedder）在黄金集 `tests/retrieval/golden.json` 上的召回，落 `retrieval-baseline.md`。
+ *      这是 §14.3/14.4 加 BM25+RRF hybrid 之后做对比的基准——「先测量后优化」。**行为与数字不变**。
+ *   2) `node bench/eval-retrieval.mjs --ablation`：跑 §14.6 **三臂消融**
+ *      （vector-only / keyword-only / hybrid），量 hybrid 相对 vector-only 基线的增益，
+ *      落 `retrieval-after.md`——判断是否值得把 hybrid 接进公共 API（§14.4b）的依据。
  *
  * 直接从 src/tests 的 .ts import（Node ≥24 原生剥类型，无需 build）。只读依赖，绝不改它们。
  *
@@ -15,31 +19,42 @@
  *   汇总 mean：overall + 按 kind(direct/paraphrase/multihop) + 按语言(含 CJK=zh 否则 en)。
  *   latency：全体 P50 / P95（ms，nearest-rank）。
  *
- * 确定性自检：整套评测跑两遍，断言两次【指标】逐位相等（HashEmbedder 确定性、latency 除外）；
+ * 确定性自检：每臂各跑两遍，断言两次【指标】逐位相等（HashEmbedder/BM25/RRF 均确定，latency 除外）；
  *   不等则 process.exit(1)。
  *
  * 真实臂（opt-in，默认关）：设 EVAL_REAL_ARM=1 或 --real，且 env(.env) 配了 MEMOWEFT_EMBED_* 才额外跑
- *   OpenAICompatEmbedder 臂；默认离线、不打网络（保持复现的确定性，§14.1）。
+ *   真实嵌入臂（OpenAICompatEmbedder）；默认离线、不打网络（保持复现的确定性，§14.1）。
  *
- * 用法：node bench/eval-retrieval.mjs                 # 默认纯离线确定性臂
- *       EVAL_REAL_ARM=1 node bench/eval-retrieval.mjs # 额外跑真实嵌入臂（需 .env MEMOWEFT_EMBED_* + 联网）
+ * 用法：node bench/eval-retrieval.mjs                          # 默认纯离线确定性 vector-only 基线
+ *       node bench/eval-retrieval.mjs --ablation               # 三臂消融（离线确定性）
+ *       EVAL_REAL_ARM=1 node bench/eval-retrieval.mjs          # 基线 + 额外真实嵌入臂（需 .env + 联网）
+ *       EVAL_REAL_ARM=1 node bench/eval-retrieval.mjs --ablation # 三臂 + 真实嵌入臂（需 .env + 联网）
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { VectorRetriever } from '../src/retrieval/vectorRetriever.ts';
+import { KeywordRetriever } from '../src/retrieval/keywordRetriever.ts';
+import { HybridRetriever } from '../src/retrieval/hybridRetriever.ts';
 import { loadEmbedConfig, OpenAICompatEmbedder } from '../src/retrieval/embedder.ts';
 import { HashEmbedder, DEFAULT_DIM } from '../tests/retrieval/hashEmbedder.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const GOLDEN_PATH = resolve(HERE, '../tests/retrieval/golden.json');
 const REPORT_PATH = resolve(HERE, 'retrieval-baseline.md');
+const AFTER_REPORT_PATH = resolve(HERE, 'retrieval-after.md');
 const GEN_CMD = 'node bench/eval-retrieval.mjs';
+const ABLATION_CMD = 'node bench/eval-retrieval.mjs --ablation';
 const TOP_K = 10;
 
 /** 9 条纯 2 字中文 direct 用例（验证向量 char-bigram 能否兜住 trigram 关键词通道够不着的 2 字词）。 */
 const TWO_CHAR_CASES = ['G-004', 'G-008', 'G-009', 'G-010', 'G-013', 'G-015', 'G-016', 'G-018', 'G-019'];
+
+/** 基线 overall Recall@5（committed retrieval-baseline.md），+10% 目标据此算。 */
+const BASELINE_OVERALL_RECALL5 = 0.7154;
+/** +10% 目标线：0.7154 × 1.10 = 0.78694 → ≥ 0.7869。 */
+const TARGET_RECALL5 = 0.7869;
 
 const CJK = /\p{Script=Han}/u;
 const langOf = (query) => (CJK.test(query) ? 'zh' : 'en');
@@ -66,11 +81,12 @@ function aggregate(results) {
 }
 
 /**
- * 用给定 embedder 跑整套黄金集。返回每条 case 的逐项指标 + 分组汇总。
- * latency 用 performance.now() 计 search(query, TOP_K)；latency 不进确定性对比。
+ * 用给定 retriever 工厂跑整套黄金集。每次调用 makeRetriever() 都 new 一个干净的 `:memory:` retriever
+ * （单一职责：本函数只吃 Retriever 接口，不认识具体通道类型——vector/keyword/hybrid 都同一路径）。
+ * 返回每条 case 的逐项指标 + 分组汇总。latency 用 performance.now() 计 search(query, TOP_K)；不进确定性对比。
  */
-async function runEval(embedder, cognitions, cases) {
-  const retriever = new VectorRetriever(':memory:', embedder);
+async function runEvalWith(makeRetriever, cognitions, cases) {
+  const retriever = makeRetriever();
   try {
     await retriever.indexAll(cognitions.map((c) => ({ id: c.id, text: c.content })));
 
@@ -125,7 +141,7 @@ async function runEval(embedder, cognitions, cases) {
 
     return { results, overall, byKind, byLang, latency };
   } finally {
-    retriever.close();
+    if (typeof retriever.close === 'function') retriever.close();
   }
 }
 
@@ -141,8 +157,30 @@ function deterministicSig(run) {
   });
 }
 
+/** 跑一臂并做确定性自检：同一 makeRetriever 跑两遍，比对指标签名。返回 { run, determinismOk }。 */
+async function runArmWithSelfCheck(name, makeRetriever, cognitions, cases) {
+  const run1 = await runEvalWith(makeRetriever, cognitions, cases);
+  const run2 = await runEvalWith(makeRetriever, cognitions, cases);
+  const determinismOk = deterministicSig(run1) === deterministicSig(run2);
+  if (!determinismOk) {
+    console.error(`[eval-retrieval] ✗ 确定性自检失败（臂=${name}）：两遍指标不逐位相等。`);
+    console.error('run1:', deterministicSig(run1));
+    console.error('run2:', deterministicSig(run2));
+    process.exit(1);
+  }
+  console.log(`[eval-retrieval] ✓ 确定性自检通过（臂=${name}）：两遍指标逐位相等。`);
+  return { run: run1, determinismOk };
+}
+
 const f4 = (n) => n.toFixed(4);
 const f3 = (n) => n.toFixed(3);
+/** 带符号的 Δ 格式（正数补 +，用于 hybrid − vector 对比）。 */
+const fDelta = (n) => (n >= 0 ? '+' : '') + n.toFixed(4);
+
+/** 某臂在 2 字中文子集上的汇总。 */
+function twoCharAgg(run) {
+  return aggregate(run.results.filter((r) => TWO_CHAR_CASES.includes(r.id)));
+}
 
 function metricRow(label, agg) {
   return `| ${label} | ${agg.n} | ${f4(agg.recall5)} | ${f4(agg.hit5)} | ${f4(agg.mrr10)} |`;
@@ -278,11 +316,298 @@ function printConsole(run, meta) {
   console.log('');
 }
 
-async function main() {
-  const golden = JSON.parse(readFileSync(GOLDEN_PATH, 'utf8'));
-  const { cognitions, cases } = golden;
+// ══════════════════════════════════════════════════════════════════════════
+// §14.6 三臂消融（vector-only / keyword-only / hybrid）
+// ══════════════════════════════════════════════════════════════════════════
 
-  const meta = {
+/** 三臂的 makeRetriever 工厂（每次 new 干净的 `:memory:` retriever）。顺序即报告行序。 */
+const ABLATION_ARMS = [
+  {
+    key: 'vector-only',
+    label: 'vector-only',
+    desc: 'VectorRetriever（余弦）+ HashEmbedder（dim=256，确定性词袋哈希 + char-bigram）',
+    make: () => new VectorRetriever(':memory:', new HashEmbedder()),
+  },
+  {
+    key: 'keyword-only',
+    label: 'keyword-only',
+    desc: 'KeywordRetriever（FTS5 trigram 分词 + BM25 排序，纯词面/子串信号，无嵌入）',
+    make: () => new KeywordRetriever(':memory:'),
+  },
+  {
+    key: 'hybrid',
+    label: 'hybrid',
+    desc: 'HybridRetriever（RRF 融合 vector+keyword，kCandidate=50，rrfK=60）',
+    make: () =>
+      new HybridRetriever([
+        new VectorRetriever(':memory:', new HashEmbedder()),
+        new KeywordRetriever(':memory:'),
+      ]),
+  },
+];
+
+/** 三臂对比表（一个指标提取器 pick(agg) → 数字）：行=臂，末行 Δ(hybrid−vector)。 */
+function armMetricTable(arms, pickAgg) {
+  const L = [];
+  L.push('| 臂 | n | Recall@5 | Hit@5 | MRR@10 |');
+  L.push('| --- | --- | --- | --- | --- |');
+  for (const a of arms) {
+    const g = pickAgg(a.run);
+    L.push(`| ${a.label} | ${g.n} | ${f4(g.recall5)} | ${f4(g.hit5)} | ${f4(g.mrr10)} |`);
+  }
+  const v = pickAgg(arms.find((a) => a.key === 'vector-only').run);
+  const h = pickAgg(arms.find((a) => a.key === 'hybrid').run);
+  L.push(
+    `| **Δ hybrid−vector** | — | ${fDelta(h.recall5 - v.recall5)} | ${fDelta(h.hit5 - v.hit5)} | ${fDelta(h.mrr10 - v.mrr10)} |`,
+  );
+  return L;
+}
+
+function buildAblationReport(arms, meta) {
+  const vector = arms.find((a) => a.key === 'vector-only').run;
+  const keyword = arms.find((a) => a.key === 'keyword-only').run;
+  const hybrid = arms.find((a) => a.key === 'hybrid').run;
+
+  // ── 诊断事实（供诚实结论，皆确定性、可复现）──
+  // keyword「点火」的 case：返回了至少一个候选（top5 非空）。FTS5 trigram phrase-match 需整条
+  // spaceless query 连续命中某 doc → 自然语言/2 字中文 query 多数空召回。
+  const kwFire = keyword.results.filter((r) => r.top5.length > 0);
+  const kwFireIds = kwFire.map((r) => r.id);
+  // hybrid 与 vector 的 top5 是否逐 case 相同（判断 RRF 在本离线配置下是否为 no-op）。
+  const top5Diffs = vector.results.filter((vr) => {
+    const hr = hybrid.results.find((x) => x.id === vr.id);
+    return !hr || JSON.stringify(vr.top5) !== JSON.stringify(hr.top5);
+  });
+  const hybEqVec = top5Diffs.length === 0;
+  // 各分组 hybrid−vector 的 Recall@5 Δ 绝对值最大者（判断是否「零增益」）。
+  const groupRecallDeltas = [
+    hybrid.overall.recall5 - vector.overall.recall5,
+    ...['direct', 'paraphrase', 'multihop'].map((k) => hybrid.byKind[k].recall5 - vector.byKind[k].recall5),
+    ...['zh', 'en'].map((l) => hybrid.byLang[l].recall5 - vector.byLang[l].recall5),
+  ];
+  const maxAbsDelta = Math.max(...groupRecallDeltas.map((d) => Math.abs(d)));
+  const noGain = hybEqVec && maxAbsDelta < 1e-9;
+
+  const L = [];
+  L.push('# 检索三臂消融报告 — Phase 1 §14.6');
+  L.push('');
+  L.push('> vector-only / keyword-only / hybrid 三臂在黄金集上的对比，量 **hybrid 相对 vector-only');
+  L.push('> 基线的增益**——判断是否值得把 hybrid 接进公共 API（§14.4b）的依据。所有确定性臂数字可由');
+  L.push('> 生成命令逐位复现（HashEmbedder/BM25/RRF 均确定，无网络、无随机、无系统时钟）。');
+  L.push('');
+
+  // ── 生成环境 ──
+  L.push('## 生成环境');
+  L.push('');
+  L.push('| 项 | 值 |');
+  L.push('| --- | --- |');
+  L.push(`| 生成命令 | \`${ABLATION_CMD}\` |`);
+  L.push(`| commit | \`${meta.commit}\` |`);
+  L.push(`| Node | ${meta.node} |`);
+  L.push(`| 平台 | ${meta.platform}/${meta.arch} |`);
+  L.push(`| 生成时间 | ${meta.generatedAt} |`);
+  L.push(`| topK | ${TOP_K} |`);
+  L.push(`| 黄金集 | tests/retrieval/golden.json（${meta.cognitionCount} 条 cognition，${meta.caseCount} 条 case） |`);
+  L.push(`| 确定性自检 | ${arms.map((a) => `${a.label} ${a.determinismOk ? '✓' : '✗'}`).join(' / ')}（三臂各两遍逐位相等） |`);
+  L.push(`| 真实臂 | ${meta.realArm} |`);
+  L.push('');
+  L.push('三臂定义：');
+  L.push('');
+  for (const a of arms) L.push(`- **${a.label}**：${a.desc}`);
+  L.push('');
+
+  // ── 三臂对比总表 ──
+  L.push('## 一、三臂对比总表（overall）');
+  L.push('');
+  L.push(...armMetricTable(arms, (run) => run.overall));
+  L.push('');
+  const dOverallR = hybrid.overall.recall5 - vector.overall.recall5;
+  L.push(
+    `- hybrid overall Recall@5 = **${f4(hybrid.overall.recall5)}**，vector-only = **${f4(vector.overall.recall5)}**，Δ = **${fDelta(dOverallR)}**。`,
+  );
+  L.push(
+    `- keyword-only 仅在 **${kwFire.length}/${meta.caseCount}** 条 case 上有候选（${kwFireIds.join(', ') || '无'}）——` +
+      'FTS5 trigram phrase-match 需整条 query 连续命中某 doc，自然语言/2 字中文 query 多数空召回。',
+  );
+  L.push(
+    `- hybrid 与 vector-only 的 top5 在 **${meta.caseCount - top5Diffs.length}/${meta.caseCount}** 条 case 上逐 case 相同` +
+      `${hybEqVec ? '（**全同** → RRF 在本离线配置下是 no-op，详见「六、诚实结论」）' : `（${top5Diffs.length} 条不同：${top5Diffs.map((r) => r.id).join(', ')}）`}。`,
+  );
+  L.push('');
+
+  // ── 按 kind ──（重点）
+  L.push('## 二、按 kind 分组三臂对比（重点）');
+  L.push('');
+  for (const kind of ['direct', 'paraphrase', 'multihop']) {
+    L.push(`### kind = ${kind}`);
+    L.push('');
+    L.push(...armMetricTable(arms, (run) => run.byKind[kind]));
+    L.push('');
+  }
+  L.push('**Δ(hybrid − vector) 按 kind 汇总**（看 hybrid 在各 kind 抬了多少）：');
+  L.push('');
+  L.push('| kind | ΔRecall@5 | ΔHit@5 | ΔMRR@10 |');
+  L.push('| --- | --- | --- | --- |');
+  for (const kind of ['direct', 'paraphrase', 'multihop']) {
+    const v = vector.byKind[kind];
+    const h = hybrid.byKind[kind];
+    L.push(`| ${kind} | ${fDelta(h.recall5 - v.recall5)} | ${fDelta(h.hit5 - v.hit5)} | ${fDelta(h.mrr10 - v.mrr10)} |`);
+  }
+  L.push('');
+
+  // ── 按 lang ──
+  L.push('## 三、按语言分组三臂对比（query 含 CJK=zh，否则 en）');
+  L.push('');
+  for (const lang of ['zh', 'en']) {
+    L.push(`### lang = ${lang}`);
+    L.push('');
+    L.push(...armMetricTable(arms, (run) => run.byLang[lang]));
+    L.push('');
+  }
+
+  // ── 9 条纯 2 字中文子集 ──
+  L.push('## 四、9 条纯 2 字中文子集三臂表现');
+  L.push('');
+  L.push('子集：G-004/G-008/G-009/G-010/G-013/G-015/G-016/G-018/G-019（纯 2 字 direct）。');
+  L.push('预期：vector 靠 char-bigram 兜住（≈1.0）；keyword 因 FTS5 trigram 需 ≥3 字符、够不着 2 字词（≈0）；');
+  L.push('hybrid 看是否被 keyword 的空召回拖累、还是仍由 vector 兜住。');
+  L.push('');
+  L.push(...armMetricTable(arms, (run) => twoCharAgg(run)));
+  L.push('');
+  // 逐 case 三臂 Hit@5 对照（直观看 keyword 空、vector/hybrid 是否兜住）
+  const hitOf = (run, id) => (run.results.find((r) => r.id === id)?.hit5 === 1 ? '✓' : '✗');
+  const rankOf = (run, id) => {
+    const fr = run.results.find((r) => r.id === id)?.firstRank ?? 0;
+    return fr ? String(fr) : '—';
+  };
+  L.push('| case | query | expect | vec Hit@5 | kw Hit@5 | hyb Hit@5 | hyb firstRank |');
+  L.push('| --- | --- | --- | --- | --- | --- | --- |');
+  for (const id of TWO_CHAR_CASES) {
+    const c = vector.results.find((r) => r.id === id);
+    L.push(
+      `| ${id} | ${c.query} | ${c.expect.join(', ')} | ${hitOf(vector, id)} | ${hitOf(keyword, id)} | ${hitOf(hybrid, id)} | ${rankOf(hybrid, id)} |`,
+    );
+  }
+  L.push('');
+  const vecTwo = twoCharAgg(vector);
+  const kwTwo = twoCharAgg(keyword);
+  const hybTwo = twoCharAgg(hybrid);
+  L.push(
+    `- vector-only 子集 Recall@5 = **${f4(vecTwo.recall5)}**，keyword-only = **${f4(kwTwo.recall5)}**，hybrid = **${f4(hybTwo.recall5)}**。`,
+  );
+  if (hybTwo.recall5 >= vecTwo.recall5 - 1e-9) {
+    L.push('- **hybrid 未被 keyword 的空召回拖累**：RRF 融合下 keyword 对 2 字词无候选贡献，vector 的名次照常进入融合，hybrid 仍靠 vector 兜住这组（子集内 keyword-only Recall@5=' + f4(kwTwo.recall5) + '，印证 trigram 够不着 2 字词）。');
+  } else {
+    L.push(`- **hybrid 被 keyword 拖累**：子集 Recall@5 从 vector 的 ${f4(vecTwo.recall5)} 掉到 ${f4(hybTwo.recall5)}（keyword 空召回稀释了 RRF 排序）。`);
+  }
+  L.push('');
+
+  // ── +10% 判定 ──
+  L.push('## 五、对 +10% 目标的判定');
+  L.push('');
+  L.push(`- 基线 overall Recall@5 = **${f4(BASELINE_OVERALL_RECALL5)}**（committed retrieval-baseline.md，vector-only）。`);
+  L.push(`- +10% 目标线 = ${f4(BASELINE_OVERALL_RECALL5)} × 1.10 = ${(BASELINE_OVERALL_RECALL5 * 1.1).toFixed(5)} → **≥ ${f4(TARGET_RECALL5)}**。`);
+  L.push(`- 本次确定性 hybrid overall Recall@5 = **${f4(hybrid.overall.recall5)}**。`);
+  const reached = hybrid.overall.recall5 >= TARGET_RECALL5;
+  if (reached) {
+    L.push(`- **判定：达标 ✓** — 确定性 hybrid（${f4(hybrid.overall.recall5)}）≥ 目标（${f4(TARGET_RECALL5)}）。`);
+  } else {
+    L.push(`- **判定：未达标 ✗** — 确定性 hybrid（${f4(hybrid.overall.recall5)}）< 目标（${f4(TARGET_RECALL5)}），缺口 **${f4(TARGET_RECALL5 - hybrid.overall.recall5)}**。`);
+    L.push('- **+10% 的达成主要落在真实嵌入臂**，待联网 nightly 补测（见下「诚实结论」）。不粉饰：确定性两臂都是词面/子串信号，抬不动语义/跨语言缺口。');
+  }
+  L.push('');
+
+  // ── 诚实结论（数据驱动，不预设方向、不粉饰）──
+  L.push('## 六、诚实结论');
+  L.push('');
+  const dParaR = hybrid.byKind.paraphrase.recall5 - vector.byKind.paraphrase.recall5;
+  const dEnR = hybrid.byLang.en.recall5 - vector.byLang.en.recall5;
+  if (noGain) {
+    L.push(
+      '- **确定性 hybrid ≡ vector-only 基线（零增益）**：三臂对比中 hybrid 相对 vector 的 Recall@5 Δ 在 overall 及全部 kind/lang 分组上均为 **+0.0000**，' +
+        `且两者 top5 在全部 ${meta.caseCount} 条 case 上逐 case 相同——RRF 融合在本离线配置下是 **no-op**。这是如实测量结果，未凭空造增益、也未掩盖。`,
+    );
+    L.push(
+      `- **为什么是 no-op**：keyword-only 仅在 ${kwFire.length}/${meta.caseCount} 条 case 上有候选（${kwFireIds.join(', ') || '无'}，均为「整条 query 恰是某 doc 子串」的关键词式 direct），` +
+        '且这几条命中的 doc 恰是 vector 已排 #1 的 doc → RRF 只是叠加确认，top5 不变；其余 case keyword 空召回，hybrid 完全退化为 vector。',
+    );
+    L.push(
+      '- **确定性 hybrid 的天花板 = vector-only 基线**：keyword（FTS5 trigram/BM25）与 HashEmbedder（char-bigram）两条离线臂**本质同源**——都靠字面/子串重叠，' +
+        '且 keyword 能命中处 vector 必也命中；RRF 只能重排两臂各自能召回的 doc，无法凭空生出 vector 之外的召回，故在此黄金集上抬不动任何一格。',
+    );
+  } else {
+    const dDirectR = hybrid.byKind.direct.recall5 - vector.byKind.direct.recall5;
+    const dMultihopR = hybrid.byKind.multihop.recall5 - vector.byKind.multihop.recall5;
+    L.push(
+      `- **确定性 hybrid 相对 vector 有位移**：direct ΔRecall@5=${fDelta(dDirectR)}、multihop ΔRecall@5=${fDelta(dMultihopR)}、` +
+        `paraphrase ΔRecall@5=${fDelta(dParaR)}（top5 在 ${top5Diffs.length} 条 case 上与 vector 不同）——` +
+        'keyword 的 BM25 子串信号与 vector char-bigram 在 RRF 下互补，词面命中的 doc 名次叠加上浮。',
+    );
+  }
+  L.push(
+    `- **paraphrase 与 en 是语义/跨语言缺口，确定性 hybrid 抬不动**：paraphrase vector 基线仅 **${f4(vector.byKind.paraphrase.recall5)}**（Δhyb=${fDelta(dParaR)}）、` +
+      `en vector 基线仅 **${f4(vector.byLang.en.recall5)}**（Δhyb=${fDelta(dEnR)}）——换词/近义/翻译后词面重叠稀薄，keyword 与 HashEmbedder 两条**词面/子串信号**都够不着。`,
+  );
+  L.push(
+    '- **语义/跨语言缺口需真实嵌入臂**（pending）：设 `EVAL_REAL_ARM=1`、配 `.env` 的 `MEMOWEFT_EMBED_*` 并联网后，' +
+      '用真实嵌入替换 HashEmbedder 通道（real-vector + real-hybrid），才可能补 paraphrase/en。**待联网 nightly 补测**。',
+  );
+  if (!reached) {
+    L.push(
+      `- **+10% 目标落在真实臂**：确定性 hybrid（overall Recall@5=${f4(hybrid.overall.recall5)}）**未达** ≥${f4(TARGET_RECALL5)}` +
+        `（缺口 ${f4(TARGET_RECALL5 - hybrid.overall.recall5)}）；本报告不将其记为已达标，+10% 的达成主要落在真实嵌入臂，待联网 nightly 补测。`,
+    );
+  } else {
+    L.push(`- **+10% 目标**：确定性 hybrid（overall Recall@5=${f4(hybrid.overall.recall5)}）已达 ≥${f4(TARGET_RECALL5)}；仍需核实增益来源是否为语义召回而非词面巧合。`);
+  }
+  L.push('');
+
+  // ── 备注 ──
+  L.push('## 备注');
+  L.push('');
+  L.push('- **确定性臂**：vector-only（HashEmbedder）/ keyword-only（FTS5 BM25）/ hybrid（RRF），全部离线、无网络、无随机、无系统时钟；每个数字可由生成命令逐位复现。');
+  L.push(`- **真实臂仍 opt-in**：${meta.realArm}`);
+  L.push('- **API 决策交回 Integrator 守门**：本报告只呈现数据（增益 Δ、+10% 判定），是否把 hybrid 接进公共 API（§14.4b）由 Integrator 裁决，评测不代拍板。');
+  L.push('- 默认 `node bench/eval-retrieval.mjs` 仍产出 vector-only 基线（retrieval-baseline.md），行为与数字不变。');
+  L.push('');
+  return L.join('\n');
+}
+
+function printAblationConsole(arms, meta) {
+  const vector = arms.find((a) => a.key === 'vector-only').run;
+  const hybrid = arms.find((a) => a.key === 'hybrid').run;
+  console.log('');
+  console.log('════════ 检索三臂消融评测（vector/keyword/hybrid · Phase 1 §14.6）════════');
+  console.log(`commit ${meta.commit} · Node ${meta.node} · ${meta.platform}/${meta.arch} · topK=${TOP_K}`);
+  console.log(`黄金集：${meta.cognitionCount} cognition / ${meta.caseCount} case`);
+  console.log('');
+  console.log('── overall（Recall@5 / Hit@5 / MRR@10）──');
+  for (const a of arms) {
+    const g = a.run.overall;
+    console.log(`${a.label.padEnd(13)} Recall@5=${f4(g.recall5)}  Hit@5=${f4(g.hit5)}  MRR@10=${f4(g.mrr10)}`);
+  }
+  console.log(`Δ hybrid−vector  Recall@5=${fDelta(hybrid.overall.recall5 - vector.overall.recall5)}`);
+  console.log('── 按 kind：Recall@5（vec / kw / hyb / Δhyb-vec）──');
+  const kw = arms.find((a) => a.key === 'keyword-only').run;
+  for (const k of ['direct', 'paraphrase', 'multihop']) {
+    const v = vector.byKind[k].recall5;
+    const h = hybrid.byKind[k].recall5;
+    console.log(`${k.padEnd(11)} ${f4(v)} / ${f4(kw.byKind[k].recall5)} / ${f4(h)} / ${fDelta(h - v)}`);
+  }
+  console.log('── 9 条 2 字中文子集：Recall@5（vec / kw / hyb）──');
+  console.log(`${f4(twoCharAgg(vector).recall5)} / ${f4(twoCharAgg(kw).recall5)} / ${f4(twoCharAgg(hybrid).recall5)}`);
+  console.log('── +10% 目标 ──');
+  console.log(`基线 ${f4(BASELINE_OVERALL_RECALL5)} → 目标 ≥${f4(TARGET_RECALL5)}；hybrid=${f4(hybrid.overall.recall5)} → ${hybrid.overall.recall5 >= TARGET_RECALL5 ? '达标 ✓' : '未达标 ✗'}`);
+  console.log('════════════════════════════════════════════════════════════════════');
+  console.log('');
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// 入口
+// ══════════════════════════════════════════════════════════════════════════
+
+function collectMeta(cognitions, cases) {
+  return {
     commit: (() => {
       try {
         return execSync('git rev-parse --short HEAD', { cwd: HERE }).toString().trim();
@@ -297,10 +622,21 @@ async function main() {
     cognitionCount: cognitions.length,
     caseCount: cases.length,
   };
+}
 
+/** 真实臂配置探测（opt-in，默认关）。返回 { wantRealArm, embedCfg }。 */
+function resolveRealArm() {
+  const wantRealArm = process.env.EVAL_REAL_ARM === '1' || process.argv.includes('--real');
+  const embedCfg = wantRealArm ? loadEmbedConfig() : null;
+  return { wantRealArm, embedCfg };
+}
+
+/** 默认模式：vector-only 基线，落 retrieval-baseline.md（行为与数字不变）。 */
+async function mainBaseline(cognitions, cases, meta) {
   // ── 确定性自检：跑两遍，逐位比对指标（latency 除外）──
-  const run1 = await runEval(new HashEmbedder(), cognitions, cases);
-  const run2 = await runEval(new HashEmbedder(), cognitions, cases);
+  const makeBaseline = () => new VectorRetriever(':memory:', new HashEmbedder());
+  const run1 = await runEvalWith(makeBaseline, cognitions, cases);
+  const run2 = await runEvalWith(makeBaseline, cognitions, cases);
   const sig1 = deterministicSig(run1);
   const sig2 = deterministicSig(run2);
   const determinismOk = sig1 === sig2;
@@ -314,12 +650,15 @@ async function main() {
   console.log('[eval-retrieval] ✓ 确定性自检通过：两遍指标逐位相等。');
 
   // ── 真实臂（OpenAICompatEmbedder）：opt-in，默认关（默认纯离线、不打网络，§14.1）──
-  const wantRealArm = process.env.EVAL_REAL_ARM === '1' || process.argv.includes('--real');
-  const embedCfg = wantRealArm ? loadEmbedConfig() : null;
+  const { wantRealArm, embedCfg } = resolveRealArm();
   if (embedCfg) {
     try {
       console.log(`[eval-retrieval] 真实臂：OpenAICompatEmbedder（model=${embedCfg.model}）跑黄金集…`);
-      const realRun = await runEval(new OpenAICompatEmbedder(embedCfg), cognitions, cases);
+      const realRun = await runEvalWith(
+        () => new VectorRetriever(':memory:', new OpenAICompatEmbedder(embedCfg)),
+        cognitions,
+        cases,
+      );
       meta.realArm = `OpenAICompatEmbedder（model=${embedCfg.model}）overall Recall@5=${f4(realRun.overall.recall5)} Hit@5=${f4(realRun.overall.hit5)} MRR@10=${f4(realRun.overall.mrr10)}`;
       meta.realArmPending = false;
       console.log(`[eval-retrieval] 真实臂 overall Recall@5=${f4(realRun.overall.recall5)} Hit@5=${f4(realRun.overall.hit5)} MRR@10=${f4(realRun.overall.mrr10)}`);
@@ -343,6 +682,71 @@ async function main() {
   const report = buildReport(run1, meta);
   writeFileSync(REPORT_PATH, report, 'utf8');
   console.log(`[eval-retrieval] 报告已写入 ${REPORT_PATH}`);
+}
+
+/** 消融模式：三臂（vector/keyword/hybrid），各自确定性自检，落 retrieval-after.md。 */
+async function mainAblation(cognitions, cases, meta) {
+  console.log('[eval-retrieval] 三臂消融（§14.6）：vector-only / keyword-only / hybrid');
+  const arms = [];
+  for (const arm of ABLATION_ARMS) {
+    const { run, determinismOk } = await runArmWithSelfCheck(arm.key, arm.make, cognitions, cases);
+    arms.push({ ...arm, run, determinismOk });
+  }
+
+  // ── 真实臂（opt-in）：默认离线、pending；置位供报告 meta ──
+  const { wantRealArm, embedCfg } = resolveRealArm();
+  if (embedCfg) {
+    // 真实臂在消融中仍 opt-in：跑一遍 real-vector + real-hybrid（无 2 遍自检，避免双倍网络成本）。
+    try {
+      console.log(`[eval-retrieval] 真实臂（消融，opt-in）：OpenAICompatEmbedder（model=${embedCfg.model}）…`);
+      const realVec = await runEvalWith(
+        () => new VectorRetriever(':memory:', new OpenAICompatEmbedder(embedCfg)),
+        cognitions,
+        cases,
+      );
+      const realHyb = await runEvalWith(
+        () =>
+          new HybridRetriever([
+            new VectorRetriever(':memory:', new OpenAICompatEmbedder(embedCfg)),
+            new KeywordRetriever(':memory:'),
+          ]),
+        cognitions,
+        cases,
+      );
+      meta.realArm =
+        `opt-in 已跑（model=${embedCfg.model}）：real-vector overall Recall@5=${f4(realVec.overall.recall5)}，` +
+        `real-hybrid overall Recall@5=${f4(realHyb.overall.recall5)}（非确定，未做两遍自检）`;
+      meta.realArmPending = false;
+      console.log(`[eval-retrieval] 真实臂 real-vector Recall@5=${f4(realVec.overall.recall5)} / real-hybrid Recall@5=${f4(realHyb.overall.recall5)}`);
+    } catch (err) {
+      meta.realArm = `opt-in 请求但调用失败（${err instanceof Error ? err.message : String(err)}）— pending，待联网 nightly`;
+      meta.realArmPending = true;
+      console.error('[eval-retrieval] 真实臂调用失败：', err instanceof Error ? err.message : err);
+    }
+  } else if (wantRealArm) {
+    meta.realArm = 'opt-in 请求（EVAL_REAL_ARM/--real）但无 embed 配置（.env 缺 MEMOWEFT_EMBED_*）— pending，待联网 nightly';
+    meta.realArmPending = true;
+  } else {
+    meta.realArm = 'opt-in（EVAL_REAL_ARM=1 + .env MEMOWEFT_EMBED_* + 联网），默认离线 — pending，待联网 nightly 补测';
+    meta.realArmPending = true;
+  }
+
+  printAblationConsole(arms, meta);
+  const report = buildAblationReport(arms, meta);
+  writeFileSync(AFTER_REPORT_PATH, report, 'utf8');
+  console.log(`[eval-retrieval] 三臂消融报告已写入 ${AFTER_REPORT_PATH}`);
+}
+
+async function main() {
+  const golden = JSON.parse(readFileSync(GOLDEN_PATH, 'utf8'));
+  const { cognitions, cases } = golden;
+  const meta = collectMeta(cognitions, cases);
+
+  if (process.argv.includes('--ablation')) {
+    await mainAblation(cognitions, cases, meta);
+  } else {
+    await mainBaseline(cognitions, cases, meta);
+  }
 }
 
 main().catch((err) => {
