@@ -341,8 +341,8 @@ hybrid(query, k):
 - [x] 语料库 ≥30 场景、覆盖矩阵达标、人类抽审通过(42 场景,6 纪律各 7)
 - [x] 评测器两级比对可跑,judge 三次判分一致;基线报告入库
 - [x] 提示词版本化(8 条收敛到 `src/prompts/registry.ts` + 哈希闸门);`test:live` 可用(~~fixtures:refresh~~ → D-0010)
-- [ ] nightly live job 上线并首晚绿(**待人类在 GitHub 加 `MEMOWEFT_LLM_*` secrets**;加之前 nightly 会红——有意为之,红胜过"绿着什么都没干");(强化项)多模型分差矩阵入库 → 未做,进 ROADMAP
-- [ ] 打 tag `phase-2-done`
+- [x] nightly live job 上线并首晚绿(2026-07-10 run 29116360383,test:live 通过:腿1 e2e + 腿2 固化 errored=0 + 腿3 大声跳过。首跑曾暴露既有 e2e bug 已修 `800adde`);(强化项)多模型分差矩阵未做 → 进 ROADMAP
+- [ ] 打 tag `phase-2-done`(待人类点头)
 
 ---
 
