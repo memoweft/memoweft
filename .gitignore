@@ -54,3 +54,8 @@ debug-output/
 .claude/transcripts/
 .claude/sessions/
 .cursor/logs/
+
+# ── Unrelated local artifacts / generated output (never commit) ──
+artifacts/
+site/
+*.mp4
