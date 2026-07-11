@@ -11,6 +11,7 @@ MemoWeft is a library that gives AI apps portable long-term memory — it keeps 
 ## Reference
 
 - **[Memory surface contract](./reference/memory-surface-contract.md)** — every host-facing method and shape; the API source of truth. [中文](./reference/memory-surface-contract.zh-CN.md)
+- **[Glossary](./glossary.md)** — every core term: code name, definition, and plain user-facing wording. [中文](./glossary.zh-CN.md)
 - **[Demo walkthrough](./demo-script.md)** — `npm run demo` shows the four differentiators in 90 seconds.
 - **[Plugin contract](./plugin-contract.md)** — plugin hooks and permission boundaries. [中文](./plugin-contract.zh-CN.md)
 

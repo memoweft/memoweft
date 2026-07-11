@@ -83,7 +83,7 @@ const INDEX_HTML = join(import.meta.dirname, 'web', 'index.html');
 
 // ── 当前激活的体验插件（批次5「做插件」v1）──
 // 回话人设不再硬编码，改由【当前激活的体验插件】提供 systemPrompt（普通助手 / 星瑶，见 experiences/）。
-//   MemoWeft 本体冷静克制、不拟人（naming.md §6）；"知道自己有长期记忆、会自然想起用户过往"的注入
+//   MemoWeft 本体冷静克制、不拟人（docs/internal/naming-positioning.md §5）；"知道自己有长期记忆、会自然想起用户过往"的注入
 //   归宿主这一层，且现在按体验分家——各体验的语气 / 拟人度写在各自插件的 systemPrompt 里。
 // activeExperienceId：模块级、单用户单进程。初值取 DEFAULT_EXPERIENCE_ID（env MEMOWEFT_EXPERIENCE，缺省 plain）。
 //   切换见 POST /api/experience：切完复用步4 的 activatedConvs.delete，让当前会话下一句重建实例、换上新人设。

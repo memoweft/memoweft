@@ -72,7 +72,7 @@ test('listPlugins：列出 id/name/type/permissions（experience 类无声明权
 test('星瑶人设守 naming 护栏：不出现过度承诺话术', () => {
   const prompt = getExperience('xingyao').systemPrompt;
   assert.ok(prompt, 'xingyao 是 experience 类、必带 systemPrompt'); // v2 契约里 systemPrompt 可选 → 先窄化
-  // 记 ≠ 信（naming.md §2）：星瑶可拟人，但不许替记忆层吹"真正理解/全方位掌握/永远不忘"。
+  // 记 ≠ 信（docs/internal/naming-positioning.md §2）：星瑶可拟人，但不许替记忆层吹"真正理解/全方位掌握/永远不忘"。
   //   这些短语作为【被禁止说的示例】出现在 prompt 里（"别说…"），所以校验它们是否出现在"别说"的否定语境中，
   //   而不是作为正面承诺——这里退一步只做冒烟级检查：确认 prompt 显式带了"不要把话说满"的护栏措辞。
   assert.ok(prompt.includes('不要') && prompt.includes('说满'), '星瑶 prompt 含"不要把话说满"护栏');

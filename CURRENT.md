@@ -1,6 +1,6 @@
 # CURRENT — 当前状态(Integrator 每个工作段落结束更新)
 
-更新于:2026-07-11 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~四批(中文版 / internals 迁移 / README 电梯稿)已落地本地;剩 glossary(并 naming 拆分)/CI 自动化/巡检)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
+更新于:2026-07-11 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~五批(中文版 / internals / README 电梯稿 / glossary+naming 拆分)已落地本地;剩 CI 自动化/巡检)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
 
 ## Phase 5:文档更不绕(§18)—— 第一批用户文档已上线(已推 origin main)
 
@@ -34,6 +34,13 @@
 - 三入口更新为 getting-started/concepts/recipes;memory-surface-contract 链接改指 `reference/` 正本。
 - 验证:死链 0(`check-links.mjs`:53 文件 282 链接,含 README 双语)、中文锚点无残留 warn。
 
+**第五批:glossary + naming 拆分已落地(本地未推)**:
+- 建 `docs/glossary.md` + `glossary.zh-CN.md`(双语术语表):18 核心术语三列(code ↔ 一句话定义 ↔ 用户词)+ 把握度定性档(credStatus 5 档)。reviewer 抓到 `cognition` 的 ContentType 漏 `project`(7→8 值)已修、credStatus 用户词逗号统一。
+- `naming.md` 拆分:§3 词表 / §5 定性档 → glossary;引言 / §1 / §2 / §4 / §5 UI 表述纪律 / §6 / §7 → `docs/internal/naming-positioning.md`(§7 进度腔清除、章节重编号);`naming.md` → 301 桩。
+- **11 处 host 注释入链分流**(用户授权碰 host):§3/§5 词表类(index.html 4 处)→ glossary,§2/§6 定位纪律类(experiences.test / server / xingyao / plain 共 7 处)→ internal/naming-positioning,§号按拆分更新(§6→§5)。**只改注释、不碰逻辑**。
+- docs/README Reference 节加 glossary 入口。
+- 验证:死链 0(56 文件 299 链接)、typecheck/api:check「一致」。
+
 **三决策(见工件 `docs/internal/phase5-migration-map.md`,含全表映射)**:
 - **D-a 分层双语**:用户页(README/getting-started/concepts/recipes/glossary/契约)双语;internals(architecture/boundaries/perf)英文单源。
 - **D-b 目录分工**:`docs/internals/`(新·"怎么建的":architecture/boundaries/perf)vs `docs/internal/`(旧·维护者账本:halumem/calibration/runbook/publishing)。
@@ -43,7 +50,7 @@
 1. ~~concepts/recipes/getting-started 的**中文版** zh-CN(分层双语)~~ ✅ **已落地**(本地未推,见上「第二批」)。
 2. ~~**architecture/boundaries/perf → `docs/internals/`**(迁移 + 修 sourceKind 陈旧 + 改入链 + 旧位留桩)~~ ✅ **已落地**(本地未推,见上「第三批」);naming 拆分移到第 4 项(和 glossary 一起做)。
 3. ~~根 **README 收敛成 60 秒电梯稿**(§18.1;现有 README 4 条重复定位句收敛成 1)~~ ✅ **已落地**(本地未推,见上「第四批」)。
-4. **glossary.md**(naming §3 词表提炼)。
+4. ~~**glossary.md**(naming §3 词表提炼)~~ ✅ **已落地**(本地未推,见上「第五批」;含 naming 拆分 + 11 处 host 注释入链分流)。
 5. **§18.3 snippets 进 CI**(`scripts/doc-snippets.mjs`:抽 md 里 ts 围栏逐个编译+跑,`<!-- snippet:skip -->` 跳过)+ **§18.4 死链检查进 CI**(把本会话手动跑的 node 死链脚本自动化)。
 6. **§18.5 新人视角巡检**("仍然绕"清单 → 逐条处理)。
 7. 收尾:打 tag `phase-5-done`(人类)。

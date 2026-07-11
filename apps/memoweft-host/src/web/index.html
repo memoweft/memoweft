@@ -1,7 +1,7 @@
 <!--
   MemoWeft Host · 最小聊天（批次5 步1）。
   单文件、内联 CSS/JS、零外部依赖（不引 CDN，本地无网也能用）。
-  文案遵 docs/naming.md：用户词（记住了/想起/对你的了解），不出现 evidence/cognition/updateProfile
+  文案遵 docs/glossary.md：用户词（记住了/想起/对你的了解），不出现 evidence/cognition/updateProfile
   等工程词，不说"真正理解你"，不用"她"指代 MemoWeft。
 -->
 <meta charset="utf-8" />
@@ -1037,14 +1037,14 @@
 
   // ══════════════════ 记忆管理页（步3） ══════════════════
   // 全走 /api/cognition|evidence 及其受控管理端点（后端只经 core.memory.*）。
-  // 列表渲染用户输入内容一律 textContent（免 XSS）；把握度/状态用 naming.md §5 的用户词，不露工程词。
+  // 列表渲染用户输入内容一律 textContent（免 XSS）；把握度/状态用 docs/glossary.md 的用户词，不露工程词。
 
-  // 可信状态 → 用户词档（naming.md §5）。不显示 0~1000 原始分数。
+  // 可信状态 → 用户词档（docs/glossary.md 把握度定性档）。不显示 0~1000 原始分数。
   const CRED_CN = {
     candidate: '还没确认', low: '低把握', limited: '有一定把握',
     stable: '比较确定', conflicted: '有冲突，需确认',
   };
-  // 内容类型 → 用户词（naming.md 词表）。
+  // 内容类型 → 用户词（docs/glossary.md 术语表）。
   const CTYPE_CN = {
     fact: '事实', preference: '偏好', goal: '目标', project: '进行中的事',
     state: '近来状态', trait: '特点', hypothesis: '暂时的猜测', trend: '近来的趋势',

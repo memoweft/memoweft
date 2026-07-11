@@ -6,9 +6,9 @@
  *
  * systemPrompt 沿用 server.ts 原来硬编码的 REPLY_PERSONA（体验层 S4a·LOG 记过的坑）：
  *   素提示下大模型会露出出厂反射「我不保留记忆、聊完就忘」，正好否定 MemoWeft 的价值，
- *   所以要显式告诉它"背后有跨对话的记忆层"。语气归宿主这一层（naming.md §6），Core 本体不拟人。
+ *   所以要显式告诉它"背后有跨对话的记忆层"。语气归宿主这一层（docs/internal/naming-positioning.md §5），Core 本体不拟人。
  *
- * naming.md 护栏：普通助手不拟人过度、不自称有情感、不说"真正理解你"。它只是一个
+ * docs/internal/naming-positioning.md §2 护栏：普通助手不拟人过度、不自称有情感、不说"真正理解你"。它只是一个
  *   "记得你、会把了解到的自然用上"的高效助手——把温柔拟人留给星瑶那一层。
  */
 import type { MemoWeftPlugin } from 'memoweft';
