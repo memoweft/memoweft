@@ -6,6 +6,7 @@
  * 挂在 openStores 的共享连接上（与三个 store 同连接，管理操作的写+审计能包进一个事务）。
  */
 import type { DatabaseSync } from '../store/driver.ts';
+import { systemClock, type Clock } from '../clock.ts';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS management_log (
@@ -44,15 +45,18 @@ export interface ManagementLog {
 
 export class SqliteManagementLog implements ManagementLog {
   private readonly db: DatabaseSync;
+  private readonly clock: Clock;
 
-  /** @param db openStores 打开的共享连接（本表与三个 store 同连接，才能同事务提交）。 */
-  constructor(db: DatabaseSync) {
+  /** @param db openStores 打开的共享连接（本表与三个 store 同连接，才能同事务提交）。
+   *  @param clock 审计行时间源（可注入求确定性）；缺省真实系统时间。 */
+  constructor(db: DatabaseSync, clock: Clock = systemClock) {
     this.db = db;
+    this.clock = clock;
     this.db.exec(SCHEMA);
   }
 
   append(e: Omit<ManagementLogEntry, 'createdAt'>): ManagementLogEntry {
-    const entry: ManagementLogEntry = { ...e, createdAt: new Date().toISOString() };
+    const entry: ManagementLogEntry = { ...e, createdAt: this.clock().toISOString() };
     this.db
       .prepare(
         'INSERT INTO management_log (op, target_kind, target_id, reason, detail, created_at) VALUES (?,?,?,?,?,?)',

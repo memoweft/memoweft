@@ -12,7 +12,7 @@
 - **S3**(`6ebc091` feat):读路径 now(`core.recall`/`handleConversationTurn` → `recallCognitions` 衰减门控)走 clock —— 前进 clock → 情绪 `state` 有效置信衰减出局、`fact` 留存(测试实证前进 11 天)。
 - **S4**(`a941429` feat):四幕 demo `examples/demo.ts`(记住/纠正/矛盾/时间)+ `npm run demo` + 三段式纯文本 CLI(`!! CONFLICT` 标记)+ `--fast-forward`/`--act` + 录屏脚本 `docs/demo-script.md`。**确定性验收:两次运行 diff 逐字为空(已验)**;只经公共 API(`import 'memoweft'`)。
 - 验证:core 298 · typecheck/api:check「一致」/build 全绿。**六提交本地未推**(S1a/S1b/S2/S3/S4 + 更早的 AD-3/§16.3)。
-- **⚠️ 方案 C 完整性剩余(demo 不阻塞 → ROADMAP)**:`managementApi`(用户手动 invalidate/archive 的 invalidAt/archivedAt)、`obs/runLog`(ts)、`asking`(askedAt)的 `new Date()` 仍未接 clock——四幕 demo 不碰这些路径;要彻底"全局可注入时钟"需补这几处。
+- **方案 C 门面路径全覆盖**(后续提交):`managementApi`/`managementLog`/`core.graph`/`core.portable` 也接了注入 clock —— **至此经 `createMemoWeftCore` 门面的所有时间源均可注入**。剩 `asking`(proposeAsk/revisitConflicts 的 askedAt)、`obs/runLog`(ts)两处【非门面路径】未接(散装 dev 算子 / 可选诊断,不被工厂调用)→ ROADMAP。
 
 ## Phase 4 验收(§17 · 只差打 tag)
 - [x] clone 一条命令 `npm run demo` 走完四幕;**两次运行 diff 为空**(确定性)

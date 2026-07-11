@@ -16,6 +16,7 @@ import type { EventWithEvidence } from '../event/model.ts';
 import type { Retriever } from '../retrieval/retriever.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
 import { effectiveConfidence } from '../background/decay.ts';
+import { systemClock, type Clock } from '../clock.ts';
 
 // ── 输入 / 结果类型 ──
 
@@ -181,6 +182,8 @@ export interface MemoryManagementAPI {
 export interface MemoryManagementDeps {
   /** 召回器：resetSubject 清向量索引要它（indexAll([])）；不传则出厂时跳过清索引（见 resetSubject 注释）。 */
   retriever?: Retriever;
+  /** 可注入时钟（Phase 4）：失效/归档/自检/读时衰减的"现在"走它；缺省真实系统时间。 */
+  clock?: Clock;
 }
 
 /**
@@ -195,6 +198,7 @@ export function createMemoryManagementAPI(
 ): MemoryManagementAPI {
   const { db, evidenceStore, eventStore, cognitionStore, managementLog, transaction } = bundle;
   const retriever = deps.retriever;
+  const clock = deps.clock ?? systemClock; // 可注入时钟（Phase 4）：失效/归档/自检/读时衰减的"现在"
   const subjectOf = (explicit?: string) => explicit ?? cfg.identity.subjectId;
 
   /** 查某证据被谁引用（事件链 + 认知链）。 */
@@ -214,7 +218,7 @@ export function createMemoryManagementAPI(
   return {
     invalidateCognition({ cognitionId, reason }) {
       return transaction(() => {
-        const updated = cognitionStore.update(cognitionId, { invalidAt: new Date().toISOString() });
+        const updated = cognitionStore.update(cognitionId, { invalidAt: clock().toISOString() });
         if (!updated) return null;
         managementLog.append({ op: 'invalidate', targetKind: 'cognition', targetId: cognitionId, reason, detail: null });
         return updated;
@@ -354,7 +358,7 @@ export function createMemoryManagementAPI(
         const updatedTarget = cognitionStore.update(targetId, { confidence, credStatus })!; // content 不动（PM 拍板）
 
         // 3) source 标失效不硬删（保留可追溯；链已搬走，来龙去脉靠本审计行的 detail）。
-        const updatedSource = cognitionStore.update(sourceId, { invalidAt: new Date().toISOString() })!;
+        const updatedSource = cognitionStore.update(sourceId, { invalidAt: clock().toISOString() })!;
 
         managementLog.append({
           op: 'merge', // PM 拍板的 op 名
@@ -377,7 +381,7 @@ export function createMemoryManagementAPI(
 
     archiveCognition({ cognitionId, reason }) {
       return transaction(() => {
-        const updated = cognitionStore.update(cognitionId, { archivedAt: new Date().toISOString() });
+        const updated = cognitionStore.update(cognitionId, { archivedAt: clock().toISOString() });
         if (!updated) return null;
         managementLog.append({ op: 'archive', targetKind: 'cognition', targetId: cognitionId, reason, detail: null });
         return updated;
@@ -412,7 +416,7 @@ export function createMemoryManagementAPI(
       for (const r of ceMissingEvidence) {
         issues.push({ kind: 'orphan_cognition_evidence', cognitionId: r.cognition_id, evidenceId: r.evidence_id, missing: 'evidence' });
       }
-      return { ok: issues.length === 0, issues, checkedAt: new Date().toISOString() };
+      return { ok: issues.length === 0, issues, checkedAt: clock().toISOString() };
     },
 
     // ── 只读列取（缺口A）：读 + 组装收进 facade，不新写记忆逻辑（all/sourcesOf/evidenceOf/effectiveConfidence 都已存在）──
@@ -424,7 +428,7 @@ export function createMemoryManagementAPI(
     },
 
     listCognitions(input = {}) {
-      const now = new Date();
+      const now = clock();
       // cognitionStore.all(subjectId) 已按 subject 过滤；每条配溯源链 + 读时算有效置信（衰减读时算、不持久化）。
       return cognitionStore.all(subjectOf(input.subjectId)).map((c) => ({
         ...c,

@@ -58,7 +58,7 @@ export function openStores(dbPath: string, cfg?: MemoWeftConfig, clock: Clock = 
     eventStore = new SqliteEventStore(db, clock);
     cognitionStore = new SqliteCognitionStore(db, clock);
     // 审计表也挂共享连接（批次2）：管理操作的"改数据 + 落审计"能包进同一个事务、全成或全滚。
-    managementLog = new SqliteManagementLog(db);
+    managementLog = new SqliteManagementLog(db, clock);
     // 建表后统一走版本化：新库盖最新版，老库升级（有真改动会先备份）。
     runMigrations(db, { dbPath, fresh });
   } catch (e) {

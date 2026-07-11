@@ -395,12 +395,13 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     },
 
     // 把本 core 的 retriever 传进 memory：resetSubject 清向量索引要它（indexAll([])）。
-    memory: createMemoryManagementAPI(stores, cfg, { retriever }),
+    memory: createMemoryManagementAPI(stores, cfg, { retriever, clock: options.clock }),
 
     portable: {
       exportBundle(opts = {}) {
         const { subjectId, ...rest } = opts;
-        return exportBundle(subjectOf(subjectId), { evidenceStore, eventStore, cognitionStore }, rest);
+        // exportedAt 走注入 clock（Phase 4）：显式 opts.now 优先（rest 在后覆盖）。opts.now 是 ISO 串。
+        return exportBundle(subjectOf(subjectId), { evidenceStore, eventStore, cognitionStore }, { now: (options.clock ?? systemClock)().toISOString(), ...rest });
       },
       importBundle(bundle, opts) {
         return importBundle(bundle, { evidenceStore, eventStore, cognitionStore, transaction }, opts);
@@ -411,7 +412,8 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     graph: {
       buildMemoryGraph(opts = {}) {
         const { subjectId, ...rest } = opts;
-        return buildMemoryGraph(subjectOf(subjectId), { evidenceStore, eventStore, cognitionStore }, rest);
+        // generatedAt 走注入 clock（Phase 4）：显式 opts.now 优先（rest 在后覆盖）。opts.now 是 ISO 串。
+        return buildMemoryGraph(subjectOf(subjectId), { evidenceStore, eventStore, cognitionStore }, { now: (options.clock ?? systemClock)().toISOString(), ...rest });
       },
     },
 
