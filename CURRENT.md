@@ -4,22 +4,37 @@
 
 > 总纲 `PROJECT_PLAN.md`;决策 `DECISIONS.md`;固化质量报告 `bench/consolidation-baseline.md`;回归流程 `docs/internal/prompt-regression-runbook.md`。
 
-## Phase 3 进行中(适配器更稳,§16)
+## Phase 3 进行中(适配器更稳,§16)—— 本地三提交,未推
 
-**已落地 §16.1 起步**(`2d087c1`,本地未推):建 `tests/adapter-kit/` 参数化契约套件(一份喂两个适配器,每适配器约 50 行薄驱动),两个适配器接入:
-- **AD-1 绿**(助手消息 → evidence 零新增)、**AD-2 绿**(用户 → 恰好一条 spoken;A 含 originId 幂等、B 含前后计数)。
-- **AD-4 baseline**:当前召回呈现格式锁进 golden(A 文本块 en/zh、B structuredContent,含一条 conflicted 项)。
-- **AD-3/AD-5/AD-6(超时+logger)**:N/A 声明位 + by-construction 断言(带绊线:将来翻 applicable 会强制补真断言)。
-- 顺手修:非法 credStatus bug(`corroborated`/`single-source`→真实枚举,conflicted 路径首测)、两处注释与实现不符。
-- 验证:core 284 · adapter-ai-sdk 23 · mcp-server 11 · typecheck/build/api:check/lint 全绿。契约红线(contract/枚举/index/api-snapshot/action)一个没碰,Integrator 独立复核过。
+**已落地**(commit `2d087c1` §16.1 起步 · `596d8f3` 进度 · `156065d` AD-6):
+- **§16.1 adapter-kit**:`tests/adapter-kit/` 参数化契约套件(一份喂两个适配器,每适配器约 50 行薄驱动)。
+- **AD-1 绿**(助手→evidence 零新增)、**AD-2 绿**(用户→恰好一条 spoken;A 幂等、B 前后计数)。
+- **AD-4 已定**(credStatus='conflicted' 即算冲突提示,人类拍板)= 纯 golden 快照(A 文本块 en/zh、B structuredContent,含一条 conflicted),无契约变更。
+- **AD-6 绿**(`156065d`,§16.2 契约 D-0012):recall 超时 200ms 可配、读不重试写一重试、降级注入空+logger。**修掉 MCP "记忆层抛错即崩" 硬伤**(实证抛错下 recall 返 [] 不崩)。两适配器降级事件形状统一 `{event:'memory_degraded',op,reason}`(MCP 另带可选 tool)。
+- **AD-5**:N/A(两适配器无 LLM→evidenceId 回捞面,by-construction)。
+- 顺手修:非法 credStatus bug(`corroborated`/`single-source`→真实枚举,conflicted 路径首测)、注释与实现不符。
+- 验证:core 284 · adapter-ai-sdk 23 · mcp-server 12 · typecheck/build/api:check「一致」/lint 全绿。**契约红线(Core src/枚举/api-snapshot)一个没碰**,Integrator 独立复核过。
 
-**卡点:剩下的 Phase 3 活都要碰契约,3 个分岔待人类拍板**(见下「Phase 3 待决」)。calibration 全貌在 workflow `phase3-calibration-recon` 的产出。
+## Phase 3 剩余:AD-3(留给新窗口)+ §16.3 版本矩阵
 
-## Phase 3 待决(3 个契约分岔,须人类先批 → DECISIONS)
+### AD-3 加 `SourceKind 'tool'`(人类已批方案,留给专注的新窗口做)
+scout 已摸清机制(agent 报告),**关键反常识结论**:加 `tool` 枚举本身**免迁移**(source_kind 是自由 TEXT 列、无 CHECK 约束)、**免触 api-freeze**(快照按类型别名名渲染、不展开联合成员)。真正的工作量和风险在两个**隐形雷**:
+- **隐私陷阱**:`evidence/store.ts:143` 只对 observed 兜底不上云,`tool` 掉进 else 分支 → **默认上云**。工具返回值常含敏感数据。**已批方案**:新增 `config.toolDefaults = { allowLocalRead:true, allowCloudRead:false, allowInference:true }`,并让 `put()` 把 tool 纳入保守分支(把 `isObserved` 扩成 tool||observed)。
+- **纪律断层**:distill/consolidate 喂 LLM 时丢 sourceKind(distill.ts:56 / consolidate.ts:146),工具结果可能被误固化为"用户亲口"。**已批:出 AD-3 范围 → 进 ROADMAP**(既有特性,observed 也这样;要治得动纪律敏感写路径)。
+- **铁律 3a**:AD-3 摄入工具**返回结果**(外部客观数据=合法证据),**不是** LLM 的工具调用意图/入参(那是助手输出,禁摄入)。适配器只取 result payload。
 
-1. **§16.2 降级语义写进 contract**(AD-6 超时+logger 的前提):建议默认 recall 超时 200ms 可配 / 读路径不重试直接降级、写路径一次重试 / 降级注入空上下文+日志。属契约变更走第 13 章。
-2. **AD-3 工具结果 source=tool 二选一**:(a) 给 `SourceKind` 加 `'tool'` 值 → 触 api-freeze + schema 变更 + 迁移评估;或 (b) 重定义为"走 `ingestObservation` 落 observed、用 kind 标 tool"(不破 API 但改 AD-3 验收定义)。
-3. **AD-4 冲突提示**:(a) 接受 `credStatus='conflicted'` 即算冲突提示 → AD-4 退化为纯快照、**无契约变更**(推荐);或 (b) 注入文本新增显式冲突措辞 → 改宿主可见格式 + 须同步两处复制文案(recallMiddleware ≡ action.ts),走第 13 章。
+**已批的 AD-3 实现清单**(新窗口照做):
+1. `src/evidence/model.ts:11` SourceKind 加 `| 'tool'`(唯一类型改动源)。
+2. 新增 `config.toolDefaults`(值见上)+ `store.ts:143` 保守分流纳入 tool。
+3. **Core 摄入 API 走 (a)**:新增 `core.ingestToolResult`(语义干净)→ **触 api-freeze**:走影响面说明(本 CURRENT 段即是)+ 人类已批 + `npm run api:update` + 记 **D-0013**。
+4. 两适配器摄入面:A 从 AI SDK `role:'tool'` message part 提 result(persistOnEnd 加 helper);B 新增 MCP tool `memoweft_ingest_tool_result`(加进 WRITE_TOOL_NAMES,server.test.ts 逐字断言集合会红→同步)。
+5. kit:AD-3 从 N/A 翻 applicable(`tests/adapter-kit/contract.ts:57-60` 硬断言 status==='na' 会红→改;两适配器 driver 的 applicability.ad3)。补覆盖铁律 3a 的测试(只摄入 result、不摄入 call 意图)。
+6. 图谱视图 tool 着色/计数(buildMemoryGraph.ts:163/213)可顺手补,非阻塞。
+
+### §16.3 版本矩阵 CI(不碰契约,但有 monorepo 复杂度)
+两适配器 SDK 的最低支持版+最新版矩阵 job。难点:单一根 package-lock + workspace hoist,换版本会改锁文件撞 guardrails 的 lockfile guard;须**与 guardrails 隔离**的探针 job(独立缓存 key)。且 mcp-server 的 SDK 是 dependency 非 peer(需先定矩阵化 dependency 还是改 peer)。
+
+### §16.5 新适配器 / §16.4 快照-beyond-baseline:进 ROADMAP(calibration 建议 adapter-kit 稳后再做)
 
 ## 刚完成:A 路线(Phase 2 收尾管道)三段全部落地 + 全量基线入库
 
