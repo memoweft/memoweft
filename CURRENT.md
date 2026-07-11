@@ -1,6 +1,6 @@
 # CURRENT — 当前状态(Integrator 每个工作段落结束更新)
 
-更新于:2026-07-11 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~七批(中文版 / internals / README / glossary+naming / 文档 CI / 新人巡检处理)已落地本地;§18 实质全完成,只差打 tag phase-5-done(人类);Phase 6 已起头——LoCoMo 冒烟链路通,本地)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
+更新于:2026-07-12 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~七批(中文版 / internals / README / glossary+naming / 文档 CI / 新人巡检处理)已落地本地;§18 实质全完成,只差打 tag phase-5-done(人类);Phase 6 进行中——LoCoMo 链路通 + cognition 层召回臂/会话日期注入已落地(本会话·纯 bench),本地)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
 
 ## Phase 6 起头(进行中·§19 公开基准):LoCoMo 冒烟链路通(本地)
 
@@ -9,7 +9,17 @@
 - **链路全通**(--limit 1 --qa 5 接 mimo):loader→ingest 419 轮→检索→mimo 答题→F1→token(4311)→runs 报告。
 - **冒烟暴露的真实取舍**(第一步的价值):evidence 层关键词检索 gold-evidence 命中率参差(single-hop 48% / multi-hop 32% / temporal 75%),F1 低——量化了「MemoWeft 画像级 recall vs 基准 episodic 事实召回」的粒度落差(scout 预判)。改进方向第一条已验证(见下)。
 - **已加 embedder 语义检索臂(bge-m3,`--retriever semantic`)**:bench 层逐条 embed + 手算 cosine(绕开本地 ollama 的 batch 坑)。前 40 轮 8 QA 同 evidence 集对比:**multi-hop 命中率 keyword 0% → bge-m3 语义 100%**(语义完胜关键词死角);temporal keyword 100% > 语义 75%(时序题含明确词、关键词占优);open-domain 都 100%。**量化了「换真 embedder 后 multi-hop 召回质变」**——呼应 D-0008 自建集 +35%,这里公开 LoCoMo 上 multi-hop 0→100%。
-- **本地 ollama 坑(记录)**:bge-m3 的 **batch embed 退化**(5 条就 >90s、单条仅 ~1s)且慢 batch **卡死串行服务**(需重启清队列)。脚本已改逐条 embed 绕过;但本地 CPU ~1s/条,完整跑(10 sample × 数百 evidence)需 **GPU 或稳定云 embedder**。剩:cognition 层召回、parse 会话日期、完整矩阵。
+- **本地 ollama 坑(记录)**:bge-m3 的 **batch embed 退化**(5 条就 >90s、单条仅 ~1s)且慢 batch **卡死串行服务**(需重启清队列)。脚本已改逐条 embed 绕过;但本地 CPU ~1s/条,完整跑(10 sample × 数百 evidence)需 **GPU 或稳定云 embedder**。(→ 已迁 3090,embed 改由 llama.cpp bge-m3 GPU 供,见「环境」段。)
+- **已加 cognition 层召回臂 + 会话日期注入(§19 剩余项①②,本会话·纯 bench,范围锁 `bench/locomo-eval.mjs`,src/tests 零改)**:
+  - `--layer cognition`:updateProfile 消化证据→`core.recall`(真实系统召回路径,env bge-m3);命中率走**溯源链**(recall 的认知→其 sources 的 evidenceId→该证据 originId=dia_id→对 gold)。
+  - **会话日期注入** evidence content(`[8 May, 2023] …`)+ occurredAt;`--no-dates` 可关做 A/B。修 §19.1 标注的 temporal「已知偏差」。
+  - 补 **core 侧 token 记账**(`core.usage()`):cognition 臂大头在 updateProfile(走 core 自带池),旧代码只记外挂答题 LLM 会严重漏算——§19.0 要求记实际 token。
+  - 认知纪律四点**只读不改**(全程经 updateProfile/recall/listCognitions/usage 公开门面);无 src/schema/API/快照改动。
+- **四臂对比·首批真实数(conv-26·全 419 轮·前 30 题;mimo-v2.5-pro + bge-m3@3090;方向性,非最终基准)**:
+  - **日期注入对 temporal 决定性**:keyword 臂 temporal 平均 F1 **0.131→0.613(×4.7)**(命中率两边同 88%,差在模型读到日期才答得出)——旧「已知偏差」实修。
+  - **evidence 层语义完胜关键词**:multi-hop F1 0.133→**0.407**(命中 20%→60%)、temporal 0.613→0.658、open-domain 命中 50%→100%(呼应+扩展 D-0008:真实 embedder 是召回提升来源,LoCoMo 大语料上 multi-hop 尤显)。
+  - **cognition 层在逐句题上更差**:temporal F1 **0.025**(命中 31%)、multi-hop 0.343、成本 **87k token(≈2×,其 76k 在消化)**——消化丢 episodic 细节,是「画像级 recall vs 逐句事实召回粒度落差」的硬量化(非缺陷,定位使然)。
+  - **结论**:LoCoMo 逐句 episodic 题 **evidence 层 + 语义 bge-m3 是赢家**(F1 最高、更省);cognition 层不适合此类题。4 份 runs 入 `bench/runs/`(gitignore)。**剩(§19):完整矩阵(§19.2·三臂×双 embedder×全 10 sample)、参数敏感性网格(§19.3)、LongMemEval_S、BENCHMARKS.md(§19.4)、token/费用完整记录。**
 - 数据 NC 许可:`bench/data/` + `bench/runs/*-locomo-*` 已 gitignore,数据只在本地(LOCOMO_PATH),绝不入库。
 - **Phase 6 完整还差**(大工程·多会话):完整 10 sample×~1986 QA + 三臂×双 embedder 矩阵(§19.2)+ 参数敏感性网格(§19.3)+ LongMemEval_S + BENCHMARKS.md(§19.4)+ token/费用完整记录。
 
@@ -189,7 +199,7 @@
 
 ## 环境 / 阻塞
 
-- 无阻塞。本地 Ollama(bge-m3 @ 11435)本会话**未起**(检索真实臂要用才起:`ollama serve`)。固化走 mimo 云端 API,不依赖 ollama。
+- 无阻塞。**已迁至 3090 机器**(RTX 3090 24G);嵌入端点(bge-m3 @ 127.0.0.1:11435)本会话**改由 llama.cpp GPU 供**(非 Ollama:`llama-server --embedding --pooling cls -ngl 99`,启动脚本 `Desktop/Working/start-llama-bge-m3-embed.cmd`;坑:须清空全局 `LLAMA_API_KEY` 否则 401)。旧机 CPU ollama 的 batch embed 退化在 GPU 上不再是瓶颈。固化/答题走 mimo 云端 API。
 - 固化评测慢:实测 82–141s/场景,全量 42 场景约 77 分钟(CURRENT 旧记的 30s/场景是错的,已在评测器注释订正)。
 - `.env`(gitignored,DLA_/MEMOWEFT_ 双前缀,mimo + bge-m3)本会话在。
 

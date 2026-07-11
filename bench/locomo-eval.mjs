@@ -13,12 +13,15 @@
  *
  * 直接从 src 的 .ts import（Node ≥24 原生剥类型,无需 build）。只读依赖,绝不改 src/tests。
  *
- * 用法:
- *   LOCOMO_PATH=/path/to/locomo10.json node bench/locomo-eval.mjs --dry            # 无 key:验 loader/检索/F1/结构 + evidence 层检索召回率
- *   LOCOMO_PATH=/path/to/locomo10.json node bench/locomo-eval.mjs --limit 1 --qa 5 # 接 mimo 跑 1 sample 前 5 QA 冒烟
- *   LOCOMO_PATH=/path/to/locomo10.json node bench/locomo-eval.mjs                  # 全量（慢,需 mimo key）
+ * 用法（LOCOMO_PATH=/path/to/locomo10.json node bench/locomo-eval.mjs …）:
+ *   --dry                                # 无 key:验 loader/检索/F1/结构 + evidence 层检索召回率
+ *   --limit 1 --qa 5                     # 接 mimo 跑 1 sample 前 5 QA 冒烟（evidence 层·关键词）
+ *   --retriever semantic --limit 1       # evidence 层·bge-m3 语义检索臂
+ *   --layer cognition --limit 1 --qa 5   # cognition 层:updateProfile 消化→core.recall 召回→答题（需 LLM,不能 --dry）
+ *   --no-dates …                         # 关掉会话日期注入,做 temporal A/B 对比
+ *   （无 flag）                           # 全量（慢,需 mimo key）
  *
- * 纪律:排除 category 5（adversarial,Mem0 惯例）;时序题（category 2）冒烟未 parse 会话日期,标注为已知偏差。
+ * 纪律:排除 category 5（adversarial,Mem0 惯例）;会话日期默认注入 evidence content + occurredAt（修 temporal 偏差,可 --no-dates 关）。
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -44,6 +47,8 @@ const LIMIT = getNum('--limit', Infinity); // 跑前 N 个 sample
 const QA_LIMIT = getNum('--qa', Infinity); // 每 sample 前 M 道 QA
 const RETRIEVER = (() => { const i = argv.indexOf('--retriever'); return i >= 0 && argv[i + 1] ? argv[i + 1] : 'keyword'; })(); // keyword | semantic（bge-m3 语义检索,读 env embedder）
 const MAXTURNS = getNum('--max-turns', Infinity); // 冒烟限回放轮数（本地 embed 慢,减 evidence 量;keyword 与 semantic 用同值才可比）
+const LAYER = (() => { const i = argv.indexOf('--layer'); return i >= 0 && argv[i + 1] ? argv[i + 1] : 'evidence'; })(); // evidence | cognition（cognition = updateProfile→core.recall,用消化后的画像答题;需 LLM,不能 --dry）
+const DATES = !argv.includes('--no-dates'); // 默认注入会话日期（修 temporal 偏差,§19 剩余项）;--no-dates 关掉做 A/B 对比
 
 // ── F1（归一化 partial-match 词重叠,LoCoMo 标准）──────────────────────────────
 const STOP = new Set(['a', 'an', 'the', 'of', 'to', 'in', 'on', 'at', 'is', 'was', 'were', 'and', 'or', 'for']);
@@ -59,6 +64,17 @@ function f1(pred, gold) {
   if (!common) return 0;
   const prec = common / p.length, rec = common / g.length;
   return (2 * prec * rec) / (prec + rec);
+}
+
+// ── 会话日期解析（修 temporal 偏差）───────────────────────────────────────────
+// LoCoMo 的 session_N_date_time 形如 "1:56 pm on 8 May, 2023"。抽出 "8 May, 2023" 转 ISO 作 occurredAt;
+//   解析失败返回 null（占位不崩，退回系统时间）。日期串本身也会注入 evidence content 供答题 LLM 直接读。
+function parseLocomoDate(raw) {
+  if (!raw) return null;
+  const m = String(raw).match(/(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
+  if (!m) return null;
+  const d = new Date(`${m[1]} ${m[2]} ${m[3]} UTC`);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 // ── loader:sample → { id, turns[], qa[] } ───────────────────────────────────
@@ -117,14 +133,27 @@ async function runSample(sample, llm) {
   const core = createMemoWeftCore({ dbPath: ':memory:' });
   const subjectId = sample.id;
   for (const t of sample.turns.slice(0, MAXTURNS)) {
-    // 两个说话人的话都进 evidence（content 带上 speaker 名,保留是谁说的）;冒烟未 parse 会话日期。
-    await core.ingestUserMessage({ subjectId, content: `${t.speaker}: ${t.text}`, originId: t.diaId });
+    // 两个说话人的话都进 evidence（content 带上 speaker 名,保留是谁说的）。
+    // DATES 时把会话日期注入 content（供答题 LLM 直接读，修 temporal 偏差）+ 设 occurredAt（语义更真）。
+    const content = DATES && t.date ? `[${t.date}] ${t.speaker}: ${t.text}` : `${t.speaker}: ${t.text}`;
+    const occurredAt = DATES ? parseLocomoDate(t.date) : null;
+    await core.ingestUserMessage({ subjectId, content, originId: t.diaId, occurredAt: occurredAt ?? undefined });
   }
   const allEv = core.memory.listEvidence({ subjectId });
 
-  // 语义臂:VectorRetriever + OpenAICompatEmbedder（读 env bge-m3）对 evidence 建索引。
-  let sem = null;
-  if (RETRIEVER === 'semantic') {
+  // 检索臂配置（三选一,互斥）:
+  //  - cognition:updateProfile 消化证据→认知,答题走 core.recall（真实系统召回路径,用 env bge-m3;topK=系统默认 5）。
+  //  - evidence+semantic:OpenAICompatEmbedder（env bge-m3）对 evidence 逐条 embed + 手算 cosine。
+  //  - evidence+keyword（默认）:关键词 overlap top-k。
+  let sem = null, cog = null;
+  if (LAYER === 'cognition') {
+    if (DRY) { console.error('--layer cognition 需 LLM(updateProfile 消化证据),不能 --dry'); process.exit(1); }
+    await core.updateProfile({ subjectId });
+    // 命中追溯链:recall 回的认知 → 其溯源证据 evidenceId → 该证据 originId(=LoCoMo dia_id) → 对 gold。
+    const evById = new Map(allEv.map((e) => [e.id, e.originId]));
+    const cogSources = new Map(core.memory.listCognitions({ subjectId }).map((c) => [c.id, c.sources || []]));
+    cog = { evById, cogSources };
+  } else if (RETRIEVER === 'semantic') {
     const cfg = loadEmbedConfig();
     if (!cfg) { console.error('--retriever semantic 需配 embedder（MEMOWEFT_EMBED_* / DLA_EMBED_*）'); process.exit(1); }
     const embedder = new OpenAICompatEmbedder(cfg);
@@ -135,26 +164,36 @@ async function runSample(sample, llm) {
   const rows = [];
   const qaList = sample.qa.slice(0, QA_LIMIT);
   for (const q of qaList) {
-    // 检索召回率:top-k 里是否含 gold evidence 的 dia_id（evidence 层召回粒度诊断）。
-    let top, topIds;
-    if (sem) {
+    // 命中率:top-k 里是否含 gold evidence 的 dia_id（召回粒度诊断;cognition 层走溯源链还原 dia_id）。
+    let top, evHit;
+    if (cog) {
+      const recalled = await core.recall({ subjectId, query: q.question });
+      top = recalled.map((r) => ({ rawContent: r.content })); // 答题喂消化后的认知（非原始证据）
+      const hitDia = new Set();
+      for (const r of recalled) for (const s of (cog.cogSources.get(r.id) || [])) { const oid = cog.evById.get(s.evidenceId); if (oid) hitDia.add(oid); }
+      evHit = q.evidence.length ? q.evidence.some((id) => hitDia.has(id)) : null;
+    } else if (sem) {
       const [qv] = await sem.embedder.embed([q.question]);
       const scored = allEv.map((e, i) => ({ e, s: cosine(qv, sem.evVecs[i]) }));
       scored.sort((a, b) => b.s - a.s);
       top = scored.slice(0, TOP_K).map((x) => x.e);
-      topIds = new Set(top.map((e) => e.originId));
+      const topIds = new Set(top.map((e) => e.originId));
+      evHit = q.evidence.length ? q.evidence.some((id) => topIds.has(id)) : null;
     } else {
       top = retrieveTopK(allEv, q.question, TOP_K);
-      topIds = new Set(top.map((e) => e.originId));
+      const topIds = new Set(top.map((e) => e.originId));
+      evHit = q.evidence.length ? q.evidence.some((id) => topIds.has(id)) : null;
     }
-    const evHit = q.evidence.length ? q.evidence.some((id) => topIds.has(id)) : null;
     let pred, score;
     if (DRY) { pred = '(dry)'; score = null; }
     else { pred = await answer(llm, top, q.question); score = f1(pred, q.answer); }
     rows.push({ category: q.category, question: q.question, gold: q.answer, pred, f1: score, evHit });
   }
+  // core 侧 token（cognition 臂:updateProfile 的 distill/consolidate + recall embed 都走 core 自带池;
+  //   §19.0 要求记实际 token——外挂答题 LLM 只是其一,不记 core 侧会漏算 cognition 臂的大头）。
+  const coreUsage = core.usage();
   core.close();
-  return { id: sample.id, evidenceCount: allEv.length, rows };
+  return { id: sample.id, evidenceCount: allEv.length, rows, coreUsage };
 }
 
 // ── 汇总 ────────────────────────────────────────────────────────────────────
@@ -195,16 +234,26 @@ async function main() {
   const sum = summarize(results);
   const commit = (() => { try { return execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'nogit'; } })();
   const usage = llm?.usage;
+  // core 侧 token 跨 sample 聚合（cognition 臂的 updateProfile/recall/embed;evidence 臂 core 未被调用则为 0）。
+  const coreTot = results.reduce((a, r) => {
+    const u = r.coreUsage; if (!u) return a;
+    return { llm: a.llm + (u.llm?.totalTokens || 0), embed: a.embed + (u.embed?.totalTokens || 0) };
+  }, { llm: 0, embed: 0 });
 
   // 报告
   const lines = [];
   lines.push(`# LoCoMo-10 冒烟基线 (${DRY ? 'DRY 结构验证' : 'F1'})`);
   lines.push('');
   lines.push(`- commit: \`${commit}\` · samples: ${samples.length} · QA: ${sum.total} (已排除 category 5 adversarial)`);
-  if (!DRY) lines.push(`- answer model: ${process.env.MEMOWEFT_LLM_MODEL || process.env.DLA_LLM_MODEL || '?'} · tokens: ${usage ? usage.totalTokens : 'n/a'} (calls with usage: ${usage ? usage.callsWithUsage : 'n/a'})`);
-  lines.push(`- 召回:evidence 层 ${RETRIEVER === 'semantic' ? 'bge-m3 语义检索' : '关键词'} top-${TOP_K}（未 updateProfile）· 时序题未 parse 会话日期（已知偏差）`);
+  if (!DRY) lines.push(`- answer model: ${process.env.MEMOWEFT_LLM_MODEL || process.env.DLA_LLM_MODEL || '?'} · 答题 tokens: ${usage ? usage.totalTokens : 'n/a'} (calls with usage: ${usage ? usage.callsWithUsage : 'n/a'})`);
+  if (!DRY && (coreTot.llm || coreTot.embed)) lines.push(`- core 侧（updateProfile+recall）: llm ${coreTot.llm} + embed ${coreTot.embed} tokens · 全程合计: ${(usage?.totalTokens || 0) + coreTot.llm + coreTot.embed}`);
+  const recallDesc = LAYER === 'cognition'
+    ? `cognition 层 core.recall top-5（updateProfile 消化后·env bge-m3）`
+    : `evidence 层 ${RETRIEVER === 'semantic' ? 'bge-m3 语义检索' : '关键词'} top-${TOP_K}（未 updateProfile）`;
+  const hitColName = LAYER === 'cognition' ? 'cognition 溯源命中率' : 'evidence 层命中率';
+  lines.push(`- 召回:${recallDesc} · 会话日期${DATES ? '已注入' : '未注入(--no-dates)'}`);
   lines.push('');
-  lines.push('| category | n | evidence 层命中率 | ' + (DRY ? '' : '平均 F1 |'));
+  lines.push(`| category | n | ${hitColName} | ` + (DRY ? '' : '平均 F1 |'));
   lines.push('|---|---|---|' + (DRY ? '' : '---|'));
   for (const c of Object.keys(sum.byCat).sort()) {
     const b = sum.byCat[c];
@@ -219,7 +268,8 @@ async function main() {
   if (!DRY) {
     if (!existsSync(RUNS_DIR)) mkdirSync(RUNS_DIR, { recursive: true });
     const date = new Date().toISOString().slice(0, 10);
-    const out = resolve(RUNS_DIR, `${date}-${commit}-locomo-smoke.md`);
+    const armTag = (LAYER === 'cognition' ? 'cognition' : `evidence-${RETRIEVER}`) + (DATES ? '' : '-nodates');
+    const out = resolve(RUNS_DIR, `${date}-${commit}-locomo-${armTag}.md`);
     writeFileSync(out, report);
     console.log('written:', out);
   }
