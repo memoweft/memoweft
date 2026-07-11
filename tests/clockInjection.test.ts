@@ -11,6 +11,7 @@ import { SqliteCognitionStore } from '../src/cognition/store.ts';
 import { SqliteEventStore } from '../src/event/store.ts';
 import { createMemoWeftCore } from '../src/core/createCore.ts';
 import type { Clock } from '../src/clock.ts';
+import type { ChatMessage } from '../src/llm/client.ts';
 
 const AT = '2026-03-01T00:00:00.000Z';
 const fixedClock = (iso = AT): Clock => () => new Date(iso);
@@ -74,6 +75,40 @@ test('门面：createMemoWeftCore({ clock }) → 落库时间跟随注入的 clo
   try {
     const e = await core.ingestUserMessage({ content: 'hi', subjectId: 'u' });
     assert.equal(e.recordedAt, AT, 'core 门面注入的 clock 透传到 evidence store 的 recordedAt');
+  } finally {
+    core.close();
+  }
+});
+
+test('S2 写路径：固定 clock 下 core.updateProfile 产的认知时间戳 = 注入 clock', async () => {
+  // 极简离线 stub：distill 出一句事件；consolidate 出一条 new preference，引用真实 evidence id。
+  const stub = {
+    callCount: 0,
+    async chat(msgs: ChatMessage[]): Promise<string> {
+      this.callCount++;
+      const sys = msgs[0]?.content ?? '';
+      const body = msgs[1]?.content ?? '';
+      if (!/JSON/.test(sys)) return 'The user likes tea.';
+      // consolidate prompt 里 utterance 行格式：`  - [evidence-id] 原话`（缩进 + 方括号 id），同 no-key-demo。
+      const um = body.split('\n').map((l) => l.match(/^\s+- \[([^\]]+)\] /)).find(Boolean);
+      const eid = um ? um[1]! : 'x';
+      return JSON.stringify({
+        new: [{ content: 'User likes tea', content_type: 'preference', formed_by: 'stated', support_evidence_ids: [eid] }],
+        reinforce: [], correct: [], conflict: [],
+      });
+    },
+  };
+  const nullRet = { async indexAll() {}, async search() { return []; } };
+  const core = createMemoWeftCore({ dbPath: ':memory:', llm: stub, retriever: nullRet, clock: fixedClock() });
+  try {
+    await core.ingestUserMessage({ content: 'I like tea', subjectId: 'u', occurredAt: AT });
+    await core.updateProfile({ subjectId: 'u' });
+    const cogs = core.memory.listCognitions({ subjectId: 'u' });
+    assert.ok(cogs.length >= 1, '产出至少一条认知（写路径接线通）');
+    for (const c of cogs) {
+      assert.equal(c.createdAt, AT, '认知 createdAt = 注入 clock（consolidate → store clock）');
+      assert.equal(c.updatedAt, AT, '认知 updatedAt = 注入 clock');
+    }
   } finally {
     core.close();
   }

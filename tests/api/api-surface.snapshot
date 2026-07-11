@@ -57,7 +57,7 @@ interface AggregateTrendsDeps { cognitionStore: CognitionStore; config?: MemoWef
 interface ArchiveCognitionInput { cognitionId: string; reason: string; }
 interface AskPolicy { askableStatuses: Array<string>; confidenceBand: { min: number; max: number; }; maxAsks: number; }
 interface AskProposal { cognitionId: string; confidence: number; contradictEvidence?: Array<{ id: string; summary: string; }> | undefined; credStatus: CredStatus; evidence: Array<{ id: string; summary: string; }>; hypothesis: string; kind: 'hypothesis' | 'conflict'; question: string; }
-interface AttributeDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm: LLMClient; }
+interface AttributeDeps { clock?: Clock | undefined; cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm: LLMClient; }
 interface AttributeResult { consideredPhenomena: number; hypotheses: Array<AttributedHypothesis>; llmCalls: number; }
 interface AttributedHypothesis { basedOnEvidenceIds: Array<string>; cognition: Cognition; phenomenon: string; }
 interface BuildGraphDeps { cognitionStore: CognitionStore; eventStore: EventStore; evidenceStore: EvidenceStore; }
@@ -71,7 +71,7 @@ interface CognitionStore { active: (subjectId: string) => Cognition[]; addEviden
 interface CognitionWithMeta { archivedAt?: string | null | undefined; askedAt: string | null; confidence: number; content: string; contentType: ContentType; createdAt: string; credStatus: CredStatus; effectiveConfidence: number; formedBy: FormedBy; id: string; invalidAt: string | null; scope: string | null; sources: Array<EvidenceLink>; subjectId: string; updatedAt: string; validAt: string | null; }
 interface CognitionWithSources { archivedAt?: string | null | undefined; askedAt: string | null; confidence: number; content: string; contentType: ContentType; createdAt: string; credStatus: CredStatus; formedBy: FormedBy; id: string; invalidAt: string | null; scope: string | null; sources: Array<EvidenceLink>; subjectId: string; updatedAt: string; validAt: string | null; }
 interface ConfidenceInputs { contentType: ContentType; contradictCount: number; formedBy: FormedBy; supportCount: number; }
-interface ConsolidateDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; eventStore: EventStore; evidenceStore: EvidenceStore; llm: LLMClient; transaction?: Transaction | undefined; }
+interface ConsolidateDeps { clock?: Clock | undefined; cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; eventStore: EventStore; evidenceStore: EvidenceStore; llm: LLMClient; transaction?: Transaction | undefined; }
 interface ConsolidateResult { conflicted: number; corrected: number; created: Array<Cognition>; llmCalls: number; processedEvents: number; profileSize: number; promptChars: number; reinforced: number; }
 interface ConversationDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; llm: LLMClient; retriever: Retriever; seedTurns?: Array<Turn> | undefined; store: EvidenceStore; systemPrompt?: string | undefined; }
 interface ConversationInput { conversationId?: string | undefined; hostId?: string | undefined; message: string; occurredAt?: string | undefined; originId?: string | null | undefined; seedTurns?: Array<Turn> | undefined; subjectId?: string | undefined; systemPrompt?: string | undefined; }
@@ -161,7 +161,7 @@ interface Turn { content: string; role: 'user' | 'assistant'; }
 interface TurnOutcome { error: string | null; llmCalls: number; recall: Array<RecalledCognition>; reply: string; storedEvidence: Evidence; }
 interface TurnRecord { conflicts: Array<ConflictItem>; error: string | null; evidence: Array<{ id: string; summary: string; }>; hypotheses: Array<Hypothesis>; kind?: 'turn' | undefined; llmCalls: number; proactiveQuestion: string | null; profileChanges: Array<ProfileChange>; recall: Array<RecallItem>; reply: string; sessionId: string; ts: string; turn: number; userInput: string; }
 interface UpdateEvidenceAuthorizationInput { allowCloudRead?: boolean | undefined; allowInference?: boolean | undefined; evidenceId: string; reason: string; }
-interface UpdateProfileDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; eventStore: EventStore; evidenceStore: EvidenceStore; llm: LLMClient; retriever: Retriever; transaction?: Transaction | undefined; }
+interface UpdateProfileDeps { clock?: Clock | undefined; cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; eventStore: EventStore; evidenceStore: EvidenceStore; llm: LLMClient; retriever: Retriever; transaction?: Transaction | undefined; }
 interface UpdateProfileInput { subjectId?: string | undefined; }
 interface UpdateProfileResult { attributed: AttributeResult; consolidated: ConsolidateResult; distilled: DistillResult; indexError: string | null; indexed: number; metrics: { profileSize: number; promptChars: number; }; timings: UpdateProfileTimings; }
 interface UpdateProfileTimings { attributeMs: number; consolidateMs: number; distillMs: number; indexMs: number; totalMs: number; }

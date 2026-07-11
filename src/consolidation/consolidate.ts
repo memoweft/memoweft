@@ -20,6 +20,7 @@ import { filterReadableByTier } from '../evidence/privacy.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 import { noopTransaction, type Transaction } from '../store/transaction.ts';
 import { resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
+import { systemClock, type Clock } from '../clock.ts';
 import { CONSOLIDATE_PROMPT } from './prompts.ts';
 
 export interface ConsolidateDeps {
@@ -33,6 +34,8 @@ export interface ConsolidateDeps {
   transaction?: Transaction;
   /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例，行为同旧；传了则把握度阈值等按这份算。 */
   config?: MemoWeftConfig;
+  /** 可注入时钟（Phase 4）：correct/conflict 分支的显式时间戳走它；缺省真实系统时间。 */
+  clock?: Clock;
 }
 
 export interface ConsolidateResult {
@@ -170,7 +173,7 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   // 接了共享连接才真开事务；没接（各开各连接的测试）走 noopTransaction = 直接跑，行为同旧。
   const runTx = deps.transaction ?? noopTransaction;
   const mutation = runTx(() => {
-    const now = new Date().toISOString();
+    const now = (deps.clock ?? systemClock)().toISOString();
     const created: Cognition[] = [];
     let reinforced = 0;
     let corrected = 0;

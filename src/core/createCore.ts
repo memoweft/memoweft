@@ -388,6 +388,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         llm: pool.for('write'), // 写路径走小快模型（缺配自动回退 chat，见 llm/pool.ts）
         transaction,
         config: cfg,
+        clock: options.clock, // 透传注入时钟（缺省=系统时间）：consolidate/attribute 的显式时间戳走它
       });
     },
 

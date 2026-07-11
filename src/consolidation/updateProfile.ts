@@ -19,6 +19,7 @@ import type { Retriever } from '../retrieval/retriever.ts';
 import type { LLMClient } from '../llm/client.ts';
 import type { Transaction } from '../store/transaction.ts';
 import type { MemoWeftConfig } from '../config.ts';
+import type { Clock } from '../clock.ts';
 
 export interface UpdateProfileDeps {
   evidenceStore: EvidenceStore;
@@ -31,6 +32,8 @@ export interface UpdateProfileDeps {
   transaction?: Transaction;
   /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例；传了则透传给 consolidate / attribute。 */
   config?: MemoWeftConfig;
+  /** 可注入时钟（Phase 4）：透传给 consolidate / attribute 作显式时间戳/归因窗口上界；缺省真实系统时间。 */
+  clock?: Clock;
 }
 
 /** 各步耗时(ms)，治慢诊断用。 */
@@ -75,6 +78,7 @@ export async function updateProfile(subjectId: string, deps: UpdateProfileDeps):
     llm: deps.llm,
     transaction: deps.transaction, // 有共享连接就把 consolidate 的写入原子化；没有则 undefined = 直接跑
     config: deps.config, // 透传注入配置（缺省=单例）
+    clock: deps.clock, // 透传注入时钟（缺省=系统时间）
   });
   const t2 = Date.now();
   // M4 归因（自动并进）：对刚沉淀出的新现象推可解释假设。内部自带节流，无现象/无原因时不调模型。
@@ -83,6 +87,7 @@ export async function updateProfile(subjectId: string, deps: UpdateProfileDeps):
     cognitionStore: deps.cognitionStore,
     llm: deps.llm,
     config: deps.config, // 透传注入配置（缺省=单例）
+    clock: deps.clock, // 透传注入时钟（缺省=系统时间）
   });
   const t3 = Date.now();
   // 重建召回索引：只索引【未失效】的认知（被纠正/失效的不再被召回；含新产假设）。

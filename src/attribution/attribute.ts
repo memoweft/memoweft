@@ -20,6 +20,7 @@ import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
+import { systemClock, type Clock } from '../clock.ts';
 import { ATTRIBUTE_PROMPT } from './prompts.ts';
 
 export interface AttributeDeps {
@@ -28,6 +29,8 @@ export interface AttributeDeps {
   llm: LLMClient;
   /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例。 */
   config?: MemoWeftConfig;
+  /** 可注入时钟（Phase 4）：归因窗口上界"此刻"走它；缺省真实系统时间。 */
+  clock?: Clock;
 }
 
 /** 一条落库的可解释假设 + 它解释的现象 + 依据。 */
@@ -115,7 +118,7 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
   const before = deps.llm.callCount;
   const hypotheses: AttributedHypothesis[] = [];
   let considered = 0;
-  const upperBound = new Date().toISOString(); // 窗口上界放到"此刻"，吸收"抱怨后才注入观察"的录入时差
+  const upperBound = (deps.clock ?? systemClock)().toISOString(); // 窗口上界放到"此刻"（可注入 clock），吸收"抱怨后才注入观察"的录入时差
 
   for (const phenom of phenomena) {
     const phenomEvidences = supportOf(phenom.id)
