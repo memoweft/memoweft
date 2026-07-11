@@ -3,9 +3,11 @@
   // include 指向本包自己的 src/tests（extends 不继承 include，必须重写）。
   // memoweft 类型解析靠 workspace：devDependencies:{"memoweft":"*"} 软链到根仓，NodeNext 顺 exports.types
   //   找 dist/index.d.ts —— 前提是先 npm run build 出根 dist（同 Host/collector）。
+  // rootDir 指向仓库根：本包 tests 复用共享契约套件 tests/adapter-kit/（仓库根下），noEmit 档下 rootDir 仅
+  //   用于「所有源文件须在 rootDir 下」这一校验，指到根才容得下跨包共享的 kit（不影响输出，build 走另档）。
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": ".",
+    "rootDir": "../..",
     "noEmit": true
   },
   "include": ["src", "tests"]

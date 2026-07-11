@@ -9,7 +9,9 @@
  *   - tool description 用中性协议措辞，不复活人设（Core 无头）。
  *
  * 这一层只做"把 Core 门面翻译成 MCP tool"：取参 → 调门面 → 把结果包成
- * structuredContent + 一段可读 text。缺库/缺模型不崩：读 core.health() 给降级提示。
+ * structuredContent + 一段可读 text。handler 不做适配器层降级：门面抛错（缺库/缺模型/召回失败）
+ * 由 MCP SDK 兜成协议错误（isError）上浮，不调 core.health()、不静默吞。
+ * TODO(AD-6)：抛错/超时的「无记忆但对话不中断」降级 + 注入 logger 属后续契约（§21.3），此处暂不实现。
  */
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';

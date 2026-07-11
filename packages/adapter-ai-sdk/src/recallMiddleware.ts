@@ -32,7 +32,8 @@ export interface MemoWeftMiddlewareOptions {
    * 只影响适配器拼的这段说明文字，不改 Core 行为。
    */
   lang?: 'en' | 'zh';
-  /** 召回为空时的回调（可选，便于宿主观测/日志）。 */
+  /** 每次成功召回后的回调（可选，便于宿主观测/日志）；召回为空也会以空数组触发。
+   *  仅在 recall 成功返回后调用——无 user 文本（未召回）或 recall 抛错（降级）时不触发。 */
   onRecall?: (items: RecalledLike[]) => void;
 }
 

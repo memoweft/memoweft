@@ -48,9 +48,11 @@ function paramsWith(userText: string): TransformArg['params'] {
   } as unknown as TransformArg['params'];
 }
 
+// credStatus 用【真实枚举】(src/cognition/model.ts:29 = candidate|low|limited|stable|conflicted)。
+//   c2 用 'conflicted' 跑通冲突路径(冲突经 credStatus 隐式带出),别把非法形状锁进测试。
 const RECALLED = [
-  { id: 'c1', content: 'Prefers concise answers', confidence: 820, credStatus: 'corroborated', score: 0.9 },
-  { id: 'c2', content: 'Might be learning Rust', confidence: 220, credStatus: 'single-source', score: 0.7 },
+  { id: 'c1', content: 'Prefers concise answers', confidence: 820, credStatus: 'stable', score: 0.9 },
+  { id: 'c2', content: 'Might be learning Rust', confidence: 220, credStatus: 'conflicted', score: 0.7 },
 ] as unknown as RecalledCognition[];
 
 test('transformParams 把召回注进最后一条 user 消息，且用 Core knowledgeBlock 中性口径', async () => {

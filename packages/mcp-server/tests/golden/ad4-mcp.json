@@ -1,0 +1,25 @@
+{
+  "result": [
+    {
+      "id": "c1",
+      "content": "Prefers concise answers",
+      "confidence": 820,
+      "credStatus": "stable",
+      "score": 0.9
+    },
+    {
+      "id": "c2",
+      "content": "Might be learning Rust",
+      "confidence": 220,
+      "credStatus": "candidate",
+      "score": 0.7
+    },
+    {
+      "id": "c3",
+      "content": "Home timezone",
+      "confidence": 500,
+      "credStatus": "conflicted",
+      "score": 0.6
+    }
+  ]
+}

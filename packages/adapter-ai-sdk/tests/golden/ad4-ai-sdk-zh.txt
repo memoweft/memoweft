@@ -1,0 +1,5 @@
+你已了解关于这个用户的一些情况（带把握度；低置信的只是假设，别当定论、别生硬复述）：
+- Prefers concise answers（把握度 820/1000，stable）
+- Might be learning Rust（把握度 220/1000，candidate）
+- Home timezone（把握度 500/1000，conflicted）
+
