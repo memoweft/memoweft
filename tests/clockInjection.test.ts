@@ -12,6 +12,26 @@ import { SqliteEventStore } from '../src/event/store.ts';
 import { createMemoWeftCore } from '../src/core/createCore.ts';
 import type { Clock } from '../src/clock.ts';
 import type { ChatMessage } from '../src/llm/client.ts';
+import type { Retriever } from '../src/retrieval/retriever.ts';
+
+/** 简易词匹配召回器（同 no-key-demo）：按共享词打分，供衰减门控测试有东西可召回。 */
+function wordRetriever(): Retriever {
+  let items: Array<{ id: string; text: string }> = [];
+  const words = (s: string) => new Set(s.toLowerCase().split(/\W+/).filter(Boolean));
+  return {
+    async indexAll(next) {
+      items = [...next];
+    },
+    async search(query, topK) {
+      const q = words(query);
+      return items
+        .map((it) => ({ id: it.id, score: [...words(it.text)].filter((w) => q.has(w)).length }))
+        .filter((h) => h.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+    },
+  };
+}
 
 const AT = '2026-03-01T00:00:00.000Z';
 const fixedClock = (iso = AT): Clock => () => new Date(iso);
@@ -109,6 +129,47 @@ test('S2 写路径：固定 clock 下 core.updateProfile 产的认知时间戳 =
       assert.equal(c.createdAt, AT, '认知 createdAt = 注入 clock（consolidate → store clock）');
       assert.equal(c.updatedAt, AT, '认知 updatedAt = 注入 clock');
     }
+  } finally {
+    core.close();
+  }
+});
+
+test('S3 读路径：前进 clock → state 情绪衰减出局、fact 类留存（fast-forward 核心）', async () => {
+  // stub：consolidate 出一条 state（情绪，半衰期 1.5 天、封顶 300）+ 一条 preference（不衰减）。
+  const stub = {
+    callCount: 0,
+    async chat(msgs: ChatMessage[]): Promise<string> {
+      this.callCount++;
+      const sys = msgs[0]?.content ?? '';
+      const body = msgs[1]?.content ?? '';
+      if (!/JSON/.test(sys)) return 'The user is tired and likes tea.';
+      const um = body.split('\n').map((l) => l.match(/^\s+- \[([^\]]+)\] /)).find(Boolean);
+      const eid = um ? um[1]! : 'x';
+      return JSON.stringify({
+        new: [
+          { content: 'User feels tired lately', content_type: 'state', formed_by: 'stated', support_evidence_ids: [eid] },
+          { content: 'User likes tea', content_type: 'preference', formed_by: 'stated', support_evidence_ids: [eid] },
+        ],
+        reinforce: [], correct: [], conflict: [],
+      });
+    },
+  };
+  let t = new Date('2026-03-01T00:00:00.000Z');
+  const clock: Clock = () => t;
+  const core = createMemoWeftCore({ dbPath: ':memory:', llm: stub, retriever: wordRetriever(), clock });
+  try {
+    await core.ingestUserMessage({ content: 'I am tired and I like tea', subjectId: 'u', occurredAt: '2026-03-01T00:00:00.000Z' });
+    await core.updateProfile({ subjectId: 'u' });
+    const q = 'tired tea feel drink';
+
+    const base = await core.recall({ query: q, subjectId: 'u' });
+    assert.ok(base.some((h) => h.content.includes('tired')), 'base：情绪 state 被召回（有效置信高）');
+    assert.ok(base.some((h) => h.content.includes('tea')), 'base：偏好被召回');
+
+    t = new Date('2026-03-12T00:00:00.000Z'); // 前进 11 天
+    const future = await core.recall({ query: q, subjectId: 'u' });
+    assert.ok(!future.some((h) => h.content.includes('tired')), '前进 11 天后：情绪 state 衰减出局（淡出，不再注入）');
+    assert.ok(future.some((h) => h.content.includes('tea')), '前进后：偏好（不衰减）留存');
   } finally {
     core.close();
   }

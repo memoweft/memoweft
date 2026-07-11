@@ -12,7 +12,7 @@
  *   缺省与 dbPath 同库（vectors 表挂同一文件，testbench 同款）。
  */
 import { config as globalConfig, type MemoWeftConfig } from '../config.ts';
-import type { Clock } from '../clock.ts';
+import { systemClock, type Clock } from '../clock.ts';
 import { openStores } from '../store/openStores.ts';
 import { perceive } from '../pipeline/perceive.ts';
 import { Conversation, type TurnOutcome, type RecalledCognition } from '../pipeline/conversation.ts';
@@ -337,7 +337,8 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     },
 
     async recall(input) {
-      return recallCognitions(input.query, subjectOf(input.subjectId), { retriever, cognitionStore }, cfg);
+      // 读路径 now 走注入 clock（Phase 4 S3）：前进 clock → 淡了的情绪衰减出局、事实留存。
+      return recallCognitions(input.query, subjectOf(input.subjectId), { retriever, cognitionStore }, cfg, (options.clock ?? systemClock)());
     },
 
     async handleConversationTurn(input) {
@@ -352,6 +353,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
           config: cfg,
           systemPrompt: input.systemPrompt,
           seedTurns: input.seedTurns,
+          clock: options.clock, // 读路径 now 走注入 clock（Phase 4 S3）
         });
         conversations.set(id, convo);
       }

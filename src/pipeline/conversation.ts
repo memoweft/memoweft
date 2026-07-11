@@ -17,6 +17,7 @@ import { WorkingMemory, type Turn } from './workingMemory.ts';
 import { perceive, type PerceiveOptions } from './perceive.ts';
 import { reply, type RelevantCognition } from './action.ts';
 import { recallCognitions } from '../retrieval/recall.ts';
+import { systemClock, type Clock } from '../clock.ts';
 
 export interface ConversationDeps {
   store: EvidenceStore;
@@ -32,6 +33,8 @@ export interface ConversationDeps {
   seedTurns?: Turn[];
   /** 宿主注入的回话人设/系统提示（cell 9：语气·角色归宿主）；缺省用库内最朴素提示。 */
   systemPrompt?: string;
+  /** 可注入时钟（Phase 4）：召回衰减门控的"现在"走它；缺省真实系统时间。前进它 → 淡了的情绪衰减出局。 */
+  clock?: Clock;
 }
 
 /** 召回到、注入了回话的一条（含相似度，供透视）。 */
@@ -72,7 +75,7 @@ export class Conversation {
     // Conversation 与 core.recall 共用同一段；这里只保留"失败不挡回话"的容错壳。
     let recall: RecalledCognition[] = [];
     try {
-      recall = await recallCognitions(userMsg, stored.subjectId, { retriever, cognitionStore }, cfg);
+      recall = await recallCognitions(userMsg, stored.subjectId, { retriever, cognitionStore }, cfg, (this.deps.clock ?? systemClock)());
     } catch {
       /* 召回失败 → 当作无召回，照常回话 */
     }
