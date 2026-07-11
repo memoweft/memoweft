@@ -106,11 +106,6 @@ jobs:
       - name: Core Build
         run: npm run build
 
-      # docs 里【未标 snippet:skip】的 ts 围栏逐个冒烟跑(无 key、内存库,靠上一步 build 出的 dist)。
-      # 需模型 / 长驻服务 / 非自包含的片段用 <!-- snippet:skip --> 显式跳过(§18.3)。
-      - name: Docs — runnable snippets
-        run: npm run docs:snippets
-
       - name: Host Typecheck
         run: npm run typecheck -w @memoweft/host
 
@@ -143,6 +138,11 @@ jobs:
 
       - name: AI SDK Adapter Build
         run: npm run build -w @memoweft/adapter-ai-sdk
+
+      # docs 里【未标 snippet:skip】的 ts 围栏逐个冒烟跑(无 key、内存库)。放在所有 workspace build
+      #   之后:vercel recipe 的验证片段 import '@memoweft/adapter-ai-sdk',需 adapter 的 dist 也 build 好(§18.3)。
+      - name: Docs — runnable snippets
+        run: npm run docs:snippets
 
   # ── 触达矩阵：Node 22 走 better-sqlite3 驱动跑全套 .ts 测试 ──────────────────
   better-sqlite3-node22:
