@@ -10,171 +10,73 @@
 
 **Portable memory for AI apps — facts, guesses, conflicts, and stale states kept apart.**
 
-面向 AI 应用的可迁移长期记忆层：让助手记住用户，并分清事实、猜测、冲突与过期状态。
-
-给 AI 应用一份带得走的长期记忆：换模型不失忆，记得住，也不乱信。
-
-MemoWeft is a library that lets AI apps keep portable, traceable long-term memory about a user. It separates facts from guesses, exposes conflicts instead of silently overwriting them, and lets different hosts reuse the same memory.
-
 [![npm](https://img.shields.io/npm/v/memoweft?style=flat-square&labelColor=14110B&color=E2A75E)](https://www.npmjs.com/package/memoweft)
 [![CI](https://img.shields.io/github/actions/workflow/status/memoweft/memoweft/ci.yml?style=flat-square&labelColor=14110B&label=CI)](https://github.com/memoweft/memoweft/actions/workflows/ci.yml)
 [![coverage](https://img.shields.io/badge/coverage-97.42%25-4A4438?style=flat-square&labelColor=14110B)](#project-status)
 [![runtime deps](https://img.shields.io/badge/runtime%20deps-zero-4A4438?style=flat-square&labelColor=14110B)](#project-status)
 [![license](https://img.shields.io/badge/license-MIT-4A4438?style=flat-square&labelColor=14110B)](LICENSE)
 
-[Run the demo](#run-the-demo) · [Why it is different](#why-it-is-different) · [Use as a library](#use-it-as-a-library) · [Reference host](#reference-host-demo) · [Docs](#documentation)
+[Why](#why-not-just-another-memory-library) · [Install](#60-second-install-and-first-call) · [Reference host](#try-the-reference-host) · [Docs](#where-to-go-next)
 
 **English** · [简体中文](./README.zh-CN.md)
 
 </div>
 
-## Run the demo
+![MemoWeft reference host demo — chat, watch memory form, and open the memory graph of evidence, events, and cognitions](assets/reference-host-demo.gif)
 
-The bundled reference host requires Node.js 24 or newer.
+MemoWeft is a library you `import` into an AI app. It keeps portable, traceable long-term memory about a user — separating facts from guesses, exposing conflicts instead of silently overwriting them, and letting different hosts reuse the same memory.
 
-```bash
-git clone https://github.com/memoweft/memoweft.git
-cd memoweft
-npm install
-npm run build
-npm start -w @memoweft/host
-```
+## Why not just another memory library?
 
-Open:
+- **Facts and guesses stay apart.** Model inferences begin as low-confidence hypotheses, never facts — what the user actually said and what a model guessed are different kinds of record.
+- **Conflicts are surfaced, not overwritten.** Contradictory information is exposed and kept side by side; MemoWeft never silently picks a winner.
+- **Confidence is computed by rule, not self-reported.** Each cognition is scored from evidence strength and corroboration — a model never sets its own credibility.
 
-```text
-http://localhost:7788
-```
+Three more disciplines (typed decay, traceability, and no self-corroboration) are backed by numbered eval cases in [`tests/eval/`](./tests/eval/) — run `npm test`.
 
-This starts the bundled **reference host demo**. It demonstrates MemoWeft Core in an app; it is not the product or the library itself. On first launch, point the setup screen at an OpenAI-compatible model endpoint.
-
-## What it is
-
-MemoWeft is a library you `import` into an AI application. It owns memory correctness and returns relevant, traceable user context when a host asks for it.
-
-| Layer                                     | Responsibility                                                                          |
-| ----------------------------------------- | --------------------------------------------------------------------------------------- |
-| **Core** (`src/`, npm package `memoweft`) | Evidence, events, cognitions, confidence, conflicts, recall, and controlled memory APIs |
-| **Host** (`apps/memoweft-host`)           | Chat, UI, persona, consent, and when or how memory is used                              |
-| **Plugins** (`plugins/`)                  | Optional collectors and experience extensions, subject to host and Core boundaries      |
-
-MemoWeft does not ship a chat product, persona, or UI. Those belong to the host.
-
-## Why it exists
-
-Changing models or hosts often resets everything an assistant learned about a user. Stuffing an ever-growing transcript into a prompt is expensive, hard to trace, and difficult to migrate.
-
-MemoWeft treats the understanding of a user as a durable data asset: it can be accumulated over time, traced back to evidence, exported, and reused across models and hosts.
-
-## Why it is different
-
-- **Recorded does not mean believed.** Stored evidence and accepted cognition are different things.
-- **Facts and guesses stay separate.** Model inferences begin as low-confidence hypotheses, not facts.
-- **Conflicts are surfaced.** Contradictory information is exposed instead of silently overwritten.
-- **Confidence is computed by MemoWeft.** The library uses evidence strength and corroboration instead of trusting a model's self-reported score.
-- **Temporary states fade.** Short-lived moods decay while durable preferences persist.
-- **Every cognition is traceable.** Judgments link back to the evidence that formed them.
-- **The assistant cannot corroborate itself.** Its own output and user silence are not treated as evidence.
-
-These rules are backed by numbered eval cases in [`tests/eval/cognition-discipline.eval.test.ts`](./tests/eval/cognition-discipline.eval.test.ts) and run with `npm test`.
-
-## Use it as a library
-
-Install the Core package:
+## 60-second install and first call
 
 ```bash
-npm install memoweft
+npm install memoweft   # Node 24: built-in node:sqlite. Node 20/22: also `npm i better-sqlite3`
 ```
-
-Node.js 24 works with the built-in `node:sqlite` driver. On Node.js 20 or 22, also install the optional `better-sqlite3` peer dependency.
-
-Configure any OpenAI-compatible endpoint:
-
-```bash
-MEMOWEFT_LLM_BASE_URL=https://your-endpoint/v1
-MEMOWEFT_LLM_API_KEY=sk-...
-MEMOWEFT_LLM_MODEL=gpt-4o-mini
-```
-
-Then create and use the Core through its public entry point:
 
 ```ts
 import { createMemoWeftCore } from 'memoweft';
 
 const core = createMemoWeftCore({ dbPath: './memoweft.db' });
-const subjectId = 'user-42';
+await core.ingestUserMessage({ subjectId: 'user-42', content: 'I only drink decaf after 3pm — caffeine wrecks my sleep.' });
+await core.updateProfile({ subjectId: 'user-42' });   // needs an OpenAI-compatible model (.env)
 
-await core.ingestUserMessage({
-  subjectId,
-  content: 'I only drink decaf after 3pm because caffeine disrupts my sleep.',
-});
-
-await core.updateProfile({ subjectId });
-
-const turn = await core.handleConversationTurn({
-  subjectId,
-  message: 'Recommend an afternoon drink.',
-});
-
+const turn = await core.handleConversationTurn({ subjectId: 'user-42', message: 'Recommend an afternoon drink.' });
 console.log(turn.reply);
-console.log(turn.recall);
-
 core.close();
 ```
 
-A runnable version is in [`examples/minimal.ts`](./examples/minimal.ts). See the [examples index](./examples/README.md) and [integration guide](./docs/integration.md) for the rest of the public surface.
+No API key? [`examples/no-key-demo.ts`](./examples/no-key-demo.ts) runs the same write path against an offline stub — watch a conflict get exposed (not overwritten) in about 30 seconds.
 
-No API key handy? [`examples/no-key-demo.ts`](./examples/no-key-demo.ts) runs the same write path against an offline stub LLM — zero config, no network — so you can watch a conflict get exposed (not overwritten) and guesses stay apart from facts in ~30 seconds.
+## Try the reference host
 
-## Reference host demo
+The bundled reference host is a **demo, not the product**. It shows how an app uses Core — chat with recall, watch memory form, and inspect the evidence → event → cognition graph. Needs Node 24+.
 
-The bundled host is a reference implementation that shows how an application can use Core without reaching into its stores. It demonstrates chat with recall, visible memory formation, evidence and cognition inspection, memory management, portable bundles, and plugin or observation flows.
+```bash
+git clone https://github.com/memoweft/memoweft.git
+cd memoweft && npm install && npm run build
+npm start -w @memoweft/host    # then open http://localhost:7788
+```
 
-Read [what the reference host is and is not](./docs/reference-host.md).
+More: [what the reference host is and is not](./docs/reference-host.md).
 
-![MemoWeft reference host demo — chatting, watching memory form, and the memory graph of evidence, events, and cognitions](assets/reference-host-demo.gif)
+## Where to go next
 
-*End to end: chat with the assistant → watch memory form → open the memory graph.*
+- **[Getting started](./docs/getting-started.md)** — install, store one piece of evidence, read it back. Five minutes.
+- **[Concepts](./docs/concepts/)** — the six cognitive-discipline rules, one screen each.
+- **[Recipes](./docs/recipes/)** — drop MemoWeft into the [Vercel AI SDK](./packages/adapter-ai-sdk) or an [MCP server](./packages/mcp-server).
 
-![MemoWeft reference host chat with memory recall and memory controls](assets/screenshot-chat.png)
-
-*Chat with recall — the top bar shows what it remembers and a one-click "organize memory".*
-
-![MemoWeft reference host memory graph connecting evidence, events, and cognitions](assets/screenshot-memory-graph.png)
-
-*Memory graph — how evidence becomes events becomes cognitions, including conflict and correction edges.*
-
-![MemoWeft reference host cognition cards with confidence and source traces](assets/screenshot-memory-manage.png)
-
-*Cognition cards — each carries a MemoWeft-computed confidence and traces back to its source evidence.*
-
-## Ecosystem adapters
-
-- [`@memoweft/mcp-server`](./packages/mcp-server) exposes guarded MemoWeft read and write tools over the Model Context Protocol.
-- [`@memoweft/adapter-ai-sdk`](./packages/adapter-ai-sdk) adds recall and evidence capture to the Vercel AI SDK.
-
-Both are thin adapters over the same Core rules; they do not change the Core package's zero-runtime-dependency baseline.
-
-## Documentation
-
-Start with the [public documentation index](./docs/README.md).
-
-Key guides cover [integration](./docs/integration.md), [architecture](./docs/internals/architecture.md), [deployment](./docs/deployment.md), the [public memory surface contract](./docs/memory-surface-contract.md), and the [plugin contract](./docs/plugin-contract.md).
-
-## Repository layout
-
-- `src/` — MemoWeft Core library.
-- `apps/memoweft-host/` — bundled reference host demo.
-- `packages/` — ecosystem adapters such as MCP and AI SDK.
-- `plugins/` — optional collectors and experience plugins.
-- `examples/` — small integration examples.
-- `docs/` — public documentation.
+Full documentation index: [`docs/README.md`](./docs/README.md).
 
 ## Project status
 
-MemoWeft is pre-1.0 and library-first. Core behavior is implemented and tested, but interfaces may still change between minor releases. Stable, experimental, and internal surfaces are documented in the [Memory Surface Contract](./docs/memory-surface-contract.md).
-
-Latest release: **0.5.0** — `npm install memoweft`.
+Pre-1.0 and library-first. Core is implemented and tested, but interfaces may still change between minor releases — stable, experimental, and internal surfaces are documented in the [Memory Surface Contract](./docs/reference/memory-surface-contract.md). **Zero runtime dependencies.**
 
 See the [roadmap](./ROADMAP.md), [contribution guide](./CONTRIBUTING.md), and [changelog](./CHANGELOG.md).
 

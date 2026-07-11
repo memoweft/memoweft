@@ -1,6 +1,6 @@
 # CURRENT — 当前状态(Integrator 每个工作段落结束更新)
 
-更新于:2026-07-11 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二批中文版 + 第三批 internals 迁移已落地本地;剩 README 电梯稿/glossary(并 naming 拆分)/CI 自动化/巡检)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
+更新于:2026-07-11 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~四批(中文版 / internals 迁移 / README 电梯稿)已落地本地;剩 glossary(并 naming 拆分)/CI 自动化/巡检)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
 
 ## Phase 5:文档更不绕(§18)—— 第一批用户文档已上线(已推 origin main)
 
@@ -26,6 +26,13 @@
 - **改活入链**(architecture 5 + 中文 4 改指英文单源 + boundaries 5 + perf 1,含新中文页 concepts 2 处)+ 建 `internals/README`(D-b 分区索引)+ 清 `internal/README` 的 boundaries 条目。
 - **boundaries 保留中文**(D-0016:D-a 英文单源的例外——纯中文无英文版,翻译损耗>收益);naming 拆分移到第 4 项(和 glossary 一起,避免词表悬空)。
 - 验证:死链 0(`check-links.mjs`:52 文件 271 链接)、typecheck/api:check「一致」;既存缺陷(boundaries 无编号锚点 vs 源码 §引用)记 ROADMAP。
+- **独立 reviewer 复查抓到并修正 3 处**(`fe938e3`):§5 删 Mem0 bullet 后「Three implementations」悬空计数→「Two」、§4「Five/Six」口径去数字、en correct-conflict 漏改的 architecture 入链→指 internals 真身。三处陈旧点值经 reviewer 逐一对源码确认一致。
+
+**第四批:README 60 秒电梯稿已落地(本地未推)**:
+- 根 `README.md` + `README.zh-CN.md` 双语重写:184 行 → ~70 行,照 §18.1 结构(一句定位 → demo GIF → 「为什么不是又一个记忆库」3 句 → 60 秒安装+首次调用 → 三入口)。
+- 4 条重复定位句(英文版里还混着 2 句中文)收敛成 1;Why different 7 条 → 3 句核心;reference host 保留精简一键启动 + GIF、4 张截图移 `docs/reference-host`(人类拍板:留精简启动、删三层表格)。
+- 三入口更新为 getting-started/concepts/recipes;memory-surface-contract 链接改指 `reference/` 正本。
+- 验证:死链 0(`check-links.mjs`:53 文件 282 链接,含 README 双语)、中文锚点无残留 warn。
 
 **三决策(见工件 `docs/internal/phase5-migration-map.md`,含全表映射)**:
 - **D-a 分层双语**:用户页(README/getting-started/concepts/recipes/glossary/契约)双语;internals(architecture/boundaries/perf)英文单源。
@@ -35,7 +42,7 @@
 **剩余(后续批,迁移映射表是蓝图)**:
 1. ~~concepts/recipes/getting-started 的**中文版** zh-CN(分层双语)~~ ✅ **已落地**(本地未推,见上「第二批」)。
 2. ~~**architecture/boundaries/perf → `docs/internals/`**(迁移 + 修 sourceKind 陈旧 + 改入链 + 旧位留桩)~~ ✅ **已落地**(本地未推,见上「第三批」);naming 拆分移到第 4 项(和 glossary 一起做)。
-3. 根 **README 收敛成 60 秒电梯稿**(§18.1;现有 README 4 条重复定位句收敛成 1)。
+3. ~~根 **README 收敛成 60 秒电梯稿**(§18.1;现有 README 4 条重复定位句收敛成 1)~~ ✅ **已落地**(本地未推,见上「第四批」)。
 4. **glossary.md**(naming §3 词表提炼)。
 5. **§18.3 snippets 进 CI**(`scripts/doc-snippets.mjs`:抽 md 里 ts 围栏逐个编译+跑,`<!-- snippet:skip -->` 跳过)+ **§18.4 死链检查进 CI**(把本会话手动跑的 node 死链脚本自动化)。
 6. **§18.5 新人视角巡检**("仍然绕"清单 → 逐条处理)。
