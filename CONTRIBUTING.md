@@ -100,7 +100,7 @@ Code and docs move together; don't just get the code green:
 - After a rename, **recognize both prefixes**: when reading each env key, the code reads the primary `MEMOWEFT_*` name first, and falls back to the old `DLA_*` name if not found. Docs always write `MEMOWEFT_*`, and note that `DLA_*` remains backward-compatible.
 - **Don't touch `.env`** (which contains the user's real keys), and don't delete / change the old `DLA_*` keys—only add `MEMOWEFT_*`, letting the code recognize both sets.
 - Keys involved: `MEMOWEFT_LLM_*`, `MEMOWEFT_WRITE_LLM_*`, `MEMOWEFT_EMBED_*` (each backward-compatible with the corresponding `DLA_*`).
-- The default SQLite filename `./dla.db` doesn't change (changing it would break away from the existing data file in the root); the physical directory name `DLA_rebuild` doesn't change.
+- The default SQLite filename `./dla.db` doesn't change (changing it would break away from the existing data file in the root); the physical directory name `memoweft` doesn't change.
 
 ---
 

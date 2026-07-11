@@ -101,7 +101,7 @@ Host 与采集插件各有独立测试：`npm test -w @memoweft/host`、`npm tes
 - 改名后**双认前缀**：代码读每个 env 键都先读 `MEMOWEFT_*` 主名、读不到再回退旧名 `DLA_*`。文档一律写 `MEMOWEFT_*`，并注明 `DLA_*` 仍向后兼容。
 - **别碰 `.env`**（含用户真实密钥），也别删 / 改 `DLA_*` 旧键——只新增 `MEMOWEFT_*`，让代码同时认两套。
 - 涉及的键：`MEMOWEFT_LLM_*`、`MEMOWEFT_WRITE_LLM_*`、`MEMOWEFT_EMBED_*`（各自兼容对应 `DLA_*`）。
-- 默认 SQLite 文件名 `./dla.db` 不改（改了会脱离根目录已有数据文件）；物理目录名 `DLA_rebuild` 不改。
+- 默认 SQLite 文件名 `./dla.db` 不改（改了会脱离根目录已有数据文件）；物理目录名 `memoweft` 不改。
 
 ---
 

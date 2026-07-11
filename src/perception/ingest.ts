@@ -21,7 +21,7 @@ export interface Observation {
   kind: string;
   /** 观察发生时刻（ISO，必带——cell 7：每条证据必带精确时间）。 */
   occurredAt: string;
-  /** 标准化后的人类可读串，例："在 VS Code（DLA_rebuild）停留约 40 分钟"。 */
+  /** 标准化后的人类可读串，例："在 VS Code（memoweft）停留约 40 分钟"。 */
   content: string;
   /** 幂等键（同一窗口会话不重复落）；缺省 = 不去重。 */
   originId?: string | null;

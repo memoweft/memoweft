@@ -14,7 +14,7 @@ import type { Observation } from 'memoweft';
 export interface ActiveWindowSample {
   /** 应用名，例 "VS Code"。 */
   app: string;
-  /** 窗口标题，例 "DLA_rebuild"。本版不读正文，只取标题。 */
+  /** 窗口标题，例 "memoweft"。本版不读正文，只取标题。 */
   title: string;
   /** 停留时长（秒），采集器算好。 */
   durationSec: number;

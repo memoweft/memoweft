@@ -43,7 +43,7 @@ function makeHarness(over: { minDurationSec?: number; onEmit?: (e: ActiveWindowE
   return { collector, emitted, sampledAt, errors, feed, setNow };
 }
 
-const A: ForegroundWindow = { app: 'Code', title: 'DLA_rebuild' };
+const A: ForegroundWindow = { app: 'Code', title: 'memoweft' };
 const B: ForegroundWindow = { app: 'chrome', title: 'GitHub' };
 
 test('采集循环：连续相同 app+title 合并累计，切换时旧段产出（时长按真实时钟差）', async () => {
@@ -57,7 +57,7 @@ test('采集循环：连续相同 app+title 合并累计，切换时旧段产出
   assert.equal(h.emitted.length, 1, '切换产出一段');
   const { sample, observation } = h.emitted[0]!;
   assert.equal(sample.app, 'Code');
-  assert.equal(sample.title, 'DLA_rebuild');
+  assert.equal(sample.title, 'memoweft');
   assert.equal(sample.durationSec, 40, '合并时长 = 段首到发现切换（0→40s）');
   assert.equal(sample.occurredAt, new Date(0).toISOString(), 'occurredAt = 段开始时刻');
   // 产出走 activeWindowToObservation：kind / 幂等键 / meta 都在
