@@ -40,6 +40,7 @@ dogfood*.mjs
 tmp/
 temp/
 scratch/
+.doc-snippets-tmp/
 .cache/
 task-logs/
 worklogs/

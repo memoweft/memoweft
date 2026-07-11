@@ -99,6 +99,7 @@ what the user said/did         a situational summary of a    understanding of th
 
 Prefer going through the unified entry `createMemoWeftCore` for everything: one line assembles the three-layer stores + retriever + model pool (all read from `.env`, degrading gracefully instead of crashing when config is missing), so the host does not hand-wire the low-level parts.
 
+<!-- snippet:skip (needs a live model) -->
 ```ts
 import { createMemoWeftCore } from 'memoweft';
 
@@ -137,6 +138,7 @@ core.close();
 
 Besides conversation, a host can also feed desktop, device, and window observations into the evidence layer. Core provides only a **generic observation ingest port**, `core.ingestObservation({ observations })`: it lands the host's normalized `Observation`s as `observed` evidence (not cloud-readable by default; idempotent by `originId`).
 
+<!-- snippet:skip (continues the snippet above; needs a live model) -->
 ```ts
 import type { Observation } from 'memoweft';
 

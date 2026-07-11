@@ -40,6 +40,7 @@ Three more disciplines (typed decay, traceability, and no self-corroboration) ar
 npm install memoweft   # Node 24: built-in node:sqlite. Node 20/22: also `npm i better-sqlite3`
 ```
 
+<!-- snippet:skip (needs a live model for updateProfile / handleConversationTurn) -->
 ```ts
 import { createMemoWeftCore } from 'memoweft';
 

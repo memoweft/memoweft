@@ -84,6 +84,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # docs 内链死链检查(不需 build):任何指向不存在文件的相对链接挡在 PR 外(§18.4)。
+      - name: Docs — dead links
+        run: npm run docs:links
+
       - name: Core Typecheck
         run: npm run typecheck
 
@@ -101,6 +105,11 @@ jobs:
 
       - name: Core Build
         run: npm run build
+
+      # docs 里【未标 snippet:skip】的 ts 围栏逐个冒烟跑(无 key、内存库,靠上一步 build 出的 dist)。
+      # 需模型 / 长驻服务 / 非自包含的片段用 <!-- snippet:skip --> 显式跳过(§18.3)。
+      - name: Docs — runnable snippets
+        run: npm run docs:snippets
 
       - name: Host Typecheck
         run: npm run typecheck -w @memoweft/host

@@ -1,6 +1,6 @@
 # CURRENT — 当前状态(Integrator 每个工作段落结束更新)
 
-更新于:2026-07-11 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~五批(中文版 / internals / README 电梯稿 / glossary+naming 拆分)已落地本地;剩 CI 自动化/巡检)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
+更新于:2026-07-11 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~六批(中文版 / internals / README / glossary+naming / 文档 CI)已落地本地;剩 新人巡检+打 tag)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
 
 ## Phase 5:文档更不绕(§18)—— 第一批用户文档已上线(已推 origin main)
 
@@ -41,6 +41,13 @@
 - docs/README Reference 节加 glossary 入口。
 - 验证:死链 0(56 文件 299 链接)、typecheck/api:check「一致」。
 
+**第六批:文档 CI 自动化已落地(本地未推)**:
+- `scripts/doc-links.mjs`(§18.4 死链):扫 docs + README 相对内链,硬查路径存在(死链 → exit 1)、锚点软警告(中文 slug 跨渲染器不稳只提示)。
+- `scripts/doc-snippets.mjs`(§18.3):抽 docs + README 里【未标 `snippet:skip`】的 ts 围栏 → 写临时文件用 Node 冒烟跑(无 key、内存库、靠 build 出的 dist 做包 self-reference)。**25 个可运行片段全绿**(含全部中文版);需模型/长驻/非自包含的片段标 skip。
+- 顺手补 6 处 `snippet:skip`:README 电梯稿 ts(en+zh,需 model)、integration.md/zh 两片段(需 model / 接上文非自包含)。
+- `ci.yml` guardrails 加两 step:Docs dead-links(Lint 后、不需 build)+ Docs runnable-snippets(Core Build 后、靠 dist);`package.json` 加 `docs:links` / `docs:snippets`;`.gitignore` 加临时目录。
+- 本地全绿(docs:links deadPath 0 · docs:snippets 25 passed)、YAML 校验通过;**CI 真跑待下次 push**。
+
 **三决策(见工件 `docs/internal/phase5-migration-map.md`,含全表映射)**:
 - **D-a 分层双语**:用户页(README/getting-started/concepts/recipes/glossary/契约)双语;internals(architecture/boundaries/perf)英文单源。
 - **D-b 目录分工**:`docs/internals/`(新·"怎么建的":architecture/boundaries/perf)vs `docs/internal/`(旧·维护者账本:halumem/calibration/runbook/publishing)。
@@ -51,7 +58,7 @@
 2. ~~**architecture/boundaries/perf → `docs/internals/`**(迁移 + 修 sourceKind 陈旧 + 改入链 + 旧位留桩)~~ ✅ **已落地**(本地未推,见上「第三批」);naming 拆分移到第 4 项(和 glossary 一起做)。
 3. ~~根 **README 收敛成 60 秒电梯稿**(§18.1;现有 README 4 条重复定位句收敛成 1)~~ ✅ **已落地**(本地未推,见上「第四批」)。
 4. ~~**glossary.md**(naming §3 词表提炼)~~ ✅ **已落地**(本地未推,见上「第五批」;含 naming 拆分 + 11 处 host 注释入链分流)。
-5. **§18.3 snippets 进 CI**(`scripts/doc-snippets.mjs`:抽 md 里 ts 围栏逐个编译+跑,`<!-- snippet:skip -->` 跳过)+ **§18.4 死链检查进 CI**(把本会话手动跑的 node 死链脚本自动化)。
+5. ~~**§18.3 snippets 进 CI** + **§18.4 死链检查进 CI**~~ ✅ **已落地**(本地未推,见上「第六批」;25 片段全绿、死链 0,CI 真跑待 push)。
 6. **§18.5 新人视角巡检**("仍然绕"清单 → 逐条处理)。
 7. 收尾:打 tag `phase-5-done`(人类)。
 

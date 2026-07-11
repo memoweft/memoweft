@@ -44,6 +44,8 @@
     "bench:retrieval": "node bench/eval-retrieval.mjs",
     "bench:consolidation": "node bench/eval-consolidation.mjs",
     "smoke:dist": "node tests/smoke/dist-smoke.mjs",
+    "docs:links": "node scripts/doc-links.mjs",
+    "docs:snippets": "node scripts/doc-snippets.mjs",
     "dev:core": "tsc -p tsconfig.build.json --watch",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },

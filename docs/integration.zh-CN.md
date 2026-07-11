@@ -98,6 +98,7 @@ evidence（证据·原始事实） → event（事件·情境化） → cognitio
 
 推荐一律经统一入口 `createMemoWeftCore` 调 Core：一行把三层 store + 召回器 + 模型池装好（全部从 `.env` 读、缺配自动降级不崩），宿主不用自己拼底层件。
 
+<!-- snippet:skip (needs a live model) -->
 ```ts
 import { createMemoWeftCore } from 'memoweft';
 
@@ -135,6 +136,7 @@ core.close();
 
 除了对话，宿主也可以把桌面、设备、窗口等观察统一灌进 evidence 层。Core 只提供**通用观察摄入口** `core.ingestObservation({ observations })`：它把宿主标准化好的 `Observation` 落成 `observed` 证据（默认不上云、带 `originId` 幂等）。
 
+<!-- snippet:skip (continues the snippet above; needs a live model) -->
 ```ts
 import type { Observation } from 'memoweft';
 

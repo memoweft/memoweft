@@ -40,6 +40,7 @@ MemoWeft 是一个供 AI 应用 `import` 的库。它为用户保存可迁移、
 npm install memoweft   # Node 24 用内置 node:sqlite；Node 20/22 还需 `npm i better-sqlite3`
 ```
 
+<!-- snippet:skip (needs a live model for updateProfile / handleConversationTurn) -->
 ```ts
 import { createMemoWeftCore } from 'memoweft';
 
