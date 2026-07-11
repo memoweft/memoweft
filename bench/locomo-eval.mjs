@@ -26,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { createMemoWeftCore } from '../src/core/createCore.ts';
 import { OpenAICompatClient } from '../src/llm/client.ts';
+import { loadEmbedConfig, OpenAICompatEmbedder } from '../src/retrieval/embedder.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RUNS_DIR = resolve(HERE, 'runs');
@@ -41,6 +42,8 @@ const DRY = argv.includes('--dry');
 const getNum = (flag, def) => { const i = argv.indexOf(flag); return i >= 0 && argv[i + 1] ? Number(argv[i + 1]) : def; };
 const LIMIT = getNum('--limit', Infinity); // 跑前 N 个 sample
 const QA_LIMIT = getNum('--qa', Infinity); // 每 sample 前 M 道 QA
+const RETRIEVER = (() => { const i = argv.indexOf('--retriever'); return i >= 0 && argv[i + 1] ? argv[i + 1] : 'keyword'; })(); // keyword | semantic（bge-m3 语义检索,读 env embedder）
+const MAXTURNS = getNum('--max-turns', Infinity); // 冒烟限回放轮数（本地 embed 慢,减 evidence 量;keyword 与 semantic 用同值才可比）
 
 // ── F1（归一化 partial-match 词重叠,LoCoMo 标准）──────────────────────────────
 const STOP = new Set(['a', 'an', 'the', 'of', 'to', 'in', 'on', 'at', 'is', 'was', 'were', 'and', 'or', 'for']);
@@ -85,6 +88,19 @@ function retrieveTopK(evidences, question, k) {
   return scored.slice(0, k).map((x) => x.e);
 }
 
+// 语义检索:逐条 embed（实测本地 ollama bge-m3 的 batch embed 异常慢——5 条就 >90s、单条仅 ~1s;
+//   逐条串行绕过这个 batch 退化）+ 手算 cosine。本地 CPU 下仍 ~1s/条,完整跑需 GPU 或云 embedder。
+async function embedAll(embedder, texts, batch = 1) {
+  const out = [];
+  for (let i = 0; i < texts.length; i += batch) out.push(...(await embedder.embed(texts.slice(i, i + batch))));
+  return out;
+}
+function cosine(a, b) {
+  let d = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return d / (Math.sqrt(na) * Math.sqrt(nb) + 1e-9);
+}
+
 // ── 答案 LLM（外挂,读 .env）─────────────────────────────────────────────────
 async function answer(llm, excerpts, question) {
   const ctx = excerpts.map((e) => e.rawContent).join('\n');
@@ -100,17 +116,37 @@ async function answer(llm, excerpts, question) {
 async function runSample(sample, llm) {
   const core = createMemoWeftCore({ dbPath: ':memory:' });
   const subjectId = sample.id;
-  for (const t of sample.turns) {
+  for (const t of sample.turns.slice(0, MAXTURNS)) {
     // 两个说话人的话都进 evidence（content 带上 speaker 名,保留是谁说的）;冒烟未 parse 会话日期。
     await core.ingestUserMessage({ subjectId, content: `${t.speaker}: ${t.text}`, originId: t.diaId });
   }
   const allEv = core.memory.listEvidence({ subjectId });
+
+  // 语义臂:VectorRetriever + OpenAICompatEmbedder（读 env bge-m3）对 evidence 建索引。
+  let sem = null;
+  if (RETRIEVER === 'semantic') {
+    const cfg = loadEmbedConfig();
+    if (!cfg) { console.error('--retriever semantic 需配 embedder（MEMOWEFT_EMBED_* / DLA_EMBED_*）'); process.exit(1); }
+    const embedder = new OpenAICompatEmbedder(cfg);
+    const evVecs = await embedAll(embedder, allEv.map((e) => e.rawContent));
+    sem = { embedder, evVecs };
+  }
+
   const rows = [];
   const qaList = sample.qa.slice(0, QA_LIMIT);
   for (const q of qaList) {
-    const top = retrieveTopK(allEv, q.question, TOP_K);
     // 检索召回率:top-k 里是否含 gold evidence 的 dia_id（evidence 层召回粒度诊断）。
-    const topIds = new Set(top.map((e) => e.originId));
+    let top, topIds;
+    if (sem) {
+      const [qv] = await sem.embedder.embed([q.question]);
+      const scored = allEv.map((e, i) => ({ e, s: cosine(qv, sem.evVecs[i]) }));
+      scored.sort((a, b) => b.s - a.s);
+      top = scored.slice(0, TOP_K).map((x) => x.e);
+      topIds = new Set(top.map((e) => e.originId));
+    } else {
+      top = retrieveTopK(allEv, q.question, TOP_K);
+      topIds = new Set(top.map((e) => e.originId));
+    }
     const evHit = q.evidence.length ? q.evidence.some((id) => topIds.has(id)) : null;
     let pred, score;
     if (DRY) { pred = '(dry)'; score = null; }
@@ -166,7 +202,7 @@ async function main() {
   lines.push('');
   lines.push(`- commit: \`${commit}\` · samples: ${samples.length} · QA: ${sum.total} (已排除 category 5 adversarial)`);
   if (!DRY) lines.push(`- answer model: ${process.env.MEMOWEFT_LLM_MODEL || process.env.DLA_LLM_MODEL || '?'} · tokens: ${usage ? usage.totalTokens : 'n/a'} (calls with usage: ${usage ? usage.callsWithUsage : 'n/a'})`);
-  lines.push(`- 召回:evidence 层关键词 top-${TOP_K}（未 updateProfile、未接 embedder）· 时序题未 parse 会话日期（已知偏差）`);
+  lines.push(`- 召回:evidence 层 ${RETRIEVER === 'semantic' ? 'bge-m3 语义检索' : '关键词'} top-${TOP_K}（未 updateProfile）· 时序题未 parse 会话日期（已知偏差）`);
   lines.push('');
   lines.push('| category | n | evidence 层命中率 | ' + (DRY ? '' : '平均 F1 |'));
   lines.push('|---|---|---|' + (DRY ? '' : '---|'));

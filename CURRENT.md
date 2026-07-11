@@ -7,7 +7,9 @@
 **用户拍板开工 LoCoMo-10 冒烟(§19.1 第一步)**。侦察(2-agent:bench 骨架复用度 + LongMemEval/LoCoMo web 研究)结论:现有 eval 骨架(runner/judge/记录器/三臂工厂/config 注入 seam)大多可复用;先接 LoCoMo(小、自带、F1 免 judge、Mem0 标准基线,**CC BY-NC 只发聚合分**),LongMemEval(MIT 可商用背书,需 GPT-4o judge)后续。
 - **`bench/locomo-eval.mjs`**(新):loader(LoCoMo 会话→ingest 序列,排除 category5 adversarial)+ evidence 层关键词 top-k 检索 + 外挂答案 LLM(mimo)+ partial-match F1 分桶 + token 记录 + runs 报告。CLI `--dry`(无 key 验管线)/`--limit`/`--qa`。
 - **链路全通**(--limit 1 --qa 5 接 mimo):loader→ingest 419 轮→检索→mimo 答题→F1→token(4311)→runs 报告。
-- **冒烟暴露的真实取舍**(第一步的价值):evidence 层关键词检索 gold-evidence 命中率参差(single-hop 48% / multi-hop 32% / temporal 75%),F1 低——量化了「MemoWeft 画像级 recall vs 基准 episodic 事实召回」的粒度落差(scout 预判)。**下一步:接 embedder 语义检索 / cognition 层召回 / parse 会话日期(时序题)**。
+- **冒烟暴露的真实取舍**(第一步的价值):evidence 层关键词检索 gold-evidence 命中率参差(single-hop 48% / multi-hop 32% / temporal 75%),F1 低——量化了「MemoWeft 画像级 recall vs 基准 episodic 事实召回」的粒度落差(scout 预判)。改进方向第一条已验证(见下)。
+- **已加 embedder 语义检索臂(bge-m3,`--retriever semantic`)**:bench 层逐条 embed + 手算 cosine(绕开本地 ollama 的 batch 坑)。前 40 轮 8 QA 同 evidence 集对比:**multi-hop 命中率 keyword 0% → bge-m3 语义 100%**(语义完胜关键词死角);temporal keyword 100% > 语义 75%(时序题含明确词、关键词占优);open-domain 都 100%。**量化了「换真 embedder 后 multi-hop 召回质变」**——呼应 D-0008 自建集 +35%,这里公开 LoCoMo 上 multi-hop 0→100%。
+- **本地 ollama 坑(记录)**:bge-m3 的 **batch embed 退化**(5 条就 >90s、单条仅 ~1s)且慢 batch **卡死串行服务**(需重启清队列)。脚本已改逐条 embed 绕过;但本地 CPU ~1s/条,完整跑(10 sample × 数百 evidence)需 **GPU 或稳定云 embedder**。剩:cognition 层召回、parse 会话日期、完整矩阵。
 - 数据 NC 许可:`bench/data/` + `bench/runs/*-locomo-*` 已 gitignore,数据只在本地(LOCOMO_PATH),绝不入库。
 - **Phase 6 完整还差**(大工程·多会话):完整 10 sample×~1986 QA + 三臂×双 embedder 矩阵(§19.2)+ 参数敏感性网格(§19.3)+ LongMemEval_S + BENCHMARKS.md(§19.4)+ token/费用完整记录。
 
