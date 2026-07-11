@@ -1,8 +1,31 @@
 # CURRENT — 当前状态(Integrator 每个工作段落结束更新)
 
-更新于:2026-07-11 | 所在 Phase:**4 demo 更锋利(时间注入 S1-S3 + 四幕 demo S4 全落地——只差人类打 `phase-4-done`;Phase 3 也待 `phase-3-done`)**(前置 tag `phase-2-done`)
+更新于:2026-07-11 | 所在 Phase:**5 文档更不绕(§18·第一批已上线 main:getting-started + concepts6 + recipes2 + reference 归位;剩中文版/internals 迁移/CI 自动化/README 电梯稿/glossary)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
 
-## Phase 4:demo 更锋利(§17)—— 时间注入 S1-S3 + 四幕 demo S4 全落地(本地未推)
+## Phase 5:文档更不绕(§18)—— 第一批用户文档已上线(已推 origin main)
+
+**已落地**(`384d6d9`,已推):
+- **`docs/getting-started.md`**:5 分钟装→存一条证据→读回(第一段无 key 立即可跑;第二段配模型解锁固化/召回)。
+- **`docs/concepts/` 六页**:认知纪律各一屏(sourcing / confidence / correct-conflict / decay / no-self-evidence / read-write),每页配【已实跑通】的无 key 片段。
+- **`docs/recipes/` 两页**:Vercel AI SDK / MCP server 五分钟接入。
+- **`docs/reference/`**:memory-surface-contract 归位(双语)+ 旧位跳转桩;`docs/README.md` 改成三入口索引。
+- 质量:11 页 69 内链 **0 死链**;所有无 key 片段实跑输出与注释逐字一致(核实 computeConfidence/effectiveConfidence/persistUserTurn 等真实签名,doc-writer 未编造)。起草走 8-agent doc-writer 工作流 + Integrator 逐页审+验+落盘。
+
+**三决策(见工件 `docs/internal/phase5-migration-map.md`,含全表映射)**:
+- **D-a 分层双语**:用户页(README/getting-started/concepts/recipes/glossary/契约)双语;internals(architecture/boundaries/perf)英文单源。
+- **D-b 目录分工**:`docs/internals/`(新·"怎么建的":architecture/boundaries/perf)vs `docs/internal/`(旧·维护者账本:halumem/calibration/runbook/publishing)。
+- **D-c**:architecture 迁移时修 `sourceKind` 3→4 值(加 tool)+ 补 toolDefaults/archivedAt。
+
+**剩余(后续批,迁移映射表是蓝图)**:
+1. concepts/recipes/getting-started 的**中文版** zh-CN(分层双语)。
+2. **architecture/boundaries/perf → `docs/internals/`**(迁移 + 修 sourceKind 陈旧 + 改入链 + 旧位留桩);naming 拆 `glossary.md` + `internal/`。
+3. 根 **README 收敛成 60 秒电梯稿**(§18.1;现有 README 4 条重复定位句收敛成 1)。
+4. **glossary.md**(naming §3 词表提炼)。
+5. **§18.3 snippets 进 CI**(`scripts/doc-snippets.mjs`:抽 md 里 ts 围栏逐个编译+跑,`<!-- snippet:skip -->` 跳过)+ **§18.4 死链检查进 CI**(把本会话手动跑的 node 死链脚本自动化)。
+6. **§18.5 新人视角巡检**("仍然绕"清单 → 逐条处理)。
+7. 收尾:打 tag `phase-5-done`(人类)。
+
+## Phase 4:demo 更锋利(§17)—— 时间注入 S1-S3 + 四幕 demo S4 全落地(已推 main)
 
 **方案 C(人类拍板·可注入时钟,D-0015)**:demo 要确定性(两次跑 diff 空)+ `--fast-forward`(情绪衰减、事实留存),且 §17.4「只经公共 API」。散落的 `new Date()` 无法注入 → 加可注入 `Clock`。
 - **S1a**(`86905a9` refactor):三个 store 时间源参数化(构造加可选 `clock`,缺省 `systemClock`),落库/更新时间走 `clock()`。internal,api-freeze 不动(store 构造签名不进快照,已验)。
