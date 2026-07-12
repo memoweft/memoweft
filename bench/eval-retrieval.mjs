@@ -50,8 +50,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const GOLDEN_PATH = resolve(HERE, '../tests/retrieval/golden.json');
 const REPORT_PATH = resolve(HERE, 'retrieval-baseline.md');
 const AFTER_REPORT_PATH = resolve(HERE, 'retrieval-after.md');
-const GEN_CMD = 'node bench/eval-retrieval.mjs';
-const ABLATION_CMD = 'node bench/eval-retrieval.mjs --ablation';
+// 生成命令:反映【实际调用】——EVAL_REAL_ARM 前缀 + 全部 flag(--ablation / --out / --real 等),不再硬编码(ROADMAP Next)。
+const INVOKED_CMD = `${process.env.EVAL_REAL_ARM ? 'EVAL_REAL_ARM=1 ' : ''}node bench/eval-retrieval.mjs${process.argv.slice(2).length ? ' ' + process.argv.slice(2).join(' ') : ''}`;
 const TOP_K = 10;
 
 /** 9 条纯 2 字中文 direct 用例（验证向量 char-bigram 能否兜住 trigram 关键词通道够不着的 2 字词）。 */
@@ -204,7 +204,7 @@ function buildReport(run, meta) {
   L.push('');
   L.push('| 项 | 值 |');
   L.push('| --- | --- |');
-  L.push(`| 生成命令 | \`${GEN_CMD}\` |`);
+  L.push(`| 生成命令 | \`${INVOKED_CMD}\` |`);
   L.push(`| commit | \`${meta.commit}\` |`);
   L.push(`| Node | ${meta.node} |`);
   L.push(`| 平台 | ${meta.platform}/${meta.arch} |`);
@@ -407,7 +407,7 @@ function buildAblationReport(arms, meta) {
   L.push('');
   L.push('| 项 | 值 |');
   L.push('| --- | --- |');
-  L.push(`| 生成命令 | \`${ABLATION_CMD}\` |`);
+  L.push(`| 生成命令 | \`${INVOKED_CMD}\` |`);
   L.push(`| commit | \`${meta.commit}\` |`);
   L.push(`| Node | ${meta.node} |`);
   L.push(`| 平台 | ${meta.platform}/${meta.arch} |`);
