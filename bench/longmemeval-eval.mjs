@@ -39,6 +39,8 @@ const getNum = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 
 const LIMIT = getNum('--limit', Infinity);
 const OFFSET = getNum('--offset', 0); // 分批跑:跳过前 N 题(配 --limit)。node:sqlite 累积 :memory: 连接在大单进程会 native 崩,分批规避(同 §19.2)。
 const MERGE = argv.includes('--merge'); // 合并同 commit 的分片 JSON → 完整 LongMemEval 报告
+const LAYER = (() => { const i = argv.indexOf('--layer'); return i >= 0 && argv[i + 1] ? argv[i + 1] : 'evidence'; })(); // evidence | cognition(updateProfile→core.recall,用消化后的画像答题;需 LLM)
+const TYPE = (() => { const i = argv.indexOf('--type'); return i >= 0 && argv[i + 1] ? argv[i + 1] : ''; })(); // 只跑某 question_type(如 single-session-preference),做定向实验
 
 // ── loader:LongMemEval_S 实例 → 归一 ─────────────────────────────────────────
 // 实例 schema:{question_id, question_type, question, answer, question_date,
@@ -101,8 +103,21 @@ async function runItem(item, llm, judgeLLM) {
     const content = t.date ? `[${t.date}] ${t.content}` : t.content;
     await core.ingestUserMessage({ subjectId, content, originId: t.originId });
   }
-  const evs = core.memory.listEvidence({ subjectId });
-  const top = retrieveTopK(evs, item.question, TOP_K);
+  let top, evCount;
+  if (LAYER === 'cognition') {
+    // cognition 层:消化证据→认知,答题走真实系统召回 core.recall(env bge-m3)。
+    // ⚠ caveat:一次性 updateProfile 把全部证据塞进单个 distill 调用;LongMemEval haystack ~500 回合会撑爆
+    //   120s LLM 超时(实测全 timeout)。MemoWeft 本是【增量消化】设计(config.profileUpdate.batchSize=5)——
+    //   要真测 cognition 层须【边摄入边周期性 updateProfile】(慢),或先 --limit 限证据量。此路适用于 LoCoMo 级中等 haystack。
+    await core.updateProfile({ subjectId });
+    const recalled = await core.recall({ subjectId, query: item.question });
+    top = recalled.map((r) => ({ rawContent: r.content }));
+    evCount = core.memory.listCognitions({ subjectId }).length;
+  } else {
+    const evs = core.memory.listEvidence({ subjectId });
+    top = retrieveTopK(evs, item.question, TOP_K);
+    evCount = evs.length;
+  }
   let pred = '(dry)', correct = null;
   if (!DRY) {
     pred = await answer(llm, top, item.question);
@@ -110,7 +125,7 @@ async function runItem(item, llm, judgeLLM) {
   }
   core.close();
   const userTurns = item.turns.filter((t) => t.role === 'user').length;
-  return { id: item.id, type: item.type, isAbstention: item.isAbstention, evidenceCount: evs.length, userTurns, pred, correct };
+  return { id: item.id, type: item.type, isAbstention: item.isAbstention, evidenceCount: evCount, userTurns, pred, correct };
 }
 
 function summarize(rows) {
@@ -199,8 +214,10 @@ async function main() {
     console.error(`LongMemEval 数据缺失。设 LONGMEMEVAL_PATH 指向本地 longmemeval_s.json(数据自查许可,不入库;从 github.com/xiaowu0162/LongMemEval 获取)。\n无数据也可验管线:node bench/longmemeval-eval.mjs --selftest`);
     process.exit(1);
   }
+  if (LAYER === 'cognition' && DRY) { console.error('--layer cognition 需 LLM(updateProfile),不能 --dry'); process.exit(1); }
   const data = JSON.parse(readFileSync(LONGMEMEVAL_PATH, 'utf8'));
-  const raw = Array.isArray(data) ? data : data.questions || [];
+  let raw = Array.isArray(data) ? data : data.questions || [];
+  if (TYPE) raw = raw.filter((q) => (q.question_type || '') === TYPE); // 定向某 question_type
   const items = raw.slice(OFFSET, OFFSET + LIMIT).map(loadItem);
   let llm = null, judgeLLM = null;
   if (!DRY) {
@@ -228,7 +245,7 @@ async function main() {
   const L = [`# LongMemEval_S ${DRY ? '(DRY 结构验证)' : '(accuracy · LLM-judge)'}`, ''];
   L.push(`- commit: \`${commit}\` · items: ${sum.total}`);
   if (!DRY) L.push(`- answer: ${process.env.MEMOWEFT_LLM_MODEL || process.env.DLA_LLM_MODEL || '?'} · judge: ${process.env.MEMOWEFT_JUDGE_MODEL || 'mimo(=answer,非标准 gpt-4o)'} · tokens(answer): ${llm?.usage?.totalTokens ?? 'n/a'}`);
-  L.push('- 摄入纪律:只 user 回合(铁律 3a);single-session-assistant 类按设计答不出。会话日期已注入。');
+  L.push(`- 检索层:${LAYER === 'cognition' ? 'cognition(updateProfile→core.recall·env bge-m3)' : 'evidence(keyword top-15)'}${TYPE ? ` · 仅 ${TYPE}` : ''} · 只 user 回合(铁律 3a)· 会话日期已注入。`);
   L.push('', `| question_type | n | ${DRY ? 'user证据均值' : '正确率'} |`, '|---|---|---|');
   for (const t of Object.keys(sum.byType).sort()) {
     const b = sum.byType[t];
@@ -240,8 +257,9 @@ async function main() {
   if (!DRY) {
     if (!existsSync(RUNS_DIR)) mkdirSync(RUNS_DIR, { recursive: true });
     const date = new Date().toISOString().slice(0, 10);
+    const expTag = `${LAYER === 'cognition' ? '-cognition' : ''}${TYPE ? `-${TYPE}` : ''}`;
     const batched = OFFSET > 0 || Number.isFinite(LIMIT);
-    const base = `${date}-${commit}-longmemeval${batched ? `-s${OFFSET}n${items.length}` : ''}`;
+    const base = `${date}-${commit}-longmemeval${expTag}${batched ? `-s${OFFSET}n${items.length}` : ''}`;
     writeFileSync(resolve(RUNS_DIR, `${base}.md`), report);
     // JSON 侧车(供 --merge 合并 + 复现):byType 原始计数 + 每题对错。
     writeFileSync(resolve(RUNS_DIR, `${base}.json`), JSON.stringify({

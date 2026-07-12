@@ -63,7 +63,7 @@
 - **强项**:single-session-user 71.4% / knowledge-update 69.3%(事实性记忆召回好)。
 - **两处结构性低分,信息量大**:
   - **single-session-assistant 19.6%**:铁律 3a 只摄入 user 回合、不存助手输出 → 问「助手说过什么」结构性偏低,**定位使然、非弱点**。
-  - **single-session-preference 10.0%**:偏好正是 cognition 层消化的东西,但本跑用 evidence 层 keyword(原始回合),偏好未被有效召回 → **提示 preference 类应走 cognition 层**(呼应 §2 层对比)。
+  - **single-session-preference 10.0%**:偏好正是 cognition 层消化的东西,但本跑用 evidence 层 keyword(原始回合),偏好未被有效召回。假设 preference 类走 cognition 层会更好,但**实测受阻**:LongMemEval haystack ~500 回合,一次性 `updateProfile` 撑爆 120s LLM 超时(cognition A/B 6 题全 timeout)——**MemoWeft 是增量消化设计(batchSize=5),非 500 回合一口气消化**。真测 cognition 层须边摄入边周期消化(慢),留作后续。这本身是个边界发现:长 haystack 超出一次性消化容量。
 - 跑法:per-batch 进程隔离(避 node:sqlite 累积 native 崩)+ `--merge`;50 批中 2 批崩溃已用 limit-5 补跑,凑齐 500。数据 278MB 经 `LONGMEMEVAL_PATH`,不入库。
 
 ## 5. 复现命令
