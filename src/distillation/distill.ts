@@ -8,6 +8,7 @@ import type { EventStore } from '../event/store.ts';
 import type { Event } from '../event/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
+import { sourceLabel } from '../evidence/sourceLabel.ts';
 import { resolveLang, type MemoWeftConfig } from '../config.ts';
 import { DISTILL_PROMPT } from './prompts.ts';
 
@@ -53,8 +54,12 @@ export async function distill(subjectId: string, deps: DistillDeps): Promise<Dis
   if (digestible.length === 0) return { event: null, pendingCount: pending.length, tierBlockedCount, llmCalls: 0 };
 
   const lang = resolveLang(deps.config);
-  const lines = digestible.map((e) => `(${e.occurredAt.slice(0, 16)}) ${e.rawContent}`).join('\n');
-  const userHead = lang === 'zh' ? '用户依次说了：' : 'The user said, in order:';
+  // 来源感知（D-0018）:每行带来源标注,让 distill 的事件描述保留"这是用户亲口 / 行为观察 / 工具返回"的区分,
+  //   下游 consolidate 据此定 formedBy(observed/tool 不被误当 stated)。
+  const lines = digestible.map((e) => `(${e.occurredAt.slice(0, 16)}) ${sourceLabel(e.sourceKind, lang)}${e.rawContent}`).join('\n');
+  const userHead = lang === 'zh'
+    ? '按时间顺序的材料（每行带来源标注；[行为观察] / [工具返回] 不是用户原话）：'
+    : "Material in chronological order (each line is tagged with its source; [observed behavior] / [tool result] are NOT the user's own words):";
   const messages: ChatMessage[] = [
     { role: 'system', content: DISTILL_PROMPT.text[lang] },
     { role: 'user', content: `${userHead}\n${lines}` },

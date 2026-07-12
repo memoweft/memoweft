@@ -1,6 +1,6 @@
 # CURRENT — 当前状态(Integrator 每个工作段落结束更新)
 
-更新于:2026-07-12 | **Phase 6 已完成并推送**(10 commit + `phase-6-done` tag 已上公开 main);现进 **ROADMAP Next**:**D-0017 已落地**(无-embedder 召回兜底 NullRetriever→KeywordRetriever,§19.2 数据驱动·人类批准·API 快照不变·300 测试绿)。历史 Phase 状态见下。 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~七批(中文版 / internals / README / glossary+naming / 文档 CI / 新人巡检处理)已落地本地;§18 实质全完成,只差打 tag phase-5-done(人类);Phase 6 验收项全绿(两套基准各 ≥1 次完整跑:LoCoMo §19.2 矩阵 + LongMemEval_S 500题标准分 51.3%;§19.3 敏感性 + BENCHMARKS.md 就位);仅剩 phase-6-done tag(人类)。本会话·纯 bench,本地)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
+更新于:2026-07-12 | **Phase 6 已完成并推送**(10 commit + `phase-6-done` tag 已上公开 main);现进 **ROADMAP Next**(已连做并推:D-0017 无-embedder keyword 兜底 · §20 环境变量表 · .gitattributes eol · eval-retrieval 命令行 · **D-0018 来源感知固化**)。**D-0018**:distill/consolidate 带来源标注,observed/tool 不再被误固化成 stated(加固来源强度纪律·人类批准·无 API/schema/eval 断言变化·§15.3 前后 95.1%→94.2% 判为单跑方差)。历史 Phase 状态见下。 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~七批(中文版 / internals / README / glossary+naming / 文档 CI / 新人巡检处理)已落地本地;§18 实质全完成,只差打 tag phase-5-done(人类);Phase 6 验收项全绿(两套基准各 ≥1 次完整跑:LoCoMo §19.2 矩阵 + LongMemEval_S 500题标准分 51.3%;§19.3 敏感性 + BENCHMARKS.md 就位);仅剩 phase-6-done tag(人类)。本会话·纯 bench,本地)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
 
 ## Phase 6 起头(进行中·§19 公开基准):LoCoMo 冒烟链路通(本地)
 

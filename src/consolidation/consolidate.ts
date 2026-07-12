@@ -17,6 +17,7 @@ import type { Evidence } from '../evidence/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from './confidence.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
+import { sourceLabel } from '../evidence/sourceLabel.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 import { noopTransaction, type Transaction } from '../store/transaction.ts';
 import { resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
@@ -137,6 +138,7 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   //   也只让它们当合法支撑——被挡的既不进 prompt、也进不了 validEvidence（不成为所生认知的依据）。
   //   tier=cloud 筛 allowCloudRead / tier=local 筛 allowLocalRead；inference=false 不进画像（distill/attribute 三处一致）。
   const tier = deps.llm.tier ?? 'cloud';
+  const lang = resolveLang(deps.config);
   const events: EventView[] = newEvents.map((ev) => {
     const evidences = deps.eventStore
       .evidenceOf(ev.id)
@@ -146,7 +148,8 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       .filter((e) => e.allowInference)
       .map((e) => {
         validEvidence.add(e.id);
-        return { id: e.id, text: e.rawContent };
+        // 来源感知（D-0018）:原话带来源前缀,让 LLM 定 formedBy 时知道哪些不是用户亲口。
+        return { id: e.id, text: sourceLabel(e.sourceKind, lang) + e.rawContent };
       });
     return { summary: ev.summary, occurredAt: ev.occurredAt, utterances };
   });
@@ -156,7 +159,6 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   // 结构化输出加固（jsonRepair）：去代码块围栏 → 解析对象；失败落日志 + 最多重试一次（提示"只输出 JSON"）。
   // 仍失败 → null（按"本轮无产出"处理，等价旧的返回空对象；下方各 `?? []` 兜住）。重试会多调一次模型，故计数取前后差。
   // 写路径仪表（D4 只观测）：先把 messages 存下来量 prompt 字符数，再原样喂给解析器——行为零变化，只加计量。
-  const lang = resolveLang(deps.config);
   const messages = buildMessages(existing, events, lang);
   const promptChars = messages.reduce((n, m) => n + m.content.length, 0);
   const before = deps.llm.callCount;
