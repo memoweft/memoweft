@@ -1,6 +1,6 @@
 # CURRENT — 当前状态(Integrator 每个工作段落结束更新)
 
-更新于:2026-07-12 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~七批(中文版 / internals / README / glossary+naming / 文档 CI / 新人巡检处理)已落地本地;§18 实质全完成,只差打 tag phase-5-done(人类);Phase 6 近完工——LoCoMo §19.1/§19.2 完整矩阵 + cognition 臂/日期注入 + §19.3 敏感性 + BENCHMARKS.md 均落地;仅剩 LongMemEval 完整跑(阻塞:数据集+gpt-4o judge)与 phase-6-done tag(本会话·纯 bench),本地)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
+更新于:2026-07-12 | 所在 Phase:**5 文档更不绕(§18·第一批英文页已上线 main + 第二~七批(中文版 / internals / README / glossary+naming / 文档 CI / 新人巡检处理)已落地本地;§18 实质全完成,只差打 tag phase-5-done(人类);Phase 6 验收项全绿(两套基准各 ≥1 次完整跑:LoCoMo §19.2 矩阵 + LongMemEval_S 500题标准分 51.3%;§19.3 敏感性 + BENCHMARKS.md 就位);仅剩 phase-6-done tag(人类)。本会话·纯 bench,本地)**(Phase 3/4 全绿,已推 main,待打 `phase-3-done`/`phase-4-done` tag)
 
 ## Phase 6 起头(进行中·§19 公开基准):LoCoMo 冒烟链路通(本地)
 
@@ -36,7 +36,7 @@
 - [x] runs 可复现(per-sample 分片 + `--merge-matrix`);token/费用记录(答题 + core 侧 + embed 分桶)
 - [x] **§19.3 敏感性报告入库**(`bench/sensitivity-confidence.md`)
 - [x] **BENCHMARKS.md 就位**(根目录·§19.4)
-- [ ] **LongMemEval_S ≥1 次完整跑**:数据(500 题·278MB)已取本地、harness 真实数据端到端验证(dry + 6 题 mimo-judge 小样本);**仍阻塞**于标准 gpt-4o judge——用户所给 key 无配额(exceeded quota)。待有余额的 gpt-4o key(MEMOWEFT_JUDGE_*)即可跑标准分;全量约 3–5h,建议 per-item 进程隔离
+- [x] **LongMemEval_S 全 500 题标准跑**(judge=gpt-4o-2024-11-20):**overall 51.3%**;强 single-session-user 71.4%/knowledge-update 69.3%,低 single-session-preference 10%(应走 cognition 层)/single-session-assistant 19.6%(铁律 3a 不摄入助手输出)。per-batch 进程隔离(2 批崩已 limit-5 补齐 500)+ --merge。judge 成本 <$1,答题 mimo ~1.70M token
 - [ ] 打 tag `phase-6-done`(发布动作,待人类;且待 LongMemEval 跑完)
 
 ## Phase 5:文档更不绕(§18)—— 第一批用户文档已上线(已推 origin main)

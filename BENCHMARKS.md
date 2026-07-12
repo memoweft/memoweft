@@ -3,7 +3,7 @@
 > 维护者账本,非营销页。原则:**每个数字都可复现、条件写清、不做不对等比较**。
 > 数据许可:LoCoMo 为 **CC BY-NC 4.0**(仅研究、非商用)——数据文件**绝不入库**,本页只发**聚合分数**。
 > 环境:本机 RTX 3090;答题/固化模型 = 小米 MiMo `mimo-v2.5-pro`(云端 OpenAI 兼容);嵌入 = 本地 `bge-m3`(1024 维,经 llama.cpp GPU)。
-> 状态:Phase 6 进行中,以下为**方向性快照**(未打 `phase-6-done`);LongMemEval 数据+harness 就绪,待有配额的 gpt-4o judge(见 §4)。
+> 状态:两套公开基准(LoCoMo §1–3、LongMemEval_S §4)均已 ≥1 次完整跑;未打 `phase-6-done`(人类)。LoCoMo 部分小样本项(§2)标注为方向性。
 
 ---
 
@@ -45,16 +45,26 @@
 - **半衰期**:召回保留窗口随半衰期**线性**伸缩(×0.5/1/2 → 窗口 ×0.5/1/2),无悬崖。
 - **结论**:未发现更优默认参数,默认值行为有序可预测,不触发「改默认→D-xxxx」或「改 eval 断言→铁律1」。
 
-## 4. LongMemEval_S · 状态:数据 + harness 就绪,待有配额的 gpt-4o judge
+## 4. LongMemEval_S · accuracy(judge = gpt-4o,标准口径)
 
-`bench/longmemeval-eval.mjs`(loader/检索/答题/LLM-judge/弃权,`--selftest` 离线全绿)。
+**全 500 题**;答题 mimo · **judge = `gpt-4o-2024-11-20`**(gpt-4o 快照,标准口径)· evidence 层 keyword 检索 · 只摄入 user 回合(铁律 3a)。
 
-- **数据 ✅**:LongMemEval_S(**500 题**·平均 haystack **494 回合/245 user**·最多 66 会话)已取本地(278MB,经 `LONGMEMEVAL_PATH`;**不入库**)。
-- **harness 真实数据端到端验证 ✅**:dry 结构验证 + 小样本(6 题 single-session-user)mimo-answer + mimo-judge 全链路跑通。
-- **标准 judge 仍阻塞**:官方用 `gpt-4o`;所提供的 key **配额/计费未启用(exceeded quota)**,无法作标准 judge。→ 待有余额的 gpt-4o key(设 `MEMOWEFT_JUDGE_BASE_URL/API_KEY/MODEL`),即可跑标准分。
-- **非标准直读(仅供参考,不可对外比)**:mimo-as-judge · keyword 检索 · 前 6 题 single-session-user → 正确率 50%。
-- **原则性限制**:铁律 3a 只摄入 user 回合 → `single-session-assistant`(56/500)按设计答不出。
-- **全量成本预估**:500 题 ×(ingest ~245 回合 + mimo 答题 + judge)≈ **3–5 小时** + 大量 mimo token;建议先跑子集。跑大样本用 per-item 进程隔离(同 §19.2,避 node:sqlite 累积 native 崩)。
+| question_type | n | 正确率 |
+|---|---|---|
+| single-session-user | 70 | **71.4%** |
+| knowledge-update | 78 | **69.3%** |
+| temporal-reasoning | 133 | 58.6% |
+| multi-session | 133 | 45.9% |
+| single-session-assistant | 56 | 19.6% |
+| single-session-preference | 30 | 10.0% |
+| **overall** | **500** | **51.3%** |
+
+- 答题 token(mimo)≈ **1.70M**;judge(gpt-4o)成本 **<$1**。
+- **强项**:single-session-user 71.4% / knowledge-update 69.3%(事实性记忆召回好)。
+- **两处结构性低分,信息量大**:
+  - **single-session-assistant 19.6%**:铁律 3a 只摄入 user 回合、不存助手输出 → 问「助手说过什么」结构性偏低,**定位使然、非弱点**。
+  - **single-session-preference 10.0%**:偏好正是 cognition 层消化的东西,但本跑用 evidence 层 keyword(原始回合),偏好未被有效召回 → **提示 preference 类应走 cognition 层**(呼应 §2 层对比)。
+- 跑法:per-batch 进程隔离(避 node:sqlite 累积 native 崩)+ `--merge`;50 批中 2 批崩溃已用 limit-5 补跑,凑齐 500。数据 278MB 经 `LONGMEMEVAL_PATH`,不入库。
 
 ## 5. 复现命令
 
@@ -75,8 +85,13 @@ node bench/locomo-eval.mjs --limit 1 --qa 30 --no-dates           # 日期 A/B
 # §19.3 参数敏感性(零 LLM)
 node bench/sensitivity-confidence.mjs              # → bench/sensitivity-confidence.md
 
-# LongMemEval:先验管线(无数据/无 key),数据到位后去掉 --selftest 并设 LONGMEMEVAL_PATH
-node bench/longmemeval-eval.mjs --selftest
+# LongMemEval_S(全 500 题·标准 gpt-4o judge):数据经 LONGMEMEVAL_PATH(278MB,不入库)
+node bench/longmemeval-eval.mjs --selftest        # 离线验管线(无数据/无 key)
+export LONGMEMEVAL_PATH=bench/data/longmemeval_s.json
+export MEMOWEFT_JUDGE_BASE_URL=https://api.openai.com/v1  # judge=gpt-4o(标准);key 只经 env
+export MEMOWEFT_JUDGE_API_KEY=sk-...  MEMOWEFT_JUDGE_MODEL=gpt-4o-2024-11-20
+for off in $(seq 0 10 490); do node --max-old-space-size=4096 bench/longmemeval-eval.mjs --offset $off --limit 10; done
+node bench/longmemeval-eval.mjs --merge           # → bench/runs/<date>-<commit>-longmemeval-merged.md
 ```
 
 嵌入端点(bge-m3 @ 127.0.0.1:11435)需在跑语义/cognition 臂前起(本机经 llama.cpp GPU)。
