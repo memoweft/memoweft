@@ -63,7 +63,8 @@
 - **强项**:single-session-user 71.4% / knowledge-update 69.3%(事实性记忆召回好)。
 - **两处结构性低分,信息量大**:
   - **single-session-assistant 19.6%**:铁律 3a 只摄入 user 回合、不存助手输出 → 问「助手说过什么」结构性偏低,**定位使然、非弱点**。
-  - **single-session-preference 10.0%**:偏好正是 cognition 层消化的东西,但本跑用 evidence 层 keyword(原始回合),偏好未被有效召回。假设 preference 类走 cognition 层会更好,但**实测受阻**:LongMemEval haystack ~500 回合,一次性 `updateProfile` 撑爆 120s LLM 超时(cognition A/B 6 题全 timeout)——**MemoWeft 是增量消化设计(batchSize=5),非 500 回合一口气消化**。真测 cognition 层须边摄入边周期消化(慢),留作后续。这本身是个边界发现:长 haystack 超出一次性消化容量。
+  - **single-session-preference 10.0%(evidence)→ cognition 层实证显著更好**:偏好正是 cognition 层消化的东西。**增量消化 A/B(`--layer cognition --consolidate-every 50`,同 3 题)实证:evidence-keyword 0% → cognition 66.7%**——preference 类确实该走 cognition 层(召回"这人偏好 X"的消化结论,胜过在 500 原始回合里 keyword 搜)。
+    - 边界+caveat:一次性 `updateProfile` 撑爆 120s LLM 超时(MemoWeft 是**增量消化**设计 batchSize=5,非一口气消化),须边摄入边周期消化;mimo 慢、部分 50 条 chunk 仍超时 → 消化**不完整**,cognition 仍大胜(效应强)。样本小(3 题),方向性;放大样本/更小 chunk/更快消化模型可进一步坐实。
 - 跑法:per-batch 进程隔离(避 node:sqlite 累积 native 崩)+ `--merge`;50 批中 2 批崩溃已用 limit-5 补跑,凑齐 500。数据 278MB 经 `LONGMEMEVAL_PATH`,不入库。
 
 ## 5. 复现命令
