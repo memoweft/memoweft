@@ -486,16 +486,19 @@ docs/
 # 第四部分:横切关注点(20–24,全 Phase 生效)
 
 ### 20. 配置与环境变量
-核心库**不读环境变量**,一切经构造时注入的 config;只有 demo/CI 层读 env 组装。
+核心库**不读环境变量**,一切经构造时注入的 config;只有 demo / testbench / bench / CI 层读 env 组装(`process.loadEnvFile()` 读 `.env`,或 CI 注入 secrets)。命名:主名 `MEMOWEFT_*`,读不到回退旧名 `DLA_*`(老 `.env` 零改动可用)。
 
 | 变量 | 层 | 用途 | 必需 |
 |---|---|---|---|
-| `MEMORY_DB_PATH` | demo | SQLite 文件路径 | 否(默认 `./memory.db`) |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | demo/本地/nightly | LLM pool:固化、live 套件、judge、真实 embedder、基准 | live 相关任务必备 |
-| `EMBEDDER` | demo | `hash` / 真实实现标识 | 否(默认 hash) |
-| `SKIP_LIVE_LLM` | 测试 | =1 跳过需真 key 用例 | CI 主干必设 |
+| `MEMOWEFT_LLM_{BASE_URL,API_KEY,MODEL}` | demo/testbench/bench/nightly | 对话大模型(OpenAI 兼容 `/chat/completions`):回话、固化、live、基准答题 | 对话/固化任务必需 |
+| `MEMOWEFT_WRITE_LLM_{BASE_URL,API_KEY,MODEL,TIER}` | 同上 | 可选写路径小快模型(整理/画像/归因);不填回退对话模型 | 否 |
+| `MEMOWEFT_EMBED_{BASE_URL,API_KEY,MODEL}` | 同上 | 可选嵌入端点:语义召回。不填召回降级为 keyword(D-0017) | 否 |
+| `MEMOWEFT_EXPERIENCE_UI` | testbench | `on`/`off`:是否起体验界面网页 | 否 |
+| `MEMOWEFT_LANG` | 全层 | `zh` → 中文提示词/摘要;否则英文 | 否 |
+| `LOCOMO_PATH` / `LONGMEMEVAL_PATH` | bench | 公开基准数据本地路径(数据不入库) | 对应基准跑时必需 |
+| `MEMOWEFT_JUDGE_{BASE_URL,API_KEY,MODEL}` | bench | LongMemEval judge(如 gpt-4o);不填回退答题模型 | 否 |
 
-CI 主干走录制夹具是为**确定性**而非省钱;真实模型覆盖由 nightly 与本地 `test:live` 承担(15.4)。
+(各 `MEMOWEFT_*` 均兼容旧名 `DLA_*`。)CI 主干**不注入 LLM secrets** → e2e 的 `HAS_LLM` 为假 → live e2e 自动跳过;真实模型覆盖由 nightly 的 `test:live` + 本地承担(§15.4)。`SKIP_LIVE_LLM` 已删(死变量,D-0011)。
 
 ### 21. 时间·日志·错误约定
 **21.1 时间**:存储一律 UTC ISO-8601;衰减与置信度计算的 `now` 必须由调用方注入,核心逻辑禁止直取系统时间(demo 快进、测试可复现、确定性验收的共同前提);违反视为 bug。
