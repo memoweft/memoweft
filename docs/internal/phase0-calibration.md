@@ -24,6 +24,8 @@
 
 **认知纪律核对(铁律 3)**:3b(置信度只由规则算)✓ `ConfidenceInputs` 只含 contentType/formedBy/support/contradict 计数,无分数入参;3d(证据 ID 白名单)✓ 见 attribute 的 candidateIds 过滤。所有落库路径(consolidate/attribute/trends/managementApi)都用 `computeConfidence` 重算。
 
+> **已知定义局限(2026-07-13 补,D-0019):ContentType 缺「事件」型。** `fact` = 确定 + 永久不衰减 + 不封顶;`state` = 临时 + 半衰期 1.5 天/7 天过期 + 置信封顶 300 + credStatus 只 {candidate,low}(state 的封顶是为**情绪**的记≠信设计)。**一次性已完成事件**(如"今天没吃早饭/周六加班/删了聊天记录")是「确定发生 + 无需长留」——标 fact 会永久污染画像,标 state 会给确定事件上"低置信",两个格子各对一半。故固化评测 no-over-inference 盘的 `created类型⊆{types}` 不符(模型多标 fact、语料期望 state,及 CC-029→goal / CC-032→preference)是**定义灰区噪声,非过度推断**(该盘 `overInferRate=0.00`,真靶心达标)。正解是将来加 `event` 型(不封顶、中等衰减),现按 D-0019 记档不改。
+
 ### 文档需修正
 - ❌ 底分**不是**按 `user/tool/observed` 来源类型,而是按 **FormedBy**(stated/observed/ruled/inferred)。
 - ❌ CredStatus **不是** `confirmed/tentative/expired`,而是 `candidate/low/limited/stable/conflicted`;"过期"是独立的 `invalidAt` 机制,不是一种 cred 状态。

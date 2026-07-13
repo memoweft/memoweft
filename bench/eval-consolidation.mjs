@@ -287,6 +287,8 @@ function checkStructural(scenario, run) {
     const { min, max, types } = ex.newCognitions;
     checks.push({ name: `created∈[${min},${max}]`, pass: c.createdCount >= min && c.createdCount <= max, detail: `created=${c.createdCount}` });
     if (types) {
+      // 注:no-over-inference 盘这条常因 fact-vs-state 定义灰区判红(一次性事件模型多标 fact、语料期望 state），
+      // 这是 ContentType 缺「事件」型的已知局限、非过度推断（真靶心是 overInferRate，见 D-0019）；别据此下"质量退化"结论。
       const set = new Set(types);
       const bad = [...new Set(c.created.filter((x) => !set.has(x.contentType)).map((x) => x.contentType))];
       checks.push({ name: `created类型⊆{${types.join(',')}}`, pass: bad.length === 0, detail: bad.length ? `越界类型: ${bad.join(',')}` : 'ok' });
