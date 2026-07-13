@@ -134,7 +134,7 @@ interface PluginUserMessage { content: string; reply: string; subjectId: string;
 interface PortableAPI { exportBundle: (opts?: ExportOptions & { subjectId?: string; }) => MemoryBundle; importBundle: (bundle: MemoryBundle, opts: ImportOptions) => ImportPlan; validateBundle: (bundle: unknown) => ValidateResult; }
 interface ProfileUpdateRecord { error: string | null; indexError: string | null; kind: 'profile_update'; llmCalls: number; sessionId: string; summary: { pendingCount: number; created: number; reinforced: number; corrected: number; conflicted: number; hypotheses: number; trends: number; expired: number; profileSize?: number; promptChars?: number; }; timings: ProfileUpdateTimings; trigger: 'manual' | 'background'; ts: string; }
 interface ProfileUpdateTimings { attributeMs: number; consolidateMs: number; distillMs: number; indexMs: number; totalMs: number; }
-interface ProposeAskDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm?: LLMClient | undefined; }
+interface ProposeAskDeps { clock?: Clock | undefined; cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm?: LLMClient | undefined; }
 interface ProposeAskOptions { markAsked?: boolean | undefined; policy?: Partial<AskPolicy> | undefined; }
 interface ProposeAskResult { llmCalls: number; proposals: Array<AskProposal>; }
 interface RecallDeps { cognitionStore: CognitionStore; retriever: Retriever; }
@@ -150,9 +150,9 @@ interface ResetSubjectInput { reason?: string | undefined; subjectId?: string | 
 interface ResetSubjectResult { auditRemoved: number; cognitionRemoved: number; eventRemoved: number; evidenceRemoved: number; }
 interface RetrievalHit { id: string; score: number; }
 interface Retriever { indexAll: (items: Array<{ id: string; text: string; }>) => Promise<void>; search: (query: string, topK: number) => Promise<RetrievalHit[]>; }
-interface RevisitDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm?: LLMClient | undefined; }
+interface RevisitDeps { clock?: Clock | undefined; cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm?: LLMClient | undefined; }
 interface RevisitResult { llmCalls: number; proposals: Array<AskProposal>; }
-interface RunLoggerOptions { dir: string; sessionId: string; }
+interface RunLoggerOptions { clock?: Clock | undefined; dir: string; sessionId: string; }
 interface RunMigrationsOptions { backup?: boolean | undefined; dbPath?: string | undefined; dryRun?: boolean | undefined; fresh?: boolean | undefined; log?: ((msg: string) => void) | undefined; migrations?: Array<Migration> | undefined; }
 interface StoreBundle { close: () => void; cognitionStore: CognitionStore; db: DatabaseSync; eventStore: EventStore; evidenceStore: EvidenceStore; managementLog: ManagementLog; transaction: Transaction; }
 interface ToolResultInput { content: string; hostId?: string | undefined; occurredAt?: string | undefined; originId?: string | null | undefined; subjectId?: string | undefined; }

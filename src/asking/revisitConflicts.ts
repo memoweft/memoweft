@@ -16,6 +16,7 @@ import type { Evidence } from '../evidence/model.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
 import type { AskProposal } from './proposeAsk.ts';
 import { REVISIT_CONFLICTS_PROMPT } from './prompts.ts';
+import { systemClock, type Clock } from '../clock.ts';
 
 export interface RevisitDeps {
   cognitionStore: CognitionStore;
@@ -23,6 +24,8 @@ export interface RevisitDeps {
   llm?: LLMClient;
   /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例（作为 opts.maxAsks 缺项的兜底）。 */
   config?: MemoWeftConfig;
+  /** 可注入时钟（D-0020：补全 D-0015 时钟不变式）：askedAt 时间戳走它；缺省 systemClock（真实系统时间）。 */
+  clock?: Clock;
 }
 
 export interface RevisitResult {
@@ -123,7 +126,7 @@ export async function revisitConflicts(
       credStatus: cog.credStatus,
     });
 
-    if (markAsked) deps.cognitionStore.update(cog.id, { askedAt: new Date().toISOString() });
+    if (markAsked) deps.cognitionStore.update(cog.id, { askedAt: (deps.clock ?? systemClock)().toISOString() });
   }
 
   return { proposals, llmCalls: (deps.llm?.callCount ?? 0) - before };

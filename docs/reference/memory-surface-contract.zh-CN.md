@@ -121,7 +121,7 @@
 
 ### 2.2 门面各方法入参形状
 
-15. **`CreateCoreOptions`** — stable：`dbPath` 必填 + `llm?/embedder?/retriever?/config?/vectorDbPath?` + **`clock?: Clock`（experimental，Phase 4）**。`clock` 注入 store 落库/更新时间源（recordedAt/created_at/updated_at）以求确定性/时间旅行；缺省真实系统时间（additive，旧调用方不受影响）。只产时间戳、绝不进置信度自算（铁律 3b）。**本步只把 clock 接到三个 store;写算子(consolidate/attribute/管理审计/runLog)与读路径 now 留后续(D-0015)。** 依据 `src/core/createCore.ts`。
+15. **`CreateCoreOptions`** — stable：`dbPath` 必填 + `llm?/embedder?/retriever?/config?/vectorDbPath?` + **`clock?: Clock`（experimental，Phase 4）**。`clock` 注入 store 落库/更新时间源（recordedAt/created_at/updated_at）以求确定性/时间旅行；缺省真实系统时间（additive，旧调用方不受影响）。只产时间戳、绝不进置信度自算（铁律 3b）。**D-0015 已把 clock 接通整条门面路径(三个 store + consolidate/attribute/管理审计 + 读路径衰减 now)。剩两处非门面路径——主动询问(`ProposeAskDeps`/`RevisitDeps` 的 askedAt)与 dev 运行日志(`RunLoggerOptions` 的 ts)——各自带可选 `clock?`(D-0020),补全「全仓时间源皆可注入」;两者属 internal 档、不经 `CreateCoreOptions.clock`。** 依据 `src/core/createCore.ts`。
 15b. **`Clock`** — experimental（Phase 4）：`type Clock = () => Date`;`systemClock` 是缺省(真实系统时间)。经 `CreateCoreOptions.clock` / `openStores(dbPath, cfg, clock)` 注入。依据 `src/clock.ts`。
 16. **`UserMessageInput`** — stable：`content` + `subjectId?/hostId?/sourceKind?/originId?/occurredAt?`。依据 `:56-66`。
 17. **`ObservationInput`** — stable：`observations: Observation[]` + `subjectId?/hostId?`。依据 `:68-73`。

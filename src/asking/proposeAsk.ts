@@ -16,6 +16,7 @@ import type { CognitionStore } from '../cognition/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CredStatus } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
+import { systemClock, type Clock } from '../clock.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
 import { PROPOSE_ASK_PROMPT } from './prompts.ts';
 
@@ -44,6 +45,8 @@ export interface ProposeAskDeps {
   llm?: LLMClient;
   /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例（作为 opts.policy 缺项的兜底）。 */
   config?: MemoWeftConfig;
+  /** 可注入时钟（D-0020：补全 D-0015 时钟不变式）：askedAt 时间戳走它；缺省 systemClock（真实系统时间）。 */
+  clock?: Clock;
 }
 
 export interface AskPolicy {
@@ -149,7 +152,7 @@ export async function proposeAsk(
       credStatus: cog.credStatus,
     });
 
-    if (markAsked) deps.cognitionStore.update(cog.id, { askedAt: new Date().toISOString() });
+    if (markAsked) deps.cognitionStore.update(cog.id, { askedAt: (deps.clock ?? systemClock)().toISOString() });
   }
 
   return { proposals, llmCalls: (deps.llm?.callCount ?? 0) - before };

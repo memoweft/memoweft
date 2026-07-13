@@ -11,6 +11,7 @@
  */
 import { appendFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { systemClock, type Clock } from '../clock.ts';
 
 /** 本轮召回到的一条认知 / 证据。 */
 export interface RecallItem {
@@ -106,6 +107,8 @@ export interface RunLoggerOptions {
   dir: string;
   /** 会话 id（一个会话一个 jsonl 文件）。 */
   sessionId: string;
+  /** 可注入时钟（D-0020：补全 D-0015 时钟不变式）：记录 ts 走它；缺省 systemClock（真实系统时间）。 */
+  clock?: Clock;
 }
 
 const EMPTY_TIMINGS: ProfileUpdateTimings = { distillMs: 0, consolidateMs: 0, attributeMs: 0, indexMs: 0, totalMs: 0 };
@@ -136,7 +139,7 @@ export class RunLogger {
   /** 追加一轮对话内幕；缺省字段补成空值，返回写入的完整记录。 */
   appendTurn(rec: Partial<TurnRecord>): TurnRecord {
     const full: TurnRecord = {
-      ts: new Date().toISOString(),
+      ts: (this.opts.clock ?? systemClock)().toISOString(),
       sessionId: this.opts.sessionId,
       turn: ++this.turn,
       userInput: rec.userInput ?? '',
@@ -158,7 +161,7 @@ export class RunLogger {
   appendProfileUpdate(rec: Partial<Omit<ProfileUpdateRecord, 'kind' | 'ts' | 'sessionId'>>): ProfileUpdateRecord {
     const full: ProfileUpdateRecord = {
       kind: 'profile_update',
-      ts: new Date().toISOString(),
+      ts: (this.opts.clock ?? systemClock)().toISOString(),
       sessionId: this.opts.sessionId,
       trigger: rec.trigger ?? 'manual',
       timings: rec.timings ?? EMPTY_TIMINGS,

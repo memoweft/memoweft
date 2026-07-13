@@ -10,9 +10,15 @@ import { SqliteEvidenceStore } from '../src/evidence/store.ts';
 import { SqliteCognitionStore } from '../src/cognition/store.ts';
 import { SqliteEventStore } from '../src/event/store.ts';
 import { createMemoWeftCore } from '../src/core/createCore.ts';
+import { proposeAsk } from '../src/asking/proposeAsk.ts';
+import { revisitConflicts } from '../src/asking/revisitConflicts.ts';
+import { createRunLogger } from '../src/obs/runLog.ts';
 import type { Clock } from '../src/clock.ts';
 import type { ChatMessage } from '../src/llm/client.ts';
 import type { Retriever } from '../src/retrieval/retriever.ts';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join as pathJoin } from 'node:path';
 
 /** 简易词匹配召回器（同 no-key-demo）：按共享词打分，供衰减门控测试有东西可召回。 */
 function wordRetriever(): Retriever {
@@ -182,5 +188,69 @@ test('方案 C 补：core.memory 注入 clock → checkIntegrity.checkedAt = 注
     assert.equal(report.checkedAt, AT, 'managementApi 的 checkedAt 走注入 clock（方案 C：core.memory 面时间可注入）');
   } finally {
     core.close();
+  }
+});
+
+// ── D-0020：补全 D-0015 时钟不变式（asking 的 askedAt / runLog 的 ts 两处非门面路径）──
+
+test('D-0020 proposeAsk：注入 clock → askedAt = 注入值；confidence 不受影响（铁律 3b）', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  try {
+    // 落在"可问带"（confidence 100–400 / credStatus low / 没问过）的低置信假设 → proposeAsk 会问它并标 askedAt。
+    const h = cog.put({ subjectId: 'u', content: '可能咖啡喝多了睡不着', contentType: 'hypothesis', formedBy: 'inferred', confidence: 200, credStatus: 'low' });
+    const r = await proposeAsk('u', { cognitionStore: cog, evidenceStore: ev, clock: fixedClock() });
+    assert.equal(r.proposals.length, 1, '挑出该问的假设');
+    assert.equal(cog.get(h.id)!.askedAt, AT, 'askedAt = 注入 clock');
+    assert.equal(cog.get(h.id)!.confidence, 200, '注入 clock 不改 confidence（铁律 3b）');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('D-0020 revisitConflicts：注入 clock → conflicted 认知的 askedAt = 注入值（confidence 不变）', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  try {
+    const eTea = ev.put({ subjectId: 'u', sourceKind: 'spoken', hostId: 'h', rawContent: '我爱喝茶' });
+    const eCoffee = ev.put({ subjectId: 'u', sourceKind: 'observed', hostId: 'h', rawContent: '这周一直在点咖啡' });
+    const c = cog.put({
+      subjectId: 'u', content: '用户喜欢喝茶', contentType: 'preference', formedBy: 'stated', confidence: 600, credStatus: 'conflicted',
+      evidence: [{ evidenceId: eTea.id, relation: 'support' }, { evidenceId: eCoffee.id, relation: 'contradict' }],
+    });
+    const r = await revisitConflicts('u', { cognitionStore: cog, evidenceStore: ev, clock: fixedClock() });
+    assert.equal(r.proposals.length, 1, '复看那条冲突');
+    assert.equal(cog.get(c.id)!.askedAt, AT, 'askedAt = 注入 clock');
+    assert.equal(cog.get(c.id)!.confidence, 600, '注入 clock 不改 confidence（铁律 3b）');
+  } finally {
+    ev.close(); cog.close();
+  }
+});
+
+test('D-0020 runLog：注入 clock → appendTurn/appendProfileUpdate 的 ts = 注入值', () => {
+  const dir = mkdtempSync(pathJoin(tmpdir(), 'mw-runlog-'));
+  try {
+    const lg = createRunLogger({ dir, sessionId: 's1', clock: fixedClock() });
+    assert.equal(lg.appendTurn({ userInput: 'hi' }).ts, AT, 'appendTurn ts = 注入 clock');
+    assert.equal(lg.appendProfileUpdate({ trigger: 'manual' }).ts, AT, 'appendProfileUpdate ts = 注入 clock');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('D-0020 回归：不注入 clock → askedAt/ts 用真实系统时间（缺省行为不变）', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  const dir = mkdtempSync(pathJoin(tmpdir(), 'mw-runlog-'));
+  try {
+    const h = cog.put({ subjectId: 'u', content: '可能没吃早饭导致饿', contentType: 'hypothesis', formedBy: 'inferred', confidence: 200, credStatus: 'low' });
+    const before = Date.now();
+    await proposeAsk('u', { cognitionStore: cog, evidenceStore: ev }); // 不传 clock
+    const at = Date.parse(cog.get(h.id)!.askedAt!);
+    assert.ok(at >= before - 2000 && at <= Date.now() + 2000, 'proposeAsk 缺省 askedAt = 系统时间（±2s）');
+    const ts = Date.parse(createRunLogger({ dir, sessionId: 's2' }).appendTurn({}).ts); // 不传 clock
+    assert.ok(ts >= before - 2000 && ts <= Date.now() + 2000, 'runLog 缺省 ts = 系统时间（±2s）');
+  } finally {
+    ev.close(); cog.close(); rmSync(dir, { recursive: true, force: true });
   }
 });
