@@ -49,6 +49,7 @@ console.log(turn.reply);
 
 ## 下一步
 
+- **本系列下一篇 → [标注来源（Sourcing）](./sourcing.zh-CN.md)**
 - **[快速上手](../getting-started.zh-CN.md)** —— 五分钟内存下一条消息再读回来。
 - **[核心概念](./README.zh-CN.md)** —— 另外五条纪律，每条一屏。
 - **[API 参考](../reference/memory-surface-contract.zh-CN.md)** —— `TurnOutcome`、`updateProfile` 和 `config.profileUpdate` 的形状。

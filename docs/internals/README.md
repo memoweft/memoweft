@@ -1,5 +1,7 @@
 # How MemoWeft is built
 
+> **`internals/` vs `internal/`** (one letter apart, easy to confuse): **this** directory (`internals/`) is the public **"how it's built"** mechanism — architecture, boundaries, performance, the numbering map. The maintainer-only ledgers (calibration facts, runbooks, feasibility, positioning discipline) live under [`docs/internal/`](../internal/).
+
 Engineer-facing notes on how MemoWeft is built — the mechanism behind the [concepts](../concepts/). English single source.
 
 - [`architecture.md`](./architecture.md) — evidence → event → cognition, the read/write paths, and how the cognitive disciplines land in code.

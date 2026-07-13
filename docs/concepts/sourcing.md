@@ -57,6 +57,7 @@ Watch a fact form from raw evidence in the four-act demo: [`examples/demo.ts`](.
 
 ## Next
 
+- **Next in this series → [No self-evidence](./no-self-evidence.md)**
 - **[Getting started](../getting-started.md)** — store one piece of evidence and read it back in five minutes.
 - **[Run the demo](../demo-script.md)** — a fact forms, gets corrected, and hits a conflict — sources intact throughout.
 - **[API reference](../reference/memory-surface-contract.md)** — exact shapes for `listEvidence`, `listCognitions`, and the source links.

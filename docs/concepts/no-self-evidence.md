@@ -58,6 +58,7 @@ The reply lives in `turn.reply`, not in the store. See the effect end to end in 
 
 ## See also
 
+- **Next in this series → [Confidence by rule](./confidence.md)**
 - [Getting started](../getting-started.md) — store one message and read it back.
 - [Memory Surface Contract](../reference/memory-surface-contract.md) — `SourceKind`, the ingest methods, how confidence is computed.
 - [Demo script](../demo-script.md) — the four differentiators in 90 seconds.

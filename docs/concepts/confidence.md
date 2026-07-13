@@ -74,6 +74,7 @@ Run it: `npm run demo -- --act 1` ([demo walkthrough](../demo-script.md)).
 
 ## Related
 
+- **Next in this series → [Correct vs conflict](./correct-conflict.md)**
 - [Getting started](../getting-started.md) — store evidence and read it back in five minutes.
 - [Concepts](./) — source strength, conflict exposure, and time decay, one screen each.
 - [Run the demo](../demo-script.md) — the four differentiators in 90 seconds.

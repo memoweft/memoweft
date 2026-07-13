@@ -76,6 +76,7 @@ for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
 
 ## 相关
 
+- **本系列下一篇 → [纠正 vs 冲突（Correct vs conflict）](./correct-conflict.zh-CN.md)**
 - [Getting started](../getting-started.zh-CN.md) —— 五分钟内存下 evidence 再读回来。
 - [Concepts](./README.zh-CN.md) —— 来源强度、冲突暴露、时间衰减，每个概念一屏。
 - [Run the demo](../demo-script.md) —— 90 秒看完四个差异点。

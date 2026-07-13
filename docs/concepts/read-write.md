@@ -47,6 +47,7 @@ Keeping reads light and writes batched is why a chat turn stays responsive while
 
 ## Next
 
+- **Next in this series → [Sourcing](./sourcing.md)**
 - **[Getting started](../getting-started.md)** — store one message and read it back in five minutes.
 - **[Concepts](./)** — the other five disciplines, one screen each.
 - **[API reference](../reference/memory-surface-contract.md)** — `TurnOutcome`, `updateProfile`, and `config.profileUpdate` shapes.

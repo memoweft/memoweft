@@ -60,6 +60,7 @@ console.log(after.length - before); // → 1 — only the user's new message; th
 
 ## 另见
 
+- **本系列下一篇 → [置信度按规则算（Confidence by rule）](./confidence.zh-CN.md)**
 - [快速上手](../getting-started.zh-CN.md) —— 存一条消息再读回来。
 - [记忆面契约（Memory Surface Contract）](../reference/memory-surface-contract.zh-CN.md) —— `SourceKind`、各个摄入方法、置信度怎么算。
 - [Demo 脚本](../demo-script.md) —— 90 秒讲清四个差异点。

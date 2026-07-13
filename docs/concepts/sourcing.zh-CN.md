@@ -59,6 +59,7 @@ for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
 
 ## 下一步
 
+- **本系列下一篇 → [不拿自己当证据（No self-evidence）](./no-self-evidence.zh-CN.md)**
 - **[快速上手](../getting-started.zh-CN.md)** —— 五分钟内存下一条证据并读回来。
 - **[跑 demo](../demo-script.md)** —— 一条事实成形、被纠正、撞上冲突 —— 全程 sources 完好无损。
 - **[API 参考](../reference/memory-surface-contract.zh-CN.md)** —— `listEvidence`、`listCognitions` 以及溯源链接的精确结构。
