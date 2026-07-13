@@ -10,6 +10,7 @@
  */
 import { config, type MemoWeftConfig } from '../config.ts';
 import type { CognitionStore } from '../cognition/store.ts';
+import type { ContentType } from '../cognition/model.ts';
 import type { Retriever } from './retriever.ts';
 import { effectiveConfidence } from '../background/decay.ts';
 
@@ -27,6 +28,8 @@ export interface RecalledCognitionItem {
   confidence: number;
   credStatus: string;
   score: number;
+  /** 认知类型（D-0022：暴露给宿主 + 供 core.recall 的 contentTypes 过滤）。 */
+  contentType: ContentType;
 }
 
 /**
@@ -53,7 +56,7 @@ export async function recallCognitions(
     // 衰减门控（cell 8 规则 8）：把握度用【有效置信】，淡了的情绪/过气的假设直接不注入。
     const eff = effectiveConfidence(c, now, cfg);
     if (eff < cfg.retrieval.minEffectiveConfidence) continue;
-    out.push({ id: c.id, content: c.content, confidence: eff, credStatus: c.credStatus, score: h.score });
+    out.push({ id: c.id, content: c.content, confidence: eff, credStatus: c.credStatus, score: h.score, contentType: c.contentType });
   }
   return out;
 }

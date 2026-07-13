@@ -11,7 +11,7 @@ import { config, resolveLang, type MemoWeftConfig } from '../config.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { Evidence, SourceKind } from '../evidence/model.ts';
 import type { CognitionStore } from '../cognition/store.ts';
-import type { EvidenceRelation } from '../cognition/model.ts';
+import type { EvidenceRelation, ContentType } from '../cognition/model.ts';
 import type { Retriever } from '../retrieval/retriever.ts';
 import type { LLMClient } from '../llm/client.ts';
 import { WorkingMemory, type Turn } from './workingMemory.ts';
@@ -57,7 +57,9 @@ export interface RecalledCognition extends RelevantCognition {
   score: number;
   /** 认知 id（批次2 增量：共享召回函数随手带回，供管理/透视反查）。可选以兼容旧构造处。 */
   id?: string;
-  /** 召回解释（D-0021）：仅在 core.recall({ explain: true }) 时带；本条认知的支撑/反证证据链（可追溯，带授权位供宿主自筛）。 */
+  /** 认知类型（D-0022：召回结果带回,供宿主看类型 + core.recall 的 contentTypes 过滤）。可选以兼容旧构造处。 */
+  contentType?: ContentType;
+  /** 召回解释（D-0021）：仅在 core.recall({ explain: true }) 时带；本条认知的支撑/反证证据链（可追溯,带授权位供宿主自筛）。 */
   provenance?: RecalledEvidence[];
 }
 

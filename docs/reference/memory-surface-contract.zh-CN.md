@@ -126,7 +126,7 @@
 16. **`UserMessageInput`** — stable：`content` + `subjectId?/hostId?/sourceKind?/originId?/occurredAt?`。依据 `:56-66`。
 17. **`ObservationInput`** — stable：`observations: Observation[]` + `subjectId?/hostId?`。依据 `:68-73`。
 17a. **`ToolResultInput`** — stable（AD-3/D-0013）：`content`（工具返回结果 payload）+ `subjectId?/hostId?/originId?/occurredAt?`。落成 `tool` 证据，cloud-read 缺省 false（`config.toolDefaults`）。依据 `src/core/createCore.ts`。
-18. **`RecallInput`** — stable：`query` + `subjectId?` + **`explain?: boolean`**（D-0021：`true` → 每条召回认知带上支撑证据链 `provenance`；additive、缺省关 = 行为不变）。依据 `:75-78`。
+18. **`RecallInput`** — stable：`query` + `subjectId?` + **`explain?: boolean`**（D-0021：`true` → 每条召回认知带上支撑证据链 `provenance`；additive、缺省关 = 行为不变）+ **`contentTypes?: ContentType[]`**（D-0022：允许名单；空/不传 = 全类型；对 top-K 的后过滤,可能欠填；additive）。依据 `:75-78`。
 19. **`ConversationInput`** — stable：`message` + `conversationId?/subjectId?/hostId?/originId?/occurredAt?/systemPrompt?/seedTurns?`。依据 `:80-93`。
 20. **`UpdateProfileInput`** — stable：`subjectId?`。依据 `:95-97`。
 21. **`ListMemoryInput`** — stable：`subjectId?`。依据 `src/memory/managementApi.ts:115-117`。
@@ -134,7 +134,7 @@
 ### 2.3 门面各方法返回形状
 
 22. **`TurnOutcome`** — stable：`reply / storedEvidence: Evidence / recall: RecalledCognition[] / llmCalls / error: string | null`。`error` 非空 = 回话降级但证据已落（见隐性契约第 6 条）。依据 `src/pipeline/conversation.ts:44-50`。
-23. **`RecalledCognition`** — stable（`recall`/`TurnOutcome.recall` 项）：`RelevantCognition + score + id?` + **`provenance?: RecalledEvidence[]`**（D-0021，仅 `recall({ explain: true })` 时带；`RecalledEvidence = { evidenceId; relation; summary; sourceKind; allowCloudRead; allowInference }` 支撑/反证证据简报、**带授权位**（对齐 `buildMemoryGraph`，宿主转发云模型前可按 tier 自筛 `provenance`）、面向宿主、可追溯；additive）。依据 `src/pipeline/conversation.ts:38-42`。
+23. **`RecalledCognition`** — stable（`recall`/`TurnOutcome.recall` 项）：`RelevantCognition + score + id?` + **`contentType?: ContentType`**（D-0022；底层 `RecalledCognitionItem` 为必填）+ **`provenance?: RecalledEvidence[]`**（D-0021，仅 `recall({ explain: true })` 时带；`RecalledEvidence = { evidenceId; relation; summary; sourceKind; allowCloudRead; allowInference }` 支撑/反证证据简报、**带授权位**（对齐 `buildMemoryGraph`，宿主转发云模型前可按 tier 自筛 `provenance`）、面向宿主、可追溯；additive）。依据 `src/pipeline/conversation.ts:38-42`。
 24. **`UpdateProfileResult`** — stable：`distilled / consolidated / attributed / indexed / indexError: string | null / timings`。依据 `src/consolidation/updateProfile.ts:45-55`。
 25. **`UpdateProfileTimings`** — stable：`distillMs / consolidateMs / attributeMs / indexMs / totalMs`。依据 `:37-43`。
 26. **`HealthReport`** — stable：`llmReady / embedReady`。依据 `src/core/createCore.ts:112-117`。

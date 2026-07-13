@@ -20,6 +20,7 @@ import type { Turn } from '../pipeline/workingMemory.ts';
 import { ingestObservations, type Observation } from '../perception/ingest.ts';
 import { updateProfile as runUpdateProfile, type UpdateProfileResult } from '../consolidation/updateProfile.ts';
 import { recallCognitions } from '../retrieval/recall.ts';
+import type { ContentType } from '../cognition/model.ts';
 import { NullRetriever } from '../retrieval/nullRetriever.ts';
 import { VectorRetriever } from '../retrieval/vectorRetriever.ts';
 import { KeywordRetriever, FtsUnavailableError } from '../retrieval/keywordRetriever.ts';
@@ -98,6 +99,9 @@ export interface RecallInput {
   subjectId?: string;
   /** 召回解释（D-0021）：true → 每条召回认知带上其支撑证据链（provenance）。缺省 false = 不做额外查询、行为不变。 */
   explain?: boolean;
+  /** 按认知类型过滤（D-0022）：只召回这些类型（允许名单）。不传/空 = 全类型（行为不变）。
+   *  后过滤（top-K 取完之后）：若命中里没有匹配类型的，可能返回 <topK 甚至空（同 similarity/衰减门控层）。 */
+  contentTypes?: ContentType[];
 }
 
 export interface ConversationInput {
@@ -354,7 +358,12 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
 
     async recall(input) {
       // 读路径 now 走注入 clock（Phase 4 S3）：前进 clock → 淡了的情绪衰减出局、事实留存。
-      const items = await recallCognitions(input.query, subjectOf(input.subjectId), { retriever, cognitionStore }, cfg, (options.clock ?? systemClock)());
+      let items = await recallCognitions(input.query, subjectOf(input.subjectId), { retriever, cognitionStore }, cfg, (options.clock ?? systemClock)());
+      // 按 contentType 过滤（D-0022，门面特性）：只留允许名单里的类型；后过滤（top-K 取完之后），可能欠填（同 similarity/衰减门控层）。
+      if (input.contentTypes?.length) {
+        const allow = new Set(input.contentTypes);
+        items = items.filter((it) => allow.has(it.contentType));
+      }
       if (!input.explain) return items;
       // 召回解释（D-0021）：门面已有两个 store → 逐条补支撑/反证证据链，不动 recallCognitions/RecallDeps。
       //   隐私（对抗审查加固）：provenance 面向宿主、库不自动喂云；但 summary 是证据【原文】（可能比派生认知更敏感、
