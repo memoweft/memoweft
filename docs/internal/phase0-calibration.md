@@ -21,6 +21,9 @@
 | 有效置信门控 | 召回处 `effectiveConfidence < 80` 跳过(`minEffectiveConfidence=80`) | `decay.ts:27-38`; `config.ts:102`; `src/retrieval/recall.ts:56` |
 | 过期(独立机制) | `invalidAt` 由 `expireAfterDays`: state7 / hypothesis14 / trend30 | `config.ts:133`; `src/background/expire.ts` |
 | 归因防伪 | LLM 引用证据 id 先按真实 `candidateIds` 白名单过滤(防编造/自证),封顶条数;`hypothesisCap=250` | `src/attribution/attribute.ts:189-203`; `config.ts:115` |
+| 召回相似度门控 | `retrieval.minSimilarity`:命中余弦 < 此值直接不注入;**默认 0=关**;值 embedder-specific | `src/config.ts:32-34`;`src/retrieval/recall.ts:48` |
+
+> **召回相似度阈值 `minSimilarity` 校准(2026-07-13·真实 bge-m3 黄金集 65 用例·top5·`tests/retrieval/golden.json`)**:gold(相关)命中余弦**中位 0.771 / 最低 0.559 / p5 0.624**;非-gold(噪声)命中**中位 0.641 / 最高 0.906**。两分布**重叠严重、无干净分割线**——阈值是"修边"非"清刀"。权衡(top5 命中上):**0.55 = 安全甜点**(保住 100% gold、砍 ~9% 噪声,约束点是那条 0.559 的 multihop gold);0.5 更保守(砍 ~3%);**≥0.6 开始误杀 gold**(0.6 砍 27% 噪声但误杀 1 条)。**默认仍 0=关**——值随 embedder 变(只对 vector 余弦清晰)、黄金集偏小(36 认知,D-0008 记),不足以定系统级默认;想开在 `config.retrieval.minSimilarity` 设一个。ROADMAP「召回质量 v2·相似度阈值」据此**收口(测+记文档,不扩 API)**:机制既存(`recall.ts:48`),现给出数据背书的取值。
 
 **认知纪律核对(铁律 3)**:3b(置信度只由规则算)✓ `ConfidenceInputs` 只含 contentType/formedBy/support/contradict 计数,无分数入参;3d(证据 ID 白名单)✓ 见 attribute 的 candidateIds 过滤。所有落库路径(consolidate/attribute/trends/managementApi)都用 `computeConfidence` 重算。
 

@@ -30,7 +30,9 @@ export interface MemoWeftConfig {
     /** 有效置信（衰减后）低于此值的认知不注入回话——淡了的情绪/过气的假设别硬塞（规则 8）。 */
     minEffectiveConfidence: number;
     /** 召回相似度门控：query 与认知的余弦分低于此值 → 直接不注入（防 top-k 把不相关认知也召回硬塞）。
-     *  0 = 关闭（默认，先不改现有 dogfood 行为）；dogfood 时照 turn.recall 里的真实分数设一个能挡住噪声的下限（值随嵌入器变）。 */
+     *  0 = 关闭（默认，不改现有行为）。想开时按【你的 embedder】的真实分定——值随嵌入器变（vector 余弦 vs keyword -bm25 vs hybrid RRF 不同量纲，只对 vector 余弦语义清晰）。
+     *  bge-m3 黄金集实测（65 用例·top5）：gold 命中余弦中位 0.77、最低 0.559；非-gold 中位 0.64。安全甜点 **0.55**（零召回损失、砍 ~9% 噪声）；
+     *  0.5 更保守（砍 ~3%）；≥0.6 开始误杀 gold。详见 docs/internal/phase0-calibration.md。 */
     minSimilarity: number;
   };
   /** 画像把握度算法参数（阶段 1a；MemoWeft 自算，非 LLM 自报。运行后校准）。 */
