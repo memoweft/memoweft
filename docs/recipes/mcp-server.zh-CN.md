@@ -46,7 +46,7 @@ const server = createMcpServer(core);
 await server.connect(new StdioServerTransport());
 ```
 
-## 这 7 个工具
+## 这 8 个工具
 
 `createMcpServer` 注册的就这几个——一个白名单，别无其他。
 
@@ -59,10 +59,13 @@ await server.connect(new StdioServerTransport());
 | `memoweft_graph` | `core.graph.buildMemoryGraph` | 读 |
 | `memoweft_ingest_user_message` | `core.ingestUserMessage` | 写（轻量） |
 | `memoweft_ingest_tool_result` | `core.ingestToolResult` | 写（轻量） |
+| `memoweft_mute_cognition` | `core.memory.muteCognition` | 写（轻量） |
 
-这两个写工具各自只记录**一条原始证据**。它们不会更新画像、不会跑固化、也不会授予任何云端读取授权。所以 `memoweft_recall` 反映的是你的宿主在别处经 `updateProfile`（配 embedder）构建出的**画像**——不是你刚通过这些工具 ingest 的原始证据。纯 MCP、没有画像步骤时，召回始终为空，这是预期行为。
+这三个写工具都是**轻写**。两个 ingest 工具各自只记录**一条原始证据**、别无其他；`memoweft_mute_cognition` 不记录任何证据——它只**翻转某条认知是否从召回排除**（召回负反馈），即仅从召回雪藏、认知仍 active 且继续演化画像，与置信度正交，不删、也不改任何云端读取授权。这三个都不会更新画像、不会跑固化、也不会授予任何云端读取授权。所以 `memoweft_recall` 反映的是你的宿主在别处经 `updateProfile`（配 embedder）构建出的**画像**——不是你刚通过这些工具 ingest 的原始证据。纯 MCP、没有画像步骤时，召回始终为空，这是预期行为。
 
-## 为什么只有这 7 个
+**`memoweft_recall` 的 v2 入参（可选）。** 除了 `query` / `subjectId`，召回还接受一个可选的 `contentTypes` 允许名单（只召回某些认知类型，比如 `["preference", "goal"]`）和一个可选的 `explain` 开关。每条结果都带 `contentType`；`explain: true` 时每条结果还带一条 `provenance` 链（某条记忆所依据的证据）。由于 MCP 客户端往往就是云模型，provenance 在 **tool 内按 tier 预筛**：云端可读的证据保留 `summary`，而云受限的证据只回 `{ evidenceId, relation, sourceKind }` 加授权位——summary 被隐去。
+
+## 为什么只有这 8 个
 
 MCP 客户端是**自主**调用工具的，没人给每次调用把关。所以这个接口面故意收得很窄。下面这些 Core 方法**永远不会**被注册成工具：
 
@@ -70,6 +73,8 @@ MCP 客户端是**自主**调用工具的，没人给每次调用把关。所以
 - `updateEvidenceAuthorization`——翻转云端读取开关，涉及隐私。
 - `handleConversationTurn`、`updateProfile`——会跑完整的固化流水线并重写画像。
 - `ingestObservation`、`portable.*`（导出/导入）——批量搬数据。
+
+**唯一的例外——`muteCognition` 现已提升为白名单轻写 tool**（`memoweft_mute_cognition`）。它之所以能安全地交给自主调用，恰恰是因为它可逆、不删任何东西、不改任何云端读取授权、且与置信度正交——mute 只是把某条认知从召回里雪藏，认知仍 active 且继续演化画像。上面那份破坏性 / 改授权 / 整套消化的清单，其余一律不进 tool 面。
 
 管理记忆——删除、合并、改授权、重置——始终是你宿主应用里由人监督的动作，而不是一个自主工具。
 

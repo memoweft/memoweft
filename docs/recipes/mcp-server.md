@@ -44,7 +44,7 @@ const server = createMcpServer(core);
 await server.connect(new StdioServerTransport());
 ```
 
-## The 7 tools
+## The 8 tools
 
 `createMcpServer` registers exactly these — a whitelist, nothing more.
 
@@ -57,10 +57,13 @@ await server.connect(new StdioServerTransport());
 | `memoweft_graph` | `core.graph.buildMemoryGraph` | read |
 | `memoweft_ingest_user_message` | `core.ingestUserMessage` | write (light) |
 | `memoweft_ingest_tool_result` | `core.ingestToolResult` | write (light) |
+| `memoweft_mute_cognition` | `core.memory.muteCognition` | write (light) |
 
-The two write tools only record **one raw piece of evidence** each. They do not update the profile, run consolidation, or grant any cloud-read authorization. So `memoweft_recall` reflects the **profile** your host builds elsewhere via `updateProfile` (with an embedder) — not the raw evidence you just ingested through these tools. In a pure-MCP setup with no profile step, recall stays empty; that is expected.
+All three write tools are **light writes**. The two ingest tools each record **one raw piece of evidence** and nothing more; `memoweft_mute_cognition` records no evidence at all — it only **toggles whether one cognition is excluded from recall** (recall negative feedback), which hides it from recall while it stays active and keeps evolving the profile, orthogonal to confidence, without deleting it or changing any cloud-read authorization. None of the three update the profile, run consolidation, or grant any cloud-read authorization. So `memoweft_recall` reflects the **profile** your host builds elsewhere via `updateProfile` (with an embedder) — not the raw evidence you just ingested through these tools. In a pure-MCP setup with no profile step, recall stays empty; that is expected.
 
-## Why only these 7
+**`memoweft_recall` v2 inputs (optional).** Besides `query` / `subjectId`, recall takes an optional `contentTypes` allow-list (recall only certain cognition types, e.g. `["preference", "goal"]`) and an optional `explain` flag. Every result carries its `contentType`; with `explain: true` each result also carries a `provenance` chain (the evidence a memory is built on). Because an MCP client is often a cloud model, provenance is **tier pre-filtered inside the tool**: cloud-readable evidence keeps its `summary`, while cloud-restricted evidence returns only `{ evidenceId, relation, sourceKind }` plus its authorization bits — the summary is withheld.
+
+## Why only these 8
 
 An MCP client invokes tools **autonomously**, with no human approving each call. So the surface is narrow on purpose. These Core methods are **never** registered as tools:
 
@@ -68,6 +71,8 @@ An MCP client invokes tools **autonomously**, with no human approving each call.
 - `updateEvidenceAuthorization` — flips the cloud-read bit; privacy-sensitive.
 - `handleConversationTurn`, `updateProfile` — run the full consolidation pipeline and rewrite the profile.
 - `ingestObservation`, `portable.*` (export/import) — bulk data movement.
+
+**The one exception — `muteCognition` is now promoted to a whitelisted light write tool** (`memoweft_mute_cognition`). It is safe to expose autonomously precisely because it is reversible, deletes nothing, changes no cloud-read authorization, and is orthogonal to confidence — muting only hides a cognition from recall while it stays active and keeps evolving the profile. Everything else on the destructive / authorization-changing / full-digestion list above stays off the tool surface.
 
 Managing memory — deleting, merging, changing authorization, resetting — stays a human-supervised action in your host app, not an autonomous tool.
 

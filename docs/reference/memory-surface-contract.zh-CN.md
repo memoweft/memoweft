@@ -37,6 +37,7 @@
   - [5.5 internal 面](#55-internal-面)
 - [六、存疑符号定级（回源确认结论）](#六存疑符号定级回源确认结论)
 - [七、适配器降级语义（§16.2）](#七适配器降级语义162)
+- [八、召回 v2 适配器透传面与 MCP mute 工具](#八召回-v2-适配器透传面与-mcp-mute-工具)
 
 ---
 
@@ -318,3 +319,24 @@
 - **降级 vs 真错**：只有记忆层内部故障/超时（`core.recall` / `core.ingestUserMessage` 抛错或超时）才降级。调用方的错——参数非法、协议层错误——**不**被当降级吞掉，仍以错误上浮。MCP server 里 inputSchema（`zod`）校验在 handler 之前跑，故参数非法仍是协议错误 `isError: true`；只有被包裹的 `core.*` 调用才降级。
 
 依据：`packages/adapter-ai-sdk/src/recallMiddleware.ts`（recall 超时 + 降级）、`packages/adapter-ai-sdk/src/persistOnEnd.ts`（写路径一次重试 + 降级）、`packages/mcp-server/src/tools.ts`（读/写 tool 兜底）、`packages/adapter-ai-sdk/src/degrade.ts` + `packages/mcp-server/src/degrade.ts`（共享 `DEFAULT_RECALL_TIMEOUT_MS = 200`、`withTimeout`、logger 事件类型）。
+
+---
+
+## 八、召回 v2 适配器透传面与 MCP mute 工具
+
+> 范围：与 §七 相同的两个官方适配器。这是**召回 v2 透传面**——D-0021/D-0022/D-0023 加在 `core.recall` 门面上的召回质量面（`explain`→`provenance`、`contentTypes` 过滤 + 结果带 `contentType`、mute 负反馈），如今经适配器**端到端**落到宿主可用（D-0024），外加一个新增的 MCP 写 tool。人类已批准，2026-07-13（见 `DECISIONS.md` D-0024）。本节只约束适配器，不给上面的 Core 门面新增任何义务。
+
+**`@memoweft/adapter-ai-sdk`（读中间件）——纯 additive：**
+
+- `MemoWeftMiddlewareOptions` 加 **`contentTypes?: ContentType[]`** 与 **`explain?: boolean`**，原样透传进 `core.recall`。不传 = 全类型 / 不带 provenance（行为不变）；过滤/解释都在 Core 门面一处做，适配器只负责透传。
+- **`onRecall(items)`** 回调现在逐项带出 v2 字段：`id?`、`contentType?`、`score?`，以及——仅在 `explain: true` 时——`provenance?: RecalledEvidence[]`（每条简报带 `allowCloudRead` / `allowInference` 授权位）。
+- **隐私硬约束（不可违反）：** `provenance`——以及 `contentType` / `id` / `score`——**绝不进 `buildKnowledgeBlock` / 注入 prompt**；注入块仍只用 `content` / `confidence` / `credStatus`。provenance 是证据**原文**加授权位（含云受限的 `observed` / `tool` 证据）；进 prompt 就等于绕过 tier 把受限原文喂给模型。它**只经 `onRecall`** 交宿主，宿主转发云模型前据 `allowCloudRead` / `allowInference` 自筛。
+- 读中间件不含 mute（它是读适配器；D-0024 的 mute 只落在 MCP server）。
+
+**`@memoweft/mcp-server`——召回 v2 输出 + 一个新增写 tool：**
+
+- `memoweft_recall` 入参加 **`contentTypes?`**（一个 `zod` enum，手动复刻并与 `src/cognition/model.ts` 的 8 个 `ContentType` 值对齐，与 `RecallInput.contentTypes` 同步）与 **`explain?`**；输出逐项加 **`contentType`**，`explain: true` 时加 **`provenance`** 链。
+- **provenance 按 tier 预筛（D-0024——由 tool 层做，不是由客户端做）：** 对每条 provenance 简报，`allowCloudRead: true` → 完整简报（**保留 `summary`**）；`allowCloudRead: false` → **隐去 `summary`**，只回 `{ evidenceId, relation, sourceKind, allowCloudRead, allowInference }`。授权位是元数据（不是敏感载荷），留着让宿主转发前仍能按 tier 自筛——与该 server「tool 证据默认 local-only」的姿态一致（库自持隐私红线，不把整个决定权推给协议对端）。
+- **新增 tool `memoweft_mute_cognition`**（轻写，转发 `core.memory.muteCognition`）：`WRITE_TOOL_NAMES` **2 → 3**、`ALL_TOOL_NAMES` **7 → 8**。故 `muteCognition` **不再在「不注册」黑名单里**——它是可控、可逆的轻写：只翻转某条认知的召回可见性（`mutedAt`），认知仍 active、仍参与 consolidation，与置信度**正交**（铁律 3b），**不删、不改任何上云授权**。入参 `{ cognitionId, muted, reason? }`；不存在的 id 返回 `{ muted: false, cognition: null }`（如实 not-found，不是降级）。
+
+依据：`packages/adapter-ai-sdk/src/recallMiddleware.ts`（`contentTypes` / `explain` 选项 + `onRecall` 透传；`provenance` 绝不进 `buildKnowledgeBlock`）、`packages/mcp-server/src/tools.ts`（`memoweft_recall` 入/出参 + provenance tier 预筛；`memoweft_mute_cognition` 注册、`WRITE_TOOL_NAMES` / `ALL_TOOL_NAMES`）。见 `DECISIONS.md` D-0021 / D-0022 / D-0023 / D-0024。

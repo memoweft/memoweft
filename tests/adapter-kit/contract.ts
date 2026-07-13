@@ -1,5 +1,5 @@
 /**
- * adapter-kit · 参数化契约套件（AD-1…AD-6）。
+ * adapter-kit · 参数化契约套件（AD-1…AD-9）。
  *
  * 用法（各适配器包的接入测试里）：
  *   import { runAdapterContract } from '../../../tests/adapter-kit/contract.ts';
@@ -14,6 +14,9 @@
  * baseline 快照：AD-4（当前召回呈现格式，含一条 conflicted 项）。
  * AD-6（契约 §16.2）：两适配器均 applicable——记忆层抛错 / 召回超时 → 降级「无记忆但对话不中断」
  *             + 经注入 logger 记一条结构化事件（throw / timeout 两模式都真跑）。
+ * 召回 v2（D-0024）：AD-7（contentTypes 过滤端到端透传，两适配器 applicable）、
+ *             AD-8（explain 带出 provenance 含 allowCloudRead/allowInference 授权位，两适配器 applicable）、
+ *             AD-9（mute 闭环：mute→召回消失 + confidence 不变 / 铁律 3b，仅 B applicable、A 声明 N/A）。
  * N/A 声明位：AD-5（无 LLM→evidenceId 回捞）。
  */
 import { test } from 'node:test';
@@ -117,6 +120,74 @@ export function runAdapterContract(driver: AdapterDriver, opts: ContractOptions)
     test(tag('AD-6', 'na', driver.applicability.ad6.reason), () => {
       assert.equal(driver.applicability.ad6.status, 'na');
       assert.ok(driver.applicability.ad6.reason.length > 0, 'N/A 须声明理由');
+    });
+  }
+
+  // ── AD-7：contentTypes 过滤端到端透传（D-0022/D-0024）──────────────────
+  if (driver.applicability.ad7.status === 'applicable') {
+    const filtered = driver.recallSurfaceFiltered?.bind(driver);
+    assert.ok(filtered, 'AD-7 applicable 的适配器必须实现 recallSurfaceFiltered 驱动');
+    test(tag('AD-7', 'applicable', 'contentTypes 过滤透传 → 召回项全部为请求类型'), async () => {
+      // 选一个夹具里确实存在的 contentType；夹具含 3 个不同类型，按其一过滤应挡掉其它。
+      const want = 'preference';
+      assert.ok(RECALL_FIXTURE.some((f) => f.contentType === want), 'AD-7 前置：夹具须含该 contentType');
+      const surface = await filtered!(RECALL_FIXTURE, [want], 'en');
+      assert.ok(surface.items.length > 0, 'AD-7：按存在的类型过滤应召回到至少一项');
+      for (const it of surface.items) {
+        assert.equal(it.contentType, want, 'AD-7：contentTypes 过滤端到端透传——返回项全部为请求类型');
+      }
+    });
+  } else {
+    test(tag('AD-7', 'na', driver.applicability.ad7.reason), () => {
+      assert.equal(driver.applicability.ad7.status, 'na');
+      assert.ok(driver.applicability.ad7.reason.length > 0, 'N/A 须声明理由');
+    });
+  }
+
+  // ── AD-8：explain 带出 provenance 含授权位（D-0021/D-0024 隐私加固）──────
+  if (driver.applicability.ad8.status === 'applicable') {
+    const explained = driver.recallSurfaceExplained?.bind(driver);
+    assert.ok(explained, 'AD-8 applicable 的适配器必须实现 recallSurfaceExplained 驱动');
+    test(tag('AD-8', 'applicable', 'explain 召回带出 provenance，每条含 allowCloudRead/allowInference 授权位'), async () => {
+      const surface = await explained!(RECALL_FIXTURE, 'en');
+      const withProv = surface.items.filter((i) => Array.isArray(i.provenance) && i.provenance!.length > 0);
+      assert.ok(withProv.length > 0, 'AD-8：explain 时至少一项带 provenance');
+      for (const it of withProv) {
+        for (const p of it.provenance!) {
+          assert.ok(typeof p.evidenceId === 'string' && p.evidenceId.length > 0, 'AD-8：provenance 元素带 evidenceId');
+          assert.equal(typeof p.allowCloudRead, 'boolean', 'AD-8：provenance 元素带 allowCloudRead 授权位（D-0021）');
+          assert.equal(typeof p.allowInference, 'boolean', 'AD-8：provenance 元素带 allowInference 授权位（D-0021）');
+        }
+      }
+    });
+  } else {
+    test(tag('AD-8', 'na', driver.applicability.ad8.reason), () => {
+      assert.equal(driver.applicability.ad8.status, 'na');
+      assert.ok(driver.applicability.ad8.reason.length > 0, 'N/A 须声明理由');
+    });
+  }
+
+  // ── AD-9：mute 闭环——mute 后召回消失 + confidence 不变（铁律 3b，仅 B applicable）──
+  if (driver.applicability.ad9.status === 'applicable') {
+    const muteAndRecall = driver.muteAndRecall?.bind(driver);
+    assert.ok(muteAndRecall, 'AD-9 applicable 的适配器必须实现 muteAndRecall 驱动');
+    test(tag('AD-9', 'applicable', 'mute 某认知 → 该 id 不再被召回、其它项仍在；mute 不改 confidence（铁律 3b）'), async () => {
+      const muteId = RECALL_FIXTURE[0]!.id; // mute 第一项
+      const others = RECALL_FIXTURE.filter((f) => f.id !== muteId).map((f) => f.id);
+      const out = await muteAndRecall!(RECALL_FIXTURE, muteId);
+      assert.ok(!out.recalledIds.includes(muteId), 'AD-9：被 mute 的认知不再出现在召回结果');
+      for (const id of others) {
+        assert.ok(out.recalledIds.includes(id), `AD-9：未 mute 的认知（${id}）仍被召回`);
+      }
+      // 铁律 3b：mute 与 confidence 正交——若驱动带回前后置信度，须严格相等。
+      if (out.mutedConfidenceBefore !== undefined && out.mutedConfidenceAfter !== undefined) {
+        assert.equal(out.mutedConfidenceAfter, out.mutedConfidenceBefore, 'AD-9/铁律3b：mute 不改被 mute 项的 confidence');
+      }
+    });
+  } else {
+    test(tag('AD-9', 'na', driver.applicability.ad9.reason), () => {
+      assert.equal(driver.applicability.ad9.status, 'na');
+      assert.ok(driver.applicability.ad9.reason.length > 0, 'N/A 须声明理由');
     });
   }
 }

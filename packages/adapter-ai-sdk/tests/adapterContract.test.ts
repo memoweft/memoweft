@@ -7,9 +7,14 @@
  * 不打真模型、不触网。AD 断言由 runAdapterContract 产出（本文件是 *.test.ts，node --test 直接跑）。
  */
 import { fileURLToPath } from 'node:url';
-import { createMemoWeftCore, type ChatMessage, type RecalledCognition } from 'memoweft';
+import { createMemoWeftCore, type ChatMessage, type RecalledCognition, type RecallInput, type ContentType } from 'memoweft';
 import type { LanguageModelMiddleware, ModelMessage } from 'ai';
-import { createMemoWeftMiddleware, createPersistOnEnd, persistToolResults } from '../src/index.ts';
+import {
+  createMemoWeftMiddleware,
+  createPersistOnEnd,
+  persistToolResults,
+  type MemoWeftMiddlewareOptions,
+} from '../src/index.ts';
 import { runAdapterContract } from '../../../tests/adapter-kit/contract.ts';
 import type {
   AdapterDriver,
@@ -48,6 +53,35 @@ function paramsWith(userText: string): TransformArg['params'] {
       { role: 'user', content: [{ type: 'text', text: userText }] },
     ],
   } as unknown as TransformArg['params'];
+}
+
+// onRecall 回调收到的召回项类型（中间件透传的 v2 面：id/contentType/score/provenance）。从公开选项类型提取，
+//   不依赖中间件内部未导出的 RecalledLike——AD-7/8 据此把「透传进 onRecall 的召回对象」当断言源。
+type OnRecallItems = Parameters<NonNullable<MemoWeftMiddlewareOptions['onRecall']>>[0];
+
+// ── AD-7/AD-8 离线 fake core：照 Core 门面 recall 语义（createCore.ts:359-380）──
+//   contentTypes → 后过滤 fixture（allow 名单）；explain → 逐条附 provenance（证据链带授权位）。
+//   据 input 真读选项行事，端到端证明适配器把 contentTypes/explain 透传进了 core.recall（非驱动自造结果）。
+function fakeRecallCore(fixture: RecallFixtureItem[]) {
+  return {
+    async recall(input: RecallInput): Promise<RecalledCognition[]> {
+      let rows = fixture.slice();
+      if (input.contentTypes?.length) {
+        const allow = new Set<string>(input.contentTypes);
+        rows = rows.filter((f) => f.contentType !== undefined && allow.has(f.contentType));
+      }
+      const items = rows.map((f) => {
+        const item: Record<string, unknown> = {
+          id: f.id, content: f.content, confidence: f.confidence,
+          credStatus: f.credStatus, score: f.score, contentType: f.contentType,
+        };
+        // explain 附 provenance（照 createCore.ts:373-379）——支撑/反证链，每条含授权位；仅经 onRecall 交宿主。
+        if (input.explain && f.provenance) item.provenance = f.provenance;
+        return item;
+      });
+      return items as unknown as RecalledCognition[];
+    },
+  };
 }
 
 const driver: AdapterDriver = {
@@ -133,6 +167,45 @@ const driver: AdapterDriver = {
     };
   },
 
+  // AD-7：带 contentTypes 调召回 → fakeRecallCore 后过滤 → 中间件把选项透传进 core.recall → onRecall 只收到匹配类型项。
+  //   surface.items 取自 onRecall 捕获的召回对象（非驱动自造）——contentTypes 端到端透传的直接证据。
+  async recallSurfaceFiltered(fixture: RecallFixtureItem[], contentTypes: string[], lang: 'en' | 'zh' = 'en'): Promise<RecallSurface> {
+    const core = fakeRecallCore(fixture);
+    let captured: OnRecallItems = [];
+    const mw = createMemoWeftMiddleware(core, {
+      lang,
+      contentTypes: contentTypes as ContentType[],
+      onRecall: (items) => { captured = items; },
+    });
+    const out = await mw.transformParams!({ type: 'generate', params: paramsWith('How should I phrase this?'), model: MODEL });
+    const userMsg = (out.prompt as unknown as TextMsg[]).find((m) => m.role === 'user');
+    return {
+      kind: 'text-block',
+      rendered: userMsg?.content[0]?.text ?? '',
+      items: captured.map((c) => ({ id: c.id!, content: c.content, confidence: c.confidence, credStatus: c.credStatus, score: c.score, contentType: c.contentType })),
+    };
+  },
+
+  // AD-8：带 explain 调召回 → fakeRecallCore 逐条附 provenance → 中间件透传 explain → 经 onRecall 交宿主。
+  //   surface.items 取自 onRecall 捕获对象，携带 provenance（含 allowCloudRead/allowInference 授权位）供断言。
+  //   隐私（D-0024）：provenance 只走 onRecall，中间件的 buildKnowledgeBlock 不用它 → 绝不进注入 prompt。
+  async recallSurfaceExplained(fixture: RecallFixtureItem[], lang: 'en' | 'zh' = 'en'): Promise<RecallSurface> {
+    const core = fakeRecallCore(fixture);
+    let captured: OnRecallItems = [];
+    const mw = createMemoWeftMiddleware(core, {
+      lang,
+      explain: true,
+      onRecall: (items) => { captured = items; },
+    });
+    const out = await mw.transformParams!({ type: 'generate', params: paramsWith('How should I phrase this?'), model: MODEL });
+    const userMsg = (out.prompt as unknown as TextMsg[]).find((m) => m.role === 'user');
+    return {
+      kind: 'text-block',
+      rendered: userMsg?.content[0]?.text ?? '',
+      items: captured.map((c) => ({ id: c.id!, content: c.content, confidence: c.confidence, credStatus: c.credStatus, score: c.score, contentType: c.contentType, provenance: c.provenance })),
+    };
+  },
+
   // AD-6：故障 core → 读路径降级。抛错/超时被 recallMiddleware catch → 原样返回 params（未注入）= 降级，
   //   并经注入 logger 记一条结构化事件。throw / timeout 两模式都真跑（timeout 由中间件 200ms 超时器有界赢下）。
   async runWithFaultyCore(mode: FaultMode): Promise<FaultOutcome> {
@@ -156,6 +229,18 @@ const driver: AdapterDriver = {
     ad6: {
       status: 'applicable',
       reason: 'recall 抛错/超时降级为不注入（recallMiddleware withTimeout+catch），经注入 logger 记一条（契约 §16.2）',
+    },
+    ad7: {
+      status: 'applicable',
+      reason: 'middleware 把 opts.contentTypes 透传进 core.recall({contentTypes}) → Core 后过滤 → onRecall 只收到匹配类型项（D-0022/D-0024，端到端透传）',
+    },
+    ad8: {
+      status: 'applicable',
+      reason: 'middleware 把 opts.explain 透传进 core.recall({explain}) → Core 附 provenance（含 allowCloudRead/allowInference 授权位）→ 经 onRecall 交宿主；provenance 绝不进注入 prompt（D-0021/D-0024 隐私加固）',
+    },
+    ad9: {
+      status: 'na',
+      reason: 'AD-9 na(ai-sdk)：读适配器（RAG-as-middleware）只做召回注入、不暴露 mute 写口；mute 负反馈是受控记忆管理（memory.mute），经宿主/B 适配器直调 Core，A 无此写路径（D-0023，仅 B applicable）',
     },
   },
 };

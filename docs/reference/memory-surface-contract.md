@@ -34,6 +34,7 @@
   - [5.5 internal surface](#55-internal-surface)
 - [VI. Questionable symbol tiering (conclusions confirmed back to source)](#vi-questionable-symbol-tiering-conclusions-confirmed-back-to-source)
 - [VII. Adapter degradation semantics (§16.2)](#vii-adapter-degradation-semantics-162)
+- [VIII. Recall v2 adapter surface and the MCP mute tool](#viii-recall-v2-adapter-surface-and-the-mcp-mute-tool)
 
 ---
 
@@ -315,3 +316,24 @@ The following 6 easily-misjudged symbols are tiered item by item according to th
 - **Degradation vs. real error**: only memory-layer internal faults/timeouts (`core.recall` / `core.ingestUserMessage` throwing or timing out) degrade. Caller errors — invalid parameters, protocol-level errors — are **not** swallowed as degradation and still surface as errors. In the MCP server, input-schema (`zod`) validation runs before the handler, so a bad parameter stays a protocol error with `isError: true`; only the wrapped `core.*` call degrades.
 
 Basis: `packages/adapter-ai-sdk/src/recallMiddleware.ts` (recall timeout + degrade), `packages/adapter-ai-sdk/src/persistOnEnd.ts` (write retry-once + degrade), `packages/mcp-server/src/tools.ts` (read/write tool guards), `packages/adapter-ai-sdk/src/degrade.ts` + `packages/mcp-server/src/degrade.ts` (shared `DEFAULT_RECALL_TIMEOUT_MS = 200`, `withTimeout`, logger event types).
+
+---
+
+## VIII. Recall v2 adapter surface and the MCP mute tool
+
+> Scope: the same two official adapters as §VII. This is the **recall v2 pass-through** face — the recall-quality surface D-0021/D-0022/D-0023 added to the `core.recall` facade (`explain`→`provenance`, the `contentTypes` filter + `contentType` on results, mute negative feedback) is now wired **end-to-end to the host through the adapters** (D-0024), plus the one new MCP write tool. Human-approved 2026-07-13 (`DECISIONS.md` D-0024). Adapters only; it adds no obligation to the Core facade above.
+
+**`@memoweft/adapter-ai-sdk` (read middleware) — purely additive:**
+
+- `MemoWeftMiddlewareOptions` gains **`contentTypes?: ContentType[]`** and **`explain?: boolean`**, passed straight through to `core.recall`. Unset = all types / no provenance (behavior unchanged); the filtering/explanation happen once, in the Core facade — the adapter only forwards.
+- The **`onRecall(items)`** callback now carries the v2 fields per item: `id?`, `contentType?`, `score?`, and — only when `explain: true` — `provenance?: RecalledEvidence[]` (each brief with its `allowCloudRead` / `allowInference` bits).
+- **Privacy hard constraint (must not violate):** `provenance` — and `contentType` / `id` / `score` — **never enter `buildKnowledgeBlock` / the injected prompt**; the injected block still uses only `content` / `confidence` / `credStatus`. Provenance is evidence **verbatim** plus its authorization bits (including cloud-restricted `observed` / `tool` evidence); putting it in the prompt would bypass tier filtering and feed cloud-restricted text to the model. It reaches the host **only via `onRecall`**, and the host tier-filters (by `allowCloudRead` / `allowInference`) before forwarding to a cloud model.
+- No mute on the read middleware (it is a read adapter; D-0024's mute lands on the MCP server only).
+
+**`@memoweft/mcp-server` — recall v2 outputs + one new write tool:**
+
+- `memoweft_recall` input gains **`contentTypes?`** (a `zod` enum manually mirroring the 8 `ContentType` values in `src/cognition/model.ts`, kept in lockstep with `RecallInput.contentTypes`) and **`explain?`**; output gains **`contentType`** per item and, when `explain: true`, a **`provenance`** chain.
+- **Provenance tier pre-filter (D-0024 — the tool layer does it, not the client):** for each provenance brief, `allowCloudRead: true` → the full brief (**keeps `summary`**); `allowCloudRead: false` → the **summary is withheld**, only `{ evidenceId, relation, sourceKind, allowCloudRead, allowInference }` is returned. The authorization bits are metadata (not the sensitive payload), left in so the host can still tier-self-filter before forwarding — consistent with the server's "tool evidence defaults to local-only" stance (the library holds its own privacy line rather than pushing the whole decision to the protocol peer).
+- **New tool `memoweft_mute_cognition`** (light write, wraps `core.memory.muteCognition`): `WRITE_TOOL_NAMES` **2 → 3**, `ALL_TOOL_NAMES` **7 → 8**. So `muteCognition` is **no longer on the "never registered" blacklist** — it is a controlled, reversible light write: it only toggles a cognition's recall visibility (`mutedAt`), the cognition stays active and keeps participating in consolidation, it is **orthogonal to confidence** (iron rule 3b), and it **deletes nothing and changes no cloud-read authorization**. Input `{ cognitionId, muted, reason? }`; a nonexistent id returns `{ muted: false, cognition: null }` (a real not-found, not a degradation).
+
+Basis: `packages/adapter-ai-sdk/src/recallMiddleware.ts` (`contentTypes` / `explain` options + `onRecall` pass-through; `provenance` never in `buildKnowledgeBlock`), `packages/mcp-server/src/tools.ts` (`memoweft_recall` inputs/outputs + provenance tier pre-filter; `memoweft_mute_cognition` registration, `WRITE_TOOL_NAMES` / `ALL_TOOL_NAMES`). See `DECISIONS.md` D-0021 / D-0022 / D-0023 / D-0024.

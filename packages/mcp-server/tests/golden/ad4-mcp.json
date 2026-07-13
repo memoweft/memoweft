@@ -5,21 +5,24 @@
       "content": "Prefers concise answers",
       "confidence": 820,
       "credStatus": "stable",
-      "score": 0.9
+      "score": 0.9,
+      "contentType": "preference"
     },
     {
       "id": "c2",
       "content": "Might be learning Rust",
       "confidence": 220,
       "credStatus": "candidate",
-      "score": 0.7
+      "score": 0.7,
+      "contentType": "goal"
     },
     {
       "id": "c3",
       "content": "Home timezone",
       "confidence": 500,
       "credStatus": "conflicted",
-      "score": 0.6
+      "score": 0.6,
+      "contentType": "fact"
     }
   ]
 }
