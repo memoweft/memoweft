@@ -151,6 +151,18 @@ jobs:
       - name: Claude Agent SDK Adapter Build
         run: npm run build -w @memoweft/adapter-claude-agent-sdk
 
+      # OpenAI Agents 适配器（0.1.0·run-wrapper 型进程内适配器，D-0027）：同上靠 Core dist、自带 build。
+      #   SDK @openai/agents 是 peer + dev（宿主自带 SDK 建/跑 agent，适配器是 wrapper）；run 包装器对它有
+      #   运行时依赖（动态 import），但 typecheck/test 只需类型 + 不启真实 SDK，npm ci 常规拉取即可。
+      - name: OpenAI Agents Adapter Typecheck
+        run: npm run typecheck -w @memoweft/adapter-openai-agents
+
+      - name: OpenAI Agents Adapter Test
+        run: npm test -w @memoweft/adapter-openai-agents
+
+      - name: OpenAI Agents Adapter Build
+        run: npm run build -w @memoweft/adapter-openai-agents
+
       # docs 里【未标 snippet:skip】的 ts 围栏逐个冒烟跑(无 key、内存库)。放在所有 workspace build
       #   之后:vercel recipe 的验证片段 import '@memoweft/adapter-ai-sdk',需 adapter 的 dist 也 build 好(§18.3)。
       - name: Docs — runnable snippets
@@ -338,7 +350,7 @@ jobs:
           fi
 
       # --workspaces 发所有【非 private】workspace 包：memoweft（根）+ @memoweft/mcp-server +
-      #   @memoweft/adapter-ai-sdk + @memoweft/adapter-claude-agent-sdk；private:true 的 host / collector 自动跳过。按 workspaces 数组顺序
+      #   @memoweft/adapter-ai-sdk + @memoweft/adapter-claude-agent-sdk + @memoweft/adapter-openai-agents；private:true 的 host / collector 自动跳过。按 workspaces 数组顺序
       #   （"." 排第一）memoweft 先发，满足新包对 memoweft 的 peer ^0.5.0。每个包 publish 前各自跑
       #   prepublishOnly（typecheck && test && build）当保险丝。--provenance 为每个包签发来源证明。
       # 【注意·作者发布前实测】--workspaces 与 --provenance 组合在旧 npm 上曾有坑；用 Node 24 自带的

@@ -1,0 +1,4 @@
+Here is some of what you already understand about this user (with confidence; low-confidence items are only guesses—do not treat them as established facts, and do not recite them stiffly):
+- Prefers concise answers (confidence 820/1000, stable)
+- Might be learning Rust (confidence 220/1000, candidate)
+- Home timezone (confidence 500/1000, conflicted)

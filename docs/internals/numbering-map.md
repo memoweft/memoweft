@@ -54,6 +54,7 @@
 | **D-0024** | 召回 v2 端到端收口:透传 explain/contentTypes/provenance/contentType 到两适配器 + MCP 新增 mute tool + provenance 按 tier 预筛 |
 | **D-0025** | §16.5 新增 Claude Agent SDK 适配器(`@memoweft/adapter-claude-agent-sdk`,hooks 型进程内)+ MCP 挂载备选文档 |
 | **D-0026** | Reranker NO-GO:真实检索序近最优、fusion 净负,不实装(同 D-0008 手法·数据驱动证伪;bench 入仓作背书) |
+| **D-0027** | 新增 OpenAI Agents SDK 适配器(`@memoweft/adapter-openai-agents`,run-wrapper 型)—— 更多适配器批次 ① |
 
 ---
 
