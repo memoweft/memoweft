@@ -3,7 +3,7 @@
 > 维护者账本,非营销页。原则:**每个数字都可复现、条件写清、不做不对等比较**。
 > 数据许可:LoCoMo 为 **CC BY-NC 4.0**(仅研究、非商用)——数据文件**绝不入库**,本页只发**聚合分数**。
 > 环境:本机 RTX 3090;答题/固化模型 = 小米 MiMo `mimo-v2.5-pro`(云端 OpenAI 兼容);嵌入 = 本地 `bge-m3`(1024 维,经 llama.cpp GPU)。
-> 状态:两套公开基准(LoCoMo §1–3、LongMemEval_S §4)均已 ≥1 次完整跑;未打 `phase-6-done`(人类)。LoCoMo 部分小样本项(§2)标注为方向性。
+> 状态:两套公开基准(LoCoMo §1–3、LongMemEval_S §4)均已 ≥1 次完整跑;固化质量指标跨模型稳健性(§5·gpt-4o 交叉验证)已验;未打 `phase-6-done`(人类)。LoCoMo 部分小样本项(§2)标注为方向性。
 
 ---
 
@@ -67,7 +67,27 @@
     - 边界+caveat:一次性 `updateProfile` 撑爆 120s LLM 超时(MemoWeft 是**增量消化**设计 batchSize=5,非一口气消化),须边摄入边周期消化;mimo 慢、部分 50 条 chunk 仍超时 → 消化**不完整**,cognition 仍大胜(效应强)。样本小(3 题),方向性;放大样本/更小 chunk/更快消化模型可进一步坐实。
 - 跑法:per-batch 进程隔离(避 node:sqlite 累积 native 崩)+ `--merge`;50 批中 2 批崩溃已用 limit-5 补跑,凑齐 500。数据 278MB 经 `LONGMEMEVAL_PATH`,不入库。
 
-## 5. 复现命令
+## 5. 固化质量 · 多模型分差(§15.5:指标对被测模型的依赖度)
+
+把 §15.2 固化评测的**被测模型**从 mimo 换成 **gpt-4o**(judge **固定** = mimo 温度 0,只动一个自变量 → 结构硬指标跨臂可比),量化"这套指标有多依赖 mimo 这个具体模型"。全 42 场景,一次完整跑。
+
+| discipline | n | mimo 结构 | gpt-4o 结构 | Δ |
+|---|---|---|---|---|
+| chitchat-negative | 7 | 35/35 | 35/35 | 0 |
+| conflict | 7 | 40/42 | 42/42 | +2 |
+| correct | 7 | 42/42 | 41/42 | −1 |
+| emotion-cap | 7 | 31/35 | 34/35 | +3 |
+| fact-vs-belief | 7 | 34/35 | 34/35 | 0 |
+| no-over-inference | 7 | 28/34 | 28/34 | 0 |
+| **overall** | 42 | **210/223(94.2%)** | **214/223(96.0%)** | **+4(+1.8pp)** |
+
+- **指标对模型依赖小**:两个前沿模型总体只差 1.8pp;**3/6 盘逐检查完全相同**(chitchat-negative / fact-vs-belief / no-over-inference),`overInferRate=0.00` 两模型全盘一致。评测器量的是**认知纪律本身**,不是 mimo 的怪癖 → 指标**跨模型稳健、可迁移**,非"只对 mimo 成立"的过拟合。
+- **no-over-inference 28/34 两模型一模一样** → **跨模型印证 D-0019**:fact-vs-state 灰区(一次性事件被标 fact/goal/preference)在 gpt-4o 上原样复现,坐实这是 **ContentType 缺「事件」型**的定义局限、**非 mimo 缺陷**。
+- **有分差处 gpt-4o 略"干净"**:emotion-cap +3(情绪封顶更稳)、conflict +2(更会标矛盾);mimo 在 1 条 correct 上略强。均 ≤3 检查,幅度小。
+- **软判(gistRecall)**:judge 固定 mimo → 非-conflict 盘可比,delta 多为 0(correct −0.14 属单跑方差 D-0009);conflict 的 0→1.00 是 **gist 评分口径 v1→v2**(度量清理①的确定性硬判,`--compare` 已高声告警),**非模型差异**。
+- 被测=gpt-4o(用户自配 `MEMOWEFT_GPT4O_*`,裸 `gpt-4o` 别名)、judge=mimo 固定。gpt-4o 臂产物在 `bench/runs/`(gitignore),本页只发聚合分。
+
+## 6. 复现命令
 
 ```bash
 # 数据(CC BY-NC,不入库):把 locomo10.json 放本地,LOCOMO_PATH 指向它
@@ -93,11 +113,17 @@ export MEMOWEFT_JUDGE_BASE_URL=https://api.openai.com/v1  # judge=gpt-4o(标准)
 export MEMOWEFT_JUDGE_API_KEY=sk-...  MEMOWEFT_JUDGE_MODEL=gpt-4o-2024-11-20
 for off in $(seq 0 10 490); do node --max-old-space-size=4096 bench/longmemeval-eval.mjs --offset $off --limit 10; done
 node bench/longmemeval-eval.mjs --merge           # → bench/runs/<date>-<commit>-longmemeval-merged.md
+
+# §15.5 多模型分差:换被测模型(judge 固定 mimo),写 runs/ 不碰基线;再 --compare 出逐 discipline 分差
+# 先在 .env 配 MEMOWEFT_GPT4O_BASE_URL / _API_KEY / _MODEL(key 只经 env)
+node bench/eval-consolidation.mjs --subject-env GPT4O
+node bench/eval-consolidation.mjs --compare bench/consolidation-baseline.json \
+  bench/runs/<date>-<sha>-consolidation-subject-gpt-4o.json   # 会高声提示「被测模型变了」
 ```
 
 嵌入端点(bge-m3 @ 127.0.0.1:11435)需在跑语义/cognition 臂前起(本机经 llama.cpp GPU)。
 
-## 6. 条件与对比纪律
+## 7. 条件与对比纪律
 
 - **不做不对等比较**:与 Mem0 / 其他记忆库的公开数字对照前,须对齐 top-k、检索层(evidence vs cognition)、嵌入模型、judge 模型、是否含 adversarial。本页数字的条件已在各节写明。
 - **模型非确定**:mimo 是推理模型、有输出漂移;F1/judge 数字是某次快照,不做 CI 断言。
