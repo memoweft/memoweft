@@ -15,6 +15,7 @@
  *   node bench/eval-consolidation.mjs --limit N              # 只跑前 N 个场景（dev 起跑 / 冒烟）——PARTIAL，写 bench/runs/，绝不碰基线
  *   node bench/eval-consolidation.mjs --discipline <name>    # 只跑某 discipline（如 chitchat-negative）——PARTIAL，写 bench/runs/，绝不碰基线
  *   node bench/eval-consolidation.mjs --out <prefix>         # 覆盖产物前缀：写 <prefix>.md 与 <prefix>.json
+ *   node bench/eval-consolidation.mjs --subject-env GPT4O    # §15.5 多模型分差：换被测模型为 MEMOWEFT_GPT4O_*（judge 仍 mimo 固定）——写 runs/、不碰 mimo 基线
  *   node bench/eval-consolidation.mjs --compare a.json b.json# 纯离线比对两份 run JSON（a=before, b=after）：不调模型、不读 .env、不加载语料
  *   node bench/eval-consolidation.mjs --selftest             # 离线自检（mock LLM + 内联 stub），必须退出 0；CI/无 key 也能验逻辑
  *
@@ -365,7 +366,8 @@ function aggregate(summaries) {
   };
 }
 
-function collectMeta(corpus, scenarios, llmCfg, filter) {
+function collectMeta(corpus, scenarios, cfgs, filter) {
+  const { subjectCfg, judgeCfg, subjectEnv } = cfgs; // subjectCfg=被测、judgeCfg=judge（§15.5 起可不同模型）
   // conflict 场景的 shouldForm 走确定性硬判、不调 judge（见 scoreGists），故不计入 judge 调用估算。
   const judgeCalls = scenarios.reduce((a, s) => {
     const formCalls = s.discipline === 'conflict' ? 0 : (s.expect?.shouldFormGists ?? []).length;
@@ -386,7 +388,7 @@ function collectMeta(corpus, scenarios, llmCfg, filter) {
     platform: process.platform,
     arch: process.arch,
     generatedAt: new Date().toISOString(),
-    model: llmCfg.model,
+    model: subjectCfg.model, // 被测模型（§15.5：--subject-env 时 = gpt-4o 等，非 mimo）
     scenarioCount: scenarios.length,
     totalScenarios: corpus.scenarios.length,
     judgeCalls,
@@ -395,7 +397,8 @@ function collectMeta(corpus, scenarios, llmCfg, filter) {
     judgePromptVersion: JUDGE_PROMPT_V1.version,
     gistScoringVersion: GIST_SCORING_VERSION, // gist 命中口径版本（conflict 硬判起 v2）；跨版本 gistRecall 不可直接比
 
-    judgeModel: llmCfg.model, // 目前同被测 model，仅温度 0 覆写；显式记下以防日后 judge 换端点。
+    judgeModel: judgeCfg.model, // judge 模型（§15.5 起可与被测不同：判官固定 mimo、被测换 gpt-4o，跨臂可比）
+    subjectEnv: subjectEnv ?? null, // 非 null = 换了被测模型（§15.5 分差臂）→ 落 runs/、不碰基线
     partial: Boolean(limit) || Boolean(discipline),
     filter: { limit, discipline },
   };
@@ -421,6 +424,11 @@ function buildReport(summaries, agg, meta) {
   const L = [];
   L.push('# 固化质量评测基线报告 — Phase 2 §15.2');
   L.push('');
+  if (meta.subjectEnv) {
+    L.push(`> 🔬 **多模型分差臂（§15.5）：被测模型 = \`${meta.model}\`（--subject-env ${meta.subjectEnv}）、judge 固定 = \`${meta.judgeModel}\`。**`);
+    L.push('> **这不是 mimo 基线**，写在 `bench/runs/` 下、不覆盖 `bench/consolidation-baseline.*`。与基线 `--compare` 时会高声提示「被测模型变了」——**结构硬指标 judge-无关、跨臂天然可比**（度量对被测模型的依赖度看这里）。');
+    L.push('');
+  }
   if (meta.partial) {
     L.push(`> ⚠ **PARTIAL RUN：只跑了 ${meta.scenarioCount}/${meta.totalScenarios} 场景（filter=${describeFilter(meta.filter)}）。**`);
     L.push('> **这不是基线，不可与全量基线直接比较。** 本产物写在 `bench/runs/` 下，未覆盖 `bench/consolidation-baseline.*`。');
@@ -530,15 +538,17 @@ function printConsole(summaries, agg, meta) {
 /**
  * 决定本轮 md/json 落哪。
  *   --out <prefix> → <prefix>.{md,json}（最高优先）。
- *   全量（!partial）→ bench/consolidation-baseline.{md,json}（沿用现路径，前一版由 git 提供）。
- *   部分（partial）→ bench/runs/<date>-<sha>-consolidation-<discipline|limitN>.{md,json}（绝不碰基线）。
+ *   全量默认被测（!partial 且无 subjectEnv）→ bench/consolidation-baseline.{md,json}（唯一「基线」= mimo 全量，前一版由 git 提供）。
+ *   部分（partial）或换了被测模型（subjectEnv，§15.5 分差臂）→ bench/runs/<date>-<sha>-consolidation-<tag>.{md,json}（绝不碰基线）。
  */
 function resolveOutputPaths(meta, outPrefix) {
   if (outPrefix) return { md: `${outPrefix}.md`, json: `${outPrefix}.json` };
-  if (!meta.partial) return { md: BASELINE_MD_PATH, json: BASELINE_JSON_PATH };
+  // 「基线」严格指 mimo 全量：换了被测模型即便跑满 42 场景也【不是】基线，写 runs/。
+  if (!meta.partial && !meta.subjectEnv) return { md: BASELINE_MD_PATH, json: BASELINE_JSON_PATH };
   mkdirSync(RUNS_DIR, { recursive: true });
   const date = meta.generatedAt.slice(0, 10); // YYYY-MM-DD
   const parts = [];
+  if (meta.subjectEnv) parts.push(`subject-${String(meta.model || meta.subjectEnv).replace(/[^A-Za-z0-9._-]/g, '_')}`);
   if (meta.filter?.discipline) parts.push(meta.filter.discipline);
   if (meta.filter?.limit) parts.push(`limit${meta.filter.limit}`);
   const tag = parts.join('-') || 'partial';
@@ -729,7 +739,7 @@ function runCompare(beforePath, afterPath) {
 // 真实模式
 // ══════════════════════════════════════════════════════════════════════════
 
-async function mainReal({ limit, discipline, outPrefix }) {
+async function mainReal({ limit, discipline, outPrefix, subjectEnv }) {
   if (!existsSync(CORPUS_PATH)) {
     console.error(`\n[eval-consolidation] 语料未就绪（test-author 并行产出中），无法起跑真实评测。\n  期望路径: ${CORPUS_PATH}`);
     process.exit(1);
@@ -759,15 +769,27 @@ async function mainReal({ limit, discipline, outPrefix }) {
     process.exit(0);
   }
 
-  const judge = new OpenAICompatClient({ ...llmCfg, temperature: 0 }); // 复用 mimo 端点，但温度 0
-  const meta = collectMeta(corpus, scenarios, llmCfg, { limit, discipline });
-  console.log(`[eval-consolidation] 真实评测起跑：${meta.scenarioCount} 场景 · 被测 model=${meta.model} · judge 温度 0（${meta.judgeCalls} 次 judge 调用）`);
+  // 被测(subject)模型：默认 = 对话模型（loadLLMConfig()，mimo）；--subject-env <PREFIX> → 换成 MEMOWEFT_<PREFIX>_* 那组。
+  //   judge 恒为默认（llmCfg，mimo，温度 0）不随被测变——§15.5 只动一个自变量（被测模型），judge 固定 → 跨臂可比。
+  let subjectCfg;
+  try {
+    subjectCfg = subjectEnv ? loadLLMConfig(subjectEnv) : llmCfg;
+  } catch (e) {
+    console.error(`\n[eval-consolidation] BLOCKED：--subject-env ${subjectEnv} 的被测模型未配置。`);
+    console.error(`  原因: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(`  解法: 在根 .env 配 MEMOWEFT_${subjectEnv}_BASE_URL / _API_KEY / _MODEL。`);
+    process.exit(0);
+  }
+
+  const judge = new OpenAICompatClient({ ...llmCfg, temperature: 0 }); // judge 恒 = 对话模型 mimo，温度 0（跨被测臂固定）
+  const meta = collectMeta(corpus, scenarios, { subjectCfg, judgeCfg: llmCfg, subjectEnv }, { limit, discipline });
+  console.log(`[eval-consolidation] 真实评测起跑：${meta.scenarioCount} 场景 · 被测 model=${meta.model}${subjectEnv ? `（--subject-env ${subjectEnv}）` : ''} · judge=${meta.judgeModel} 温度 0（${meta.judgeCalls} 次 judge 调用）`);
 
   const summaries = [];
   for (const sc of scenarios) {
     const t0 = Date.now();
     console.log(`[eval-consolidation] 场景 ${sc.id} (${sc.discipline}/${sc.lang}) 固化中…`);
-    const llm = new OpenAICompatClient(); // 被测：mimo（每场景一新实例，计数独立）
+    const llm = new OpenAICompatClient(subjectCfg); // 被测：subjectCfg（默认 mimo / --subject-env 指定；每场景一新实例，计数独立）
     const run = await runScenario(sc, llm);
     const checks = checkStructural(sc, run);
     let gist = { formResults: [], notResults: [], gistRecall: null, overInferRate: null };
@@ -788,6 +810,11 @@ async function mainReal({ limit, discipline, outPrefix }) {
   const agg = aggregate(summaries);
   printConsole(summaries, agg, meta);
 
+  if (meta.subjectEnv) {
+    console.log(`ℹ 非基线模型臂：被测=${meta.model}（--subject-env ${meta.subjectEnv}）、judge=${meta.judgeModel}（固定）。产物写在 bench/runs/，不覆盖 mimo 基线。`);
+    console.log(`  与基线比：node bench/eval-consolidation.mjs --compare bench/consolidation-baseline.json <本次.json>（会高声提示「被测模型变了」；结构硬指标 judge-无关、天然可比）。`);
+    console.log('');
+  }
   if (meta.partial) {
     console.log(`⚠ PARTIAL RUN：只跑了 ${meta.scenarioCount}/${meta.totalScenarios} 场景（filter=${describeFilter(meta.filter)}）。`);
     console.log('  这不是基线，不可与全量基线直接比较。产物写在 bench/runs/ 下，未污染 bench/consolidation-baseline.*。');
@@ -1062,6 +1089,19 @@ async function selftest() {
   const diffGsvSame = diffRuns(mkRun({ structPass: 200, structTotal: 223, gistScoringVersion: 'v2' }), mkRun({ structPass: 200, structTotal: 223, gistScoringVersion: 'v2' }));
   ok(!diffGsvSame.warnings.some((w) => /gist 评分口径变了/.test(w)), 'diffRuns 同 gist 口径（v2=v2）→ 不误报口径变更');
 
+  // ── 7) §15.5 被测模型注入：collectMeta 分离 subject/judge model、subjectEnv 落 runs/ 不碰基线 ──
+  console.log('[selftest] 7) §15.5 被测模型注入 meta/落盘路由');
+  const corpusStub = { scenarios: [{ discipline: 'conflict', expect: {} }] };
+  const metaSubj = collectMeta(corpusStub, corpusStub.scenarios, { subjectCfg: { model: 'gpt-4o-x' }, judgeCfg: { model: 'mimo-x' }, subjectEnv: 'GPT4O' }, {});
+  ok(metaSubj.model === 'gpt-4o-x' && metaSubj.judgeModel === 'mimo-x', `collectMeta 分离 subject/judge model（subject=${metaSubj.model} judge=${metaSubj.judgeModel}）`);
+  ok(metaSubj.subjectEnv === 'GPT4O' && metaSubj.partial === false, `collectMeta 记 subjectEnv=${metaSubj.subjectEnv} 且非 partial（全量非基线）`);
+  const pSubj = resolveOutputPaths(metaSubj, null);
+  ok(/[\\/]runs[\\/]/.test(pSubj.json) && /subject-gpt-4o-x/.test(pSubj.json), `subject 臂落 runs/、文件名带被测模型（${pSubj.json.split(/[\\/]/).pop()}）`);
+  ok(pSubj.json !== BASELINE_JSON_PATH, 'subject 臂绝不覆盖 mimo 基线');
+  // 默认被测（无 subjectEnv、非 partial）仍落基线
+  const metaBase = collectMeta(corpusStub, corpusStub.scenarios, { subjectCfg: { model: 'mimo' }, judgeCfg: { model: 'mimo' }, subjectEnv: null }, {});
+  ok(resolveOutputPaths(metaBase, null).json === BASELINE_JSON_PATH, '默认被测全量仍落 baseline（唯一基线=mimo 全量）');
+
   if (failures === 0) {
     console.log('\n[selftest] ✓ 全部通过（结构断言判定、不变量、检测器负例、judge 多数投票、gist 判分、diffRuns 前后对比均离线验证）');
     process.exit(0);
@@ -1111,6 +1151,16 @@ if (outIdx >= 0) {
   outPrefix = raw;
 }
 
+// --subject-env <PREFIX>：换被测(subject)模型为 MEMOWEFT_<PREFIX>_* 那组（§15.5 多模型分差矩阵）。
+//   judge 固定不变（仍 mimo）→ 换被测臂的结构硬指标与软判都可与 mimo 基线跨臂比。非默认被测一律写 runs/、绝不碰基线。
+const subjEnvIdx = args.indexOf('--subject-env');
+let subjectEnv = null;
+if (subjEnvIdx >= 0) {
+  const raw = args[subjEnvIdx + 1];
+  if (!raw || raw.startsWith('--')) die(`--subject-env 需要一个 env 前缀（如 GPT4O，读 MEMOWEFT_<前缀>_BASE_URL/_API_KEY/_MODEL；收到: ${raw ?? '(空)'}）。`);
+  subjectEnv = raw;
+}
+
 const cmpIdx = args.indexOf('--compare');
 let compare = null;
 if (cmpIdx >= 0) {
@@ -1131,7 +1181,7 @@ async function main() {
     runCompare(compare.before, compare.after); // 纯离线，内部 exit 0
     return;
   }
-  await mainReal({ limit, discipline, outPrefix });
+  await mainReal({ limit, discipline, outPrefix, subjectEnv });
 }
 
 main().catch((err) => {
