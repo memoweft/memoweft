@@ -138,9 +138,10 @@ interface ProposeAskDeps { clock?: Clock | undefined; cognitionStore: CognitionS
 interface ProposeAskOptions { markAsked?: boolean | undefined; policy?: Partial<AskPolicy> | undefined; }
 interface ProposeAskResult { llmCalls: number; proposals: Array<AskProposal>; }
 interface RecallDeps { cognitionStore: CognitionStore; retriever: Retriever; }
-interface RecallInput { query: string; subjectId?: string | undefined; }
-interface RecalledCognition { confidence: number; content: string; credStatus: string; id?: string | undefined; score: number; }
+interface RecallInput { explain?: boolean | undefined; query: string; subjectId?: string | undefined; }
+interface RecalledCognition { confidence: number; content: string; credStatus: string; id?: string | undefined; provenance?: Array<RecalledEvidence> | undefined; score: number; }
 interface RecalledCognitionItem { confidence: number; content: string; credStatus: string; id: string; score: number; }
+interface RecalledEvidence { allowCloudRead: boolean; allowInference: boolean; evidenceId: string; relation: EvidenceRelation; sourceKind: SourceKind; summary: string; }
 interface RemovalBlocker { id: string; kind: 'event' | 'cognition'; relation?: string | undefined; }
 interface RemoveCognitionResult { removed: boolean; removedLinks: Array<EvidenceLink>; }
 interface RemoveCognitionSafelyInput { cognitionId: string; reason: string; }

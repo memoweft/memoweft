@@ -96,6 +96,8 @@ export interface ToolResultInput {
 export interface RecallInput {
   query: string;
   subjectId?: string;
+  /** 召回解释（D-0021）：true → 每条召回认知带上其支撑证据链（provenance）。缺省 false = 不做额外查询、行为不变。 */
+  explain?: boolean;
 }
 
 export interface ConversationInput {
@@ -352,7 +354,20 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
 
     async recall(input) {
       // 读路径 now 走注入 clock（Phase 4 S3）：前进 clock → 淡了的情绪衰减出局、事实留存。
-      return recallCognitions(input.query, subjectOf(input.subjectId), { retriever, cognitionStore }, cfg, (options.clock ?? systemClock)());
+      const items = await recallCognitions(input.query, subjectOf(input.subjectId), { retriever, cognitionStore }, cfg, (options.clock ?? systemClock)());
+      if (!input.explain) return items;
+      // 召回解释（D-0021）：门面已有两个 store → 逐条补支撑/反证证据链，不动 recallCognitions/RecallDeps。
+      //   隐私（对抗审查加固）：provenance 面向宿主、库不自动喂云；但 summary 是证据【原文】（可能比派生认知更敏感、
+      //   含云受限的 observed/tool，默认 allowCloudRead=false）→ 随附 allowCloudRead/allowInference 授权位（对齐
+      //   buildMemoryGraph L158-159），让宿主转发云模型前能按 tier 自筛；write-path 的 filterReadableByTier 不受影响。
+      //   证据已不在（悬挂链，正常级联删不该发生）则跳过、不凭空造字段。
+      return items.map((it) => ({
+        ...it,
+        provenance: cognitionStore.sourcesOf(it.id).flatMap((link) => {
+          const e = evidenceStore.get(link.evidenceId);
+          return e ? [{ evidenceId: link.evidenceId, relation: link.relation, summary: e.summary || e.rawContent, sourceKind: e.sourceKind, allowCloudRead: e.allowCloudRead, allowInference: e.allowInference }] : [];
+        }),
+      }));
     },
 
     async handleConversationTurn(input) {

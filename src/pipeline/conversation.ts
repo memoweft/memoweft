@@ -9,8 +9,9 @@
  */
 import { config, resolveLang, type MemoWeftConfig } from '../config.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
-import type { Evidence } from '../evidence/model.ts';
+import type { Evidence, SourceKind } from '../evidence/model.ts';
 import type { CognitionStore } from '../cognition/store.ts';
+import type { EvidenceRelation } from '../cognition/model.ts';
 import type { Retriever } from '../retrieval/retriever.ts';
 import type { LLMClient } from '../llm/client.ts';
 import { WorkingMemory, type Turn } from './workingMemory.ts';
@@ -37,11 +38,27 @@ export interface ConversationDeps {
   clock?: Clock;
 }
 
+/** 召回解释（D-0021）：一条召回认知背后的一条支撑/反证证据简报，供宿主看"这条记忆建立在什么上"（可追溯卖点）。
+ *  带 allowCloudRead/allowInference 授权位（对齐 buildMemoryGraph 惯例）：summary 是证据【原文】（可能比派生认知更敏感、
+ *  含云受限的 observed/tool），宿主把 provenance 转发云模型前应据此按 tier 自筛——库不自动喂云，DTO 附授权位让宿主筛得了。 */
+export interface RecalledEvidence {
+  evidenceId: string;
+  relation: EvidenceRelation;
+  /** 证据简报（summary，无则回退 rawContent）。 */
+  summary: string;
+  sourceKind: SourceKind;
+  /** 授权位（对齐 buildMemoryGraph）：宿主据此在转发云模型前自筛（observed/tool 默认 allowCloudRead=false）。 */
+  allowCloudRead: boolean;
+  allowInference: boolean;
+}
+
 /** 召回到、注入了回话的一条（含相似度，供透视）。 */
 export interface RecalledCognition extends RelevantCognition {
   score: number;
   /** 认知 id（批次2 增量：共享召回函数随手带回，供管理/透视反查）。可选以兼容旧构造处。 */
   id?: string;
+  /** 召回解释（D-0021）：仅在 core.recall({ explain: true }) 时带；本条认知的支撑/反证证据链（可追溯，带授权位供宿主自筛）。 */
+  provenance?: RecalledEvidence[];
 }
 
 export interface TurnOutcome {

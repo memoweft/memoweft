@@ -200,7 +200,7 @@ export { recallCognitions, type RecallDeps, type RecalledCognitionItem } from '.
 
 // 管线 / 会话编排
 // [stable] 会话返回形状：TurnOutcome / RecalledCognition 由 handleConversationTurn/recall 回吐宿主。
-export { type TurnOutcome, type RecalledCognition } from './pipeline/conversation.ts';
+export { type TurnOutcome, type RecalledCognition, type RecalledEvidence } from './pipeline/conversation.ts';
 // [internal] Conversation 类 + 其 Deps：门面 handleConversationTurn 内包，宿主不直接 new。
 export { Conversation, type ConversationDeps } from './pipeline/conversation.ts';
 // [internal] perceive / WorkingMemory：管线内部件，门面已收口。
