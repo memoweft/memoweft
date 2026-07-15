@@ -16,7 +16,7 @@ export default tseslint.config(
   {
     // 先只关 src/ 与 tests/：把其余目录全排掉。
     ignores: [
-      'dist/**',
+      '**/dist/**',
       'node_modules/**',
       'testbench/**',
       'apps/**',

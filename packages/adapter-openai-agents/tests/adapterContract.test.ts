@@ -108,6 +108,7 @@ function modelInputWithUser(prompt: string): ModelInputData {
 }
 /** 包成 CallModelInputFilterArgs（recallInject 只读 args.modelData，agent/context 不用，最小 cast）。 */
 function filterArgs(modelData: ModelInputData): CallModelInputFilterArgs {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- upstream CallModelInputFilterArgs accepts an Agent with an unconstrained output generic; this fixture never reads it
   return { modelData, agent: {} as unknown as Agent<unknown, any>, context: undefined };
 }
 

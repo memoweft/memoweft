@@ -331,7 +331,7 @@ jobs:
       - name: Test (${{ matrix.pkg }})
         run: npm test -w ${{ matrix.pkg }}
 
-  # ── on-tag 发布：npm publish + provenance（供应链背书）──────────────────────
+  # ── on-tag 发布：根包 npm publish + provenance（供应链背书）───────────────
   #
   # 【执行前提·作者手动】发布前，作者需先往本 repo 的 GitHub secrets 托管一个
   #   npm automation token（Publish 权限），存为 NPM_TOKEN。这步是供应链决策、归作者手动，
@@ -339,12 +339,18 @@ jobs:
   #
   # 只在打版本 tag（v*）时跑：job 级 if 卡住 refs/tags/，push main / PR 都不触发本 job
   #   （on.push.tags 负责让 tag 推送进入本 workflow，if 负责让只有本 job 认 tag）。
+  # 发布必须等待全部合并门绿，避免 tag 一推就与测试并行、形成未验先发。
   # provenance 靠 GitHub OIDC 身份签发来源证明，不靠长期密钥——所以要 id-token: write。
   # 发布走 `npm publish --provenance`，会自动先跑 package.json 的 prepublishOnly
   #   （typecheck && test && build）——发布前再过一遍三绿 + build 保险丝，不绕过、不 --ignore-scripts。
   publish:
-    name: 发布 (on tag · npm publish --provenance)
+    name: 发布根包 (on tag · npm publish --provenance)
     runs-on: ubuntu-latest
+    needs:
+      - guardrails
+      - better-sqlite3-node22
+      - better-sqlite3-node20
+      - sdk-version-matrix
     if: startsWith(github.ref, 'refs/tags/')
 
     permissions:
@@ -365,6 +371,15 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
+      - name: Verify tag matches root package version
+        shell: bash
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package version $expected"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -373,13 +388,10 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
-      # --workspaces 发所有【非 private】workspace 包：memoweft（根）+ @memoweft/mcp-server +
-      #   @memoweft/adapter-ai-sdk + @memoweft/adapter-claude-agent-sdk + @memoweft/adapter-openai-agents + @memoweft/adapter-langchain + @memoweft/adapter-llamaindex；private:true 的 host / collector 自动跳过。按 workspaces 数组顺序
-      #   （"." 排第一）memoweft 先发，满足新包对 memoweft 的 peer ^0.5.0。每个包 publish 前各自跑
-      #   prepublishOnly（typecheck && test && build）当保险丝。--provenance 为每个包签发来源证明。
-      # 【注意·作者发布前实测】--workspaces 与 --provenance 组合在旧 npm 上曾有坑；用 Node 24 自带的
-      #   较新 npm，发布前先 `npm publish --workspaces --provenance --dry-run` 核一遍再去 token。
-      - name: Publish to npm (all publishable workspaces, with provenance)
-        run: npm publish --workspaces --provenance --access public
+      # 版本 tag v0.x.y 只对应根包 memoweft@0.x.y。各公开 adapter/MCP 包有自己的 0.1.x
+      # 版本线，不能在根包 tag 下用 --workspaces 重发：已存在的版本会 E403，并可能形成半发布状态。
+      # 它们应在各自版本提升、各自 release scope 验收后单独发布。
+      - name: Publish memoweft to npm (with provenance)
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

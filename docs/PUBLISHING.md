@@ -3,7 +3,7 @@
 > 面向**维护者 / 作者**：如何把 MemoWeft 打包发到 npm。日常安装 / 体验见 [INSTALL.md](INSTALL.md)。
 > ⚠️ 发布是对外承诺、不可撤回：发布前每一步都跑绿护栏、`npm pack --dry-run` 核对包内容，别一把梭。
 
-> **现状基线（2026-07）**：`memoweft` 已在 npm 上（`0.1.0` 首发、`0.2.0` 为 latest）。本文档以 **0.2.0 已发布** 为现实基线，讲**发下一版**怎么走。历史里的 `0.1.0` 只作为已发生的事实提及。
+> **现状基线**：`memoweft` 已在 npm 上；实际 `latest` 以 `npm view memoweft version --registry=https://registry.npmjs.org` 为准，待发布版本以当前 `package.json` 为准。本文档讲**发下一版**怎么走，不维护容易过期的固定 latest 文案。
 
 ---
 
@@ -12,7 +12,7 @@
 ```jsonc
 {
   "name": "memoweft",
-  "version": "0.2.0",            // 当前 latest（与 src/version.ts 的 MEMOWEFT_VERSION 已同步）
+  "version": "0.5.1",            // 示例：须与 package-lock.json、src/version.ts 同步
   "type": "module",
   "main": "dist/index.js",       // 运行时入口（编译后）
   "types": "dist/index.d.ts",    // 类型入口
@@ -27,7 +27,7 @@
 关键点：
 
 - **`main` / `types` 指向 `dist/`**：消费者装完 `import` 的是**编译后的 `.js` + `.d.ts`**，不是源码。所以**发布前必须先 `npm run build`**（下节的 `prepublishOnly` 已把这步兜进自动化）。
-- **`files` 只挑 `.js` + `.d.ts`**（外加双 README / CHANGELOG / LICENSE）：不把 `.js.map` / `.d.ts.map` 打进包。原因见 §2。
+- **`files` 只挑 `.js` + `.d.ts`**（外加双 README / CHANGELOG / LICENSE）：不把 `.js.map` / `.d.ts.map` 文件打进包。原因见 §2。
 - **`type: "module"`**：纯 ESM 包。消费者用 `import`，不支持 `require`。
 - **零 `dependencies`**：存储 / HTTP / 向量全用 Node 内置（`node:sqlite` / `node:http` / `node:fs`），`dependencies` 恒为空——「零运行时依赖」指的就是这个。**Node ≥ 24 开箱即用**（`node:sqlite` 到 24 转正）；**Node 20/22** 上内置模块不可用，消费者需装可选驱动 `better-sqlite3`（`npm i better-sqlite3`）。`better-sqlite3` 声明为**可选 peer 依赖**（`peerDependenciesMeta.optional`），装不装用户自己定，不进 `dependencies`——`npm install memoweft` 仍不拉任何 runtime 依赖 / 原生模块。`engines` 已相应放宽到 `>=20`。
 
@@ -39,7 +39,7 @@
 
 原因：这些 map 的 `sources` 指向 `../src/*.ts`，而**源码 `src/` 并不在包里**——所以发出去的 map 是**指向不存在文件的死引用**，对消费者无用、只增体积。挑白名单后，包里既没有死 map、也没有 `src/`。
 
-> 如果将来希望消费者能 source-map 回溯，正解是**把 `src/` 也一起发**（`files` 加 `"src"`）让 map 有落点，而不是发一堆死 map。当前保持包小，不做。
+> 如果将来希望消费者能 source-map 回溯，需要同时设计源码与 map 的发布口径。当前保持包小，不发布 map 文件或 `src/`。
 
 ---
 
@@ -70,9 +70,9 @@ npm run build       # 重新产出 dist/
 
 ## 4. 发布步骤（发下一版）
 
-### 4.1 定版本号（两处一起改，别只改一处）
+### 4.1 定版本号（三处一起改，别只改一处）
 
-- `package.json` 的 `version` 与 `src/version.ts` 的 `MEMOWEFT_VERSION` **必须同步**。这是**人工纪律**——没有自动化替你对齐，改版本时手动改两处。
+- `package.json`、`package-lock.json` 根包版本与 `src/version.ts` 的 `MEMOWEFT_VERSION` **必须同步**。改版本后逐项核对，避免发布元数据与运行时自报版本不一致。
 - 版本语义：1.0 之前，minor 也可能带破坏性改动（见 CHANGELOG 顶部声明），按实际影响决定进位。
 - 顺手更新 `CHANGELOG.md`：把 `[Unreleased]` 段落的内容归到新版本号下。
 
@@ -86,30 +86,31 @@ npm pack --dry-run
 
 确认输出里：
 
-- 文件只含 `dist/**` 的 `.js` + `.d.ts`（**无 `.map`、无 `src/`、无 `.env`、无 `testbench/`、无 `*.db`**）。
+- 文件只含 `dist/**` 的 `.js` + `.d.ts`（**不包含 `.map` 文件、`src/`、`.env`、`testbench/`、`*.db`**）。
 - 有 `README.md`、`README.zh-CN.md`、`CHANGELOG.md`、`LICENSE`、`package.json`。
 - `name` / `version` 是你要发的值。
 
-**当前 0.2.0 的实测包内容**：约 **111 个文件、115.6 kB 打包体积**（全是 `dist/` 的 `.js` + `.d.ts` 加双 README / CHANGELOG / LICENSE，无死 map、无源码）。发新版时以你本机 `npm pack --dry-run` 的当次输出为准——文件数会随 `dist/` 内容增减浮动。
+不维护固定的文件数或包体积基线；每次发布都以干净 worktree 中当次 `npm pack --dry-run` 的输出为准，文件数会随 `dist/` 演进而变化。
 
-### 4.3 登录并发布
-
-```bash
-npm login      # 作者账号，一次登录后可复用
-npm publish    # 发布前 npm 自动跑 prepublishOnly（三绿 + 构建）；任一红则中止
-```
-
-> `memoweft` 是**无 scope 的普通包**，直接 `npm publish` 即可，**不需要** `--access public`（那是 `@scope/xxx` 首发才要的）。
-
-### 4.4 打 tag
-
-发布成功后打对应版本 tag，方便追溯：
+### 4.3 推送版本 tag，由 CI 发布
 
 ```bash
-git tag v0.x.0 && git push --tags
+git tag -a v0.x.y -m "memoweft v0.x.y"
+git push origin v0.x.y
 ```
 
-（仓库已是 git 仓、已配 GitHub remote，直接打 tag 即可。）
+`.github/workflows/ci.yml` 会先等待全部 guardrails、Node 20/22 触达和 SDK 版本矩阵通过，再执行根包 `npm publish --provenance --access public`。仓库必须预先配置具有 Publish 权限的 `NPM_TOKEN`；没有该 secret 时不要推版本 tag。
+
+版本 tag 只发布根包 `memoweft`。公开 adapters / MCP server 有各自的 `0.1.x` 版本线，必须在它们各自升版和验收后单独发布；不要在根包 tag 上使用 `npm publish --workspaces`，否则已存在版本会失败并造成半发布。
+
+若 CI 发布链暂不可用，可在同一干净 release commit 上走本机兜底，但必须先登录官方 registry，并保留完整门禁记录：
+
+```bash
+npm login --registry=https://registry.npmjs.org
+npm publish --registry=https://registry.npmjs.org
+```
+
+> `memoweft` 是无 scope 的普通包；本机兜底不需要 `--access public`。发布版本不可覆盖，失败后的修复应升新版本，不能重写已发布版本。
 
 ---
 
@@ -133,24 +134,20 @@ node --input-type=module -e "import { MEMOWEFT_VERSION } from 'memoweft'; consol
 - **`engines` 字段**：已声明 `"node": ">=20"`（Node ≥24 走内置 `node:sqlite`；20/22 需可选的 `better-sqlite3`）。
 - **`repository` / `homepage` / `bugs` / `keywords`**：均已填 GitHub 地址与关键词，npm 页面会显示仓库链接、利于搜索。
 - **LICENSE**：已定 **MIT**（根目录 `LICENSE` + `package.json` `"license"` + README License 段一致），随 `files` 白名单打包。
-- **CI（GitHub Actions）**：`.github/workflows/ci.yml` 在 push（`main`）/ PR 上跑 Node 24 下 `typecheck + test + build` 三绿作为合并门，另加触达矩阵（Node 22.18+ 强制 `better-sqlite3` 跑全测试、Node 20 用 dist 冒烟脚本验）。
+- **CI（GitHub Actions）**：`.github/workflows/ci.yml` 在 push（`main`）/ PR 上跑 Node 24 下完整 guardrails，另加触达矩阵（Node 22.18+ 强制 `better-sqlite3` 跑全测试、Node 20 用 dist 冒烟脚本验）；版本 tag 在所有门禁通过后发布根包并生成 provenance。
 - **`bin` 字段**：**不需要**——MemoWeft 是库、无 CLI 命令。`testbench` 是 `npm run` 脚本、非对外可执行入口。将来若出 CLI 再加。
-
-> 尚未做、属作者单独决策的：**自动发布的 CI 工作流**（把 npm token 入库触发自动 `npm publish`）。本项目当前是手动 `npm publish` + `prepublishOnly` 兜底，自动发布暂不引入。
-
----
 
 ## 7. 一页流程图
 
 ```
-定版本号（package.json + src/version.ts 两处同步）+ 更新 CHANGELOG
+定版本号（package.json + package-lock.json + src/version.ts 三处同步）+ 更新 CHANGELOG
         │
         ▼
 npm run build → npm pack --dry-run   ← 核对只含 dist 的 .js/.d.ts + 双README + CHANGELOG + LICENSE（pack 不触发 prepublishOnly，故先手动 build 出最新产物）
         │
         ▼
-npm login → npm publish   ← 发布前 npm 再次自动跑 prepublishOnly，任一红则中止（不会发出陈旧构建）
+推送 v0.x.y tag → CI 等待全部门禁 → 根包 npm publish --provenance
         │
         ▼
-git tag v0.x.0 && git push --tags → 临时目录 install 自检
+临时目录 install 自检
 ```

@@ -102,6 +102,7 @@ export interface MemoWeftRunExtras {
 /** `run` 包装器的 options：SDK 的 NonStreamRunOptions + 适配器专属 `memoweft` 子对象（调 SDK 前剥离）。 */
 export type MemoWeftRunOptions<
   TContext = undefined,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors the upstream Agent generic constraint without narrowing host agent output types
   TAgent extends Agent<any, any> = Agent<any, any>,
 > = NonStreamRunOptions<TContext, TAgent> & { memoweft?: MemoWeftRunExtras };
 
@@ -112,6 +113,7 @@ export interface MemoWeftRunner {
    * 跑真实 `run` → 扫 `RunResult.newItems` 摄 tool_call_output_item(③) → 原样返回 RunResult。
    * 写路径全程降级不中断（不向调用方抛记忆层的错）。
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors the upstream run() Agent constraint so every supported agent output type passes through unchanged
   run<TAgent extends Agent<any, any>, TContext = undefined>(
     agent: TAgent,
     input: string | AgentInputItem[],
@@ -341,6 +343,7 @@ export function createMemoWeftRunner(
   };
 
   // ── ② 用户原话摄入 + ①③ 编排 = run 包装器 ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors the upstream run() Agent constraint so every supported agent output type passes through unchanged
   const run = async <TAgent extends Agent<any, any>, TContext = undefined>(
     agent: TAgent,
     input: string | AgentInputItem[],
