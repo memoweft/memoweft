@@ -78,9 +78,8 @@ interface RawRef {
   cognition_id?: string;
   support_evidence_ids?: string[];
   evidence_ids?: string[];
-  /** 强化的来源强度分类（D-0033 Phase 1b）:LLM 把这次 reinforce 判为哪种来源;仅 'stated' 用于把
-   *  confirmed 认知升级破顶(见 reinforce 分支)。Phase 2 提示词才教它标;Phase 1b 缺省 undefined = 不升级。 */
-  formed_by?: string;
+  // 注：原有 `formed_by?`（D-0033 Phase 1b 的 confirmed→stated 升级 gate①）已随 v0.6 Phase 3·D-0035
+  //   拍板③ 取消升级路而**删除**——它已无消费者。破顶改由 reinforce 分支里的【并存新认知】兑现。
 }
 /** 一条候选语义解析（v0.6 Phase 2·D-0034）：LLM 对某条原话的解析（这句在回应谁提出的什么、是肯定/否定/选择/含糊）。
  *  字段全 string 容错；落库前经 VALID_* 收敛（非法值落 null）。**是解释、不是证据**，永不进 support 白名单（3a/3d）。 */
@@ -328,27 +327,44 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       const links = deps.cognitionStore.sourcesOf(cog.id);
       const supportCount = links.filter((l) => l.relation === 'support').length;
       const contradictCount = links.filter((l) => l.relation === 'contradict').length;
-      // confirmed→stated 升级（D-0033）:附和产的 confirmed 认知,只有被【用户主动亲口】印证才破 480 封顶
-      //   ——"AI 带你确认的永远低档,你自己捅出来的才够比较确定"。触发判据(双重、缺一不可):
-      //   ① LLM 把这次 reinforce 判为 formed_by='stated'(与 new 路同款语义分类);
-      //   ② 引用的支撑原话里【有 spoken 来源】(结构护栏:observed/tool/inferred 永不能升 stated)。
-      //   纯附和(LLM 判 confirmed / 未标 stated)永不触发 → 诱导提问风暴 + 连答"是的"洗不上去。
-      //   分数仍由规则算(铁律 3b:formedBy 是分类、confidence 由 computeConfidence 算)。
-      let formedBy = cog.formedBy;
-      if (
-        formedBy === 'confirmed' &&
-        c.formed_by === 'stated' &&
-        cited.some((id) => deps.evidenceStore.get(id)?.sourceKind === 'spoken')
-      ) {
-        formedBy = 'stated';
-      }
+      // v0.6 Phase 3·D-0035 拍板③：**取消 confirmed→stated 的就地升级**。
+      //   旧世界在这里改写来源标签，触发靠 ① LLM 自报 formed_by='stated' + ② 引的原话里有 spoken。
+      //   Phase 3 删掉了 formed_by 的载体维指令 → gate① 的输入源消失，升级路会默认失效（= 悄悄推翻
+      //   D-0033 决定③，最不诚实的选项）。且「就地改写一条认知的来源标签」本就与宪章「冲突只暴露
+      //   不裁决」相悖。→ formedBy **恒继承**；「主动说才破顶」的承诺改由下面的【并存新认知】兑现。
+      const formedBy = cog.formedBy;
       const confidence = computeConfidence({ contentType: cog.contentType, formedBy, supportCount, contradictCount }, deps.config);
       deps.cognitionStore.update(cog.id, {
         confidence,
         credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config),
-        ...(formedBy !== cog.formedBy ? { formedBy } : {}),
       });
       reinforced++;
+
+      // 拍板③ 的另一半：旧认知是【附和来的】(confirmed)，而这次【新增】的证据是【用户主动说的】
+      //   （载体维派生成 stated）→ 形成一条**并存的新 stated 认知**；旧的 confirmed 原样留档、标签不动。
+      //   两条各自溯源清楚，读的人自己判断——而不是把一条认知的来源就地改写掉。
+      //   **用 `add`（本次新增）而非 `cited` 派生**：cited 可能含旧的附和证据，取最弱会让它恒算 confirmed、
+      //   并存永不触发。add 为空（幂等重跑 / 无新证据）自然不触发。
+      //   ⚠ 已知代价（拍板③ 记档）：新认知的 content 只能**复制旧命题**——reinforce 的输入 `RawRef` 不带
+      //   content（模型报 reinforce 时不重述内容）。于是同一命题会并存两条（旧 confirmed + 新 stated）。
+      //   去重 / 合并另议，本轮不做。
+      if (cog.formedBy === 'confirmed' && add.length > 0 && resolveFormedBy(false, add) === 'stated') {
+        const upConfidence = computeConfidence(
+          { contentType: cog.contentType, formedBy: 'stated', supportCount: add.length, contradictCount: 0 },
+          deps.config,
+        );
+        created.push(
+          deps.cognitionStore.put({
+            subjectId,
+            content: cog.content,
+            contentType: cog.contentType,
+            formedBy: 'stated',
+            confidence: upConfidence,
+            credStatus: deriveCredStatus(upConfidence, 0, cog.contentType, deps.config),
+            evidence: add.map((id) => ({ evidenceId: id, relation: 'support' as const })),
+          }),
+        );
+      }
     }
 
     // correct：旧失效保留，采纳新的
