@@ -17,6 +17,8 @@ import { openStores } from '../store/openStores.ts';
 import { perceive } from '../pipeline/perceive.ts';
 import { Conversation, type TurnOutcome, type RecalledCognition } from '../pipeline/conversation.ts';
 import type { Turn } from '../pipeline/workingMemory.ts';
+import { InteractionSession } from '../pipeline/interactionSession.ts';
+import type { VisibleTurn } from '../interaction/model.ts';
 import { ingestObservations, type Observation } from '../perception/ingest.ts';
 import { updateProfile as runUpdateProfile, type UpdateProfileResult } from '../consolidation/updateProfile.ts';
 import { recallCognitions } from '../retrieval/recall.ts';
@@ -74,6 +76,15 @@ export interface UserMessageInput {
   /** 幂等键：同 originId 重复摄入只落一条。 */
   originId?: string | null;
   occurredAt?: string;
+  /**
+   * 会话标识（v0.6·D-0034）：带上它，core 就为该会话维护一份上下文窗口——把「上一轮 AI 那句」
+   *   捕获进证据的 preceding_ai_context（供下游理解附和/短回答），并落一条 interaction_context。
+   *   宿主生成 AI 回复后调 recordAssistantReply(conversationId) 报告，下一轮即可捕获。
+   *   不传 = 无会话上下文，行为同旧（裸摄入）。
+   */
+  conversationId?: string;
+  /** 交互 episode 标识（v0.6）：宿主可选传（如按会话/天切段）；不传则库内按 idle 间隔自动切分。仅带 conversationId 时有意义。 */
+  episodeId?: string;
 }
 
 export interface ObservationInput {
@@ -109,6 +120,8 @@ export interface ConversationInput {
   message: string;
   /** 会话标识；缺省 'default'。同 id 复用同一个 Conversation 实例（窗口连续）。 */
   conversationId?: string;
+  /** 交互 episode 标识（v0.6·D-0034）：宿主可选传；不传则库内按 idle 间隔自动切分。落进本轮 interaction_context。 */
+  episodeId?: string;
   subjectId?: string;
   hostId?: string;
   originId?: string | null;
@@ -117,6 +130,14 @@ export interface ConversationInput {
   systemPrompt?: string;
   /** 续聊种子：同上，仅首次建实例时生效。 */
   seedTurns?: Turn[];
+}
+
+/** 报告一轮 AI 回复（v0.6·D-0034）：宿主自建 agent 循环时，把生成的助手回复交给 core 作后续上下文。 */
+export interface RecordAssistantReplyInput {
+  /** 目标会话（须与 ingestUserMessage 用的一致）。 */
+  conversationId: string;
+  /** 这轮 AI 回复的文本。**只进上下文窗口、永不落证据**（铁律 3a）。 */
+  content: string;
 }
 
 export interface UpdateProfileInput {
@@ -167,6 +188,9 @@ export interface MemoWeftCore {
   recall(input: RecallInput): Promise<RecalledCognition[]>;
   /** 处理一轮对话（存证据 → 召回 → 回话）。同 conversationId 复用实例、窗口连续。 */
   handleConversationTurn(input: ConversationInput): Promise<TurnOutcome>;
+  /** 报告一轮 AI 回复（v0.6·D-0034）：自建 agent 循环的宿主用它把助手回复交给 core 作后续上下文（只进窗口、不落证据，3a）。
+   *  下一轮 ingestUserMessage(同 conversationId) 即把它当「上一轮 AI 那句」捕获进 preceding_ai_context。 */
+  recordAssistantReply(input: RecordAssistantReplyInput): void;
   /** 丢弃某会话的活跃实例：下次 handleConversationTurn 会【重建】该会话（此时传的 systemPrompt / seedTurns 才生效）。
    *  Host 切换人设、或重开会话续聊时调它——否则同 conversationId 命中旧实例、新 systemPrompt/seedTurns 被静默忽略。
    *  不存在的 id 静默略过。会话历史是 Host 的持久数据（这里只丢内存里的活跃窗口实例、不碰任何库）。 */
@@ -247,6 +271,9 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
   const subjectOf = (explicit?: string) => explicit ?? cfg.identity.subjectId;
   // 会话缓存：conversationId → Conversation。首次建实例（systemPrompt/seedTurns 此时生效），后续复用不重建。
   const conversations = new Map<string, Conversation>();
+  // 交互会话缓存（v0.6·D-0034）：conversationId → InteractionSession。裸 ingestUserMessage 路的上下文窗口 +
+  //   episode 切分在此维护（与 conversations 分开：那是回话实例，这是纯上下文；不走回话的宿主只用 sessions）。
+  const sessions = new Map<string, InteractionSession>();
 
   // ── 插件（第 7 步·契约 v2）：hook 全在本工厂的方法层烧，conversation.ts / ingest.ts 纯逻辑不碰。──
   const plugins = options.plugins ?? [];
@@ -315,15 +342,38 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
   return {
     async ingestUserMessage(input) {
       // testbench/server.mjs 现行组合（perceive → put）的正式归位：Host 以后调这里，不再自己拼。
-      return evidenceStore.put(
-        perceive(input.content, {
+      // 交互上下文捕获（v0.6·D-0034）：带 conversationId 时，用 InteractionSession 抓「上一轮 AI 那句」填进
+      //   EvidenceInput.precedingAiContext（D-0033 结构墙列）→ 下游 distill/consolidate 的注入逻辑一字不改即对
+      //   【裸 ingest 路】生效（修复「weftmate 全走裸 ingest、附和上下文从未捕获」的头号缺口）；并落一条
+      //   interaction_context（供 Phase 2 resolver / 审计 / 导出）。不带 conversationId → precedingAiContext=null、不落上下文，行为同旧。
+      let precedingAiContext: string | null = null;
+      if (input.conversationId) {
+        const subjectId = subjectOf(input.subjectId);
+        let session = sessions.get(input.conversationId);
+        if (!session) {
+          session = new InteractionSession({ maxTurns: cfg.workingMemory.maxTurns });
+          sessions.set(input.conversationId, session);
+        }
+        const atMs = input.occurredAt ? Date.parse(input.occurredAt) : (options.clock ?? systemClock)().getTime();
+        const turn = session.beginUserTurn(atMs, input.episodeId);
+        precedingAiContext = turn.precedingAiContext;
+        // 本轮可见上下文快照 = [上一轮 AI（若有）, 本轮用户]——最小可解释单元（禁 system/hidden/CoT）。
+        const context: VisibleTurn[] = [];
+        if (precedingAiContext) context.push({ role: 'assistant', content: precedingAiContext });
+        context.push({ role: 'user', content: input.content });
+        stores.interactionContextStore.record({ subjectId, conversationId: input.conversationId, episodeId: turn.episodeId, context });
+        session.pushUser(input.content);
+      }
+      return evidenceStore.put({
+        ...perceive(input.content, {
           subjectId: input.subjectId,
           hostId: input.hostId,
           sourceKind: input.sourceKind,
           originId: input.originId,
           occurredAt: input.occurredAt,
         }, cfg),
-      );
+        precedingAiContext,
+      });
     },
 
     async ingestObservation(input) {
@@ -413,10 +463,19 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       return outcome;
     },
 
+    recordAssistantReply(input) {
+      // 宿主（自建 agent 循环）把生成的 AI 回复报告给 core：push 进该会话的 InteractionSession 窗口，
+      //   下一轮 ingestUserMessage 就能把它当「上一轮 AI 那句」捕获。**只作后续上下文、永不落证据**（铁律 3a）。
+      //   该 conversationId 尚无 session（还没 ingest 过）→ 静默略过（下次 ingest 会建）。
+      const session = sessions.get(input.conversationId);
+      if (session) session.pushAssistant(input.content);
+    },
+
     dropConversation(conversationId) {
       // 丢弃活跃实例 → 下次该 conversationId 会重建（systemPrompt/seedTurns 仅在建实例时生效，
       //   不丢就换不了人设、也重种不了续聊窗口）。只删内存里的实例，不碰库。
       conversations.delete(conversationId);
+      sessions.delete(conversationId); // 交互会话上下文窗口一并丢（v0.6·D-0034）
     },
 
     async updateProfile(input = {}) {
@@ -424,6 +483,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         evidenceStore,
         eventStore,
         cognitionStore,
+        semanticResolutionStore: stores.semanticResolutionStore, // v0.6 Phase 2·D-0034：落语义解析
         retriever,
         llm: pool.for('write'), // 写路径走小快模型（缺配自动回退 chat，见 llm/pool.ts）
         transaction,
@@ -439,10 +499,18 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       exportBundle(opts = {}) {
         const { subjectId, ...rest } = opts;
         // exportedAt 走注入 clock（Phase 4）：显式 opts.now 优先（rest 在后覆盖）。opts.now 是 ISO 串。
-        return exportBundle(subjectOf(subjectId), { evidenceStore, eventStore, cognitionStore }, { now: (options.clock ?? systemClock)().toISOString(), ...rest });
+        return exportBundle(
+          subjectOf(subjectId),
+          { evidenceStore, eventStore, cognitionStore, interactionContextStore: stores.interactionContextStore, semanticResolutionStore: stores.semanticResolutionStore },
+          { now: (options.clock ?? systemClock)().toISOString(), ...rest },
+        );
       },
       importBundle(bundle, opts) {
-        return importBundle(bundle, { evidenceStore, eventStore, cognitionStore, transaction }, opts);
+        return importBundle(
+          bundle,
+          { evidenceStore, eventStore, cognitionStore, interactionContextStore: stores.interactionContextStore, semanticResolutionStore: stores.semanticResolutionStore, transaction },
+          opts,
+        );
       },
       validateBundle,
     },

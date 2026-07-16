@@ -8,7 +8,7 @@ import type { EventStore } from '../event/store.ts';
 import type { Event } from '../event/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
-import { sourceLabel } from '../evidence/sourceLabel.ts';
+import { sourceLabel, aiContextSuffix } from '../evidence/sourceLabel.ts';
 import { resolveLang, type MemoWeftConfig } from '../config.ts';
 import { DISTILL_PROMPT } from './prompts.ts';
 
@@ -56,7 +56,13 @@ export async function distill(subjectId: string, deps: DistillDeps): Promise<Dis
   const lang = resolveLang(deps.config);
   // 来源感知（D-0018）:每行带来源标注,让 distill 的事件描述保留"这是用户亲口 / 行为观察 / 工具返回"的区分,
   //   下游 consolidate 据此定 formedBy(observed/tool 不被误当 stated)。
-  const lines = digestible.map((e) => `(${e.occurredAt.slice(0, 16)}) ${sourceLabel(e.sourceKind, lang)}${e.rawContent}`).join('\n');
+  // 附和/AI 上下文（D-0033 Phase 1b）:对已过隐私门(tier+inference)的 digestible 证据,把它的
+  //   preceding_ai_context【追加进本行】(经专用只读 precedingAiContextOf,不进 Evidence 读结构)——
+  //   让 distill 看懂孤儿回应指向什么。缺省无 AI 上文 → 后缀为空 = no-op(既有语料不受影响)。
+  //   注:AI 上文只是行内上下文文本、无独立 id,不会成为可溯源证据(3a 由 consolidate 的 support 白名单结构性守死)。
+  const lines = digestible
+    .map((e) => `(${e.occurredAt.slice(0, 16)}) ${sourceLabel(e.sourceKind, lang)}${e.rawContent}${aiContextSuffix(deps.evidenceStore.precedingAiContextOf(e.id), lang)}`)
+    .join('\n');
   const userHead = lang === 'zh'
     ? '按时间顺序的材料（每行带来源标注；[行为观察] / [工具返回] 不是用户原话）：'
     : "Material in chronological order (each line is tagged with its source; [observed behavior] / [tool result] are NOT the user's own words):";

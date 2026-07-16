@@ -51,6 +51,22 @@ export { type CognitionInput } from './cognition/model.ts';
 // [internal] 认知 store 实现件：门面已收口。
 export { SqliteCognitionStore, type CognitionStore, type CognitionPatch } from './cognition/store.ts';
 
+// 交互语义层（v0.6·D-0034）：交互上下文 + 语义解析——理解人机对话（短回答/附和/否定/选择），
+//   只提供语义环境、不产 Cognition、永不成为证据（铁律 3a）。
+// [stable] 交互领域形状：InteractionContext / SemanticResolution 由便携包携带、供宿主/审计读；各言语行为枚举。
+export {
+  type InteractionContext,
+  type SemanticResolution,
+  type VisibleTurn,
+  type ResponseAct,
+  type PromptAct,
+  type PropositionOrigin,
+  type AssertionStrength,
+} from './interaction/model.ts';
+// [internal] 交互层 store 实现件：门面已收口（ingestUserMessage/recordAssistantReply），宿主没理由直接拼。
+export { SqliteInteractionContextStore, type InteractionContextStore } from './interaction/interactionContextStore.ts';
+export { SqliteSemanticResolutionStore, type SemanticResolutionStore } from './interaction/semanticResolutionStore.ts';
+
 // 存储装配：一条共享连接 + 三个 store + 事务器（让写路径多步、多表写能原子化）
 // [experimental] openStores/StoreBundle：装配底座，取用形态 pre-1.0 可能变。
 export { openStores, type StoreBundle } from './store/openStores.ts';
@@ -156,6 +172,7 @@ export {
   type ToolResultInput,
   type RecallInput,
   type ConversationInput,
+  type RecordAssistantReplyInput,
   type UpdateProfileInput,
   type PortableAPI,
   type MemoryGraphAPI,

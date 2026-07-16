@@ -8,6 +8,8 @@
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { EventStore } from '../event/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
+import type { InteractionContextStore } from '../interaction/interactionContextStore.ts';
+import type { SemanticResolutionStore } from '../interaction/semanticResolutionStore.ts';
 import { MEMOWEFT_VERSION } from '../version.ts';
 import {
   BUNDLE_FORMAT,
@@ -21,6 +23,10 @@ export interface ExportDeps {
   evidenceStore: EvidenceStore;
   eventStore: EventStore;
   cognitionStore: CognitionStore;
+  /** 交互上下文 store（v0.6·D-0034）：按 subject 导出交互上下文快照。 */
+  interactionContextStore: InteractionContextStore;
+  /** 语义解析 store（v0.6·D-0034）：按导出的证据集过滤导出语义解析。 */
+  semanticResolutionStore: SemanticResolutionStore;
 }
 
 export interface ExportOptions {
@@ -38,7 +44,7 @@ export interface ExportOptions {
  * 导出某 subject 的完整三层记忆 + 溯源关系为一个 MemoryBundle。
  */
 export function exportBundle(subjectId: string, deps: ExportDeps, opts: ExportOptions = {}): MemoryBundle {
-  const { evidenceStore, eventStore, cognitionStore } = deps;
+  const { evidenceStore, eventStore, cognitionStore, interactionContextStore, semanticResolutionStore } = deps;
 
   // evidenceStore.all() 返回全 subject，这里按 subjectId 收口（证据无 subject 过滤读法，靠 filter）。
   const evidence = evidenceStore.all().filter((e) => e.subjectId === subjectId);
@@ -62,6 +68,10 @@ export function exportBundle(subjectId: string, deps: ExportDeps, opts: ExportOp
   // 保真 consolidated：记下导出时尚未消化的事件，导入端据此还原（防"未消化事件导入后漏消化"）。
   const unconsolidatedEventIds = eventStore.unconsolidated(subjectId).map((e) => e.id);
 
+  // 交互层（v0.6·D-0034）：上下文按 subject 全取；语义解析按导出的证据集过滤（通过 evidence_id 关联）。
+  const interactionContexts = interactionContextStore.all(subjectId);
+  const semanticResolutions = semanticResolutionStore.forEvidenceIds(evidence.map((e) => e.id));
+
   return {
     format: BUNDLE_FORMAT,
     schemaVersion: BUNDLE_SCHEMA_VERSION,
@@ -69,7 +79,7 @@ export function exportBundle(subjectId: string, deps: ExportDeps, opts: ExportOp
     memoWeftVersion: opts.memoWeftVersion ?? MEMOWEFT_VERSION,
     subjectId,
     source: { hostId: opts.hostId ?? 'memoweft', exportMode: 'full' },
-    data: { evidence, events, eventEvidence, cognitions, cognitionEvidence, unconsolidatedEventIds },
+    data: { evidence, events, eventEvidence, cognitions, cognitionEvidence, unconsolidatedEventIds, interactionContexts, semanticResolutions },
     metadata: {
       counts: {
         evidence: evidence.length,

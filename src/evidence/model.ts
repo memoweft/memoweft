@@ -58,4 +58,16 @@ export interface EvidenceInput {
   allowCloudRead?: boolean;
   allowInference?: boolean;
   correctsEvidenceId?: string | null;
+  /**
+   * 上一轮【AI 那句】的原文（附和/AI 上下文机制,D-0033 Phase 1b)——**只写入,不读回**。
+   * 用途:孤儿回应("AI:你喜欢爬山吧? 用户:是的")的信息只藏在 AI 那句里;把它作为【只读上下文】
+   *   注入 distill/consolidate,让附和产得出 `confirmed` 认知。**永不成为证据、永不给证据 id**(3a/3d)。
+   * 关键(结构墙):此字段**只在 EvidenceInput(写入端),不在 Evidence(读结构),也不进 fromRow** →
+   *   落进 SQLite 的 `preceding_ai_context` 列后,任何读回路径(exportBundle/listEvidence/MCP/host/TurnOutcome)
+   *   物理上都拿不到它 → AI 话不外泄=结构保证(不靠"记得剥离")。distill/consolidate 要用它,经专用只读方法
+   *   `EvidenceStore.precedingAiContextOf(id)` 取,且只对已过隐私门(tier+inference)的证据行注入。
+   * 仅走 Conversation 的路会设它(handleConversationTurn 先存后答·working memory 尚存上一轮 AI);
+   *   裸 ingest/observed/tool 路不设(缺省 null)。
+   */
+  precedingAiContext?: string | null;
 }

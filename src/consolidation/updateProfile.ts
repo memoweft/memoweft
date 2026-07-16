@@ -15,6 +15,7 @@ import { attribute, type AttributeResult } from '../attribution/attribute.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { EventStore } from '../event/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
+import type { SemanticResolutionStore } from '../interaction/semanticResolutionStore.ts';
 import type { Retriever } from '../retrieval/retriever.ts';
 import type { LLMClient } from '../llm/client.ts';
 import type { Transaction } from '../store/transaction.ts';
@@ -25,6 +26,8 @@ export interface UpdateProfileDeps {
   evidenceStore: EvidenceStore;
   eventStore: EventStore;
   cognitionStore: CognitionStore;
+  /** 语义解析 store（v0.6 Phase 2·D-0034，可选）：透传给 consolidate 落 semantic_resolution；不接 = 不落解析。 */
+  semanticResolutionStore?: SemanticResolutionStore;
   retriever: Retriever;
   llm: LLMClient;
   /** 事务器（可选）：接了共享连接就传它，consolidate 的写入会原子化（崩在中间整段回滚）。见 store/openStores.ts。
@@ -75,6 +78,7 @@ export async function updateProfile(subjectId: string, deps: UpdateProfileDeps):
     eventStore: deps.eventStore,
     evidenceStore: deps.evidenceStore,
     cognitionStore: deps.cognitionStore,
+    semanticResolutionStore: deps.semanticResolutionStore, // v0.6 Phase 2：落语义解析（缺省 undefined = 不落）
     llm: deps.llm,
     transaction: deps.transaction, // 有共享连接就把 consolidate 的写入原子化；没有则 undefined = 直接跑
     config: deps.config, // 透传注入配置（缺省=单例）

@@ -124,5 +124,18 @@ export function validateBundle(bundle: unknown): ValidateResult {
     }
   }
 
+  // 交互层（v0.6·D-0034，可选：v2 包带、v1 包无 → 跳过）：若存在须为数组且元素有非空 id。
+  for (const [name, arr] of [
+    ['interactionContexts', data.interactionContexts],
+    ['semanticResolutions', data.semanticResolutions],
+  ] as Array<[string, unknown]>) {
+    if (arr === undefined) continue;
+    if (!Array.isArray(arr)) {
+      errors.push(lang === 'zh' ? `data.${name} 应为数组` : `data.${name} should be an array`);
+    } else if (arr.some((x) => typeof (x as { id?: unknown }).id !== 'string' || (x as { id?: unknown }).id === '')) {
+      errors.push(lang === 'zh' ? `data.${name} 存在缺 id 的元素` : `data.${name} has an element with a missing id`);
+    }
+  }
+
   return { valid: errors.length === 0, errors, warnings };
 }

@@ -88,6 +88,10 @@ export interface CognitionPatch {
   content?: string;
   confidence?: number;
   credStatus?: CredStatus;
+  /** 来源强度升级（D-0033 Phase 1b）:reinforce 里 confirmed 认知被【用户主动亲口】印证时 confirmed→stated,
+   *  破 480 封顶。**仅 consolidate.reinforce 的升级路径写它**;是形成方式分类(由 LLM 判、结构护栏兜),
+   *  置信度分数仍由规则算(铁律 3b)。缺省不改（保持原 formedBy）。 */
+  formedBy?: FormedBy;
   scope?: string | null;
   /** 标失效（被纠正/过期）；保留条目可溯源（cell 6 默认保留 + cell 8 反证）。 */
   invalidAt?: string | null;
@@ -254,6 +258,7 @@ export class SqliteCognitionStore implements CognitionStore {
       content: patch.content ?? cur.content,
       confidence: patch.confidence ?? cur.confidence,
       credStatus: patch.credStatus ?? cur.credStatus,
+      formedBy: patch.formedBy ?? cur.formedBy, // D-0033: confirmed→stated 升级路径写它;缺省保持原值
       scope: patch.scope === undefined ? cur.scope : patch.scope,
       invalidAt: patch.invalidAt === undefined ? cur.invalidAt : patch.invalidAt,
       askedAt: patch.askedAt === undefined ? cur.askedAt : patch.askedAt,
@@ -263,9 +268,9 @@ export class SqliteCognitionStore implements CognitionStore {
     };
     this.db
       .prepare(
-        'UPDATE cognition SET content=?, confidence=?, cred_status=?, scope=?, invalid_at=?, asked_at=?, archived_at=?, muted_at=?, updated_at=? WHERE id=?',
+        'UPDATE cognition SET content=?, confidence=?, cred_status=?, formed_by=?, scope=?, invalid_at=?, asked_at=?, archived_at=?, muted_at=?, updated_at=? WHERE id=?',
       )
-      .run(next.content, next.confidence, next.credStatus, next.scope, next.invalidAt, next.askedAt, next.archivedAt, next.mutedAt, next.updatedAt, id);
+      .run(next.content, next.confidence, next.credStatus, next.formedBy, next.scope, next.invalidAt, next.askedAt, next.archivedAt, next.mutedAt, next.updatedAt, id);
     return this.get(id);
   }
 

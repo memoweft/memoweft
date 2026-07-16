@@ -15,6 +15,8 @@ import { SqliteEvidenceStore, type EvidenceStore } from '../evidence/store.ts';
 import { SqliteEventStore, type EventStore } from '../event/store.ts';
 import { SqliteCognitionStore, type CognitionStore } from '../cognition/store.ts';
 import { SqliteManagementLog, type ManagementLog } from '../memory/managementLog.ts';
+import { SqliteInteractionContextStore, type InteractionContextStore } from '../interaction/interactionContextStore.ts';
+import { SqliteSemanticResolutionStore, type SemanticResolutionStore } from '../interaction/semanticResolutionStore.ts';
 import { runMigrations } from './migrations.ts';
 import { BUSY_TIMEOUT_MS } from './busyTimeout.ts';
 import type { Transaction } from './transaction.ts';
@@ -29,6 +31,10 @@ export interface StoreBundle {
   cognitionStore: CognitionStore;
   /** 受控管理审计日志（批次2）：core.memory.* 的每个操作在此留痕（op/target/reason/detail）。 */
   managementLog: ManagementLog;
+  /** 交互上下文（v0.6·D-0034）：一段用户可见上下文的快照，供理解短回答；不产 Cognition、永不成证据。 */
+  interactionContextStore: InteractionContextStore;
+  /** 语义解析（v0.6·D-0034）：一条证据的语义解析；Phase 1 只建表，写路径 Phase 2 resolver 接。 */
+  semanticResolutionStore: SemanticResolutionStore;
   /** 把一段【同步】写包进一个事务（可重入）。传给 consolidate / updateProfile 即让其写入原子化。 */
   transaction: Transaction;
   /** 关掉这条共享连接（统一在此关，别去关单个 store——单 store 的 close 对共享连接是 no-op）。 */
@@ -51,6 +57,7 @@ export function openStores(dbPath: string, cfg?: MemoWeftConfig, clock: Clock = 
   // 建库/迁移期间任何一步抛错（如降级防护拒绝打开未来版本的库），都要【关掉这条连接】再抛，
   //   否则连接泄漏——文件被锁、下次打不开也删不掉（Windows EPERM）。
   let evidenceStore: EvidenceStore, eventStore: EventStore, cognitionStore: CognitionStore, managementLog: ManagementLog;
+  let interactionContextStore: InteractionContextStore, semanticResolutionStore: SemanticResolutionStore;
   try {
     // 三个 store 都接同一条连接（构造里会各自 CREATE TABLE IF NOT EXISTS + 迁移，幂等）。
     // 只有 evidence store 的 put 会读 config 补授权默认，故只把 cfg 透给它（event/cognition 不读 config）。
@@ -59,6 +66,10 @@ export function openStores(dbPath: string, cfg?: MemoWeftConfig, clock: Clock = 
     cognitionStore = new SqliteCognitionStore(db, clock);
     // 审计表也挂共享连接（批次2）：管理操作的"改数据 + 落审计"能包进同一个事务、全成或全滚。
     managementLog = new SqliteManagementLog(db, clock);
+    // 交互层两表也挂共享连接（v0.6·D-0034）：构造里 CREATE TABLE IF NOT EXISTS，fresh 与老库两条路径都建、
+    //   被 migrations.test 的 schema 签名收敛测试兜住（同 management_log，不进 formal migrations）。
+    interactionContextStore = new SqliteInteractionContextStore(db, clock);
+    semanticResolutionStore = new SqliteSemanticResolutionStore(db, clock);
     // 建表后统一走版本化：新库盖最新版，老库升级（有真改动会先备份）。
     runMigrations(db, { dbPath, fresh });
   } catch (e) {
@@ -90,6 +101,8 @@ export function openStores(dbPath: string, cfg?: MemoWeftConfig, clock: Clock = 
     eventStore,
     cognitionStore,
     managementLog,
+    interactionContextStore,
+    semanticResolutionStore,
     transaction,
     close: () => db.close(),
   };

@@ -11,6 +11,7 @@ export {
   type ToolResultInput,
   type RecallInput,
   type ConversationInput,
+  type RecordAssistantReplyInput,
   type UpdateProfileInput,
   type PortableAPI,
   type MemoryGraphAPI,

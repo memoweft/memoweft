@@ -14,10 +14,12 @@ import type { EvidenceStore } from '../evidence/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { Cognition, ContentType, FormedBy } from '../cognition/model.ts';
 import type { Evidence } from '../evidence/model.ts';
+import type { SemanticResolutionStore } from '../interaction/semanticResolutionStore.ts';
+import type { ResponseAct, PromptAct, PropositionOrigin, AssertionStrength } from '../interaction/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from './confidence.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
-import { sourceLabel } from '../evidence/sourceLabel.ts';
+import { sourceLabel, aiContextSuffix } from '../evidence/sourceLabel.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 import { noopTransaction, type Transaction } from '../store/transaction.ts';
 import { resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
@@ -29,6 +31,9 @@ export interface ConsolidateDeps {
   /** 证据层：证据级溯源要读原话文本喂给 LLM（地基债 · 证据级引用）。 */
   evidenceStore: EvidenceStore;
   cognitionStore: CognitionStore;
+  /** 语义解析 store（v0.6 Phase 2·D-0034，可选）：接了则把每条证据的语义解析落 semantic_resolution 表。
+   *  Phase 2 只 produce+store、不碰 formedBy（那是 Phase 3）；不接（旧调用方/bench 单测）= 不落解析、行为同旧。 */
+  semanticResolutionStore?: SemanticResolutionStore;
   llm: LLMClient;
   /** 事务器（可选）：接了共享连接就传它，把下方多步写（new/correct/conflict/reinforce + markConsolidated）
    *  原子化——崩在中间整段回滚，不留半拉画像。不传（如各开各连接的测试）= 直接跑，行为同旧。见 store/openStores.ts。 */
@@ -69,12 +74,27 @@ interface RawRef {
   cognition_id?: string;
   support_evidence_ids?: string[];
   evidence_ids?: string[];
+  /** 强化的来源强度分类（D-0033 Phase 1b）:LLM 把这次 reinforce 判为哪种来源;仅 'stated' 用于把
+   *  confirmed 认知升级破顶(见 reinforce 分支)。Phase 2 提示词才教它标;Phase 1b 缺省 undefined = 不升级。 */
+  formed_by?: string;
+}
+/** 一条候选语义解析（v0.6 Phase 2·D-0034）：LLM 对某条原话的解析（这句在回应谁提出的什么、是肯定/否定/选择/含糊）。
+ *  字段全 string 容错；落库前经 VALID_* 收敛（非法值落 null）。**是解释、不是证据**，永不进 support 白名单（3a/3d）。 */
+interface RawResolution {
+  evidence_id?: string;
+  resolved_content?: string;
+  response_act?: string;
+  prompt_act?: string;
+  proposition_origin?: string;
+  assertion_strength?: string;
+  required_context?: string;
 }
 interface LLMOut {
   new?: RawCog[];
   reinforce?: RawRef[];
   correct?: Array<{ cognition_id?: string } & RawCog>;
   conflict?: RawRef[];
+  resolutions?: RawResolution[];
 }
 
 /** 从候选里取它引的原话 id（容错字段名）。 */
@@ -84,6 +104,11 @@ function citedIds(c: RawCog | RawRef): string[] {
 
 const VALID_TYPES = ['fact', 'preference', 'goal', 'project', 'state', 'trait'];
 const VALID_FORMED = ['stated', 'observed', 'ruled', 'confirmed', 'inferred'];
+// 语义解析枚举（v0.6 Phase 2·D-0034）：落库前收敛，非法值落 null（与 model.ts 的 `... | null` 一致）。
+const VALID_RESPONSE_ACT = ['affirm', 'negate', 'select', 'elaborate', 'ask', 'none', 'other'];
+const VALID_PROMPT_ACT = ['propose', 'ask', 'state', 'none', 'other'];
+const VALID_ORIGIN = ['user_stated', 'assistant_proposed'];
+const VALID_STRENGTH = ['explicit', 'weak', 'none'];
 
 /** 从原始候选里抽出认知（容错字段名 + 缺类型给保守默认：fact/inferred）。无内容返回 null。 */
 function pickCognition(c: RawCog): { content: string; contentType: ContentType; formedBy: FormedBy } | null {
@@ -134,6 +159,12 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   // 事件视图 + 合法原话集合：把每个新事件覆盖的原话（带 id+原文）摊开给 LLM 引用；
   // 只有这些 id 是合法支撑（防 LLM 编造/自证，证据级溯源）。
   const validEvidence = new Set<string>();
+  /** 合法原话里【来源=spoken】的子集（v0.6 Phase 2·D-0034）：resolutions 只对【用户真说出口的话】落解析。
+   *  [行为观察]/[工具返回] 不是用户在说话——「这句在回应谁提出的什么、是肯定还是否定」对一条行为观察
+   *  本就无意义，落进表里就是脏数据（而 Phase 3 的 deriveFormedBy 要读这张表：垃圾进→垃圾出）。
+   *  提示词 v4 也教了同样的收窄，但**这里是结构保证**：模型不听话也进不了表（同 validEvidence 守 3d 的思路——
+   *  纪律靠结构、不靠提示词自觉）。 */
+  const spokenEvidence = new Set<string>();
   // 隐私关（按当前写模型 tier）+ 推理门：事件覆盖的原话里，只把【当前模型可读】且【可推画像】的喂给 LLM、
   //   也只让它们当合法支撑——被挡的既不进 prompt、也进不了 validEvidence（不成为所生认知的依据）。
   //   tier=cloud 筛 allowCloudRead / tier=local 筛 allowLocalRead；inference=false 不进画像（distill/attribute 三处一致）。
@@ -148,8 +179,17 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       .filter((e) => e.allowInference)
       .map((e) => {
         validEvidence.add(e.id);
+        if (e.sourceKind === 'spoken') spokenEvidence.add(e.id); // resolutions 的落库白名单（见 spokenEvidence 声明）
         // 来源感知（D-0018）:原话带来源前缀,让 LLM 定 formedBy 时知道哪些不是用户亲口。
-        return { id: e.id, text: sourceLabel(e.sourceKind, lang) + e.rawContent };
+        // 附和/AI 上下文（D-0033 Phase 1b）:把 preceding_ai_context【追加进本原话的 text 后缀】
+        //   (经专用只读 precedingAiContextOf,只对已过隐私门的证据取)——让 LLM 看懂"是的"这类孤儿回应
+        //   在附和 AI 提出的什么命题,据此判 formed_by=confirmed。**关键(3a/3d):AI 上文只是 text 后缀、
+        //   共用这条【真证据】的 id,绝不铸独立 {id,text} 条目 → validEvidence 只含真证据 id、AI 上文永无 id
+        //   → pickSupport 结构性引不到 AI 上文 → 助手输出永不成为可溯源证据**。缺省无 → 后缀空 = no-op。
+        return {
+          id: e.id,
+          text: sourceLabel(e.sourceKind, lang) + e.rawContent + aiContextSuffix(deps.evidenceStore.precedingAiContextOf(e.id), lang),
+        };
       });
     return { summary: ev.summary, occurredAt: ev.occurredAt, utterances };
   });
@@ -213,8 +253,26 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       const links = deps.cognitionStore.sourcesOf(cog.id);
       const supportCount = links.filter((l) => l.relation === 'support').length;
       const contradictCount = links.filter((l) => l.relation === 'contradict').length;
-      const confidence = computeConfidence({ contentType: cog.contentType, formedBy: cog.formedBy, supportCount, contradictCount }, deps.config);
-      deps.cognitionStore.update(cog.id, { confidence, credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config) });
+      // confirmed→stated 升级（D-0033）:附和产的 confirmed 认知,只有被【用户主动亲口】印证才破 480 封顶
+      //   ——"AI 带你确认的永远低档,你自己捅出来的才够比较确定"。触发判据(双重、缺一不可):
+      //   ① LLM 把这次 reinforce 判为 formed_by='stated'(与 new 路同款语义分类);
+      //   ② 引用的支撑原话里【有 spoken 来源】(结构护栏:observed/tool/inferred 永不能升 stated)。
+      //   纯附和(LLM 判 confirmed / 未标 stated)永不触发 → 诱导提问风暴 + 连答"是的"洗不上去。
+      //   分数仍由规则算(铁律 3b:formedBy 是分类、confidence 由 computeConfidence 算)。
+      let formedBy = cog.formedBy;
+      if (
+        formedBy === 'confirmed' &&
+        c.formed_by === 'stated' &&
+        cited.some((id) => deps.evidenceStore.get(id)?.sourceKind === 'spoken')
+      ) {
+        formedBy = 'stated';
+      }
+      const confidence = computeConfidence({ contentType: cog.contentType, formedBy, supportCount, contradictCount }, deps.config);
+      deps.cognitionStore.update(cog.id, {
+        confidence,
+        credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config),
+        ...(formedBy !== cog.formedBy ? { formedBy } : {}),
+      });
       reinforced++;
     }
 
@@ -254,6 +312,27 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       conflicted++;
     }
 
+    // 语义解析落库（v0.6 Phase 2·D-0034）：对每条【真证据】落一份 resolution（resolvedContent + 各解析维度）。
+    //   **只 produce+store、绝不碰 formedBy**（那是 Phase 3 的 deriveFormedBy）。复用 validEvidence 白名单
+    //   （3d：只对真证据落、伪造/AI-上文 id 结构性丢弃）；幂等（同证据已有解析则跳过）；resolverVersion 绑
+    //   prompt 版本可追溯。resolved_content 是【解释结果、不是证据】，永不进 consolidate 的 support 白名单（3a）。
+    for (const r of out.resolutions ?? []) {
+      const eid = r.evidence_id;
+      if (!eid || !spokenEvidence.has(eid)) continue; // 3d + 来源收窄：只对【用户真说的】真证据落（伪造 id / AI 上文 / observed / tool 全丢弃；spokenEvidence ⊆ validEvidence，故 3d 一并守住）
+      const resolved = (r.resolved_content ?? '').trim();
+      if (!resolved) continue; // resolved_content 非空
+      if (deps.semanticResolutionStore?.ofEvidence(eid)) continue; // 幂等：同证据不重复落
+      deps.semanticResolutionStore?.put({
+        evidenceId: eid,
+        resolvedContent: resolved,
+        responseAct: VALID_RESPONSE_ACT.includes(r.response_act ?? '') ? (r.response_act as ResponseAct) : null,
+        promptAct: VALID_PROMPT_ACT.includes(r.prompt_act ?? '') ? (r.prompt_act as PromptAct) : null,
+        propositionOrigin: VALID_ORIGIN.includes(r.proposition_origin ?? '') ? (r.proposition_origin as PropositionOrigin) : null,
+        assertionStrength: VALID_STRENGTH.includes(r.assertion_strength ?? '') ? (r.assertion_strength as AssertionStrength) : null,
+        requiredContext: (r.required_context ?? '').trim() || null,
+        resolverVersion: `consolidate@${CONSOLIDATE_PROMPT.version}`,
+      });
+    }
     deps.eventStore.markConsolidated(newEvents.map((e) => e.id));
     return { created, reinforced, corrected, conflicted };
   });
