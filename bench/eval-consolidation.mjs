@@ -219,6 +219,11 @@ async function runScenario(scenario, llm) {
         sourceKind: m.sourceKind,
         hostId: 'local',
         rawContent: m.rawContent,
+        // AI 前一句（v0.6 Phase 2·D-0033/D-0034，可选）：短回答家族的场景要靠它，孤儿回应（"是"/"后者"）
+        //   的信息只在 AI 那句里。落 preceding_ai_context 列 → distill/consolidate 注入时作【只读上下文】
+        //   后缀拼进本原话（共用真证据 id、永不铸独立条目 = 3a/3d 结构墙，见 evidence/sourceLabel.ts）。
+        //   缺省 undefined = 不注入，旧 42 场景行为逐字同旧。
+        precedingAiContext: m.precedingAiContext,
         occurredAt: new Date(base + i * 1000).toISOString(),
         allowCloudRead: true, // 见函数注释：让被测云模型真读到全部语料证据
       });
@@ -246,7 +251,9 @@ async function runScenario(scenario, llm) {
     return {
       error: null,
       consolidated: {
-        created: result.consolidated.created.map((c) => ({ content: c.content, contentType: c.contentType, credStatus: c.credStatus, confidence: c.confidence })),
+        // formedBy（v0.6 Phase 2）：短回答家族要判「附和 → confirmed、不得洗成 stated」，故随 created 收集。
+        //   additive：旧 run JSON 无此字段，diffRuns 比的是聚合分数、不读逐条 created → 跨版本 --compare 不受影响。
+        created: result.consolidated.created.map((c) => ({ content: c.content, contentType: c.contentType, credStatus: c.credStatus, confidence: c.confidence, formedBy: c.formedBy })),
         createdCount: result.consolidated.created.length,
         reinforced: result.consolidated.reinforced,
         corrected: result.consolidated.corrected,
@@ -269,12 +276,18 @@ async function runScenario(scenario, llm) {
 
 /**
  * 结构性断言（程序判，不调 LLM）：
- *   from expect：conflict→conflicted≥1；correct→corrected≥1；newCognitions→created∈[min,max] 且类型⊆types；
- *                discipline==='chitchat-negative'→created===0。
+ *   from expect：conflict→conflicted≥1；correct→corrected≥1；newCognitions→created∈[min,max] 且类型⊆types
+ *                （可选 formedBy → created 来源⊆formedBy）；discipline==='chitchat-negative'→created===0；
+ *                discipline==='short-reply'→confirmed 封顶不变量（见下）。
  *   不变量（每场景都查，与模型判定无关）：
  *     ① 每条 active 认知 confidence ∈ (0,1000]；
  *     ② 每条 state 认知 credStatus ∈ {candidate,low}（情绪封顶）；
  *     ③ 每条认知的证据链引用的 evidenceId 都真实存在于 evidence store（证据白名单/虚构丢弃）。
+ *
+ * 【口径纪律·可比性】v0.6 Phase 2 新增的两条断言（expect.newCognitions.formedBy / short-reply 封顶）都是
+ *   **条件触发**——语料不声明就不加 check。旧 42 场景 expect 无 formedBy 字段、discipline 也非 short-reply
+ *   → 一条 check 都不多 → structTotal 逐字不变 → 6 个旧盘的前后分仍严格可比（别改成全场景不变量：
+ *   那会让每场景 +1 条恒 pass 的 check，分母虚涨、把旧基线的分数抬高成假提升）。
  */
 function checkStructural(scenario, run) {
   if (run.error) return [{ name: 'run', pass: false, detail: `updateProfile 抛错: ${run.error}` }];
@@ -285,7 +298,7 @@ function checkStructural(scenario, run) {
   if (ex.conflict) checks.push({ name: 'conflicted≥1', pass: c.conflicted >= 1, detail: `conflicted=${c.conflicted}` });
   if (ex.correct) checks.push({ name: 'corrected≥1', pass: c.corrected >= 1, detail: `corrected=${c.corrected}` });
   if (ex.newCognitions) {
-    const { min, max, types } = ex.newCognitions;
+    const { min, max, types, formedBy } = ex.newCognitions;
     checks.push({ name: `created∈[${min},${max}]`, pass: c.createdCount >= min && c.createdCount <= max, detail: `created=${c.createdCount}` });
     if (types) {
       // 注:no-over-inference 盘这条常因 fact-vs-state 定义灰区判红(一次性事件模型多标 fact、语料期望 state），
@@ -294,10 +307,24 @@ function checkStructural(scenario, run) {
       const bad = [...new Set(c.created.filter((x) => !set.has(x.contentType)).map((x) => x.contentType))];
       checks.push({ name: `created类型⊆{${types.join(',')}}`, pass: bad.length === 0, detail: bad.length ? `越界类型: ${bad.join(',')}` : 'ok' });
     }
+    // 来源强度允许集（v0.6 Phase 2·D-0033/D-0034，短回答家族的靶心）：判「附和 AI 提出的命题 → confirmed，
+    // **绝不可洗成 stated**」（用户那句"是"没主动说出内容，命题是 AI 提的）。条件断言，见函数头【口径纪律】。
+    if (formedBy) {
+      const set = new Set(formedBy);
+      const bad = [...new Set(c.created.filter((x) => !set.has(x.formedBy)).map((x) => x.formedBy))];
+      checks.push({ name: `created来源⊆{${formedBy.join(',')}}`, pass: bad.length === 0, detail: bad.length ? `越界来源: ${bad.join(',')}` : 'ok' });
+    }
   }
   if (scenario.discipline === 'chitchat-negative') {
     checks.push({ name: 'chitchat→created===0', pass: c.createdCount === 0, detail: `created=${c.createdCount}` });
   }
+  // 【刻意不加】short-reply 的 confirmed 封顶 check——**它恒 pass、是分母灌水**。
+  //   confirmed 底分 280 + 支持满 200 = 480 < limited(500)，由 confidence.ts:30 的算式【结构保证】
+  //   （见已批影响面报告 v0.6-impact-report.md:95「纯附和永远顶天低置信」是安全不变式，非提示词软判）
+  //   → `formedBy==='confirmed' && (confidence>480 || credStatus∈{limited,stable})` 数学上不可证伪。
+  //   加了它就是给每个 short-reply 场景 +1 条恒绿 check、把 structRate 抬成假提升——正是本函数头
+  //   【口径纪律】禁止的事。config 被改高底分的回归由单测守（confirmedLaundering.test.ts），eval 不是回归测试。
+  //   本盘真正有鉴别力的机判是上面的 `created来源⊆{...}`（模型把 AI 的臆断标成 stated 就红）。
 
   // 不变量①：confidence ∈ (0,1000]
   const confBad = run.active.filter((a) => !(a.confidence > 0 && a.confidence <= 1000));

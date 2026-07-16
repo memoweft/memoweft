@@ -3,7 +3,9 @@
     "purpose": "固化质量评测场景语料库（Phase 2 · §15.1）。人工撰写期望，供真模型评测器跑 updateProfile 固化后比对。禁用被测模型 mimo 生成期望值。",
     "consumedBy": "另建的固化质量评测器：按每个场景喂 seed(预置旧认知)→messages(按序证据)走真实 updateProfile，再拿 expect 与 consolidated.{created,corrected,conflicted} + LLM 判分比对。",
     "sourceKindNote": "sourceKind 取值锚定真实模型 src/evidence/model.ts SourceKind = spoken|inferred|observed（无 'tool'）；语料按真实写路径对齐，本库不使用 'tool'。",
-    "gistNote": "shouldFormGists=应形成的认知要点(给 LLM 判分)；shouldNotFormGists=不应形成的过度推断(判分重点)。confidence 由系统按规则自算，语料从不给期望置信数值。",
+    "gistNote": "shouldFormGists=应形成的认知要点(给 LLM 判分)；shouldNotFormGists=不应形成的过度推断(判分重点)。confidence 由系统按规则自算，语料从不给期望置信数值。【gist 只写认知 content 层能判的命题】——judge 只拿到 active 认知的 content 串(见 bench/eval-consolidation.mjs 的 scoreGists)，看不到 formedBy/confidence/credStatus；把元数据断言(如『不许标 stated』『不许升进 limited』)写进 gist 会恒判 NO、白占 overInferRate 分母、把靶心稀释，元数据靶心一律交给机判(expect.newCognitions.formedBy)。",
+    "precedingAiContextNote": "precedingAiContext(可选，D-0033/D-0034)=AI 前一句，只有 short-reply 盘用。短回答(『是啊』/『The former.』)自身零信息，命题只活在 AI 那句里；评测器落它进 evidence 的 preceding_ai_context 列 → distill/consolidate 作【只读上下文】后缀注入(拼在用户真原话后、共用同一个证据 id、永不铸独立 {id,text} 条目 → AI 的话结构性拿不到 evidence id、引不进 support 白名单 = 铁律 3a/3d)。注入有 240 字符截断(src/evidence/sourceLabel.ts)，CC-045 的长行程正是靠它把『行吧』的指向压成含糊。",
+    "formedByNote": "expect.newCognitions.formedBy(可选)=created 的来源强度允许集，是 short-reply 盘唯一有鉴别力的机判靶心。附和 AI 提出的命题 → confirmed(底分 280、结构封顶 480<limited，见 v0.6-impact-report.md:95)；用户主动说出内容 → stated。本盘【双向设防】是刻意的：CC-043/044/047/048 要 confirmed、CC-046/049 要 stated → 『把一切标 confirmed』与『把一切标 stated』两种退化模型各红一半，无单一退化策略能通吃。别为了让某条变绿而放宽成 ['confirmed','stated']——那等于把本盘作废。",
     "seeds": ["身份 阿舟/云、上海→深圳搬家", "偏好 茶→咖啡/辣/安静/直接指出", "宠物 团子橘猫", "项目 像素游戏/学吉他", "状态 没睡好/累/烦", "假设 熬夜致困"]
   },
   "scenarios": [
@@ -615,6 +617,153 @@
         "newCognitions": { "min": 0, "max": 0 },
         "shouldFormGists": [],
         "shouldNotFormGists": ["把闲聊天气记成关于用户的事实/偏好", "从『天气不错』推断用户喜欢晴天等无据结论"]
+      }
+    },
+    {
+      "id": "CC-043",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 提『你挺喜欢爬山的吧』、用户只答『是啊』（附和产 confirmed、不产 stated）",
+      "messages": [ { "sourceKind": "spoken", "rawContent": "是啊", "precedingAiContext": "你挺喜欢爬山的吧？" } ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 1, "max": 1, "types": ["preference"], "formedBy": ["confirmed"] },
+        "shouldFormGists": ["形成一条『用户喜欢爬山』的偏好认知"],
+        "shouldNotFormGists": [
+          "把一句『是啊』扩写成『用户热爱户外运动／经常去爬山／是个资深户外爱好者』这类它确认不了的结论",
+          "把 AI 那句提问本身记成认知（如『AI 问过用户喜不喜欢爬山』『用户被问到爬山』）——AI 的话只是只读上下文，不是关于用户的认知",
+          "从『是啊』两个字推断『用户话少／性格随和／有问必答』这类性格结论"
+        ]
+      }
+    },
+    {
+      "id": "CC-044",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 连环追问、用户四次点头（连声附和不聚合成人格特质）",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "是啊", "precedingAiContext": "聊了这么久，我感觉你周末应该更愿意待在家里吧？" },
+        { "sourceKind": "spoken", "rawContent": "对", "precedingAiContext": "那你是不是也挺喜欢一个人去看电影的？" },
+        { "sourceKind": "spoken", "rawContent": "嗯", "precedingAiContext": "我猜你不太爱去人多的酒吧？" },
+        { "sourceKind": "spoken", "rawContent": "对对", "precedingAiContext": "还有个感觉——你是不是特别不爱打电话？" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 1, "max": 4, "types": ["preference"], "formedBy": ["confirmed"] },
+        "shouldFormGists": [
+          "记下『用户周末更愿意待在家』这条被点头认下的偏好",
+          "记下『用户不太爱去人多的酒吧』这条被点头认下的偏好"
+        ],
+        "shouldNotFormGists": [
+          "断定『用户性格内向/社恐/不擅社交』这类稳定人格特质",
+          "把几个具体场景的点头并成『用户偏好独处/不喜欢社交』这类笼统概括结论"
+        ]
+      }
+    },
+    {
+      "id": "CC-045",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 长篇行程 + 一句『行吧』（窄范围负例：指向含糊，不产认知）",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "嗯……行吧", "precedingAiContext": "我自己琢磨了一版国庆去云南的行程，先发你看看：Day1 下午的飞机到昆明，落地直接住机场边上的青旅六人间，便宜，省下的钱留给后面几天；Day2 早上六点起床赶最早那班高铁去大理，白天在洱海边骑一天电动车，中午找家小馆吃酸辣口的酸菜鱼，晚上回客栈早点睡；Day3 全天爬苍山，走玉带路那条线，午饭带干粮在山上解决，下山之后去古城听会儿民谣；Day4 一早转丽江，先去蓝月谷，住束河那家老院子改的民宿；Day5 一整天留给虎跳峡徒步，得提前备好登山杖和护膝；Day6 中午的飞机回深圳。全程人均预算我卡在 4000 以内，交通优先挑了硬座和大巴，住的全是青旅和民宿、一家酒店都没订，吃的也基本是路边小店。这么排你觉得行吗？" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 0 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "从一句含糊的『行吧』里挑出行程中的某个具体条目，当成用户自己的偏好或习惯（如『用户习惯早上六点起床』『用户喜欢吃酸辣的酸菜鱼』『用户出门爱住青旅』『用户喜欢爬山徒步』）",
+          "把这份 AI 自己琢磨出来的行程当成用户已确认的计划或目标固化（如『用户国庆要去云南玩六天』『用户已定下苍山、虎跳峡的徒步安排』）",
+          "把行程里的预算/交通细节写成用户的偏好或约束（如『用户的旅行预算是人均 4000 以内』『用户偏好硬座和大巴这类省钱交通』）",
+          "从两个字的敷衍回应里推断用户的情绪或性格（如『用户对这趟旅行不上心』『用户随和、别人说什么都答应』）"
+        ]
+      }
+    },
+    {
+      "id": "CC-046",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 猜宅家追剧、用户答周末爬山七八年（对照组：内容出自用户之口 → stated 非 confirmed）",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "我周末基本都去爬山，挺喜欢的，都爬了七八年了", "precedingAiContext": "你周末一般都怎么过呀？我猜你是那种喜欢宅在家追剧的人。" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 1, "max": 3, "types": ["preference", "fact"], "formedBy": ["stated"] },
+        "shouldFormGists": [
+          "记录用户亲述的爬山习惯：周末基本都去爬山、挺喜欢",
+          "记录用户亲述事实：爬山已有七八年"
+        ],
+        "shouldNotFormGists": [
+          "用户喜欢宅在家追剧、周末宅着看剧（这是 AI 那句里的猜测，用户从没说过）",
+          "用户不喜欢追剧、讨厌宅在家",
+          "用户很自律、有毅力、意志坚定",
+          "用户是资深驴友、体力过人、爬山技术很好"
+        ]
+      }
+    },
+    {
+      "id": "CC-047",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "'The former.' to a window-or-aisle question (must resolve to window, not aisle)",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "The former.", "precedingAiContext": "Random question — when you fly, do you go for the window seat or the aisle?" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 1, "max": 1, "types": ["preference"], "formedBy": ["confirmed"] },
+        "shouldFormGists": ["Resolve 'the former' against the assistant's window-or-aisle question and record that the user prefers the window seat over the aisle"],
+        "shouldNotFormGists": [
+          "The user prefers the aisle seat",
+          "The user dislikes or never books window seats",
+          "The user flies often or travels by plane regularly"
+        ]
+      }
+    },
+    {
+      "id": "CC-048",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "'Maybe, I guess' to an AI's introvert guess (hedge is not confirmation)",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "Maybe, I guess.", "precedingAiContext": "You seem like an introvert, right?" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 1, "types": ["state", "preference", "trait"], "formedBy": ["confirmed"] },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "'The user is an introvert' worded as an unhedged, settled personality claim — no 'maybe/possibly/tentatively' qualifier anywhere in it",
+          "The user said / described himself as an introvert (the AI's guess put into the user's mouth — the user never uttered the word)",
+          "The user dislikes parties, avoids people, or is socially anxious"
+        ]
+      }
+    },
+    {
+      "id": "CC-049",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "Denied the AI's vegetarian guess (a denial must never read as a confirmation)",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "Nope, I'm not.", "precedingAiContext": "You're a vegetarian, right?" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 1, "types": ["fact", "preference"], "formedBy": ["stated"] },
+        "shouldFormGists": ["The user is not a vegetarian"],
+        "shouldNotFormGists": [
+          "The user is a vegetarian (the AI's guess, laundered into a stored fact)",
+          "The user is a meat lover"
+        ]
       }
     }
   ]
