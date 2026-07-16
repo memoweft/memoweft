@@ -13,11 +13,12 @@ import type { EventStore } from '../event/store.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 import type { Cognition, ContentType, FormedBy } from '../cognition/model.ts';
-import type { Evidence } from '../evidence/model.ts';
+import type { Evidence, SourceKind } from '../evidence/model.ts';
 import type { SemanticResolutionStore } from '../interaction/semanticResolutionStore.ts';
 import type { ResponseAct, PromptAct, PropositionOrigin, AssertionStrength } from '../interaction/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from './confidence.ts';
+import { deriveFormedBy } from './deriveFormedBy.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
 import { sourceLabel, aiContextSuffix } from '../evidence/sourceLabel.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
@@ -31,8 +32,11 @@ export interface ConsolidateDeps {
   /** 证据层：证据级溯源要读原话文本喂给 LLM（地基债 · 证据级引用）。 */
   evidenceStore: EvidenceStore;
   cognitionStore: CognitionStore;
-  /** 语义解析 store（v0.6 Phase 2·D-0034，可选）：接了则把每条证据的语义解析落 semantic_resolution 表。
-   *  Phase 2 只 produce+store、不碰 formedBy（那是 Phase 3）；不接（旧调用方/bench 单测）= 不落解析、行为同旧。 */
+  /** 语义解析 store（v0.6 Phase 2·D-0034，**可选**）：接了则把每条证据的语义解析落 semantic_resolution 表。
+   *  **v0.6 Phase 3 起：不接它也不影响 formedBy 派生** —— `deriveFormedBy` 吃的是本轮 LLM 产的解析
+   *  （内存里的 `resolutionOf`）、**不读表**，所以本依赖始终可选，接了只是多一份可追溯的落库。
+   *  （这也是为什么 Phase 3 没把它改成必需：唯一要读历史解析的场景本是 reinforce 的升级路，
+   *   而 D-0035 拍板③ 已把升级路取消、改为并存新认知。） */
   semanticResolutionStore?: SemanticResolutionStore;
   llm: LLMClient;
   /** 事务器（可选）：接了共享连接就传它，把下方多步写（new/correct/conflict/reinforce + markConsolidated）
@@ -110,13 +114,24 @@ const VALID_PROMPT_ACT = ['propose', 'ask', 'state', 'none', 'other'];
 const VALID_ORIGIN = ['user_stated', 'assistant_proposed'];
 const VALID_STRENGTH = ['explicit', 'weak', 'none'];
 
-/** 从原始候选里抽出认知（容错字段名 + 缺类型给保守默认：fact/inferred）。无内容返回 null。 */
-function pickCognition(c: RawCog): { content: string; contentType: ContentType; formedBy: FormedBy } | null {
+/**
+ * 从原始候选里抽出认知（容错字段名 + 缺类型给保守默认 fact）。无内容返回 null。
+ *
+ * **不再算 formedBy**（v0.6 Phase 3·D-0035 拍板①）：载体维（stated/confirmed/observed = 这条信息是
+ * 谁的话）由 `deriveFormedBy` 从支持证据算、**模型说了不算**；模型只保留「这条是不是我推断出来的」
+ * 这一维（推断距离），即 `modelSaysInferred` —— 那是往低了报、无骗人动机的一维，且只有它知道。
+ */
+function pickCognition(c: RawCog): { content: string; contentType: ContentType; modelSaysInferred: boolean } | null {
   const content = (c.content ?? c.new_content ?? c.cognition ?? '').trim();
   if (!content) return null;
   const contentType = (VALID_TYPES.includes(c.content_type ?? '') ? c.content_type : 'fact') as ContentType;
-  const formedBy = (VALID_FORMED.includes(c.formed_by ?? '') ? c.formed_by : 'inferred') as FormedBy;
-  return { content, contentType, formedBy };
+  // 模型只负责「这条是不是我推断出来的」这一维（拍板①）。**缺 / 非法值 → 保守当推断**：
+  //   模型【漏标】时旧世界兜底成 inferred(200)，若改成「缺 = 不是推断 → 走载体维」，一条 spoken 证据
+  //   就会把漏标的推断型认知抬到 stated(600) —— 那是真的退步。EVAL-T05「缺 formed_by → 保守当 inferred，
+  //   不默认高置信亲述」这条既有断言正是钉这个，Phase 3 刻意保留其语义。
+  //   ⇒ 只有模型【明确填了合法值且不是 inferred】，才认为它主张「这条是从原话直接得到的」，进而走载体维。
+  const declared = VALID_FORMED.includes(c.formed_by ?? '') ? c.formed_by : null;
+  return { content, contentType, modelSaysInferred: declared === null || declared === 'inferred' };
 }
 
 /** 喂给 LLM 的事件视图：事件摘要 + 其下逐条原话（带证据 id 供引用）。 */
@@ -165,6 +180,9 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
    *  提示词 v4 也教了同样的收窄，但**这里是结构保证**：模型不听话也进不了表（同 validEvidence 守 3d 的思路——
    *  纪律靠结构、不靠提示词自觉）。 */
   const spokenEvidence = new Set<string>();
+  /** 过了隐私门的证据 id → 派生载体维要的两样（v0.6 Phase 3·D-0035）：来源 + 它的 AI 上一句。
+   *  在下面构建 events 时顺手填（那里本就查了这两样），避免为每条支撑再查一次 store。 */
+  const carrierOf = new Map<string, { sourceKind: SourceKind; precedingAiContext: string | null }>();
   // 隐私关（按当前写模型 tier）+ 推理门：事件覆盖的原话里，只把【当前模型可读】且【可推画像】的喂给 LLM、
   //   也只让它们当合法支撑——被挡的既不进 prompt、也进不了 validEvidence（不成为所生认知的依据）。
   //   tier=cloud 筛 allowCloudRead / tier=local 筛 allowLocalRead；inference=false 不进画像（distill/attribute 三处一致）。
@@ -180,6 +198,8 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       .map((e) => {
         validEvidence.add(e.id);
         if (e.sourceKind === 'spoken') spokenEvidence.add(e.id); // resolutions 的落库白名单（见 spokenEvidence 声明）
+        const aiCtx = deps.evidenceStore.precedingAiContextOf(e.id);
+        carrierOf.set(e.id, { sourceKind: e.sourceKind, precedingAiContext: aiCtx }); // 见 carrierOf 声明
         // 来源感知（D-0018）:原话带来源前缀,让 LLM 定 formedBy 时知道哪些不是用户亲口。
         // 附和/AI 上下文（D-0033 Phase 1b）:把 preceding_ai_context【追加进本原话的 text 后缀】
         //   (经专用只读 precedingAiContextOf,只对已过隐私门的证据取)——让 LLM 看懂"是的"这类孤儿回应
@@ -188,7 +208,7 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
         //   → pickSupport 结构性引不到 AI 上文 → 助手输出永不成为可溯源证据**。缺省无 → 后缀空 = no-op。
         return {
           id: e.id,
-          text: sourceLabel(e.sourceKind, lang) + e.rawContent + aiContextSuffix(deps.evidenceStore.precedingAiContextOf(e.id), lang),
+          text: sourceLabel(e.sourceKind, lang) + e.rawContent + aiContextSuffix(aiCtx, lang),
         };
       });
     return { summary: ev.summary, occurredAt: ev.occurredAt, utterances };
@@ -209,6 +229,60 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
   })) ?? {};
   const llmCalls = deps.llm.callCount - before;
 
+  /**
+   * 本轮 LLM 产的语义解析，规整 + 收窄后按 evidenceId 索引（v0.6 Phase 3·D-0035）。
+   * **落库（下方）与派生（deriveFormedBy）共用这一份**——两处各自校验必然漂移。
+   * 收窄同落库白名单：只收【用户真说的】真证据（`spokenEvidence` ⊆ `validEvidence` → 3d 一并守住）；
+   * `resolved_content` 空则整条丢；非法枚举收敛 null（不写脏数据）；同证据多条解析【先到先得】（同幂等语义）。
+   * **为什么必须在写循环之前规整**：new 路【当场】就要算 formedBy，而落库在四个写循环之后。
+   */
+  const resolutionOf = new Map<
+    string,
+    {
+      resolvedContent: string;
+      responseAct: ResponseAct | null;
+      promptAct: PromptAct | null;
+      propositionOrigin: PropositionOrigin | null;
+      assertionStrength: AssertionStrength | null;
+      requiredContext: string | null;
+    }
+  >();
+  for (const r of out.resolutions ?? []) {
+    const eid = r.evidence_id;
+    if (!eid || !spokenEvidence.has(eid)) continue; // 3d + 来源收窄（见 spokenEvidence 声明）
+    const resolved = (r.resolved_content ?? '').trim();
+    if (!resolved) continue; // resolved_content 非空
+    if (resolutionOf.has(eid)) continue; // 同证据先到先得
+    resolutionOf.set(eid, {
+      resolvedContent: resolved,
+      responseAct: VALID_RESPONSE_ACT.includes(r.response_act ?? '') ? (r.response_act as ResponseAct) : null,
+      promptAct: VALID_PROMPT_ACT.includes(r.prompt_act ?? '') ? (r.prompt_act as PromptAct) : null,
+      propositionOrigin: VALID_ORIGIN.includes(r.proposition_origin ?? '') ? (r.proposition_origin as PropositionOrigin) : null,
+      assertionStrength: VALID_STRENGTH.includes(r.assertion_strength ?? '') ? (r.assertion_strength as AssertionStrength) : null,
+      requiredContext: (r.required_context ?? '').trim() || null,
+    });
+  }
+
+  /**
+   * 算一条认知的 formedBy（v0.6 Phase 3·D-0035）。
+   * 模型报「我推断的」→ `inferred`（拍板①：推断距离这一维仍归模型，代码只接管载体维）；
+   * 否则由 `deriveFormedBy` 从支持证据的【载体维】算（取最弱，含「spoken 无解析」的结构性兜底）。
+   * 派生不出（支持集空）→ `inferred`（最保守）。
+   */
+  const resolveFormedBy = (modelSaysInferred: boolean, supportIds: readonly string[]): FormedBy => {
+    if (modelSaysInferred) return 'inferred';
+    const inputs = supportIds.map((id) => {
+      const c = carrierOf.get(id);
+      return {
+        // 取不到理论上不该发生（supportIds 已过 validEvidence 白名单）→ 保守当作「不是用户亲口」
+        sourceKind: c?.sourceKind ?? ('observed' as const),
+        precedingAiContext: c?.precedingAiContext ?? null,
+        resolution: resolutionOf.get(id) ?? null,
+      };
+    });
+    return deriveFormedBy(inputs) ?? 'inferred';
+  };
+
   // 事务化（写路径一致性，地图 cell 4）：下面这些多步写（new/correct/conflict/reinforce + markConsolidated）
   // 要么全成、要么全滚——崩在中间不留半拉画像、也不出现"认知写了但事件没标已消化 → 下轮重复处理"。
   // 只包这段【同步】写：LLM 已在上面 await 完，此闭包内不含任何 await（见 store/openStores.ts 的告诫）。
@@ -227,13 +301,14 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       if (!p) continue;
       const support = pickSupport(citedIds(c));
       if (support.length === 0) continue; // 无可溯源原话 → 跳过（不落无溯源认知，地基债 fork 决策）
-      const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 }, deps.config);
+      const formedBy = resolveFormedBy(p.modelSaysInferred, support); // v0.6 Phase 3·D-0035：载体维由代码从证据算，不听模型
+      const confidence = computeConfidence({ contentType: p.contentType, formedBy, supportCount: support.length, contradictCount: 0 }, deps.config);
       created.push(
         deps.cognitionStore.put({
           subjectId,
           content: p.content,
           contentType: p.contentType,
-          formedBy: p.formedBy,
+          formedBy,
           confidence,
           credStatus: deriveCredStatus(confidence, 0, p.contentType, deps.config),
           evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
@@ -284,13 +359,14 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       const support = pickSupport(citedIds(c));
       if (support.length === 0) continue; // 纠正后的新认知也要可溯源，否则跳过（不动旧的）
       deps.cognitionStore.update(old.id, { invalidAt: now }); // 标失效、保留可溯源
-      const confidence = computeConfidence({ contentType: p.contentType, formedBy: p.formedBy, supportCount: support.length, contradictCount: 0 }, deps.config);
+      const formedBy = resolveFormedBy(p.modelSaysInferred, support); // v0.6 Phase 3·D-0035：同 new 路，载体维由代码算
+      const confidence = computeConfidence({ contentType: p.contentType, formedBy, supportCount: support.length, contradictCount: 0 }, deps.config);
       created.push(
         deps.cognitionStore.put({
           subjectId,
           content: p.content,
           contentType: p.contentType,
-          formedBy: p.formedBy,
+          formedBy,
           confidence,
           credStatus: deriveCredStatus(confidence, 0, p.contentType, deps.config),
           evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
@@ -312,24 +388,22 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       conflicted++;
     }
 
-    // 语义解析落库（v0.6 Phase 2·D-0034）：对每条【真证据】落一份 resolution（resolvedContent + 各解析维度）。
-    //   **只 produce+store、绝不碰 formedBy**（那是 Phase 3 的 deriveFormedBy）。复用 validEvidence 白名单
-    //   （3d：只对真证据落、伪造/AI-上文 id 结构性丢弃）；幂等（同证据已有解析则跳过）；resolverVersion 绑
-    //   prompt 版本可追溯。resolved_content 是【解释结果、不是证据】，永不进 consolidate 的 support 白名单（3a）。
-    for (const r of out.resolutions ?? []) {
-      const eid = r.evidence_id;
-      if (!eid || !spokenEvidence.has(eid)) continue; // 3d + 来源收窄：只对【用户真说的】真证据落（伪造 id / AI 上文 / observed / tool 全丢弃；spokenEvidence ⊆ validEvidence，故 3d 一并守住）
-      const resolved = (r.resolved_content ?? '').trim();
-      if (!resolved) continue; // resolved_content 非空
+    // 语义解析落库（v0.6 Phase 2·D-0034）：对每条【用户真说的】证据落一份 resolution。
+    //   规整 / 收窄 / 枚举收敛已在上方 `resolutionOf` 做完（3d + 来源收窄见那里）——**落库与派生共用那一份**，
+    //   两处各自校验必然漂移。这里只负责 store：幂等（同证据已有解析则跳过）+ resolverVersion 绑 prompt 版本可追溯。
+    //   resolved_content 是【解释结果、不是证据】，永不进 consolidate 的 support 白名单（3a）。
+    //   **v0.6 Phase 3 起**：同一份解析还喂 `resolveFormedBy` 算认知的载体维（见上方声明）——
+    //   即「先 produce → 当场派生 → 最后 store」，落库晚于派生是刻意的（派生不能等写完才算）。
+    for (const [eid, r] of resolutionOf) {
       if (deps.semanticResolutionStore?.ofEvidence(eid)) continue; // 幂等：同证据不重复落
       deps.semanticResolutionStore?.put({
         evidenceId: eid,
-        resolvedContent: resolved,
-        responseAct: VALID_RESPONSE_ACT.includes(r.response_act ?? '') ? (r.response_act as ResponseAct) : null,
-        promptAct: VALID_PROMPT_ACT.includes(r.prompt_act ?? '') ? (r.prompt_act as PromptAct) : null,
-        propositionOrigin: VALID_ORIGIN.includes(r.proposition_origin ?? '') ? (r.proposition_origin as PropositionOrigin) : null,
-        assertionStrength: VALID_STRENGTH.includes(r.assertion_strength ?? '') ? (r.assertion_strength as AssertionStrength) : null,
-        requiredContext: (r.required_context ?? '').trim() || null,
+        resolvedContent: r.resolvedContent,
+        responseAct: r.responseAct,
+        promptAct: r.promptAct,
+        propositionOrigin: r.propositionOrigin,
+        assertionStrength: r.assertionStrength,
+        requiredContext: r.requiredContext,
         resolverVersion: `consolidate@${CONSOLIDATE_PROMPT.version}`,
       });
     }
