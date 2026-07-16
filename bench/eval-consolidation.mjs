@@ -397,6 +397,39 @@ function checkStructural(scenario, run) {
 // 汇总
 // ══════════════════════════════════════════════════════════════════════════
 
+/**
+ * 解析覆盖探针（v0.6 Phase 3 前置测量·纯观测不判分）。
+ *
+ * 为什么要它：Phase 3 的 `deriveFormedBy` 从 semantic_resolution 派生 formedBy，而派生表规定
+ *   「无法解析 → inferred(200)」。若模型只对短回答产解析、不对普通陈述产，旧盘本该 stated(600) 的
+ *   认知就会被兜底打成 inferred(200) —— 全盘回归，且「取最弱」的聚合策略会放大它。
+ *   v5 提示词教的是「给每条 [用户说] 原话出解析」，但**教了不等于做了**，必须实测。
+ * 为什么不加 check：加了会动 structTotal、破坏 §15.2 与 v5 基线的可比性（见 checkStructural 的
+ *   【口径纪律】）。本探针只落数、不参与判分。
+ */
+function buildResolutionProbe(resolutions) {
+  const spoken = resolutions.filter((x) => x.sourceKind === 'spoken');
+  const withRes = spoken.filter((x) => x.res);
+  const dist = (key) => {
+    const out = {};
+    for (const x of withRes) {
+      const v = x.res[key] ?? 'null';
+      out[v] = (out[v] ?? 0) + 1;
+    }
+    return out;
+  };
+  return {
+    spokenCount: spoken.length,
+    withResolution: withRes.length,
+    coverage: spoken.length ? withRes.length / spoken.length : null,
+    /** 应恒 0：consolidate 的 spokenEvidence 白名单结构性挡住 observed/tool 落解析。非 0 = 收窄破了。 */
+    nonSpokenWithResolution: resolutions.filter((x) => x.sourceKind !== 'spoken' && x.res).length,
+    responseAct: dist('responseAct'),
+    propositionOrigin: dist('propositionOrigin'),
+    assertionStrength: dist('assertionStrength'),
+  };
+}
+
 function buildSummary(sc, run, checks, gist) {
   return {
     id: sc.id,
@@ -412,6 +445,7 @@ function buildSummary(sc, run, checks, gist) {
     formResults: gist.formResults,
     notResults: gist.notResults,
     consolidated: run.consolidated,
+    resolutionProbe: buildResolutionProbe(run.resolutions ?? []), // 见函数 JSDoc：纯观测、不判分
   };
 }
 
