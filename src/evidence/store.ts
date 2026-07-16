@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS evidence (
   allow_local_read     INTEGER NOT NULL,
   allow_cloud_read     INTEGER NOT NULL,
   allow_inference      INTEGER NOT NULL,
-  corrects_evidence_id TEXT
+  corrects_evidence_id TEXT,
+  preceding_ai_context TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_evidence_origin
   ON evidence(origin_id) WHERE origin_id IS NOT NULL;
@@ -49,6 +50,9 @@ interface EvidenceRow {
   allow_cloud_read: number;
   allow_inference: number;
   corrects_evidence_id: string | null;
+  // 注:`preceding_ai_context` 列【故意不列在 EvidenceRow 里】(D-0033 Phase 1b 结构墙)——
+  //   fromRow 的入参类型因此永不含它、结构上无法把 AI 上文映射进 Evidence 读结构。
+  //   写入端(put/insert)把它作为额外参数键塞进 INSERT;读取端(注入用)走专用 precedingAiContextOf。
 }
 
 function toRow(e: Evidence): EvidenceRow {
@@ -104,6 +108,10 @@ export interface EvidenceStore {
   remove(id: string): boolean;
   /** 按幂等键 originId 查回一条（摄入层判重用：已存在则跳过、不重复落库）。不存在返回 null。 */
   findByOrigin(originId: string): Evidence | null;
+  /** 取某条证据的【上一轮 AI 那句】只读上下文（D-0033 Phase 1b）——**唯一读取该列的路径**,专供
+   *  distill/consolidate 注入(且只对已过隐私门的证据行调)。不进 Evidence 读结构=永不外泄为证据。
+   *  无 AI 上文 / 证据不存在 → null。**永不返回证据 id、永不进 consolidate 的 support 白名单(3a/3d)**。 */
+  precedingAiContextOf(evidenceId: string): string | null;
   /** 按【原 id 与时间戳】原样插入（导入/恢复用；不生成新 id）。调用方须先判重：id 或 originId 已存在会抛约束错。 */
   insert(evidence: Evidence): void;
   close(): void;
@@ -130,6 +138,20 @@ export class SqliteEvidenceStore implements EvidenceStore {
     this.cfg = cfg;
     this.clock = clock;
     this.db.exec(SCHEMA);
+    this.migrate();
+  }
+
+  /** 幂等迁移:旧库补上后加的 nullable 列（D-0033 Phase 1b: preceding_ai_context）。新库由 SCHEMA 直接带上。
+   *  为何走这里而非 migrations.ts formal v2:它是 nullable 状态列、无数据变换,缺列补对【任何构造路径】
+   *  (含直接构造老库、不经 openStores/runMigrations)都稳;formal 迁移路径留给需版本化/备份/数据变换的迁移
+   *  (同 D-0023 muted_at 先例;LATEST_SCHEMA_VERSION 仍 v1,migrations.test 的 schema 签名收敛测试会兜住漏补)。 */
+  private migrate(): void {
+    const cols = this.db
+      .prepare("SELECT name FROM pragma_table_info('evidence')")
+      .all() as unknown as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === 'preceding_ai_context')) {
+      this.db.exec('ALTER TABLE evidence ADD COLUMN preceding_ai_context TEXT');
+    }
   }
 
   put(input: EvidenceInput): Evidence {
@@ -168,17 +190,21 @@ export class SqliteEvidenceStore implements EvidenceStore {
       correctsEvidenceId: input.correctsEvidenceId ?? null,
     };
 
-    const row = toRow(evidence);
+    // preceding_ai_context（D-0033 Phase 1b）:AI 上文只写不读、不在 Evidence 读结构里,故作为额外参数键
+    //   塞进 INSERT(不经 toRow/Evidence)。缺省 null;仅 Conversation 路会传值。
+    const row = { ...toRow(evidence), preceding_ai_context: input.precedingAiContext ?? null };
     this.db
       .prepare(
         `INSERT INTO evidence (
           id, subject_id, source_kind, host_id, origin_id,
           occurred_at, recorded_at, raw_content, summary,
-          allow_local_read, allow_cloud_read, allow_inference, corrects_evidence_id
+          allow_local_read, allow_cloud_read, allow_inference, corrects_evidence_id,
+          preceding_ai_context
         ) VALUES (
           $id, $subject_id, $source_kind, $host_id, $origin_id,
           $occurred_at, $recorded_at, $raw_content, $summary,
-          $allow_local_read, $allow_cloud_read, $allow_inference, $corrects_evidence_id
+          $allow_local_read, $allow_cloud_read, $allow_inference, $corrects_evidence_id,
+          $preceding_ai_context
         )`,
       )
       .run(row as unknown as Record<string, SQLInputValue>);
@@ -239,18 +265,30 @@ export class SqliteEvidenceStore implements EvidenceStore {
     return row ? fromRow(row) : null;
   }
 
+  precedingAiContextOf(evidenceId: string): string | null {
+    // 只 SELECT 这一列(不经 SELECT */fromRow → AI 上文永不进 Evidence 读结构)。
+    const row = this.db
+      .prepare('SELECT preceding_ai_context FROM evidence WHERE id = ?')
+      .get(evidenceId) as unknown as { preceding_ai_context: string | null } | undefined;
+    return row?.preceding_ai_context ?? null;
+  }
+
   insert(evidence: Evidence): void {
-    const row = toRow(evidence);
+    // 导入/恢复路径:Evidence 无 precedingAiContext 字段(导出已结构性剥离)→ 该列恒写 null
+    //   (AI 上文永不跨导出/导入边界)。同 put,作为额外参数键塞进 INSERT。
+    const row = { ...toRow(evidence), preceding_ai_context: null };
     this.db
       .prepare(
         `INSERT INTO evidence (
           id, subject_id, source_kind, host_id, origin_id,
           occurred_at, recorded_at, raw_content, summary,
-          allow_local_read, allow_cloud_read, allow_inference, corrects_evidence_id
+          allow_local_read, allow_cloud_read, allow_inference, corrects_evidence_id,
+          preceding_ai_context
         ) VALUES (
           $id, $subject_id, $source_kind, $host_id, $origin_id,
           $occurred_at, $recorded_at, $raw_content, $summary,
-          $allow_local_read, $allow_cloud_read, $allow_inference, $corrects_evidence_id
+          $allow_local_read, $allow_cloud_read, $allow_inference, $corrects_evidence_id,
+          $preceding_ai_context
         )`,
       )
       .run(row as unknown as Record<string, SQLInputValue>);

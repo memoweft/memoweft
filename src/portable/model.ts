@@ -10,11 +10,14 @@
 import type { Evidence } from '../evidence/model.ts';
 import type { Event } from '../event/model.ts';
 import type { Cognition, EvidenceRelation } from '../cognition/model.ts';
+import type { InteractionContext, SemanticResolution } from '../interaction/model.ts';
 
 /** 包格式标记（用于导入前辨认）。 */
 export const BUNDLE_FORMAT = 'memoweft-bundle';
-/** 包结构版本（结构演进时 +1，配合 validate/migration）。 */
-export const BUNDLE_SCHEMA_VERSION = 1;
+/** 包结构版本（结构演进时 +1，配合 validate/migration）。
+ *  v2（D-0034）：data 增 interactionContexts / semanticResolutions（交互上下文 + 语义解析随用户迁移）。
+ *  向后兼容：导入 v1 包（无这两段）按空处理。 */
+export const BUNDLE_SCHEMA_VERSION = 2;
 
 /** 事件 → 覆盖的原话证据（对应 event_evidence 表一行）。 */
 export interface EventEvidenceLink {
@@ -48,6 +51,11 @@ export interface MemoryBundle {
     cognitionEvidence: CognitionEvidenceLink[];
     /** 导出时尚未消化（consolidated=0）的事件 id；导入按此还原 consolidated 标记（保真，防漏消化）。 */
     unconsolidatedEventIds: string[];
+    /** 交互上下文（v0.6·D-0034，schemaVersion≥2）：跟随用户迁移的会话上下文快照。v1 包无此段（导入按空）。
+     *  注意：内容含 AI 可见文本，但**永不成为证据**（结构墙，3a）——导入回来仍是独立表、不进 consolidate 白名单。 */
+    interactionContexts?: InteractionContext[];
+    /** 语义解析（v0.6·D-0034，schemaVersion≥2）：证据的语义解析。Phase 1 通常为空（Phase 2 起产）。v1 包无此段。 */
+    semanticResolutions?: SemanticResolution[];
   };
   metadata: {
     counts: {
@@ -82,6 +90,10 @@ export interface ImportPlan {
     cognitions: number;
     eventEvidence: number;
     cognitionEvidence: number;
+    /** 交互上下文新写入条数（v0.6·D-0034）。 */
+    interactionContexts: number;
+    /** 语义解析新写入条数（v0.6·D-0034）。 */
+    semanticResolutions: number;
   };
   /** 因 id 已存在（或 originId 冲突）而跳过、未重复写入的条数。 */
   duplicates: {

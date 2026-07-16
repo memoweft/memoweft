@@ -9,7 +9,7 @@
 ## Table of Contents
 
 - [How to read this contract (three tiers + break policy)](#how-to-read-this-contract-three-tiers--break-policy)
-- [I. Facade methods chapter (25 host-facing methods)](#i-facade-methods-chapter-25-host-facing-methods)
+- [I. Facade methods chapter (26 host-facing methods)](#i-facade-methods-chapter-26-host-facing-methods)
   - [1.0 Factory](#10-factory)
   - [1.1 Facade top-level 9 methods (`MemoWeftCore.*`)](#11-facade-top-level-9-methods-memoweftcore)
   - [1.2 `core.memory` (controlled memory management API, 11 methods)](#12-corememory-controlled-memory-management-api-11-methods)
@@ -55,7 +55,7 @@
 
 ---
 
-## I. Facade methods chapter (25 host-facing methods)
+## I. Facade methods chapter (26 host-facing methods)
 
 The host's main entry point is `createMemoWeftCore(options)`; after getting the `MemoWeftCore` facade, it does its work through the facade's methods and three sub-namespaces (`memory` / `portable` / `graph`). **Do not bypass the facade and directly assemble the underlying `Sqlite*Store` / operators.**
 
@@ -69,7 +69,7 @@ Count: `createMemoWeftCore`(1) + facade top-level 9 + `core.memory` 11 + `core.p
 - **Implicit contract**: **a core can be built even without `.env`** — missing model config does not crash; only paths that actually call a model degrade/error (see implicit contract item 9). `vectorDbPath` defaults to the same store as `dbPath`; the existing contract of one vector instance per subject is unchanged.
 - Basis: `src/core/createCore.ts:39-52` (input), `:155-174` (assembly degradation).
 
-### 1.1 Facade top-level 9 methods (`MemoWeftCore.*`)
+### 1.1 Facade top-level 10 methods (`MemoWeftCore.*`)
 
 | Method | Input | Returns | Tier | Implicit behavior contract |
 |---|---|---|---|---|
@@ -78,7 +78,8 @@ Count: `createMemoWeftCore`(1) + facade top-level 9 + `core.memory` 11 + `core.p
 | `ingestToolResult(input)` | `ToolResultInput` | `Promise<Evidence>` | stable | Stores one tool-execution **result payload** as `tool` evidence (AD-3/D-0013), **does not upload to cloud by default** (`config.toolDefaults`); idempotent via `originId`. Only the tool's returned output is ingested — never the model's tool-call intent/arguments (iron rule 3a). To make a stored `tool` evidence cloud-readable, go through `memory.updateEvidenceAuthorization` (audited), not the ingest path. |
 | `recall(input)` | `RecallInput` | `Promise<RecalledCognition[]>` | stable | Shares recall semantics with the same segment as `Conversation` (invalid/archived/out-of-scope/decay gating all apply). |
 | `handleConversationTurn(input)` | `ConversationInput` | `Promise<TurnOutcome>` | stable | Store evidence → recall → reply; same `conversationId` reuses the instance, window is continuous; `systemPrompt`/`seedTurns` only take effect when the instance is first created (see implicit contract item 4). |
-| `dropConversation(conversationId)` | `string` | `void` | stable | Drops the active conversation instance in memory (does not touch the store); the next call with the same id rebuilds it (at which point new `systemPrompt`/`seedTurns` take effect); a nonexistent id is silently skipped. |
+| `dropConversation(conversationId)` | `string` | `void` | stable | Drops the active conversation instance in memory (does not touch the store); the next call with the same id rebuilds it (at which point new `systemPrompt`/`seedTurns` take effect); a nonexistent id is silently skipped. Also drops the conversation's `InteractionSession` context window (v0.6/D-0034). |
+| `recordAssistantReply(input)` | `RecordAssistantReplyInput` | `void` | stable | v0.6/D-0034: a host running its own agent loop reports the AI reply to core; it is pushed into the conversation's `InteractionSession` window as follow-on context so the next `ingestUserMessage` with the same `conversationId` captures it as the "previous AI turn" (into `preceding_ai_context`). **Into the window only — never persisted as evidence** (iron rule 3a). A `conversationId` not yet ingested is silently skipped. |
 | `updateProfile(input?)` | `UpdateProfileInput` | `Promise<UpdateProfileResult>` | stable | One-shot distill→consolidate→attribute→rebuild recall index. A failed index rebuild does not roll back the profile (`indexError` reports the cause). |
 | `health()` | — | `HealthReport` | stable | Judged from the **parts this core actually holds**, not re-checking env: `llmReady`=holds a real conversation client; `embedReady`=holds a vector recaller. An injected stub/empty recaller is judged false. |
 | `close()` | — | `void` | stable | Closes the shared connection + self-created vector store connection; **an injected retriever is the caller's to manage and is not touched**. |
@@ -135,7 +136,7 @@ Each item is marked stable/experimental. "Complete post-persistence shape" and "
 ### 2.1 Three-layer persistence shapes (stable)
 
 1. **`Evidence`** — stable. Complete post-persistence shape of evidence: `id / subjectId / sourceKind / hostId / originId / occurredAt / recordedAt / rawContent / summary / allowLocalRead / allowCloudRead / allowInference / correctsEvidenceId`. Basis `src/evidence/model.ts:14-40`.
-2. **`EvidenceInput`** — stable (the host produces it indirectly via `ingestUserMessage`; directly constructing `evidenceStore.put` is an internal path). `id/recordedAt` are generated by the storage layer, default authorization bits are routed by `sourceKind`. Basis `src/evidence/model.ts:48-60`.
+2. **`EvidenceInput`** — stable (the host produces it indirectly via `ingestUserMessage`; directly constructing `evidenceStore.put` is an internal path). `id/recordedAt` are generated by the storage layer, default authorization bits are routed by `sourceKind`. **`precedingAiContext?` (D-0033 Phase 1b) is a write-only field the host does not set** — the Conversation path captures the previous AI turn and persists it as read-only context (injected into distill/consolidate so an orphan affirmation like "AI: you like hiking? / user: yes" can form a `confirmed` cognition). It is **deliberately absent from the `Evidence` read shape and never mapped by `fromRow`**, so no read path (`listEvidence` / `exportBundle` / MCP / `TurnOutcome`) can surface it — the AI's words never leak out as evidence (structural, not strip-based). The only reader is the internal `EvidenceStore.precedingAiContextOf(id)` used for injection, gated by the same tier/inference privacy filter; it never mints an evidence id, so the consolidate support-id whitelist can never cite it (iron rule 3a/3d). Basis `src/evidence/model.ts:48-60`, `src/evidence/store.ts`.
 3. **`SourceKind`** — stable enum: `'spoken' | 'inferred' | 'observed' | 'tool'` (`'tool'` added in AD-3/D-0013 = a tool-execution result, an external data point). Adding values is not a break, must keep default. Basis `src/evidence/model.ts:11`.
 4. **`Event`** — stable. Event persistence shape: `id / subjectId / summary / occurredAt / createdAt`. Basis `src/event/model.ts:10-18`.
 5. **`EventInput`** — **experimental**. The host generally does not directly construct it (produced internally by `distill`); no direct construction point on the Host side (grep `apps/memoweft-host` has no hits). Basis `src/event/model.ts:20-26`.
@@ -148,16 +149,17 @@ Each item is marked stable/experimental. "Complete post-persistence shape" and "
 12. **`EvidenceRelation`** — stable enum: `support | contradict`. Basis `src/cognition/model.ts:32`.
 13. **`EvidenceLink`** — stable: `{ evidenceId, relation: EvidenceRelation }`. Basis `src/cognition/model.ts:34-37`.
 14. **`CognitionWithSources`** — stable: `Cognition + sources: EvidenceLink[]`. Basis `src/cognition/model.ts:78-80`.
+14a. **Interaction-semantics types (v0.6·D-0034)** — new domain shapes: `InteractionContext` (`id / subjectId / conversationId / episodeId / context: VisibleTurn[] / contextHash / createdAt` — a snapshot of user-visible context per conversation/episode) + `SemanticResolution` (`id / evidenceId / resolvedContent / responseAct / promptAct / propositionOrigin / assertionStrength / requiredContext / resolverVersion / createdAt` — a per-evidence semantic resolution) + `VisibleTurn` (`{ role: 'user' | 'assistant' | 'tool', content }`) + enums `ResponseAct` / `PromptAct` / `PropositionOrigin` / `AssertionStrength`. Both tables carry AI-visible text / interpretation but are **never evidence** and never enter the consolidate support whitelist (iron rule 3a/3d — orthogonal to whether they ride in a portable bundle). `semantic_resolution` is **structure-only in Phase 1** (the resolver populates it in Phase 2). Backed by the `interaction_context` / `semantic_resolution` tables (construct-time `CREATE TABLE IF NOT EXISTS`, not formal migrations — `LATEST_SCHEMA_VERSION` stays v1). Basis `src/interaction/model.ts`.
 
 ### 2.2 Input shapes of the facade methods
 
 15. **`CreateCoreOptions`** — stable: `dbPath` required + `llm?/embedder?/retriever?/config?/vectorDbPath?` + **`clock?: Clock` (experimental, Phase 4)**. The `clock` injects the store time source (`recordedAt`/`created_at`/`updated_at`) for determinism / time-travel; defaults to real system time (additive, existing callers unaffected). It only produces timestamps and never enters confidence self-computation (iron rule 3b). **As of D-0015 the clock is wired through the entire facade path (stores + consolidate/attribute/management-audit + read-path decay `now`). The two remaining non-facade paths — proactive asking (`ProposeAskDeps`/`RevisitDeps`, `askedAt`) and the dev run-log (`RunLoggerOptions`, `ts`) — take their own optional `clock?` (D-0020), completing "every time source is injectable"; both are internal-tier and not reached by `CreateCoreOptions.clock`.** Basis `src/core/createCore.ts`.
 15b. **`Clock`** — experimental (Phase 4): `type Clock = () => Date`; `systemClock` is the default (real system time). Injected via `CreateCoreOptions.clock` / `openStores(dbPath, cfg, clock)`. Basis `src/clock.ts`.
-16. **`UserMessageInput`** — stable: `content` + `subjectId?/hostId?/sourceKind?/originId?/occurredAt?`. Basis `:56-66`.
+16. **`UserMessageInput`** — stable: `content` + `subjectId?/hostId?/sourceKind?/originId?/occurredAt?` + **`conversationId?/episodeId?` (v0.6·D-0034)**. Passing `conversationId` makes core maintain a per-conversation `InteractionSession`: it captures the previous AI turn (reported via `recordAssistantReply`) into the evidence's `preceding_ai_context` — so the existing distill/consolidate injection works on the **bare-ingest path** (fixes "the real product goes 100% through bare ingest, never `handleConversationTurn`") — and persists one `interaction_context`. `episodeId?` is optional (host may pass its own; otherwise core splits episodes by idle interval). Absent `conversationId` = no context capture, unchanged behavior. Basis `:56-66`.
 17. **`ObservationInput`** — stable: `observations: Observation[]` + `subjectId?/hostId?`. Basis `:68-73`.
 17a. **`ToolResultInput`** — stable (AD-3/D-0013): `content` (the tool's returned result payload) + `subjectId?/hostId?/originId?/occurredAt?`. Ingested as `tool` evidence, cloud-read defaults false (`config.toolDefaults`). Basis `src/core/createCore.ts`.
 18. **`RecallInput`** — stable: `query` + `subjectId?` + **`explain?: boolean`** (D-0021: `true` → each recalled cognition carries its supporting `provenance` evidence chain; additive, default off = unchanged) + **`contentTypes?: ContentType[]`** (D-0022: allow-list; empty/absent = all types; applied as a post-filter of the top-K so it may under-fill; additive). Basis `:75-78`.
-19. **`ConversationInput`** — stable: `message` + `conversationId?/subjectId?/hostId?/originId?/occurredAt?/systemPrompt?/seedTurns?`. Basis `:80-93`.
+19. **`ConversationInput`** — stable: `message` + `conversationId?/episodeId?/subjectId?/hostId?/originId?/occurredAt?/systemPrompt?/seedTurns?`. `episodeId?` (v0.6·D-0034) is additive (host may pass an episode boundary; the `handleConversationTurn` path's `interaction_context` persistence is deferred to Phase 2). Basis `:80-93`.
 20. **`UpdateProfileInput`** — stable: `subjectId?`. Basis `:95-97`.
 21. **`ListMemoryInput`** — stable: `subjectId?`. Basis `src/memory/managementApi.ts:115-117`.
 
@@ -190,13 +192,13 @@ Each item is marked stable/experimental. "Complete post-persistence shape" and "
 
 ### 2.5 Bundle shapes
 
-43. **`MemoryBundle`** — stable: `format / schemaVersion / exportedAt / memoWeftVersion / subjectId / source{hostId,exportMode:'full'} / data{evidence,events,eventEvidence,cognitions,cognitionEvidence,unconsolidatedEventIds} / metadata{counts,notes}`. Basis `src/portable/model.ts:33-60`.
+43. **`MemoryBundle`** — stable: `format / schemaVersion / exportedAt / memoWeftVersion / subjectId / source{hostId,exportMode:'full'} / data{evidence,events,eventEvidence,cognitions,cognitionEvidence,unconsolidatedEventIds, interactionContexts?, semanticResolutions?} / metadata{counts,notes}`. The two `data` fields are v0.6/D-0034 (schemaVersion ≥ 2, optional — v1 bundles import as empty); `ImportPlan.counts` gains matching `interactionContexts` / `semanticResolutions` counts. Basis `src/portable/model.ts:33-60`.
 44. **`EventEvidenceLink`** — stable: `{eventId, evidenceId}`. Basis `:20-23`.
 45. **`CognitionEvidenceLink`** — stable: `{cognitionId, evidenceId, relation}`. Basis `:26-30`.
 46. **`ImportMode`** — stable type, but the `'replace'` value is **experimental** (reserved for V2; currently only `'dryRun' | 'merge'`). Basis `:63`.
 47. **`ValidateResult`** — stable: `valid + errors[] + warnings[]`. Basis `:66-70`.
 48. **`ImportPlan`** — stable: `mode + valid + errors[] + warnings[] + counts{...} + duplicates{...}`. Basis `:73-92`.
-49. **`BUNDLE_FORMAT` / `BUNDLE_SCHEMA_VERSION`** — stable constants: `'memoweft-bundle'` / `1`. Basis `:15-17`.
+49. **`BUNDLE_FORMAT` / `BUNDLE_SCHEMA_VERSION`** — stable constants: `'memoweft-bundle'` / `2` (v0.6/D-0034 bumped 1 → 2 for the `interactionContexts` / `semanticResolutions` data fields; importing a v1 bundle is backward-compatible — the missing sections import as empty). Basis `:15-17`.
 
 ### 2.6 Graph payload shapes
 

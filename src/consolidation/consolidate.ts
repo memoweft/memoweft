@@ -17,7 +17,7 @@ import type { Evidence } from '../evidence/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from './confidence.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
-import { sourceLabel } from '../evidence/sourceLabel.ts';
+import { sourceLabel, aiContextSuffix } from '../evidence/sourceLabel.ts';
 import { parseJsonObjectWithRepair } from '../llm/jsonRepair.ts';
 import { noopTransaction, type Transaction } from '../store/transaction.ts';
 import { resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
@@ -69,6 +69,9 @@ interface RawRef {
   cognition_id?: string;
   support_evidence_ids?: string[];
   evidence_ids?: string[];
+  /** 强化的来源强度分类（D-0033 Phase 1b）:LLM 把这次 reinforce 判为哪种来源;仅 'stated' 用于把
+   *  confirmed 认知升级破顶(见 reinforce 分支)。Phase 2 提示词才教它标;Phase 1b 缺省 undefined = 不升级。 */
+  formed_by?: string;
 }
 interface LLMOut {
   new?: RawCog[];
@@ -149,7 +152,15 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       .map((e) => {
         validEvidence.add(e.id);
         // 来源感知（D-0018）:原话带来源前缀,让 LLM 定 formedBy 时知道哪些不是用户亲口。
-        return { id: e.id, text: sourceLabel(e.sourceKind, lang) + e.rawContent };
+        // 附和/AI 上下文（D-0033 Phase 1b）:把 preceding_ai_context【追加进本原话的 text 后缀】
+        //   (经专用只读 precedingAiContextOf,只对已过隐私门的证据取)——让 LLM 看懂"是的"这类孤儿回应
+        //   在附和 AI 提出的什么命题,据此判 formed_by=confirmed。**关键(3a/3d):AI 上文只是 text 后缀、
+        //   共用这条【真证据】的 id,绝不铸独立 {id,text} 条目 → validEvidence 只含真证据 id、AI 上文永无 id
+        //   → pickSupport 结构性引不到 AI 上文 → 助手输出永不成为可溯源证据**。缺省无 → 后缀空 = no-op。
+        return {
+          id: e.id,
+          text: sourceLabel(e.sourceKind, lang) + e.rawContent + aiContextSuffix(deps.evidenceStore.precedingAiContextOf(e.id), lang),
+        };
       });
     return { summary: ev.summary, occurredAt: ev.occurredAt, utterances };
   });
@@ -213,8 +224,26 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       const links = deps.cognitionStore.sourcesOf(cog.id);
       const supportCount = links.filter((l) => l.relation === 'support').length;
       const contradictCount = links.filter((l) => l.relation === 'contradict').length;
-      const confidence = computeConfidence({ contentType: cog.contentType, formedBy: cog.formedBy, supportCount, contradictCount }, deps.config);
-      deps.cognitionStore.update(cog.id, { confidence, credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config) });
+      // confirmed→stated 升级（D-0033）:附和产的 confirmed 认知,只有被【用户主动亲口】印证才破 480 封顶
+      //   ——"AI 带你确认的永远低档,你自己捅出来的才够比较确定"。触发判据(双重、缺一不可):
+      //   ① LLM 把这次 reinforce 判为 formed_by='stated'(与 new 路同款语义分类);
+      //   ② 引用的支撑原话里【有 spoken 来源】(结构护栏:observed/tool/inferred 永不能升 stated)。
+      //   纯附和(LLM 判 confirmed / 未标 stated)永不触发 → 诱导提问风暴 + 连答"是的"洗不上去。
+      //   分数仍由规则算(铁律 3b:formedBy 是分类、confidence 由 computeConfidence 算)。
+      let formedBy = cog.formedBy;
+      if (
+        formedBy === 'confirmed' &&
+        c.formed_by === 'stated' &&
+        cited.some((id) => deps.evidenceStore.get(id)?.sourceKind === 'spoken')
+      ) {
+        formedBy = 'stated';
+      }
+      const confidence = computeConfidence({ contentType: cog.contentType, formedBy, supportCount, contradictCount }, deps.config);
+      deps.cognitionStore.update(cog.id, {
+        confidence,
+        credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config),
+        ...(formedBy !== cog.formedBy ? { formedBy } : {}),
+      });
       reinforced++;
     }
 

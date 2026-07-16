@@ -12,9 +12,9 @@
 ## 目录
 
 - [怎么读这份契约（三档 + 破坏政策）](#怎么读这份契约三档--破坏政策)
-- [一、门面方法专章（25 个宿主接触方法）](#一门面方法专章25-个宿主接触方法)
+- [一、门面方法专章（26 个宿主接触方法）](#一门面方法专章26-个宿主接触方法)
   - [1.0 工厂](#10-工厂)
-  - [1.1 门面顶层 9 方法（`MemoWeftCore.*`）](#11-门面顶层-9-方法memoweftcore)
+  - [1.1 门面顶层 10 方法（`MemoWeftCore.*`）](#11-门面顶层-10-方法memoweftcore)
   - [1.2 `core.memory`（受控记忆管理 API，11 方法）](#12-corememory受控记忆管理-api11-方法)
   - [1.3 `core.portable`（便携记忆包，3 方法）](#13-coreportable便携记忆包3-方法)
   - [1.4 `core.graph`（图谱视图，1 方法）](#14-coregraph图谱视图1-方法)
@@ -58,11 +58,11 @@
 
 ---
 
-## 一、门面方法专章（25 个宿主接触方法）
+## 一、门面方法专章（26 个宿主接触方法）
 
 宿主主入口是 `createMemoWeftCore(options)`，拿到 `MemoWeftCore` 门面后经它的方法与三个子命名空间（`memory` / `portable` / `graph`）做事。**不要绕过门面直接拼底层 `Sqlite*Store` / 算子**。
 
-计数：`createMemoWeftCore`(1) + 门面顶层 9 + `core.memory` 11 + `core.portable` 3 + `core.graph` 1 = **25**。全部 **stable**。
+计数：`createMemoWeftCore`(1) + 门面顶层 10 + `core.memory` 11 + `core.portable` 3 + `core.graph` 1 = **26**。全部 **stable**。
 
 ### 1.0 工厂
 
@@ -72,7 +72,7 @@
 - **隐性契约**：**无 `.env` 也能建 core**——缺模型配置不崩，只有真调模型的路径才降级/报错（见隐性契约第 9 条）。`vectorDbPath` 缺省与 `dbPath` 同库；一个 subject 一个向量实例的既有契约不变。
 - 依据：`src/core/createCore.ts:39-52`（入参）、`:155-174`（装配降级）。
 
-### 1.1 门面顶层 9 方法（`MemoWeftCore.*`）
+### 1.1 门面顶层 10 方法（`MemoWeftCore.*`）
 
 | 方法 | 入参 | 返回 | 级 | 隐性行为契约 |
 |---|---|---|---|---|
@@ -81,7 +81,8 @@
 | `ingestToolResult(input)` | `ToolResultInput` | `Promise<Evidence>` | stable | 存一条工具执行的**返回结果** payload 为 `tool` 证据（AD-3/D-0013），**默认不上云**（`config.toolDefaults`）；带 `originId` 幂等。只摄入工具返回结果，绝不摄入 LLM 的工具调用意图/入参（铁律 3a）。要给某条 `tool` 证据开上云走 `memory.updateEvidenceAuthorization`（带审计），不在摄入口开口子。 |
 | `recall(input)` | `RecallInput` | `Promise<RecalledCognition[]>` | stable | 与 `Conversation` 同一段共享召回语义（invalid/archived/越界/衰减门控全走）。 |
 | `handleConversationTurn(input)` | `ConversationInput` | `Promise<TurnOutcome>` | stable | 存证据→召回→回话；同 `conversationId` 复用实例、窗口连续；`systemPrompt`/`seedTurns` 仅首次建实例生效（见隐性契约第 4 条）。 |
-| `dropConversation(conversationId)` | `string` | `void` | stable | 丢内存里的活跃会话实例（不碰库）；下次同 id 会重建（届时新 `systemPrompt`/`seedTurns` 才生效）；不存在的 id 静默略过。 |
+| `dropConversation(conversationId)` | `string` | `void` | stable | 丢内存里的活跃会话实例（不碰库）；下次同 id 会重建（届时新 `systemPrompt`/`seedTurns` 才生效）；不存在的 id 静默略过。同时丢该会话的 `InteractionSession` 上下文窗口（v0.6/D-0034）。 |
+| `recordAssistantReply(input)` | `RecordAssistantReplyInput` | `void` | stable | v0.6/D-0034：自建 agent 循环的宿主把 AI 回复报告给 core，push 进该会话的 `InteractionSession` 窗口作后续上下文，下一轮同 `conversationId` 的 `ingestUserMessage` 即把它当"上一轮 AI 那句"捕获（进 `preceding_ai_context`）。**只进窗口、永不落证据**（铁律 3a）。未 ingest 过的 `conversationId` 静默略过。 |
 | `updateProfile(input?)` | `UpdateProfileInput` | `Promise<UpdateProfileResult>` | stable | 一键 distill→consolidate→attribute→重建召回索引。索引重建失败不回滚画像（`indexError` 报因）。 |
 | `health()` | — | `HealthReport` | stable | 基于本 core **实际持有的部件**判断，不重查 env：`llmReady`=持有真对话客户端；`embedReady`=持有向量召回器。注入的 stub/空召回器判 false。 |
 | `close()` | — | `void` | stable | 关共享连接 + 自建向量库连接；**注入的 retriever 归调用方管、不动**。 |
@@ -138,7 +139,7 @@
 ### 2.1 三层落库形状（stable）
 
 1. **`Evidence`** — stable。证据落库完整形状：`id / subjectId / sourceKind / hostId / originId / occurredAt / recordedAt / rawContent / summary / allowLocalRead / allowCloudRead / allowInference / correctsEvidenceId`。依据 `src/evidence/model.ts:14-40`。
-2. **`EvidenceInput`** — stable（宿主经 `ingestUserMessage` 间接产；直接构造 `evidenceStore.put` 属 internal 路径）。`id/recordedAt` 由存储层生成，缺省授权位按 `sourceKind` 分流。依据 `src/evidence/model.ts:48-60`。
+2. **`EvidenceInput`** — stable（宿主经 `ingestUserMessage` 间接产；直接构造 `evidenceStore.put` 属 internal 路径）。`id/recordedAt` 由存储层生成，缺省授权位按 `sourceKind` 分流。**`precedingAiContext?`（D-0033 Phase 1b）是宿主不设的只写字段**——Conversation 路捕获上一轮 AI 那句、作为只读上下文落库（注入 distill/consolidate，让"AI：你喜欢爬山吧？／用户：是的"这类孤儿附和产得出 `confirmed` 认知）。它**故意不在 `Evidence` 读结构里、也不被 `fromRow` 映射**，故任何读回路径（`listEvidence` / `exportBundle` / MCP / `TurnOutcome`）都拿不到它——AI 那句永不外泄为证据（结构保证，非"记得剥离"）。唯一读取者是内部 `EvidenceStore.precedingAiContextOf(id)`（供注入用，受同一 tier/推理隐私门守住）；它永不铸证据 id，故 consolidate 的 support 白名单永远引不到它（铁律 3a/3d）。依据 `src/evidence/model.ts:48-60`、`src/evidence/store.ts`。
 3. **`SourceKind`** — stable 枚举：`'spoken' | 'inferred' | 'observed' | 'tool'`（`'tool'` 于 AD-3/D-0013 加入 = 工具执行的返回结果，外部数据点）。加值不算破坏、须留 default。依据 `src/evidence/model.ts:11`。
 4. **`Event`** — stable。事件落库形状：`id / subjectId / summary / occurredAt / createdAt`。依据 `src/event/model.ts:10-18`。
 5. **`EventInput`** — **experimental**。宿主一般不直接构造（由 `distill` 内部产）；Host 侧无直接构造点（grep `apps/memoweft-host` 无命中）。依据 `src/event/model.ts:20-26`。
@@ -151,16 +152,17 @@
 12. **`EvidenceRelation`** — stable 枚举：`support | contradict`。依据 `src/cognition/model.ts:32`。
 13. **`EvidenceLink`** — stable：`{ evidenceId, relation: EvidenceRelation }`。依据 `src/cognition/model.ts:34-37`。
 14. **`CognitionWithSources`** — stable：`Cognition + sources: EvidenceLink[]`。依据 `src/cognition/model.ts:78-80`。
+14a. **交互语义类型（v0.6·D-0034）** — 新领域形状：`InteractionContext`（`id / subjectId / conversationId / episodeId / context: VisibleTurn[] / contextHash / createdAt`——一段用户可见上下文快照，按 conversation/episode）+ `SemanticResolution`（`id / evidenceId / resolvedContent / responseAct / promptAct / propositionOrigin / assertionStrength / requiredContext / resolverVersion / createdAt`——一条证据的语义解析）+ `VisibleTurn`（`{ role: 'user' | 'assistant' | 'tool', content }`）+ 枚举 `ResponseAct` / `PromptAct` / `PropositionOrigin` / `AssertionStrength`。两表承载 AI 可见文本 / 解释，但**永不成为证据**、永不进 consolidate 的 support 白名单（铁律 3a/3d——与是否进便携包正交）。`semantic_resolution` **Phase 1 只建结构**（Phase 2 resolver 填）。背后是 `interaction_context` / `semantic_resolution` 表（构造期 `CREATE TABLE IF NOT EXISTS`，非 formal migrations——`LATEST_SCHEMA_VERSION` 仍 v1）。依据 `src/interaction/model.ts`。
 
 ### 2.2 门面各方法入参形状
 
 15. **`CreateCoreOptions`** — stable：`dbPath` 必填 + `llm?/embedder?/retriever?/config?/vectorDbPath?` + **`clock?: Clock`（experimental，Phase 4）**。`clock` 注入 store 落库/更新时间源（recordedAt/created_at/updated_at）以求确定性/时间旅行；缺省真实系统时间（additive，旧调用方不受影响）。只产时间戳、绝不进置信度自算（铁律 3b）。**D-0015 已把 clock 接通整条门面路径(三个 store + consolidate/attribute/管理审计 + 读路径衰减 now)。剩两处非门面路径——主动询问(`ProposeAskDeps`/`RevisitDeps` 的 askedAt)与 dev 运行日志(`RunLoggerOptions` 的 ts)——各自带可选 `clock?`(D-0020),补全「全仓时间源皆可注入」;两者属 internal 档、不经 `CreateCoreOptions.clock`。** 依据 `src/core/createCore.ts`。
 15b. **`Clock`** — experimental（Phase 4）：`type Clock = () => Date`;`systemClock` 是缺省(真实系统时间)。经 `CreateCoreOptions.clock` / `openStores(dbPath, cfg, clock)` 注入。依据 `src/clock.ts`。
-16. **`UserMessageInput`** — stable：`content` + `subjectId?/hostId?/sourceKind?/originId?/occurredAt?`。依据 `:56-66`。
+16. **`UserMessageInput`** — stable：`content` + `subjectId?/hostId?/sourceKind?/originId?/occurredAt?` + **`conversationId?/episodeId?`（v0.6·D-0034）**。带 `conversationId` 时 core 为该会话维护 `InteractionSession`：把上一轮 AI（经 `recordAssistantReply` 报告）捕获进证据的 `preceding_ai_context`——让既有 distill/consolidate 注入对**裸 ingest 路**生效（修"真实产品全走裸 ingest、从不经 `handleConversationTurn`"）——并落一条 `interaction_context`。`episodeId?` 可选（宿主可自传；否则库内按 idle 间隔切分）。不带 `conversationId` = 不捕获上下文、行为同旧。依据 `:56-66`。
 17. **`ObservationInput`** — stable：`observations: Observation[]` + `subjectId?/hostId?`。依据 `:68-73`。
 17a. **`ToolResultInput`** — stable（AD-3/D-0013）：`content`（工具返回结果 payload）+ `subjectId?/hostId?/originId?/occurredAt?`。落成 `tool` 证据，cloud-read 缺省 false（`config.toolDefaults`）。依据 `src/core/createCore.ts`。
 18. **`RecallInput`** — stable：`query` + `subjectId?` + **`explain?: boolean`**（D-0021：`true` → 每条召回认知带上支撑证据链 `provenance`；additive、缺省关 = 行为不变）+ **`contentTypes?: ContentType[]`**（D-0022：允许名单；空/不传 = 全类型；对 top-K 的后过滤,可能欠填；additive）。依据 `:75-78`。
-19. **`ConversationInput`** — stable：`message` + `conversationId?/subjectId?/hostId?/originId?/occurredAt?/systemPrompt?/seedTurns?`。依据 `:80-93`。
+19. **`ConversationInput`** — stable：`message` + `conversationId?/episodeId?/subjectId?/hostId?/originId?/occurredAt?/systemPrompt?/seedTurns?`。`episodeId?`（v0.6·D-0034）additive（宿主可传 episode 边界；`handleConversationTurn` 路的 `interaction_context` 落库延到 Phase 2）。依据 `:80-93`。
 20. **`UpdateProfileInput`** — stable：`subjectId?`。依据 `:95-97`。
 21. **`ListMemoryInput`** — stable：`subjectId?`。依据 `src/memory/managementApi.ts:115-117`。
 
@@ -193,13 +195,13 @@
 
 ### 2.5 便携包形状
 
-43. **`MemoryBundle`** — stable：`format / schemaVersion / exportedAt / memoWeftVersion / subjectId / source{hostId,exportMode:'full'} / data{evidence,events,eventEvidence,cognitions,cognitionEvidence,unconsolidatedEventIds} / metadata{counts,notes}`。依据 `src/portable/model.ts:33-60`。
+43. **`MemoryBundle`** — stable：`format / schemaVersion / exportedAt / memoWeftVersion / subjectId / source{hostId,exportMode:'full'} / data{evidence,events,eventEvidence,cognitions,cognitionEvidence,unconsolidatedEventIds, interactionContexts?, semanticResolutions?} / metadata{counts,notes}`。两个 `data` 字段为 v0.6/D-0034（schemaVersion ≥ 2，可选——v1 包导入按空）；`ImportPlan.counts` 相应加 `interactionContexts` / `semanticResolutions` 计数。依据 `src/portable/model.ts:33-60`。
 44. **`EventEvidenceLink`** — stable：`{eventId, evidenceId}`。依据 `:20-23`。
 45. **`CognitionEvidenceLink`** — stable：`{cognitionId, evidenceId, relation}`。依据 `:26-30`。
 46. **`ImportMode`** — stable 类型，但 `'replace'` 取值 **experimental**（留 V2；现仅 `'dryRun' | 'merge'`）。依据 `:63`。
 47. **`ValidateResult`** — stable：`valid + errors[] + warnings[]`。依据 `:66-70`。
 48. **`ImportPlan`** — stable：`mode + valid + errors[] + warnings[] + counts{...} + duplicates{...}`。依据 `:73-92`。
-49. **`BUNDLE_FORMAT` / `BUNDLE_SCHEMA_VERSION`** — stable 常量：`'memoweft-bundle'` / `1`。依据 `:15-17`。
+49. **`BUNDLE_FORMAT` / `BUNDLE_SCHEMA_VERSION`** — stable 常量：`'memoweft-bundle'` / `2`（v0.6/D-0034 因 `interactionContexts` / `semanticResolutions` 两 data 字段 bump 1 → 2；导入 v1 包向后兼容——缺失段按空导入）。依据 `:15-17`。
 
 ### 2.6 图谱 payload 形状
 

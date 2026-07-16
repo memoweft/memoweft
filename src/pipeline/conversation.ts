@@ -87,7 +87,13 @@ export class Conversation {
     const cfg = this.deps.config ?? config; // 可注入配置（缺省=单例）
 
     // 1) 感知 → 存证据（只存用户的，亲口）。先存，后答。
-    const stored = store.put(perceive(userMsg, opts, cfg));
+    // 附和/AI 上下文（D-0033 Phase 1b）:先存后答 → 此刻 window 里还留着【上一轮 AI 那句】
+    //   （本轮 user/assistant 要到 L119-120 才 push）。抓下它作为【只读上下文】随证据落进
+    //   preceding_ai_context 列（写入端 EvidenceInput，不进 Evidence 读结构 → 永不外泄为证据）。
+    //   让孤儿回应("AI:你喜欢爬山吧? 用户:是的")的信息进得了 distill/consolidate、产得出 confirmed 认知。
+    //   只此 Conversation 路捕得到（裸 ingest 无 working memory 窗口 → 缺省 null）。
+    const precedingAiContext = [...this.window.context()].reverse().find((t) => t.role === 'assistant')?.content ?? null;
+    const stored = store.put({ ...perceive(userMsg, opts, cfg), precedingAiContext });
 
     // 2) 召回相关认知（阶段 1b）。失败不挡回话。
     // 召回段已抽为共享函数 retrieval/recall.ts（批次2）：门槛顺序与判断条件原样搬走、语义零变化，

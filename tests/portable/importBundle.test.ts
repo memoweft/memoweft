@@ -36,7 +36,7 @@ test('importBundle · dryRun：不写库，只返回计划', () => {
   try {
     const plan = importBundle(bundle, t, { mode: 'dryRun' });
     assert.equal(plan.valid, true);
-    assert.deepEqual(plan.counts, { evidence: 2, events: 1, cognitions: 2, eventEvidence: 2, cognitionEvidence: 1 });
+    assert.deepEqual(plan.counts, { evidence: 2, events: 1, cognitions: 2, eventEvidence: 2, cognitionEvidence: 1, interactionContexts: 0, semanticResolutions: 0 });
     assert.equal(t.evidenceStore.all().length, 0, 'dryRun 一条都不写');
     assert.equal(t.cognitionStore.all('owner').length, 0);
   } finally {
@@ -208,5 +208,7 @@ function normalize(data: MemoryBundle['data']) {
     eventEvidence: [...data.eventEvidence].sort(byJson),
     cognitionEvidence: [...data.cognitionEvidence].sort(byJson),
     unconsolidatedEventIds: [...data.unconsolidatedEventIds].sort(),
+    interactionContexts: [...(data.interactionContexts ?? [])].sort(byId),
+    semanticResolutions: [...(data.semanticResolutions ?? [])].sort(byId),
   };
 }

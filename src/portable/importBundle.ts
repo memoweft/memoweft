@@ -18,6 +18,8 @@
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { EventStore } from '../event/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
+import type { InteractionContextStore } from '../interaction/interactionContextStore.ts';
+import type { SemanticResolutionStore } from '../interaction/semanticResolutionStore.ts';
 import type { Transaction } from '../store/transaction.ts';
 import type { EvidenceLink } from '../cognition/model.ts';
 import { validateBundle } from './validateBundle.ts';
@@ -28,6 +30,10 @@ export interface ImportDeps {
   evidenceStore: EvidenceStore;
   eventStore: EventStore;
   cognitionStore: CognitionStore;
+  /** 交互上下文 store（v0.6·D-0034）：导入交互上下文快照（按 id 判重）。 */
+  interactionContextStore: InteractionContextStore;
+  /** 语义解析 store（v0.6·D-0034）：导入语义解析（按 id 判重）。 */
+  semanticResolutionStore: SemanticResolutionStore;
   /** 可选事务器：merge 的写入包进一个事务，中途失败整体回滚，避免污染库。 */
   transaction?: Transaction;
 }
@@ -37,7 +43,7 @@ export interface ImportOptions {
 }
 
 export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: ImportOptions): ImportPlan {
-  const { evidenceStore, eventStore, cognitionStore } = deps;
+  const { evidenceStore, eventStore, cognitionStore, interactionContextStore, semanticResolutionStore } = deps;
   const lang = resolveLang();
 
   const validation = validateBundle(bundle);
@@ -46,7 +52,7 @@ export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: Impor
     valid: validation.valid,
     errors: [...validation.errors],
     warnings: [...validation.warnings],
-    counts: { evidence: 0, events: 0, cognitions: 0, eventEvidence: 0, cognitionEvidence: 0 },
+    counts: { evidence: 0, events: 0, cognitions: 0, eventEvidence: 0, cognitionEvidence: 0, interactionContexts: 0, semanticResolutions: 0 },
     duplicates: { evidence: 0, events: 0, cognitions: 0 },
   };
   if (!validation.valid) return plan; // 结构/引用错 → 绝不写库
@@ -131,12 +137,18 @@ export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: Impor
     return e;
   });
 
+  // 交互层（v0.6·D-0034）：按 id 判重（跳过已存在的）；向后兼容 v1 包（无这两段 → 空数组）。
+  const newInteractionContexts = (data.interactionContexts ?? []).filter((c) => !interactionContextStore.get(c.id));
+  const newSemanticResolutions = (data.semanticResolutions ?? []).filter((r) => !semanticResolutionStore.get(r.id));
+
   plan.counts = {
     evidence: newEvidence.length,
     events: newEvents.length,
     cognitions: newCognitions.length,
     eventEvidence: eventEvidenceCount,
     cognitionEvidence: cognitionEvidenceCount,
+    interactionContexts: newInteractionContexts.length,
+    semanticResolutions: newSemanticResolutions.length,
   };
 
   if (opts.mode === 'dryRun') return plan; // 只算不写
@@ -149,6 +161,10 @@ export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: Impor
     for (const e of evidenceToInsert) evidenceStore.insert(e);
     for (const ev of newEvents) eventStore.insert(ev, eventEvidenceOf.get(ev.id) ?? [], { consolidated: !unconsolidatedSet.has(ev.id) });
     for (const c of newCognitions) cognitionStore.insert(c, cognitionSourcesOf.get(c.id) ?? []);
+    // 交互层（v0.6·D-0034）：独立表，无溯源 join；按原 id 原样落库。interaction_context 含 AI 文本但仍是独立记录、
+    //   永不进 consolidate 白名单（结构墙）；semantic_resolution 通过 evidence_id 关联（弱引用，无外键）。
+    for (const c of newInteractionContexts) interactionContextStore.insert(c);
+    for (const r of newSemanticResolutions) semanticResolutionStore.insert(r);
   };
   // 事务优先（openStores 提供）：中途抛错整体回滚，库不留残。无事务无法回滚——把异常收进 plan.errors 并提示，
   // 不把裸异常抛给调用方（保住"返回 ImportPlan"的契约）。包内重复 id 等最常见抛错源已由 validateBundle 提前挡下。
@@ -169,7 +185,7 @@ export function importBundle(bundle: MemoryBundle, deps: ImportDeps, opts: Impor
           : 'No transaction provided; a mid-write failure may have left partial data (use the transaction from openStores)',
       );
     }
-    plan.counts = { evidence: 0, events: 0, cognitions: 0, eventEvidence: 0, cognitionEvidence: 0 };
+    plan.counts = { evidence: 0, events: 0, cognitions: 0, eventEvidence: 0, cognitionEvidence: 0, interactionContexts: 0, semanticResolutions: 0 };
     return plan;
   }
 
