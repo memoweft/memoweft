@@ -105,6 +105,40 @@ function citedIds(c: RawCog | RawRef): string[] {
   return c.support_evidence_ids ?? c.evidence_ids ?? [];
 }
 
+/** 前缀容错的最短长度：短于此一律不猜。`ev-1`（提示词示例的字面占位）绝不能撞上真证据。 */
+const MIN_ID_PREFIX = 8;
+
+/**
+ * 把模型写回的 evidence id 解回【白名单内的真 id】；解不出返回 null。
+ *
+ * 精确匹配优先 → **模型写对时行为零变化**。失败才做【唯一前缀】容错：
+ * dogfood 实测（mimo-v2.5-pro，2026-07-17）该模型**间歇性**把 36 字符 UUID 截断成前 8 位写回
+ * （6 次重放撞 5 次），偶尔还照 `prompts.ts:87` 输出示例里的 `"support_evidence_ids":["ev-1"]`
+ * 写成 `ev-<前8位>`。它产的 JSON 完全合法（finish_reason=stop、jsonRepair 零告警、new 与
+ * resolutions 都填得好好的），但 support 白名单与 resolutions 白名单都做精确匹配 → 短 id 全部落空
+ * → 每条认知被 `support.length === 0` 丢弃、resolutions 整批被丢弃。两个通道**共用**这套白名单
+ * （`spokenEvidence ⊆ validEvidence`），故「0 解析」与「0 认知」完全共变，而 event 仍被无条件标
+ * consolidated ⇒ **模型干了活，产出被静默丢弃、证据永久蒸发**（活库实测 5 批 47 条原话）。
+ *
+ * **护栏一寸不让（3a/3d）**：只可能解到白名单【内】的 id，且必须**唯一命中**——
+ * 捏造 id（非任何真 id 前缀）、歧义前缀（命中多条）、过短前缀一律 null。宁可不记，不可记错。
+ * 见 tests/evidenceIdTruncation.test.ts（前半钉「真 id 别被误杀」、后半钉「护栏不许松」），
+ * 与 confirmedLaundering.test.ts 的 3a 用例互补。
+ */
+function resolveEvidenceId(raw: string | undefined, whitelist: Set<string>): string | null {
+  if (!raw) return null;
+  if (whitelist.has(raw)) return raw; // 精确匹配：绝大多数情况，零行为变化
+  const bare = raw.replace(/^ev-/i, ''); // 剥掉照抄示例的 `ev-` 前缀
+  if (bare.length < MIN_ID_PREFIX) return null;
+  let hit: string | null = null;
+  for (const id of whitelist) {
+    if (!id.startsWith(bare)) continue;
+    if (hit !== null) return null; // 歧义 → 不猜
+    hit = id;
+  }
+  return hit;
+}
+
 const VALID_TYPES = ['fact', 'preference', 'goal', 'project', 'state', 'trait'];
 const VALID_FORMED = ['stated', 'observed', 'ruled', 'confirmed', 'inferred'];
 // 语义解析枚举（v0.6 Phase 2·D-0034）：落库前收敛，非法值落 null（与 model.ts 的 `... | null` 一致）。
@@ -212,8 +246,10 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
       });
     return { summary: ev.summary, occurredAt: ev.occurredAt, utterances };
   });
-  /** 取候选引的原话 id，只留合法的、去重（无合法引用 → 空，调用方按"跳过"处理）。 */
-  const pickSupport = (ids: string[]): string[] => [...new Set(ids.filter((id) => validEvidence.has(id)))];
+  /** 取候选引的原话 id，只留合法的、去重（无合法引用 → 空，调用方按"跳过"处理）。
+   *  经 `resolveEvidenceId` 归一：精确匹配优先，模型截断的短 id 按【唯一前缀】解回真 id（见其文档）。 */
+  const pickSupport = (ids: string[]): string[] =>
+    [...new Set(ids.map((id) => resolveEvidenceId(id, validEvidence)).filter((id): id is string => id !== null))];
 
   // 结构化输出加固（jsonRepair）：去代码块围栏 → 解析对象；失败落日志 + 最多重试一次（提示"只输出 JSON"）。
   // 仍失败 → null（按"本轮无产出"处理，等价旧的返回空对象；下方各 `?? []` 兜住）。重试会多调一次模型，故计数取前后差。
@@ -247,8 +283,11 @@ export async function consolidate(subjectId: string, deps: ConsolidateDeps): Pro
     }
   >();
   for (const r of out.resolutions ?? []) {
-    const eid = r.evidence_id;
-    if (!eid || !spokenEvidence.has(eid)) continue; // 3d + 来源收窄（见 spokenEvidence 声明）
+    // 归一到真 id（同 pickSupport）：白名单仍是 spokenEvidence（3d + 来源收窄，见其声明）——
+    // 容错只把模型截断的短 id 解回【集合内】的真 id，解不出 / 歧义一律丢，白名单一寸不放宽。
+    // **必须用解出的真 id 做 key**：下方落库直接拿 key 写 evidence_id，短 id 进表就是脏数据。
+    const eid = resolveEvidenceId(r.evidence_id, spokenEvidence);
+    if (!eid) continue;
     const resolved = (r.resolved_content ?? '').trim();
     if (!resolved) continue; // resolved_content 非空
     if (resolutionOf.has(eid)) continue; // 同证据先到先得
