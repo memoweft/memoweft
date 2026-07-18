@@ -12,7 +12,19 @@
 npm i @openai/agents memoweft @memoweft/adapter-openai-agents
 ```
 
-`@openai/agents` `^0.13` 与 `memoweft` `^0.5.0` 是 peer 依赖。
+`@openai/agents` `^0.13` 与 `memoweft` `^0.5.0 || ^0.6.0` 是 peer 依赖。
+
+## v0.6 会话上下文（可选）
+
+在 memoweft `0.6` 下，每轮传一个稳定的 `conversationId`，即可跨轮理解短回答——让后面一句「是的」/「后者」能对着 AI 上一句问题被解出：
+
+```ts
+const result = await mw.run(agent, input, {
+  memoweft: { conversationId: threadId, spokenOriginId: turnId },
+});
+```
+
+传了 `conversationId`（且 Core 是 0.6）时：本轮用户原话带它摄入——Core 据此把【上一轮】AI 那句捕获进 `preceding_ai_context`——run 结束后包装器再把本轮**最终 AI 回复**经 `recordAssistantReply` 报告。该回复**只作上下文、永不落证据**（铁律 3a）：它让【下一轮】能被理解，绝不存成记忆。memoweft `0.5`（无 `recordAssistantReply`）下这条线经运行时能力探测整条跳过，其余照常。
 
 ## 一个工厂、三件套、三条路径
 
@@ -51,7 +63,7 @@ const result = await mw.run(agent, '我偏好什么主题？', {
 
 工厂：`{ subjectId?, lang?: 'en' | 'zh', contentTypes?, explain?, onRecall?, callModelInputFilter?, recallTimeoutMs?, ingestTimeoutMs?, logger? }`
 
-每轮（经 `run` 的 `options.memoweft`）：`{ spokenOriginId? }`
+每轮（经 `run` 的 `options.memoweft`）：`{ spokenOriginId?, conversationId? }`（`conversationId` 启用上面的 v0.6 会话上下文）
 
 ## 完整示例
 
@@ -64,7 +76,7 @@ const result = await mw.run(agent, '我偏好什么主题？', {
 ## 它不做什么
 
 - 不注入人格/人设 prompt（Core 无头——语气/角色是宿主的事）。
-- 不存助手回话，只存用户原话与工具结果。
+- 绝不把助手回复存成**证据**——只有用户原话与工具结果成为证据。带 v0.6 `conversationId` 时，回复经 `recordAssistantReply` 作**会话上下文**上报，永不成记忆。
 - 从不读工具调用的入参，写路径不带任何上云授权位。
 
 ## License

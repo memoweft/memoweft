@@ -12,7 +12,19 @@ This is an **external integration package**. It wraps MemoWeft's public Core fac
 npm i @openai/agents memoweft @memoweft/adapter-openai-agents
 ```
 
-`@openai/agents` `^0.13` and `memoweft` `^0.5.0` are peer dependencies.
+`@openai/agents` `^0.13` and `memoweft` `^0.5.0 || ^0.6.0` are peer dependencies.
+
+## v0.6 conversation context (optional)
+
+With memoweft `0.6`, pass a stable `conversationId` per run to enable short-reply understanding across turns — so a later "yes" / "the latter" is resolved against the assistant's previous question:
+
+```ts
+const result = await mw.run(agent, input, {
+  memoweft: { conversationId: threadId, spokenOriginId: turnId },
+});
+```
+
+When `conversationId` is set (and the Core is 0.6), the user's turn is ingested with it — Core captures the **previous** turn's AI reply into `preceding_ai_context` — and after the run the wrapper reports the turn's **final AI reply** via `recordAssistantReply`. That reply is **context only, never evidence** (iron rule 3a): it lets the *next* turn be understood, and is never stored as a memory. On memoweft `0.5` (no `recordAssistantReply`) this whole line is skipped via a runtime capability probe, and everything else works unchanged.
 
 ## One factory, three pieces, three paths
 
@@ -51,7 +63,7 @@ The injected block uses MemoWeft's own neutral wording (ported verbatim from Cor
 
 Factory: `{ subjectId?, lang?: 'en' | 'zh', contentTypes?, explain?, onRecall?, callModelInputFilter?, recallTimeoutMs?, ingestTimeoutMs?, logger? }`
 
-Per-run (via `run`'s `options.memoweft`): `{ spokenOriginId? }`
+Per-run (via `run`'s `options.memoweft`): `{ spokenOriginId?, conversationId? }` (`conversationId` enables the v0.6 conversation context above)
 
 ## Full example
 
@@ -64,7 +76,7 @@ If you would rather not wrap `run` at all, `@openai/agents` can mount [`@memowef
 ## What it does not do
 
 - No persona / character prompt (Core is headless — tone/role is the host's job).
-- Does not store the assistant reply, only the user's words and tool results.
+- Never stores the assistant reply **as evidence** — only the user's words and tool results become evidence. With a v0.6 `conversationId` the reply is reported as **conversation context** (`recordAssistantReply`), never as a memory.
 - Never reads a tool call's arguments, and passes no cloud-authorization bits on the write path.
 
 ## License

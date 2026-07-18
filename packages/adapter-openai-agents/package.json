@@ -26,7 +26,7 @@
   },
   "peerDependencies": {
     "@openai/agents": "^0.13",
-    "memoweft": "^0.5.0"
+    "memoweft": "^0.5.0 || ^0.6.0"
   },
   "devDependencies": {
     "@openai/agents": "^0.13",

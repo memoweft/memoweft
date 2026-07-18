@@ -151,9 +151,10 @@ jobs:
       - name: Claude Agent SDK Adapter Build
         run: npm run build -w @memoweft/adapter-claude-agent-sdk
 
-      # OpenAI Agents 适配器（0.1.0·run-wrapper 型进程内适配器，D-0027）：同上靠 Core dist、自带 build。
+      # OpenAI Agents 适配器（0.1.0·run-wrapper 型进程内适配器，D-0027 / D-0040）：同上靠 Core dist、自带 build。
       #   SDK @openai/agents 是 peer + dev（宿主自带 SDK 建/跑 agent，适配器是 wrapper）；run 包装器对它有
       #   运行时依赖（动态 import），但 typecheck/test 只需类型 + 不启真实 SDK，npm ci 常规拉取即可。
+      #   D-0040 薄补 0.6 recordAssistantReply（能力探测·无新依赖），recordReply.test 离线跑、不加载 SDK。
       - name: OpenAI Agents Adapter Typecheck
         run: npm run typecheck -w @memoweft/adapter-openai-agents
 

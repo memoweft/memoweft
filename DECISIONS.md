@@ -765,3 +765,21 @@ gate(2026-07-18 实跑):**adapter typecheck 干净 · 契约测试 11/11 绿(AD-
 影响面:middleware.ts + index 导出 + package.json(可选 peer/dev `langchain` + memoweft peer 扩 0.6)+ 新契约测试 `tests/middleware.test.ts`(name `langchain-mw`)+ golden mw en/zh + README en/zh 加 middleware 章 + ci.yml 注释 + CHANGELOG + root package-lock(+langchain 树)。
 gate(2026-07-18 实跑):**adapter typecheck 干净 · lint 0 · 契约 22/22 绿(langchain 11 + langchain-mw 11,AD-1…9)· build 出 dist · 核心 api:check 一致 · 核心 399/399 无回归**。
 分级(诚实):离线契约测试直接驱动 `buildMemoWeftHooks` 的纯函数(未启真实 `createAgent`);`createMiddleware` 接线由 typecheck 保证。真实 agent 端到端 + thread_id→conversationId 的实链待打磨阶段 dogfood 或宿主接入坐实。
+
+## D-0040 adapter-openai-agents 薄补 0.6 recordAssistantReply 会话上下文(1.2 第③个·裁剪自「Session 形态」)
+
+日期:2026-07-18 / 状态:已采纳(在 D-0037 批准的 1.2 方向内;实现已落·门禁全绿)
+背景(动机):1.2 第③项原描述为「openai-agents 补 Session 形态」。生态侦察(2026-07-18)同时给出**强约束**:OpenAI Agents SDK 仍 0.x、官方已预告「下一代」(harness/sandbox/可配置 memory,TS 版未发)⇒ **Session/记忆面中期可能大改,现在深投 Session 形态有返工风险,建议薄实现+跟踪**。而现有 `createMemoWeftRunner`(D-0027)已覆盖召回①+用户原话②+工具结果③,**唯独缺 0.6 的 recordAssistantReply**(会话上下文面,让下一轮短回答/附和能被理解)——这正是 mastra/langchain 本轮已补的 0.6 面。
+
+**裁剪决定(诚实记录)**:③ 从「造一个 `MemoweftSession`(完整对话历史存储 + 旁路证据流)」**裁剪为「把 0.6 recordAssistantReply 薄补进现有 run() 收尾」**。理由:①现有 runner 已是低摩擦入口,Session 会与它**重复** surface;②Session 语义是 message store、memoweft 不是,需内置 pass-through 历史层,是更大的面;③官方下一代将重塑 Session ⇒ 现在造 Session = 追移动靶、返工风险高。薄补 recordAssistantReply **同样达成 ③ 的核心目标(给 openai-agents 补 0.6 会话上下文面)**,零新依赖、纯追加、返工面最小。**完整 Session 形态 defer**,待 SDK 下一代稳定后按真实需求重评。
+
+决定(形态·纯追加):
+- `RunnerCore` += 可选 `recordAssistantReply`(能力探测);`MemoWeftRunExtras` += `conversationId?`(每轮传)。
+- run() 收尾:带 `conversationId` 且能力具备时——用户原话 ingest 带上 conversationId(Core 捕获上一轮 AI 进 preceding_ai_context)+ run 结束后把**本轮 AI 最终回复**经 `recordAssistantReply` 报告(供下一轮)。**AI 回复只进上下文窗口、永不落证据**(铁律 3a)。
+- 新增导出 `finalAssistantText(result)`(从 RunResult 提最终回复文本:finalOutput string / 倒扫 message_output_item 的 output_text)+ `recordFinalReply(core,result,conversationId)`(自带能力/conversationId/非空/抛错门控,可离线单测)。
+- memoweft peer `^0.5.0` → **`^0.5.0 || ^0.6.0`**(recordAssistantReply 是 0.6 面,能力探测;0.5 整条静默跳过)。
+
+破坏性:**无——纯追加**。不带 conversationId / 0.5 Core = 行为完全同旧。不碰 core、不触 api-freeze(`api:check` 一致·已验)。
+影响面:runner.ts(+recordFinalReply/finalAssistantText/conversationId 线)+ index 导出 + package.json(peer 扩 0.6)+ 新单测 `tests/recordReply.test.ts`(8 例:finalAssistantText 三形 + recordFinalReply 五门控含抛错静默)+ README en/zh 加 0.6 会话上下文节 + ci.yml 注释 + CHANGELOG。**无新依赖 → 无 root install**。
+gate(2026-07-18 实跑):**adapter typecheck 干净 · lint 0 · test 19/19 绿(契约 11 + recordReply 8)· build 出 dist · 核心 api:check 一致**。
+分级(诚实):recordFinalReply/finalAssistantText 离线单测充分;真实 `run()` 里的 recordAssistantReply 时机(动态 import 真 SDK)未端到端跑,待打磨阶段 dogfood 或宿主接入坐实。**完整 Session 形态明确 defer**(见上裁剪理由)。

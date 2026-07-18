@@ -40,8 +40,9 @@ import {
 } from './degrade.ts';
 import { buildKnowledgeBlock, type RecalledLike } from './knowledgeBlock.ts';
 
-/** 只依赖读写三方法——测试可传最小 stub。 */
-type RunnerCore = Pick<MemoWeftCore, 'recall' | 'ingestUserMessage' | 'ingestToolResult'>;
+/** 只依赖读写三方法——测试可传最小 stub。recordAssistantReply 是 0.6 面 → 可选（0.5 无此方法，运行时能力探测）。 */
+type RunnerCore = Pick<MemoWeftCore, 'recall' | 'ingestUserMessage' | 'ingestToolResult'> &
+  Partial<Pick<MemoWeftCore, 'recordAssistantReply'>>;
 
 export interface MemoWeftRunnerOptions {
   /** 召回/摄入归属的 subject；缺省交给 Core（config.identity.subjectId）。 */
@@ -97,6 +98,13 @@ export interface MemoWeftRunExtras {
    * 建议宿主用自己的 turnId / messageId；不传则不去重（每次都落，见 Core originId 语义）。
    */
   spokenOriginId?: string | null;
+  /**
+   * 会话标识（v0.6·D-0034）：跨轮用同一个（如线程 id）。传了它且 Core 具备 recordAssistantReply（0.6 面）时，
+   *   本轮用户原话带 conversationId 摄入（Core 据此把【上一轮】AI 那句捕获进 preceding_ai_context），
+   *   且 run 结束后把【本轮 AI 最终回复】经 recordAssistantReply 报告给 Core（**只进上下文窗口、永不落证据**，铁律 3a），
+   *   供下一轮理解附和/短回答。不传 = 无会话上下文，行为同旧（裸摄入）；0.5 Core 无此面则整条静默跳过。
+   */
+  conversationId?: string;
 }
 
 /** `run` 包装器的 options：SDK 的 NonStreamRunOptions + 适配器专属 `memoweft` 子对象（调 SDK 前剥离）。 */
@@ -220,6 +228,62 @@ function lastUserText(input: readonly AgentInputItem[]): string | null {
   return null;
 }
 
+/**
+ * 从 `RunResult` 提【本轮 AI 最终回复文本】（供 recordAssistantReply·0.6 上下文，永不落证据）。
+ *   - `result.finalOutput` 为非空 string → 直接用（文本 agent 的常态）；
+ *   - 否则从 newItems 倒扫最后一条 `message_output_item`，拼其 `rawItem.content` 里的 `output_text` 部分。
+ * 结构化输出（finalOutput 非串）且无文本消息 → null（无可当「AI 那句」的文本，不 record）。按 unknown 防御解析。
+ * 注意：这只用于【上下文窗口】(recordAssistantReply)，绝不落证据——助手输出永不成 evidence（铁律 3a）。
+ */
+export function finalAssistantText(result: {
+  finalOutput?: unknown;
+  newItems?: readonly RunItem[];
+}): string | null {
+  if (typeof result.finalOutput === 'string' && result.finalOutput.trim() !== '') return result.finalOutput;
+  const items = result.newItems;
+  if (!Array.isArray(items)) return null;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i] as { type?: unknown; rawItem?: unknown } | undefined;
+    if (!it || it.type !== 'message_output_item') continue;
+    const content = (it.rawItem as { content?: unknown } | undefined)?.content;
+    if (typeof content === 'string') return content.trim() === '' ? null : content;
+    if (!Array.isArray(content)) return null;
+    const texts = content
+      .filter((p): p is { type: 'output_text'; text: string } => {
+        const part = p as { type?: unknown; text?: unknown };
+        return part?.type === 'output_text' && typeof part.text === 'string';
+      })
+      .map((p) => p.text);
+    const joined = texts.join('\n');
+    return joined.trim() === '' ? null : joined;
+  }
+  return null;
+}
+
+/**
+ * 把【本轮 AI 最终回复】报告给 Core 的 recordAssistantReply（0.6 会话上下文·**只进上下文窗口、永不落证据**·铁律 3a）。
+ * 自带门控（可测·run 包装器内部即调它）：
+ *   - Core 无 recordAssistantReply（0.5）或未传 conversationId → 不 record，返回 false；
+ *   - finalAssistantText 提不出非空文本（结构化输出等）→ 不 record，返回 false；
+ *   - recordAssistantReply 同步、失败静默吞（记忆层出错不崩对话），此时返回 false。
+ * @returns 是否真调用了 recordAssistantReply 且未抛错。
+ */
+export function recordFinalReply(
+  core: Partial<Pick<MemoWeftCore, 'recordAssistantReply'>>,
+  result: { finalOutput?: unknown; newItems?: readonly RunItem[] },
+  conversationId: string | undefined,
+): boolean {
+  if (typeof core.recordAssistantReply !== 'function' || !conversationId) return false;
+  const reply = finalAssistantText(result);
+  if (reply === null || reply.trim() === '') return false;
+  try {
+    core.recordAssistantReply({ conversationId, content: reply });
+    return true;
+  } catch {
+    return false; // 上下文记录失败不崩对话（永不落证据，丢了只是下一轮少一句上文）
+  }
+}
+
 /** 末条 input 是否为 user 消息——① 注入 guard：只在一轮开头（末条 user、模型尚未产出工具回合）注一次。 */
 function isLastItemUserMessage(input: readonly AgentInputItem[]): boolean {
   const last = input[input.length - 1] as { role?: unknown } | undefined;
@@ -273,6 +337,9 @@ export function createMemoWeftRunner(
     ingestTimeoutMs,
     logger,
   } = opts;
+
+  // 能力探测（peer ^0.5 || ^0.6）：recordAssistantReply 是 0.6 会话上下文面；0.5 无此方法 → 不启用会话上下文线。
+  const canRecordReply = typeof core.recordAssistantReply === 'function';
 
   // ── ① 召回注入 filter（只做召回；宿主 filter 由 chainFilters 前置）──
   //
@@ -351,13 +418,17 @@ export function createMemoWeftRunner(
   ): Promise<RunResult<TContext, TAgent>> => {
     const { memoweft, ...sdkOptions } = options ?? {};
 
+    // v0.6 会话上下文（仅 Core 具备 recordAssistantReply 且宿主传了 conversationId 时启用）。
+    const conversationId = canRecordReply ? memoweft?.conversationId : undefined;
+
     // ② 写：把【用户这轮原话】(从原始 input 提，注入前) 沉淀成 spoken 证据。originId 用宿主 turnId 保证幂等。
     //    不传任何授权位——ingestUserMessage 存 spoken，本就不涉上云授权位（红线）。
+    //    带 conversationId 时（0.6）：Core 据此把【上一轮】AI 那句捕获进 preceding_ai_context。
     const spoken = spokenTextFromRunInput(input);
     if (spoken !== null) {
       await runIngestWithRetry(
         () =>
-          core.ingestUserMessage({ content: spoken, originId: memoweft?.spokenOriginId ?? null, subjectId }),
+          core.ingestUserMessage({ content: spoken, originId: memoweft?.spokenOriginId ?? null, subjectId, conversationId }),
         ingestTimeoutMs,
         logger,
       );
@@ -379,6 +450,10 @@ export function createMemoWeftRunner(
 
     // ③ 写：run 结束后扫 newItems 摄工具结果。降级不中断——persistToolOutputs 内部从不抛。
     await persistToolOutputs(result.newItems);
+
+    // ④ 上下文（0.6·仅能力具备 + 有 conversationId）：把【本轮 AI 最终回复】报告给 Core 供下一轮捕获。
+    //    **只进上下文窗口、永不落证据**（铁律 3a）；recordFinalReply 内部再核能力/失败不崩对话。
+    recordFinalReply(core, result, conversationId);
     return result;
   };
 

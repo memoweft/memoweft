@@ -13,6 +13,8 @@
 export {
   createMemoWeftRunner,
   spokenTextFromRunInput,
+  finalAssistantText,
+  recordFinalReply,
   type MemoWeftRunner,
   type MemoWeftRunnerOptions,
   type MemoWeftRunOptions,
