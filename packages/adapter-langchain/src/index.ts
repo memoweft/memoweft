@@ -44,6 +44,14 @@ export {
   type PersistUserTurnInput,
 } from './writeCallback.ts';
 
+// ── v1 Agent Middleware 入口（LangChain v1 正门；读写一体，需可选 peer `langchain` 伞包）──
+//   现有 retriever+callback 是 v0 载体；middleware 是 v1 createAgent 的主推面，且 afterAgent 能接 0.6 recordAssistantReply。
+export {
+  createMemoWeftMiddleware,
+  buildMemoWeftHooks,
+  type MemoWeftMiddlewareOptions,
+} from './middleware.ts';
+
 // 召回注入块拼装 + 召回项形状（对外也当独立工具用；隐私口径见 knowledgeBlock.ts 注释）。
 export { buildKnowledgeBlock, type RecalledLike } from './knowledgeBlock.ts';
 

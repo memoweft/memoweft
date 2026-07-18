@@ -26,10 +26,15 @@
   },
   "peerDependencies": {
     "@langchain/core": "^1",
-    "memoweft": "^0.5.0"
+    "langchain": "^1",
+    "memoweft": "^0.5.0 || ^0.6.0"
+  },
+  "peerDependenciesMeta": {
+    "langchain": { "optional": true }
   },
   "devDependencies": {
     "@langchain/core": "^1.2.2",
+    "langchain": "^1.5.3",
     "memoweft": "*"
   }
 }

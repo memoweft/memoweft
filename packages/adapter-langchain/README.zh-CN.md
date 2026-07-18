@@ -12,7 +12,36 @@
 npm i @langchain/core memoweft @memoweft/adapter-langchain
 ```
 
-`@langchain/core` `^1` 与 `memoweft` `^0.5.0` 是 peer 依赖。
+`@langchain/core` `^1` 与 `memoweft` `^0.5.0 || ^0.6.0` 是 peer 依赖。`langchain` `^1`（携带 v1 agent middleware API 的伞包）是**可选** peer——只有用下面的 v1 middleware 入口才需要它；retriever + callback 老路只需 `@langchain/core`。
+
+## LangChain v1 agent middleware（`createAgent` 首选）
+
+如果你用 LangChain v1 的 `createAgent` 搭智能体，正门是**一个 middleware 一肩挑**——`createMemoWeftMiddleware(core, opts?)`：
+
+```ts
+import { createAgent } from 'langchain';
+import { createMemoWeftCore } from 'memoweft';
+import { createMemoWeftMiddleware } from '@memoweft/adapter-langchain';
+
+const core = createMemoWeftCore({ dbPath: './memory.db' });
+
+const agent = createAgent({
+  model,                                   // 自带对话模型
+  tools,
+  middleware: [createMemoWeftMiddleware(core, { lang: 'zh' })],
+});
+```
+
+middleware 在哪个 hook 接了什么：
+
+- **召回注入（读）— `wrapModelCall`。** 每次模型调用前，为本轮最后一条 human 消息召回记忆，把中性知识块**临时**注入进 request 的 **`systemMessage`**（只对本次调用生效，不累积进会话 state）。这正是 retriever 老路自己做不到的注入（callbacks 观察-only）。
+- **用户原话（写）— `beforeAgent`。** 本轮最后一条 human 原话存一次为 `spoken` 证据（按消息 id 幂等）。
+- **工具结果（写）— `wrapToolCall`。** 只存工具返回的 `ToolMessage.content` 为 `tool` 证据；工具调用的入参绝不读（铁律 3a，by-construction）。
+- **AI 回复（上下文）— `afterAgent`。** 在 memoweft `0.6` 下，本轮最终 AI 回复经 `recordAssistantReply` 上报，好让**下一轮**的短回答（「是的」「后者」）能对着它被理解。它**只作上下文、永不落证据**。`0.5` 上此步跳过（运行时能力探测），其余照常。
+
+会话线程默认用 `runtime.configurable.thread_id` 作 MemoWeft 的 `conversationId`（可用选项 `conversationId` / `getConversationId` 覆盖）。隐私与降级同下面的 retriever 路径（provenance 绝不注入、召回受 `recallTimeoutMs` 上界、写路径失败重试一次）。
+
+下面的 retriever + callback API 仍完整保留,供非 agent 链或 LangChain v0 式接线使用。
 
 ## 为何召回走 retriever 而非 callback
 

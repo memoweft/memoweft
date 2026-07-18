@@ -12,7 +12,36 @@ This is an **external integration package**. It wraps MemoWeft's public Core fac
 npm i @langchain/core memoweft @memoweft/adapter-langchain
 ```
 
-`@langchain/core` `^1` and `memoweft` `^0.5.0` are peer dependencies.
+`@langchain/core` `^1` and `memoweft` `^0.5.0 || ^0.6.0` are peer dependencies. `langchain` `^1` (the umbrella that ships the v1 agent middleware API) is an **optional** peer — you only need it if you use the v1 middleware entry below; the retriever + callback path needs only `@langchain/core`.
+
+## LangChain v1 agent middleware (recommended for `createAgent`)
+
+If you build agents with LangChain v1's `createAgent`, the modern entry is **one middleware that does everything** — `createMemoWeftMiddleware(core, opts?)`:
+
+```ts
+import { createAgent } from 'langchain';
+import { createMemoWeftCore } from 'memoweft';
+import { createMemoWeftMiddleware } from '@memoweft/adapter-langchain';
+
+const core = createMemoWeftCore({ dbPath: './memory.db' });
+
+const agent = createAgent({
+  model,                                   // bring your own chat model
+  tools,
+  middleware: [createMemoWeftMiddleware(core, { lang: 'en' })],
+});
+```
+
+What the middleware wires, and on which hook:
+
+- **Recall injection (read) — `wrapModelCall`.** Before each model call it recalls memory for the turn's last human message and injects the neutral knowledge block into the request's **`systemMessage`** for that call only — ephemeral, so it never accumulates in conversation state. This is the injection the retriever path can't do on its own (callbacks are observe-only).
+- **The user's words (write) — `beforeAgent`.** The turn's last human message is stored once as `spoken` evidence (idempotent on the message id).
+- **Tool results (write) — `wrapToolCall`.** Only the tool's returned `ToolMessage.content` is stored as `tool` evidence; the tool call's arguments are never read (iron rule 3a, by construction).
+- **Assistant reply (context) — `afterAgent`.** With memoweft `0.6`, the final AI reply is reported via `recordAssistantReply` so the **next** turn's short answer ("yes", "the latter") can be understood against it. It is **context only, never evidence**. On `0.5` this is skipped (runtime capability probe) and everything else still works.
+
+Conversation threading uses `runtime.configurable.thread_id` as the MemoWeft `conversationId` by default (override with `conversationId` / `getConversationId` in options). Privacy and degradation are identical to the retriever path below (provenance never injected, recall bounded by `recallTimeoutMs`, writes retry once).
+
+The retriever + callback API below remains fully supported for non-agent chains or LangChain v0-style wiring.
 
 ## Why recall goes through a retriever, not a callback
 

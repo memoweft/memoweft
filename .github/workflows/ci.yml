@@ -163,9 +163,10 @@ jobs:
       - name: OpenAI Agents Adapter Build
         run: npm run build -w @memoweft/adapter-openai-agents
 
-      # LangChain 适配器（0.1.0·retriever + callback 型进程内适配器，D-0028）：同上靠 Core dist、自带 build。
-      #   SDK @langchain/core 是 peer + dev（宿主自带 LangChain；extends BaseRetriever / new Document 需运行时值）；
-      #   typecheck/test 只需类型 + 不跑真实链，npm ci 常规拉取即可。
+      # LangChain 适配器（0.1.0·retriever + callback 型 + v1 middleware 入口，D-0028 / D-0039）：同上靠 Core dist、自带 build。
+      #   SDK @langchain/core 是 peer + dev（extends BaseRetriever / new Document 需运行时值）；`langchain` 伞包（v1
+      #   agent middleware `createMiddleware` 所在）是【可选 peer】+ dev——middleware 入口的 typecheck/test 需它，
+      #   retriever/callback 老路只需 @langchain/core。typecheck/test 只需类型 + 不跑真实 agent，npm ci 常规拉取即可。
       - name: LangChain Adapter Typecheck
         run: npm run typecheck -w @memoweft/adapter-langchain
 

@@ -36,7 +36,7 @@ type UserIngestOnly = Pick<MemoWeftCore, 'ingestUserMessage'>;
  *
  * （与 adapter-openai-agents runner.ts 的同名私有件逐字对齐，保持包间行为一致。）
  */
-async function runIngestWithRetry(
+export async function runIngestWithRetry(
   fn: () => Promise<unknown>,
   ingestTimeoutMs: number | undefined,
   logger?: MemoWeftLogger,
