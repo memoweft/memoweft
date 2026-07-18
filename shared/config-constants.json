@@ -11,7 +11,11 @@
     }
   },
   "attribution": {
-    "hypothesisCap": 250
+    "hypothesisCap": 250,
+    "maxCausesPerHypothesis": 2,
+    "maxPhenomenaPerRun": 1,
+    "minPhenomenonSupport": 2,
+    "windowHours": 24
   },
   "background": {
     "expireAfterDays": {

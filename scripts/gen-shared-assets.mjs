@@ -35,6 +35,8 @@ import { stripReasoning, readReplyText } from '../src/llm/client.ts';
 import { extractJsonObject, parseJsonObject } from '../src/llm/jsonRepair.ts';
 import { distill } from '../src/distillation/distill.ts';
 import { consolidate } from '../src/consolidation/consolidate.ts';
+import { attribute } from '../src/attribution/attribute.ts';
+import { aggregateTrends } from '../src/background/trends.ts';
 import { validateBundle } from '../src/portable/validateBundle.ts';
 import { BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION } from '../src/portable/model.ts';
 
@@ -94,7 +96,8 @@ function buildConfigConstants() {
       minEffectiveConfidence: c.retrieval.minEffectiveConfidence,
       minSimilarity: c.retrieval.minSimilarity,
     },
-    attribution: { hypothesisCap: c.attribution.hypothesisCap },
+    // attribution 全字段(P2-7 纳入:原只有 hypothesisCap,windowHours/maxPhenomenaPerRun/maxCausesPerHypothesis/minPhenomenonSupport 是归因规则门,跨语言须同源)
+    attribution: c.attribution,
     asking: { confidenceBand: c.asking.confidenceBand, askableStatuses: c.asking.askableStatuses },
     // CARRIER_RANK 未从 deriveFormedBy.ts 导出(内部件),此处照抄并由 formed-by parity 夹具间接钉死其效果。
     carrierRank: { confirmed: 0, observed: 1, stated: 2 }, // deriveFormedBy.ts:62
@@ -582,6 +585,119 @@ async function parityConsolidate() {
   };
 }
 
+// ── parity 夹具:attribute 归因(真 TS attribute + stub llm)——P2-7 ──
+function _mkStateCog(id, content, createdAt) {
+  return {
+    id, subjectId: 'owner', content, contentType: 'state', formedBy: 'stated', confidence: 300, credStatus: 'low',
+    scope: null, validAt: null, invalidAt: null, askedAt: null, archivedAt: null, mutedAt: null, createdAt, updatedAt: createdAt,
+  };
+}
+
+async function parityAttribute() {
+  const NOW = '2026-01-02T00:00:00.000Z';
+  const build = async (lang) => {
+    const cfg = { ...config, language: lang };
+    const stores = openStores(':memory:', cfg, () => new Date('2026-01-01T00:00:00.000Z'));
+    const put = (sourceKind, rawContent, occurredAt, extra = {}) =>
+      stores.evidenceStore.put({ subjectId: 'owner', sourceKind, hostId: 'local', occurredAt, rawContent, ...extra });
+    const p1 = put('spoken', '昨晚没睡好', '2026-01-01T22:00:00.000Z');
+    const p2 = put('spoken', '今天也没睡好', '2026-01-01T23:00:00.000Z'); // 最晚 → 现象锚
+    put('observed', '凌晨3点还在打游戏', '2026-01-01T03:00:00.000Z', { allowCloudRead: true }); // 候选原因(显式授权上云)
+    put('spoken', '晚上喝了咖啡', '2026-01-01T20:00:00.000Z'); // 候选原因
+    // 现象:state 认知挂 2 条支撑(满足 minPhenomenonSupport=2)、无假设引用过(未归因)
+    stores.cognitionStore.insert(_mkStateCog('cog-phenom', '最近总没睡好', '2026-01-01T00:00:00.000Z'), [
+      { evidenceId: p1.id, relation: 'support' },
+      { evidenceId: p2.id, relation: 'support' },
+    ]);
+    let n = 0;
+    const seen = [];
+    const stubLlm = {
+      get callCount() {
+        return n;
+      },
+      tier: 'cloud',
+      async chat(messages) {
+        seen.push(messages);
+        n++;
+        return JSON.stringify({ hypotheses: [{ content: '可能是熬夜打游戏导致没睡好', based_on_evidence_ids: ['e1'] }] });
+      },
+    };
+    const result = await attribute('owner', {
+      evidenceStore: stores.evidenceStore, cognitionStore: stores.cognitionStore, llm: stubLlm,
+      config: cfg, clock: () => new Date(NOW),
+    });
+    const out = {
+      messages: seen[0],
+      hypotheses: result.hypotheses.map((h) => ({
+        content: h.cognition.content, contentType: h.cognition.contentType, formedBy: h.cognition.formedBy,
+        confidence: h.cognition.confidence, credStatus: h.cognition.credStatus,
+        basedOnCount: h.basedOnEvidenceIds.length, phenomenon: h.phenomenon,
+      })),
+      consideredPhenomena: result.consideredPhenomena,
+      llmCalls: result.llmCalls,
+    };
+    stores.close();
+    return out;
+  };
+  return {
+    note: 'attribute 归因:现象筛选(minPhenomenonSupport≥2 / 未归因)+ 时间窗候选(禁 state→state)+ 短标号 e1 + hypothesisCap 封顶 + 支撑=原因+现象锚',
+    zh: await build('zh'),
+    en: await build('en'),
+  };
+}
+
+// ── parity 夹具:trends 趋势聚合(真 TS aggregateTrends + stub llm)——P2-7 ──
+async function parityTrends() {
+  const NOW = '2026-01-02T00:00:00.000Z';
+  const build = async (lang) => {
+    const cfg = { ...config, language: lang };
+    const stores = openStores(':memory:', cfg, () => new Date('2026-01-01T00:00:00.000Z'));
+    const put = (rawContent, occurredAt) =>
+      stores.evidenceStore.put({ subjectId: 'owner', sourceKind: 'spoken', hostId: 'local', occurredAt, rawContent });
+    const t1 = put('好累', '2026-01-01T10:00:00.000Z');
+    const t2 = put('没睡好', '2026-01-01T11:00:00.000Z');
+    const t3 = put('提不起劲', '2026-01-01T12:00:00.000Z');
+    // 3 条 state 认知(同 confidence,createdAt 递增 → all() 序 s1,s2,s3);满足 trendMinCount=3
+    stores.cognitionStore.insert(_mkStateCog('cog-s1', '很累', '2026-01-01T00:00:01.000Z'), [{ evidenceId: t1.id, relation: 'support' }]);
+    stores.cognitionStore.insert(_mkStateCog('cog-s2', '没睡好', '2026-01-01T00:00:02.000Z'), [{ evidenceId: t2.id, relation: 'support' }]);
+    stores.cognitionStore.insert(_mkStateCog('cog-s3', '提不起劲', '2026-01-01T00:00:03.000Z'), [{ evidenceId: t3.id, relation: 'support' }]);
+    let n = 0;
+    const seen = [];
+    const stubLlm = {
+      get callCount() {
+        return n;
+      },
+      tier: 'cloud',
+      async chat(messages) {
+        seen.push(messages);
+        n++;
+        return JSON.stringify({ trends: [{ content: '用户最近持续情绪低落', based_on_evidence_ids: ['e1', 'e2', 'e3'] }] });
+      },
+    };
+    const result = await aggregateTrends(
+      'owner',
+      { evidenceStore: stores.evidenceStore, cognitionStore: stores.cognitionStore, llm: stubLlm, config: cfg },
+      new Date(NOW),
+    );
+    const out = {
+      messages: seen[0],
+      trends: result.trends.map((t) => ({
+        content: t.content, contentType: t.contentType, formedBy: t.formedBy, confidence: t.confidence, credStatus: t.credStatus,
+        supportCount: stores.cognitionStore.sourcesOf(t.id).filter((s) => s.relation === 'support').length,
+      })),
+      consideredCount: result.consideredCount,
+      llmCalls: result.llmCalls,
+    };
+    stores.close();
+    return out;
+  };
+  return {
+    note: 'trends 趋势:窗口内 state 支撑证据(all() 历史口径、排除 confirmed、不筛 allowInference)+ trendMinCount=3 规则门 + 短标号 + formedBy=ruled',
+    zh: await build('zh'),
+    en: await build('en'),
+  };
+}
+
 // ── parity 夹具:SQLite schema(从 openStores 真建库 dump 权威结构;供 Python 建同构表对拍) ──
 //   dump 逐表列结构(pragma_table_info,驱动无关 → node:sqlite/better-sqlite3 一致)+ user_version。
 function buildSchema() {
@@ -712,6 +828,8 @@ export async function buildSharedAssets() {
   const embedCases = he.embedTexts.map((text, i) => ({ input: { text, dim: he.DIM }, expected: vecs[i] }));
   const distillFx = await parityDistill();
   const consolidateFx = await parityConsolidate();
+  const attributeFx = await parityAttribute();
+  const trendsFx = await parityTrends();
 
   return {
     'config-constants.json': buildConfigConstants(),
@@ -735,6 +853,8 @@ export async function buildSharedAssets() {
     'parity/json-extract.json': parityJsonExtract(),
     'parity/distill.json': distillFx,
     'parity/consolidate.json': consolidateFx,
+    'parity/attribute.json': attributeFx,
+    'parity/trends.json': trendsFx,
     'parity/schema.json': buildSchema(),
     'parity/fts.json': buildFtsGolden(),
     ...(() => { const bf = buildBundleFixtures(); return { 'parity/bundle.json': bf.bundle, 'parity/bundle-validate.json': bf.validate }; })(),

@@ -34,6 +34,17 @@ class Consolidation:
 
 
 @dataclass(frozen=True, slots=True)
+class Attribution:
+    """M4 归因规则门(config.ts:119-125);全字段 P2-7 纳入 shared(原只有 hypothesis_cap)。"""
+
+    window_hours: int
+    hypothesis_cap: int
+    max_phenomena_per_run: int
+    max_causes_per_hypothesis: int
+    min_phenomenon_support: int
+
+
+@dataclass(frozen=True, slots=True)
 class Identity:
     """身份默认(config.ts:100):v1 单人单宿主,perceive/ingest 缺省用;多用户由调用方覆盖。"""
 
@@ -63,6 +74,10 @@ class Config:
     consolidation: Consolidation
     half_life_days: Mapping[ContentType, float]
     expire_after_days: Mapping[ContentType, int]
+    #: 跨会话趋势(config.ts:140-141):看近多少天 + 窗口内至少几次才算趋势。
+    trend_window_days: int
+    trend_min_count: int
+    attribution: Attribution
     min_effective_confidence: int
     carrier_rank: Mapping[str, int]
     min_id_prefix: int
@@ -93,6 +108,15 @@ def _load() -> Config:
         ),
         half_life_days=dict(c["background"]["halfLifeDays"]),
         expire_after_days=dict(c["background"]["expireAfterDays"]),
+        trend_window_days=c["background"]["trendWindowDays"],
+        trend_min_count=c["background"]["trendMinCount"],
+        attribution=Attribution(
+            window_hours=c["attribution"]["windowHours"],
+            hypothesis_cap=c["attribution"]["hypothesisCap"],
+            max_phenomena_per_run=c["attribution"]["maxPhenomenaPerRun"],
+            max_causes_per_hypothesis=c["attribution"]["maxCausesPerHypothesis"],
+            min_phenomenon_support=c["attribution"]["minPhenomenonSupport"],
+        ),
         min_effective_confidence=c["retrieval"]["minEffectiveConfidence"],
         carrier_rank=dict(c["carrierRank"]),
         min_id_prefix=c["minIdPrefix"],
