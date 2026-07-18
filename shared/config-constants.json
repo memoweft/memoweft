@@ -63,6 +63,10 @@
     "allowInference": true,
     "allowLocalRead": true
   },
+  "identity": {
+    "hostId": "local",
+    "subjectId": "owner"
+  },
   "minIdPrefix": 8,
   "observedDefaults": {
     "allowCloudRead": false,

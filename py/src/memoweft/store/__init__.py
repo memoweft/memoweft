@@ -9,8 +9,10 @@ from .cognition import SqliteCognitionStore
 from .driver import BUSY_TIMEOUT_MS, FtsUnavailableError, fts5_available, open_db, user_version
 from .event import SqliteEventStore
 from .evidence import SqliteEvidenceStore
+from .interaction_context import SqliteInteractionContextStore, hash_context
 from .keyword import Hit, KeywordRetriever, to_match_query
 from .schema import SCHEMA_SQL, SCHEMA_VERSION
+from .semantic_resolution import SqliteSemanticResolutionStore
 
 __all__ = [
     "BUSY_TIMEOUT_MS",
@@ -26,4 +28,7 @@ __all__ = [
     "SqliteEvidenceStore",
     "SqliteEventStore",
     "SqliteCognitionStore",
+    "SqliteInteractionContextStore",
+    "hash_context",
+    "SqliteSemanticResolutionStore",
 ]

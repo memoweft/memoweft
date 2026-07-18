@@ -28,6 +28,8 @@ import { PROMPT_REGISTRY } from '../src/prompts/registry.ts';
 import { openStores } from '../src/store/openStores.ts';
 import { SqliteEvidenceStore } from '../src/evidence/store.ts';
 import { SqliteCognitionStore } from '../src/cognition/store.ts';
+import { sourceLabel, aiContextSuffix } from '../src/evidence/sourceLabel.ts';
+import { hashContext } from '../src/interaction/interactionContextStore.ts';
 import { validateBundle } from '../src/portable/validateBundle.ts';
 import { BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION } from '../src/portable/model.ts';
 
@@ -93,6 +95,8 @@ function buildConfigConstants() {
     carrierRank: { confirmed: 0, observed: 1, stated: 2 }, // deriveFormedBy.ts:62
     minIdPrefix: MIN_ID_PREFIX, // echoedId.ts:17
     dayMs: 86400000, // decay.ts:13
+    // ── 身份默认(perceive/ingest 缺省 subjectId/hostId 用;identity 非 env 依赖,可纳入)——P2-1b 纳入 ──
+    identity: c.identity, // config.ts:100(默认 owner/local)
     // ── 证据授权默认(evidence.put 按 sourceKind 分流补默认;跨语言【授权红线】常量,storage 层读)——P2-1a 纳入 ──
     privacyMode: c.privacyMode, // config.ts:103(cloudReadDefault = !privacyMode)
     evidenceDefaults: c.evidenceDefaults, // config.ts:104(spoken/inferred 通用默认;无 allowCloudRead → 走 cloudReadDefault)
@@ -288,6 +292,54 @@ function parityCognitionOrder() {
   };
 }
 
+// ── parity 夹具:sourceLabel + aiContextSuffix(用真 TS;钉 js-trim/UTF-16 slice/全角括号字节)——P2-1b ──
+function paritySourceLabel() {
+  const langs = ['zh', 'en'];
+  const labelCases = [];
+  for (const sk of SOURCE_KINDS)
+    for (const lang of langs) labelCases.push({ input: { sourceKind: sk, lang }, expected: sourceLabel(sk, lang) });
+  const texts = [
+    null,
+    '',
+    '   ',
+    '﻿去BOM﻿', // js trim 去 U+FEFF(py str.strip 不去)
+    '普通一句 AI 上文',
+    '爬'.repeat(300), // > 240 → 截断(BMP,单 code unit)
+    '爬'.repeat(240), // 恰好 240,不截断
+    'emoji 😀😀 短句', // 含 astral(每个 length=2),但短、不截断:验 length 计算不误伤
+    '  前后空白  ',
+  ];
+  const suffixCases = [];
+  for (const text of texts)
+    for (const lang of langs) suffixCases.push({ input: { text, lang }, expected: aiContextSuffix(text, lang) });
+  return {
+    sourceLabel: { fn: 'sourceLabel', note: '来源前缀(含尾随空格);未知退回 spoken', cases: labelCases },
+    aiContextSuffix: {
+      fn: 'aiContextSuffix',
+      note: 'js-trim(去 BOM 等)+ UTF-16 slice(前 240 code unit)+ 全角括号 ⟨⟩;空/纯空白→""',
+      max: 240,
+      cases: suffixCases,
+    },
+  };
+}
+
+// ── parity 夹具:hashContext(sha256 over JSON.stringify(context))——钉 JSON 字节 + sha256 跨语言一致(P2-1b)──
+function parityContextHash() {
+  const contexts = [
+    [],
+    [{ role: 'user', content: 'hi' }],
+    [{ role: 'assistant', content: '你喜欢爬山吧?' }, { role: 'user', content: '是的' }],
+    [{ role: 'tool', content: '{"result": 42}' }], // 内含 JSON 字符,验转义
+    [{ role: 'user', content: 'emoji 😀 和中文' }],
+    [{ role: 'user', content: '含"引号"和\\反斜杠\n换行' }], // 验 JSON.stringify 转义
+  ];
+  return {
+    fn: 'hashContext',
+    note: 'sha256(JSON.stringify(context));Python 用 json.dumps(ensure_ascii=False, separators=(",",":")).encode("utf-8") 对齐字节',
+    cases: contexts.map((context) => ({ input: context, expected: hashContext(context) })),
+  };
+}
+
 // ── parity 夹具:SQLite schema(从 openStores 真建库 dump 权威结构;供 Python 建同构表对拍) ──
 //   dump 逐表列结构(pragma_table_info,驱动无关 → node:sqlite/better-sqlite3 一致)+ user_version。
 function buildSchema() {
@@ -432,6 +484,8 @@ export async function buildSharedAssets() {
     'parity/echoed-id.json': parityEchoedId(),
     'parity/evidence-auth.json': parityEvidenceAuth(),
     'parity/cognition-order.json': parityCognitionOrder(),
+    'parity/source-label.json': paritySourceLabel(),
+    'parity/context-hash.json': parityContextHash(),
     'parity/schema.json': buildSchema(),
     'parity/fts.json': buildFtsGolden(),
     ...(() => { const bf = buildBundleFixtures(); return { 'parity/bundle.json': bf.bundle, 'parity/bundle-validate.json': bf.validate }; })(),

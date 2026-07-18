@@ -33,6 +33,14 @@ class Consolidation:
 
 
 @dataclass(frozen=True, slots=True)
+class Identity:
+    """身份默认(config.ts:100):v1 单人单宿主,perceive/ingest 缺省用;多用户由调用方覆盖。"""
+
+    subject_id: str
+    host_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class EvidenceDefaults:
     """spoken/inferred 证据的通用授权默认(config.ts:104);无 allow_cloud_read → 走 cloud_read_default。"""
 
@@ -57,6 +65,8 @@ class Config:
     carrier_rank: Mapping[str, int]
     min_id_prefix: int
     day_ms: int
+    #: 身份默认(perceive/ingest 缺省 subject_id/host_id;P2-1b 纳入 shared)。
+    identity: Identity
     #: 存储层授权默认(evidence.put 补;跨语言授权红线,P2-1a 纳入 shared)。
     privacy_mode: bool
     evidence_defaults: EvidenceDefaults
@@ -84,6 +94,7 @@ def _load() -> Config:
         carrier_rank=dict(c["carrierRank"]),
         min_id_prefix=c["minIdPrefix"],
         day_ms=c["dayMs"],
+        identity=Identity(subject_id=c["identity"]["subjectId"], host_id=c["identity"]["hostId"]),
         privacy_mode=c["privacyMode"],
         evidence_defaults=EvidenceDefaults(
             allow_local_read=c["evidenceDefaults"]["allowLocalRead"],

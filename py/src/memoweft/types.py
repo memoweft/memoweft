@@ -192,3 +192,73 @@ class CognitionPatch:
     asked_at: "str | None | _Unset" = UNSET
     archived_at: "str | None | _Unset" = UNSET
     muted_at: "str | None | _Unset" = UNSET
+
+
+# ── 语言 / 模型 tier(跨模块共用)──
+Lang = Literal["zh", "en"]
+#: 模型 tier(隐私读取门用;TS 在 llm/client.ts:21,py 归 types 供 privacy/llm 共用)。
+ModelTier = Literal["cloud", "local"]
+
+
+# ── 交互语义模型(v0.6 · D-0034;Phase 2 P2-1b 移植)──
+#   对齐 interaction/model.ts。ResponseAct/PropositionOrigin 已在上(枚举区)。
+
+PromptAct = Literal["propose", "ask", "state", "none", "other"]
+AssertionStrength = Literal["explicit", "weak", "none"]
+
+
+@dataclass(frozen=True, slots=True)
+class VisibleTurn:
+    """可见交互轮(interaction/model.ts:25-28):只含用户可见内容。字段序 role,content 用于 hash_context 的 JSON 字节。"""
+
+    role: Literal["user", "assistant", "tool"]
+    content: str
+
+
+@dataclass(frozen=True, slots=True)
+class InteractionContext:
+    """一条交互上下文快照(interaction/model.ts:31-42)。不产 Cognition、永不成证据(3a)。"""
+
+    id: str
+    subject_id: str
+    conversation_id: str
+    episode_id: str
+    context: list[VisibleTurn]
+    context_hash: str
+    created_at: str
+
+
+@dataclass(slots=True)
+class InteractionContextInput:
+    subject_id: str
+    conversation_id: str
+    episode_id: str
+    context: list[VisibleTurn]
+
+
+@dataclass(frozen=True, slots=True)
+class SemanticResolution:
+    """一条语义解析(interaction/model.ts:52-67)。解释结果、不是证据(3a)。"""
+
+    id: str
+    evidence_id: str
+    resolved_content: str
+    response_act: Optional[ResponseAct]
+    prompt_act: Optional[PromptAct]
+    proposition_origin: Optional[PropositionOrigin]
+    assertion_strength: Optional[AssertionStrength]
+    required_context: Optional[str]
+    resolver_version: str
+    created_at: str
+
+
+@dataclass(slots=True)
+class SemanticResolutionInput:
+    evidence_id: str
+    resolved_content: str
+    resolver_version: str
+    response_act: Optional[ResponseAct] = None
+    prompt_act: Optional[PromptAct] = None
+    proposition_origin: Optional[PropositionOrigin] = None
+    assertion_strength: Optional[AssertionStrength] = None
+    required_context: Optional[str] = None
