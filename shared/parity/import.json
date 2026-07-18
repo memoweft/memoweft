@@ -1,0 +1,193 @@
+{
+  "danglingCorrects": {
+    "correctsAfter": null,
+    "dbState": {
+      "cognitions": 1,
+      "events": 1,
+      "evidence": 2
+    },
+    "plan": {
+      "counts": {
+        "cognitionEvidence": 1,
+        "cognitions": 1,
+        "eventEvidence": 2,
+        "events": 1,
+        "evidence": 2,
+        "interactionContexts": 1,
+        "semanticResolutions": 0
+      },
+      "duplicates": {
+        "cognitions": 0,
+        "events": 0,
+        "evidence": 0
+      },
+      "errors": [],
+      "mode": "merge",
+      "valid": true,
+      "warnings": [
+        "evidence ev-2 correctsEvidenceId(ghost-corrects) is not in the bundle",
+        "evidence ev-2 correctsEvidenceId(ghost-corrects) cannot be resolved in the target database; cleared on import"
+      ]
+    }
+  },
+  "dryRun": {
+    "dbState": {
+      "cognitions": 0,
+      "events": 0,
+      "evidence": 0
+    },
+    "plan": {
+      "counts": {
+        "cognitionEvidence": 1,
+        "cognitions": 1,
+        "eventEvidence": 2,
+        "events": 1,
+        "evidence": 2,
+        "interactionContexts": 1,
+        "semanticResolutions": 0
+      },
+      "duplicates": {
+        "cognitions": 0,
+        "events": 0,
+        "evidence": 0
+      },
+      "errors": [],
+      "mode": "dryRun",
+      "valid": true,
+      "warnings": []
+    }
+  },
+  "invalid": {
+    "dbState": {
+      "cognitions": 0,
+      "events": 0,
+      "evidence": 0
+    },
+    "plan": {
+      "counts": {
+        "cognitionEvidence": 0,
+        "cognitions": 0,
+        "eventEvidence": 0,
+        "events": 0,
+        "evidence": 0,
+        "interactionContexts": 0,
+        "semanticResolutions": 0
+      },
+      "duplicates": {
+        "cognitions": 0,
+        "events": 0,
+        "evidence": 0
+      },
+      "errors": [
+        "eventEvidence references a non-existent evidence: ghost"
+      ],
+      "mode": "merge",
+      "valid": false,
+      "warnings": []
+    }
+  },
+  "merge": {
+    "dbState": {
+      "cognitions": 1,
+      "events": 1,
+      "evidence": 2
+    },
+    "plan": {
+      "counts": {
+        "cognitionEvidence": 1,
+        "cognitions": 1,
+        "eventEvidence": 2,
+        "events": 1,
+        "evidence": 2,
+        "interactionContexts": 1,
+        "semanticResolutions": 0
+      },
+      "duplicates": {
+        "cognitions": 0,
+        "events": 0,
+        "evidence": 0
+      },
+      "errors": [],
+      "mode": "merge",
+      "valid": true,
+      "warnings": []
+    }
+  },
+  "note": "importBundle 完整 ImportPlan:dryRun 只算不写 / merge 写入 / 幂等 duplicates / 非法包拒写 / originId 撞库丢悬空 join + 告警 / 悬空 corrects 置空 + 告警。warnings 语言随 resolveLang()(env 缺省 en)。",
+  "originCollision": {
+    "dbState": {
+      "cognitions": 1,
+      "events": 1,
+      "evidence": 2
+    },
+    "plan": {
+      "counts": {
+        "cognitionEvidence": 0,
+        "cognitions": 1,
+        "eventEvidence": 1,
+        "events": 1,
+        "evidence": 1,
+        "interactionContexts": 1,
+        "semanticResolutions": 0
+      },
+      "duplicates": {
+        "cognitions": 0,
+        "events": 0,
+        "evidence": 1
+      },
+      "errors": [],
+      "mode": "merge",
+      "valid": true,
+      "warnings": [
+        "evidence ev-1 originId is already taken by another record in the database; skipping (its provenance links are dropped too)"
+      ]
+    }
+  },
+  "twice": {
+    "dbState": {
+      "cognitions": 1,
+      "events": 1,
+      "evidence": 2
+    },
+    "first": {
+      "counts": {
+        "cognitionEvidence": 1,
+        "cognitions": 1,
+        "eventEvidence": 2,
+        "events": 1,
+        "evidence": 2,
+        "interactionContexts": 1,
+        "semanticResolutions": 0
+      },
+      "duplicates": {
+        "cognitions": 0,
+        "events": 0,
+        "evidence": 0
+      },
+      "errors": [],
+      "mode": "merge",
+      "valid": true,
+      "warnings": []
+    },
+    "second": {
+      "counts": {
+        "cognitionEvidence": 0,
+        "cognitions": 0,
+        "eventEvidence": 0,
+        "events": 0,
+        "evidence": 0,
+        "interactionContexts": 0,
+        "semanticResolutions": 0
+      },
+      "duplicates": {
+        "cognitions": 1,
+        "events": 1,
+        "evidence": 2
+      },
+      "errors": [],
+      "mode": "merge",
+      "valid": true,
+      "warnings": []
+    }
+  }
+}

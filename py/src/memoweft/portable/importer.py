@@ -1,89 +1,219 @@
-"""导入便携记忆包 → schema 同构的 SQLite 库(字段映射 camelCase→snake_case,bool→0/1)。
+"""导入便携记忆包 —— 移植自 src/portable/importBundle.ts(P2-旁 完整 ImportPlan 语义)。
 
-移植自 src/portable/importBundle.ts 的核心(merge/id 去重);此阶段做 interop 往返验证所需的插入,
-dryRun/duplicates 明细等完整 ImportPlan 语义按需再补。跨语言 interop 证据:TS 生成的合法包 → Python 建同构库导入 → 保真。
+保真 + 幂等 + 不污染:
+  - 保真:按【原 id 与时间戳】落库(store.insert),溯源链不丢。
+  - 幂等去重:按 id 判重,已存在则跳过(计 duplicates)。
+  - 引用完整:evidence 因 originId 撞库中【另一条不同 id】而无法落库时标记悬空,**连带丢弃指向它的 join 行**并告警;
+    悬空 correctsEvidenceId 落库前置空——绝不写出悬空引用。
+  - 不污染:非法包(validate_bundle 不过)绝不写库;merge 写入包进事务(若传),中途失败整体回滚。
+dryRun:只算不写。
 """
 from __future__ import annotations
 
-import json
-import sqlite3
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
+
+from ..config import resolve_lang
+from ..store.cognition import SqliteCognitionStore
+from ..store.event import SqliteEventStore
+from ..store.evidence import SqliteEvidenceStore
+from ..store.interaction_context import SqliteInteractionContextStore
+from ..store.semantic_resolution import SqliteSemanticResolutionStore
+from ..store.transaction import Transaction
+from ..types import (
+    Cognition,
+    Event,
+    Evidence,
+    EvidenceLink,
+    InteractionContext,
+    SemanticResolution,
+    VisibleTurn,
+)
+from .model import ImportCounts, ImportDuplicates, ImportMode, ImportPlan
+from .validate import validate_bundle
 
 
-@dataclass(slots=True)
-class ImportCounts:
-    evidence: int = 0
-    events: int = 0
-    event_evidence: int = 0
-    cognitions: int = 0
-    cognition_evidence: int = 0
-    interaction_contexts: int = 0
-    semantic_resolutions: int = 0
+def _to_evidence(d: dict[str, Any]) -> Evidence:
+    return Evidence(
+        id=d["id"], subject_id=d["subjectId"], source_kind=d["sourceKind"], host_id=d["hostId"],
+        origin_id=d.get("originId"), occurred_at=d["occurredAt"], recorded_at=d["recordedAt"],
+        raw_content=d["rawContent"], summary=d["summary"], allow_local_read=bool(d["allowLocalRead"]),
+        allow_cloud_read=bool(d["allowCloudRead"]), allow_inference=bool(d["allowInference"]),
+        corrects_evidence_id=d.get("correctsEvidenceId"),
+    )
 
 
-def _b(v: Any) -> int:
-    return 1 if v else 0
+def _to_event(d: dict[str, Any]) -> Event:
+    return Event(id=d["id"], subject_id=d["subjectId"], summary=d["summary"], occurred_at=d["occurredAt"], created_at=d["createdAt"])
 
 
-def import_bundle(db: sqlite3.Connection, bundle: dict[str, Any]) -> ImportCounts:
-    """把 bundle.data 插进库(带 PK 的表 INSERT OR IGNORE 去重)。返回各表新插入条数。"""
+def _to_cognition(d: dict[str, Any]) -> Cognition:
+    return Cognition(
+        id=d["id"], subject_id=d["subjectId"], content=d["content"], content_type=d["contentType"],
+        formed_by=d["formedBy"], confidence=d["confidence"], cred_status=d["credStatus"], scope=d.get("scope"),
+        valid_at=d.get("validAt"), invalid_at=d.get("invalidAt"), asked_at=d.get("askedAt"),
+        archived_at=d.get("archivedAt"), muted_at=d.get("mutedAt"), created_at=d["createdAt"], updated_at=d["updatedAt"],
+    )
+
+
+def _to_interaction_context(d: dict[str, Any]) -> InteractionContext:
+    return InteractionContext(
+        id=d["id"], subject_id=d["subjectId"], conversation_id=d["conversationId"], episode_id=d["episodeId"],
+        context=[VisibleTurn(role=t["role"], content=t["content"]) for t in d["context"]],
+        context_hash=d["contextHash"], created_at=d["createdAt"],
+    )
+
+
+def _to_semantic_resolution(d: dict[str, Any]) -> SemanticResolution:
+    return SemanticResolution(
+        id=d["id"], evidence_id=d["evidenceId"], resolved_content=d["resolvedContent"],
+        response_act=d.get("responseAct"), prompt_act=d.get("promptAct"), proposition_origin=d.get("propositionOrigin"),
+        assertion_strength=d.get("assertionStrength"), required_context=d.get("requiredContext"),
+        resolver_version=d["resolverVersion"], created_at=d["createdAt"],
+    )
+
+
+def import_bundle(
+    bundle: Any,
+    *,
+    evidence_store: SqliteEvidenceStore,
+    event_store: SqliteEventStore,
+    cognition_store: SqliteCognitionStore,
+    interaction_context_store: SqliteInteractionContextStore,
+    semantic_resolution_store: SqliteSemanticResolutionStore,
+    transaction: Optional[Transaction] = None,
+    mode: ImportMode = "merge",
+) -> ImportPlan:
+    """对齐 importBundle.ts:45-193。"""
+    lang = resolve_lang()
+    validation = validate_bundle(bundle)
+    plan = ImportPlan(
+        mode=mode, valid=validation.valid, errors=list(validation.errors), warnings=list(validation.warnings),
+        counts=ImportCounts(), duplicates=ImportDuplicates(),
+    )
+    if not validation.valid:
+        return plan  # 结构/引用错 → 绝不写库
+
     data = bundle["data"]
-    c = ImportCounts()
 
+    # ── 判重(evidence:按 id;额外防 originId 唯一约束撞车)──
+    unresolved_evidence: set[str] = set()
+    new_evidence: list[dict[str, Any]] = []
     for e in data["evidence"]:
-        cur = db.execute(
-            "INSERT OR IGNORE INTO evidence (id, subject_id, source_kind, host_id, origin_id, occurred_at, recorded_at, "
-            "raw_content, summary, allow_local_read, allow_cloud_read, allow_inference, corrects_evidence_id, preceding_ai_context) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (e["id"], e["subjectId"], e["sourceKind"], e["hostId"], e.get("originId"), e["occurredAt"], e["recordedAt"],
-             e["rawContent"], e["summary"], _b(e["allowLocalRead"]), _b(e["allowCloudRead"]), _b(e["allowInference"]),
-             e.get("correctsEvidenceId"), e.get("precedingAiContext")),
-        )
-        c.evidence += cur.rowcount
+        if evidence_store.get(e["id"]) is not None:
+            plan.duplicates.evidence += 1  # 同 id 已在 → 跳过(join 仍指向它,安全)
+            continue
+        origin = e.get("originId")
+        if origin is not None and evidence_store.find_by_origin(origin) is not None:
+            plan.duplicates.evidence += 1
+            unresolved_evidence.add(e["id"])  # 无法按原 id 落库 → 指向它的 join 行必须一并丢
+            plan.warnings.append(
+                f"evidence {e['id']} 的 originId 已被库中另一条占用，跳过（其溯源引用一并丢弃）"
+                if lang == "zh"
+                else f"evidence {e['id']} originId is already taken by another record in the database; skipping (its provenance links are dropped too)"
+            )
+            continue
+        new_evidence.append(e)
 
+    new_events = []
     for ev in data["events"]:
-        cur = db.execute(
-            "INSERT OR IGNORE INTO event (id, subject_id, summary, occurred_at, created_at, consolidated) VALUES (?,?,?,?,?,?)",
-            (ev["id"], ev["subjectId"], ev["summary"], ev["occurredAt"], ev["createdAt"], _b(ev["consolidated"])),
-        )
-        c.events += cur.rowcount
+        if event_store.get(ev["id"]) is not None:
+            plan.duplicates.events += 1
+            continue
+        new_events.append(ev)
 
+    new_cognitions = []
+    for c in data["cognitions"]:
+        if cognition_store.get(c["id"]) is not None:
+            plan.duplicates.cognitions += 1
+            continue
+        new_cognitions.append(c)
+
+    # 将新建 event 的覆盖证据(丢弃指向悬空 evidence 的链)。
+    new_event_ids = {e["id"] for e in new_events}
+    event_evidence_of: dict[str, list[str]] = {}
+    event_evidence_count = 0
     for link in data["eventEvidence"]:
-        db.execute("INSERT INTO event_evidence (event_id, evidence_id) VALUES (?,?)", (link["eventId"], link["evidenceId"]))
-        c.event_evidence += 1
+        if link["eventId"] not in new_event_ids:
+            continue
+        if link["evidenceId"] in unresolved_evidence:
+            continue  # 悬空 → 丢
+        event_evidence_of.setdefault(link["eventId"], []).append(link["evidenceId"])
+        event_evidence_count += 1
 
-    for cog in data["cognitions"]:
-        cur = db.execute(
-            "INSERT OR IGNORE INTO cognition (id, subject_id, content, content_type, formed_by, confidence, cred_status, "
-            "scope, valid_at, invalid_at, asked_at, archived_at, muted_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (cog["id"], cog["subjectId"], cog["content"], cog["contentType"], cog["formedBy"], cog["confidence"], cog["credStatus"],
-             cog.get("scope"), cog.get("validAt"), cog.get("invalidAt"), cog.get("askedAt"), cog.get("archivedAt"), cog.get("mutedAt"),
-             cog["createdAt"], cog["updatedAt"]),
-        )
-        c.cognitions += cur.rowcount
-
+    # 将新建 cognition 的溯源链(同理丢弃悬空)。
+    new_cognition_ids = {c["id"] for c in new_cognitions}
+    cognition_sources_of: dict[str, list[EvidenceLink]] = {}
+    cognition_evidence_count = 0
     for link in data["cognitionEvidence"]:
-        db.execute("INSERT INTO cognition_evidence (cognition_id, evidence_id, relation) VALUES (?,?,?)",
-                   (link["cognitionId"], link["evidenceId"], link["relation"]))
-        c.cognition_evidence += 1
-
-    for ic in data.get("interactionContexts") or []:
-        cur = db.execute(
-            "INSERT OR IGNORE INTO interaction_context (id, subject_id, conversation_id, episode_id, context_json, context_hash, created_at) "
-            "VALUES (?,?,?,?,?,?,?)",
-            (ic["id"], ic["subjectId"], ic["conversationId"], ic["episodeId"], json.dumps(ic["context"], ensure_ascii=False), ic["contextHash"], ic["createdAt"]),
+        if link["cognitionId"] not in new_cognition_ids:
+            continue
+        if link["evidenceId"] in unresolved_evidence:
+            continue
+        cognition_sources_of.setdefault(link["cognitionId"], []).append(
+            EvidenceLink(evidence_id=link["evidenceId"], relation=link["relation"])
         )
-        c.interaction_contexts += cur.rowcount
+        cognition_evidence_count += 1
 
-    for sr in data.get("semanticResolutions") or []:
-        cur = db.execute(
-            "INSERT OR IGNORE INTO semantic_resolution (id, evidence_id, resolved_content, response_act, prompt_act, "
-            "proposition_origin, assertion_strength, required_context, resolver_version, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (sr["id"], sr["evidenceId"], sr["resolvedContent"], sr.get("responseAct"), sr.get("promptAct"),
-             sr.get("propositionOrigin"), sr.get("assertionStrength"), sr.get("requiredContext"), sr["resolverVersion"], sr["createdAt"]),
-        )
-        c.semantic_resolutions += cur.rowcount
+    # 悬空 correctsEvidenceId 置空:目标库既无、也不在本次新建集 → 落库前置空。
+    new_evidence_ids = {e["id"] for e in new_evidence}
+    evidence_to_insert: list[dict[str, Any]] = []
+    for e in new_evidence:
+        cid = e.get("correctsEvidenceId")
+        if cid is not None and evidence_store.get(cid) is None and cid not in new_evidence_ids:
+            plan.warnings.append(
+                f"evidence {e['id']} 的 correctsEvidenceId({cid}) 在目标库无法解析，导入时置空"
+                if lang == "zh"
+                else f"evidence {e['id']} correctsEvidenceId({cid}) cannot be resolved in the target database; cleared on import"
+            )
+            evidence_to_insert.append({**e, "correctsEvidenceId": None})
+        else:
+            evidence_to_insert.append(e)
 
-    db.commit()
-    return c
+    # 交互层:按 id 判重;向后兼容 v1 包(无这两段 → 空)。
+    new_interaction_contexts = [c for c in (data.get("interactionContexts") or []) if interaction_context_store.get(c["id"]) is None]
+    new_semantic_resolutions = [r for r in (data.get("semanticResolutions") or []) if semantic_resolution_store.get(r["id"]) is None]
+
+    plan.counts = ImportCounts(
+        evidence=len(new_evidence), events=len(new_events), cognitions=len(new_cognitions),
+        event_evidence=event_evidence_count, cognition_evidence=cognition_evidence_count,
+        interaction_contexts=len(new_interaction_contexts), semantic_resolutions=len(new_semantic_resolutions),
+    )
+
+    if mode == "dryRun":
+        return plan  # 只算不写
+
+    # ── merge:实际写入。顺序:evidence → event(挂证据)→ cognition(挂溯源)——被引方先落库。──
+    unconsolidated_set = set(data.get("unconsolidatedEventIds") or [])
+
+    def write() -> None:
+        for e in evidence_to_insert:
+            evidence_store.insert(_to_evidence(e))
+        for ev in new_events:
+            event_store.insert(
+                _to_event(ev), event_evidence_of.get(ev["id"], []), consolidated=ev["id"] not in unconsolidated_set
+            )
+        for c in new_cognitions:
+            cognition_store.insert(_to_cognition(c), cognition_sources_of.get(c["id"], []))
+        for c in new_interaction_contexts:
+            interaction_context_store.insert(_to_interaction_context(c))
+        for r in new_semantic_resolutions:
+            semantic_resolution_store.insert(_to_semantic_resolution(r))
+
+    try:
+        if transaction is not None:
+            transaction(write)
+        else:
+            write()
+    except Exception as e:  # 无事务无法回滚 → 收进 errors + 提示,不把裸异常抛给调用方
+        plan.valid = False
+        plan.errors.append(f"导入写入失败：{e}" if lang == "zh" else f"Import write failed: {e}")
+        if transaction is None:
+            plan.warnings.append(
+                "未提供 transaction，写入中途失败可能已残留部分数据（建议用 openStores 的 transaction）"
+                if lang == "zh"
+                else "No transaction provided; a mid-write failure may have left partial data (use the transaction from openStores)"
+            )
+        plan.counts = ImportCounts()
+        return plan
+
+    return plan

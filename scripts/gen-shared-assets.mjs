@@ -40,6 +40,7 @@ import { aggregateTrends } from '../src/background/trends.ts';
 import { proposeAsk } from '../src/asking/proposeAsk.ts';
 import { revisitConflicts } from '../src/asking/revisitConflicts.ts';
 import { updateProfile } from '../src/consolidation/updateProfile.ts';
+import { importBundle } from '../src/portable/importBundle.ts';
 import { validateBundle } from '../src/portable/validateBundle.ts';
 import { BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION } from '../src/portable/model.ts';
 
@@ -865,6 +866,73 @@ async function parityUpdateProfile() {
   };
 }
 
+// ── parity 夹具:importBundle 完整 ImportPlan(dryRun/merge/幂等/非法/originId 撞库/悬空 corrects)——P2-旁 ──
+function parityImport() {
+  const T = '2026-01-01T00:00:00.000Z';
+  const mkDeps = (stores) => ({
+    evidenceStore: stores.evidenceStore, eventStore: stores.eventStore, cognitionStore: stores.cognitionStore,
+    interactionContextStore: stores.interactionContextStore, semanticResolutionStore: stores.semanticResolutionStore,
+    transaction: stores.transaction,
+  });
+  const dbState = (stores) => ({
+    evidence: stores.evidenceStore.all().length,
+    events: stores.eventStore.all('owner').length,
+    cognitions: stores.cognitionStore.all('owner').length,
+  });
+  const run = (bundle, mode, preSeed) => {
+    const stores = openStores(':memory:', config, () => new Date(T));
+    if (preSeed) preSeed(stores);
+    const plan = importBundle(bundle, mkDeps(stores), { mode });
+    const out = { plan, dbState: dbState(stores) };
+    stores.close();
+    return out;
+  };
+
+  const good = seedBundle();
+  // 幂等:同一库连导两次
+  const twice = (() => {
+    const stores = openStores(':memory:', config, () => new Date(T));
+    const deps = mkDeps(stores);
+    const first = importBundle(good, deps, { mode: 'merge' });
+    const second = importBundle(good, deps, { mode: 'merge' });
+    const out = { first, second, dbState: dbState(stores) };
+    stores.close();
+    return out;
+  })();
+
+  const invalid = structuredClone(good);
+  invalid.data.eventEvidence[0].evidenceId = 'ghost'; // 悬空溯源 → validateBundle 致命 error
+
+  // originId 撞库:包里 ev-1 带 originId,库中已有【另一条 id】占用同 originId
+  const withOrigin = structuredClone(good);
+  withOrigin.data.evidence[0].originId = 'origin-x';
+  const originCollision = run(withOrigin, 'merge', (stores) => {
+    stores.evidenceStore.put({ subjectId: 'owner', sourceKind: 'spoken', hostId: 'local', occurredAt: T, rawContent: '库里已有', originId: 'origin-x' });
+  });
+
+  // 悬空 correctsEvidenceId:指向包外/库外 → 落库前置空 + 告警
+  const dangling = structuredClone(good);
+  dangling.data.evidence[1].correctsEvidenceId = 'ghost-corrects';
+  const danglingRun = (() => {
+    const stores = openStores(':memory:', config, () => new Date(T));
+    const plan = importBundle(dangling, mkDeps(stores), { mode: 'merge' });
+    const got = stores.evidenceStore.get('ev-2');
+    const out = { plan, dbState: dbState(stores), correctsAfter: got ? got.correctsEvidenceId : null };
+    stores.close();
+    return out;
+  })();
+
+  return {
+    note: 'importBundle 完整 ImportPlan:dryRun 只算不写 / merge 写入 / 幂等 duplicates / 非法包拒写 / originId 撞库丢悬空 join + 告警 / 悬空 corrects 置空 + 告警。warnings 语言随 resolveLang()(env 缺省 en)。',
+    dryRun: run(good, 'dryRun'),
+    merge: run(good, 'merge'),
+    twice,
+    invalid: run(invalid, 'merge'),
+    originCollision,
+    danglingCorrects: danglingRun,
+  };
+}
+
 // ── parity 夹具:SQLite schema(从 openStores 真建库 dump 权威结构;供 Python 建同构表对拍) ──
 //   dump 逐表列结构(pragma_table_info,驱动无关 → node:sqlite/better-sqlite3 一致)+ user_version。
 function buildSchema() {
@@ -1026,6 +1094,7 @@ export async function buildSharedAssets() {
     'parity/trends.json': trendsFx,
     'parity/asking.json': askingFx,
     'parity/update-profile.json': updateProfileFx,
+    'parity/import.json': parityImport(),
     'parity/schema.json': buildSchema(),
     'parity/fts.json': buildFtsGolden(),
     ...(() => { const bf = buildBundleFixtures(); return { 'parity/bundle.json': bf.bundle, 'parity/bundle-validate.json': bf.validate }; })(),
