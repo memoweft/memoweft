@@ -347,6 +347,29 @@ jobs:
       - name: Test (${{ matrix.pkg }})
         run: npm test -w ${{ matrix.pkg }}
 
+  # ── Python parity 内核（1.3 · D-0042 · Phase 1）────────────────────────────
+  # py/ 是 TS 库的 Python 移植线;Phase 1 = parity 内核(纯逻辑不变量层)。本 job 用 uv 建环境,
+  #   跑 pytest(读 shared/parity/*.json 逐位对拍 TS 源)+ mypy --strict。与 TS 护栏独立、不互相阻塞。
+  #   前提:shared/ 资产由 TS 侧生成并守门(shared:check 在 guardrails 里由 npm test 覆盖)。
+  python-parity:
+    name: Python parity 内核 (uv · pytest 逐位对拍 + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.11'
+      - name: Sync (dev)
+        working-directory: py
+        run: uv sync --extra dev
+      - name: Parity suite (bit-exact vs TS via shared/parity)
+        working-directory: py
+        run: uv run pytest -q
+      - name: Types (mypy --strict)
+        working-directory: py
+        run: uv run mypy --strict src tests
+
   # ── on-tag 发布：根包 npm publish + provenance（供应链背书）───────────────
   #
   # 【执行前提·作者手动】发布前，作者需先往本 repo 的 GitHub secrets 托管一个
