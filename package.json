@@ -66,6 +66,8 @@
     "api:update": "node scripts/api-snapshot.mjs",
     "api:check": "node scripts/api-snapshot.mjs --check",
     "prompts:update": "node scripts/prompt-hashes.mjs",
+    "shared:update": "node scripts/gen-shared-assets.mjs",
+    "shared:check": "node scripts/gen-shared-assets.mjs --check",
     "bench": "node bench/bulk-updateProfile.mjs",
     "bench:retrieval": "node bench/eval-retrieval.mjs",
     "bench:consolidation": "node bench/eval-consolidation.mjs",

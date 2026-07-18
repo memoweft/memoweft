@@ -1,0 +1,68 @@
+{
+  "_note": "Language-neutral numeric constants read by the pure-logic layer. Source of truth = src/config.ts (+ CARRIER_RANK/hard cap noted). Regenerate via `npm run shared:update`.",
+  "asking": {
+    "askableStatuses": [
+      "candidate",
+      "low"
+    ],
+    "confidenceBand": {
+      "max": 400,
+      "min": 100
+    }
+  },
+  "attribution": {
+    "hypothesisCap": 250
+  },
+  "background": {
+    "expireAfterDays": {
+      "hypothesis": 14,
+      "state": 7,
+      "trend": 30
+    },
+    "halfLifeDays": {
+      "goal": 14,
+      "hypothesis": 2,
+      "project": 14,
+      "state": 1.5,
+      "trait": 60,
+      "trend": 7
+    },
+    "trendMinCount": 3,
+    "trendWindowDays": 14
+  },
+  "carrierRank": {
+    "confirmed": 0,
+    "observed": 1,
+    "stated": 2
+  },
+  "consolidation": {
+    "baseByFormedBy": {
+      "confirmed": 280,
+      "inferred": 200,
+      "observed": 350,
+      "ruled": 450,
+      "stated": 600
+    },
+    "confidenceHardMax": 1000,
+    "contradictPenalty": 120,
+    "credThresholds": {
+      "limited": 500,
+      "low": 300,
+      "stable": 750
+    },
+    "minConfidence": 50,
+    "supportCap": 5,
+    "supportStep": 40,
+    "transientCap": 300,
+    "transientTypes": [
+      "state"
+    ]
+  },
+  "dayMs": 86400000,
+  "minIdPrefix": 8,
+  "retrieval": {
+    "minEffectiveConfidence": 80,
+    "minSimilarity": 0,
+    "topK": 5
+  }
+}

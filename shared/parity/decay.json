@@ -1,0 +1,5628 @@
+{
+  "decayFactor": {
+    "cases": [
+      {
+        "expected": 1,
+        "input": {
+          "ageMs": 432000000,
+          "halfLifeDays": 0
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "ageMs": 432000000,
+          "halfLifeDays": -1
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "ageMs": 0,
+          "halfLifeDays": 1.5
+        }
+      },
+      {
+        "expected": 0.5,
+        "input": {
+          "ageMs": 129600000,
+          "halfLifeDays": 1.5
+        }
+      },
+      {
+        "expected": 0.25,
+        "input": {
+          "ageMs": 259200000,
+          "halfLifeDays": 1.5
+        }
+      },
+      {
+        "expected": 0.7071067811865476,
+        "input": {
+          "ageMs": 64800000,
+          "halfLifeDays": 1.5
+        }
+      },
+      {
+        "expected": 0.5,
+        "input": {
+          "ageMs": 604800000,
+          "halfLifeDays": 7
+        }
+      },
+      {
+        "expected": 0.22643091606597668,
+        "input": {
+          "ageMs": 2592000000,
+          "halfLifeDays": 14
+        }
+      },
+      {
+        "expected": 0.5,
+        "input": {
+          "ageMs": 5184000000,
+          "halfLifeDays": 60
+        }
+      },
+      {
+        "expected": 0.7071067811865476,
+        "input": {
+          "ageMs": 86400000,
+          "halfLifeDays": 2
+        }
+      }
+    ],
+    "fn": "decayFactor",
+    "note": "halfLife≤0→1、精确半衰期→0.5、2×→0.25 等(expected 为原始 double,Python 应 IEEE754 逐位一致)"
+  },
+  "effectiveConfidence": {
+    "cases": [
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 40,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 31,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 20,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 13,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 5,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 2,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 79,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 63,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 40,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 10,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 4,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 109,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 86,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 69,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 54,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 34,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 14,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 5,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 238,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 189,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 150,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 119,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 75,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 30,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 12,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 382,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 303,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 241,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 191,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 120,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 48,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 19,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 476,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 378,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 238,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 150,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 60,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 24,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 793,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 629,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 500,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 396,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 250,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 99,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 39,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 2,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "state",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 42,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 35,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 30,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 18,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 9,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 4,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 84,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 71,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 59,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 35,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 18,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 9,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 115,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 97,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 81,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 69,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 48,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 24,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 12,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 252,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 212,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 178,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 150,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 106,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 53,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 27,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 2,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 404,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 340,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 286,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 241,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 170,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 85,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 43,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 4,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 505,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 424,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 357,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 212,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 106,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 53,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 5,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 840,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 706,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 594,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 500,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 353,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 177,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 88,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 8,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "hypothesis",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 49,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 48,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 46,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 45,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 43,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 39,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 35,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 11,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 3,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 98,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 95,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 93,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 91,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 86,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 78,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 71,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 23,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 5,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 134,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 130,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 127,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 124,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 118,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 107,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 97,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 69,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 31,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 7,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 293,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 286,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 279,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 272,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 259,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 234,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 212,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 150,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 68,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 15,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 2,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 469,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 458,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 447,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 436,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 415,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 376,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 340,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 241,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 109,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 3,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 585,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 571,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 557,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 543,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 517,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 468,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 424,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 136,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 31,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 4,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 975,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 951,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 927,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 905,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 861,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 780,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 706,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 500,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 226,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 51,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 7,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "goal",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 48,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 45,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 43,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 41,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 37,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 30,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 13,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 3,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 95,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 91,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 86,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 82,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 74,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 61,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 5,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 130,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 124,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 118,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 112,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 102,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 84,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 69,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 34,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 7,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 286,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 272,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 259,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 246,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 223,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 183,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 150,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 75,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 15,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 458,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 436,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 415,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 395,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 357,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 293,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 241,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 120,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 1,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 571,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 543,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 517,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 492,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 446,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 366,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 150,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 31,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 2,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 951,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 905,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 861,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 820,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 742,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 609,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 500,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 250,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 51,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 3,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 0,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trend",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 49,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 49,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 49,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 48,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 47,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 46,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 43,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 35,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 25,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 16,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 99,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 99,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 98,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 98,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 97,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 94,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 92,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 85,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 71,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 31,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 136,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 135,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 135,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 134,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 132,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 129,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 126,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 117,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 97,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 69,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 43,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 298,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 297,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 295,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 293,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 290,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 283,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 277,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 255,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 212,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 150,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 94,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 478,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 475,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 473,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 470,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 465,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 454,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 444,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 409,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 340,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 241,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 152,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 597,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 593,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 590,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 586,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 580,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 566,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 553,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 510,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 424,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 189,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 993,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 988,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 982,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 976,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 965,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 943,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 921,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 850,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 706,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 500,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 315,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "trait",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 50,
+        "input": {
+          "cog": {
+            "confidence": 50,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 100,
+        "input": {
+          "cog": {
+            "confidence": 100,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 137,
+        "input": {
+          "cog": {
+            "confidence": 137,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 300,
+        "input": {
+          "cog": {
+            "confidence": 300,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 481,
+        "input": {
+          "cog": {
+            "confidence": 481,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 600,
+        "input": {
+          "cog": {
+            "confidence": 600,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-01T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-02T12:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-03T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-04T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-06T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-08T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-15T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-01-31T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-03-02T00:00:00.000Z"
+        }
+      },
+      {
+        "expected": 999,
+        "input": {
+          "cog": {
+            "confidence": 999,
+            "contentType": "fact",
+            "updatedAt": "2026-01-01T00:00:00.000Z"
+          },
+          "now": "2026-04-11T00:00:00.000Z"
+        }
+      }
+    ],
+    "fn": "effectiveConfidence",
+    "note": "contentType×confidence×ageDays 网格;expected 为整数,⚠ Math.round 半值向 +∞,Python 须 floor(x+0.5) 非 banker round"
+  }
+}

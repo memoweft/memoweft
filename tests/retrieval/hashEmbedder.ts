@@ -23,7 +23,7 @@ export const DEFAULT_DIM = 256;
  * FNV-1a 32 位哈希：纯位运算、无依赖、跨平台确定。
  * 用 Math.imul 做 32 位乘法（避免 JS number 溢出到 53 位精度区）；`>>> 0` 归一到无符号 32 位。
  */
-function fnv1a32(str: string): number {
+export function fnv1a32(str: string): number {
   let h = 0x811c9dc5; // FNV offset basis (2166136261)
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i);

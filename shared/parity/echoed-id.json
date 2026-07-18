@@ -1,0 +1,248 @@
+{
+  "cases": [
+    {
+      "expected": "afb63041-b678-4ebc",
+      "input": {
+        "raw": "e1",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": "afb63041-b678-4ebc",
+      "input": {
+        "raw": "afb63041-b678-4ebc",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": "afb63041-b678-4ebc",
+      "input": {
+        "raw": "afb63041",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": "afb63041-b678-4ebc",
+      "input": {
+        "raw": "ev-afb63041",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": "9398bd80-ffd8-42cb",
+      "input": {
+        "raw": "cog-9398bd80",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": null,
+      "input": {
+        "raw": "1",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": null,
+      "input": {
+        "raw": "ev-1",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": null,
+      "input": {
+        "raw": "zzzzzzzz",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": null,
+      "input": {
+        "raw": "f",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": null,
+      "input": {
+        "raw": null,
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": null,
+      "input": {
+        "raw": "",
+        "tagMap": [
+          [
+            "e1",
+            "afb63041-b678-4ebc"
+          ],
+          [
+            "e2",
+            "f51446dc-f70c-4ea5"
+          ]
+        ],
+        "whitelist": [
+          "afb63041-b678-4ebc",
+          "f51446dc-f70c-4ea5",
+          "9398bd80-ffd8-42cb"
+        ]
+      }
+    },
+    {
+      "expected": null,
+      "input": {
+        "raw": "abcd1234",
+        "tagMap": [],
+        "whitelist": [
+          "abcd1234ef",
+          "abcd1234gh"
+        ]
+      }
+    }
+  ],
+  "fn": "resolveEchoedId",
+  "note": "标号→精确→唯一前缀三级 + 护栏(过短/捏造/歧义→null)"
+}
