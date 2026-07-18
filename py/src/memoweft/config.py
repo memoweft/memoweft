@@ -61,6 +61,7 @@ class SourceDefaults:
 class Config:
     consolidation: Consolidation
     half_life_days: Mapping[ContentType, float]
+    expire_after_days: Mapping[ContentType, int]
     min_effective_confidence: int
     carrier_rank: Mapping[str, int]
     min_id_prefix: int
@@ -90,6 +91,7 @@ def _load() -> Config:
             transient_cap=cons["transientCap"],
         ),
         half_life_days=dict(c["background"]["halfLifeDays"]),
+        expire_after_days=dict(c["background"]["expireAfterDays"]),
         min_effective_confidence=c["retrieval"]["minEffectiveConfidence"],
         carrier_rank=dict(c["carrierRank"]),
         min_id_prefix=c["minIdPrefix"],

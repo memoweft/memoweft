@@ -30,6 +30,7 @@ import { SqliteEvidenceStore } from '../src/evidence/store.ts';
 import { SqliteCognitionStore } from '../src/cognition/store.ts';
 import { sourceLabel, aiContextSuffix } from '../src/evidence/sourceLabel.ts';
 import { hashContext } from '../src/interaction/interactionContextStore.ts';
+import { expire } from '../src/background/expire.ts';
 import { validateBundle } from '../src/portable/validateBundle.ts';
 import { BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION } from '../src/portable/model.ts';
 
@@ -340,6 +341,39 @@ function parityContextHash() {
   };
 }
 
+// ── parity 夹具:expire(纯规则;用真 TS expire + SqliteCognitionStore;固定 now/认知集 → 过期结果)——P2-2 ──
+function parityExpire() {
+  const store = new SqliteCognitionStore(':memory:');
+  const now = new Date('2026-02-01T00:00:00.000Z');
+  const daysAgo = (d) => new Date(now.getTime() - d * 86400000).toISOString();
+  const mk = (id, contentType, updatedAt, extra = {}) => ({
+    id, subjectId: 'owner', content: `内容 ${id}`, contentType, formedBy: 'stated',
+    confidence: 300, credStatus: 'low', scope: null, validAt: null, invalidAt: null,
+    askedAt: null, archivedAt: null, mutedAt: null, createdAt: updatedAt, updatedAt, ...extra,
+  });
+  const cogs = [
+    mk('s-fresh', 'state', daysAgo(3)), // 3 < 7 → 不过期
+    mk('s-boundary', 'state', daysAgo(7)), // 7 > 7 false(严格)→ 不过期
+    mk('s-old', 'state', daysAgo(8)), // 8 > 7 → 过期
+    mk('h-boundary', 'hypothesis', daysAgo(14)), // 14 > 14 false → 不过期
+    mk('h-old', 'hypothesis', daysAgo(15)), // 15 > 14 → 过期
+    mk('t-old', 'trend', daysAgo(31)), // 31 > 30 → 过期
+    mk('f-old', 'fact', daysAgo(100)), // 不在名单 → 永不过期
+    mk('p-old', 'preference', daysAgo(100)), // 不在名单 → 永不过期
+    mk('s-arch', 'state', daysAgo(30), { archivedAt: daysAgo(1) }), // 归档 → active 排除,不碰
+  ];
+  for (const c of cogs) store.insert(c, []);
+  const result = expire('owner', { cognitionStore: store }, now);
+  const invalidIds = store.all('owner').filter((c) => c.invalidAt != null).map((c) => c.id).sort();
+  store.close();
+  return {
+    note: 'expire 纯规则:临时类(state7/hypothesis14/trend30)超阈标 invalid(严格 >)、fact/preference 不列永不过期、归档 active 排除不碰',
+    now: now.toISOString(),
+    expired: result.expired,
+    invalidIds,
+  };
+}
+
 // ── parity 夹具:SQLite schema(从 openStores 真建库 dump 权威结构;供 Python 建同构表对拍) ──
 //   dump 逐表列结构(pragma_table_info,驱动无关 → node:sqlite/better-sqlite3 一致)+ user_version。
 function buildSchema() {
@@ -486,6 +520,7 @@ export async function buildSharedAssets() {
     'parity/cognition-order.json': parityCognitionOrder(),
     'parity/source-label.json': paritySourceLabel(),
     'parity/context-hash.json': parityContextHash(),
+    'parity/expire.json': parityExpire(),
     'parity/schema.json': buildSchema(),
     'parity/fts.json': buildFtsGolden(),
     ...(() => { const bf = buildBundleFixtures(); return { 'parity/bundle.json': bf.bundle, 'parity/bundle-validate.json': bf.validate }; })(),

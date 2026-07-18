@@ -1,0 +1,10 @@
+{
+  "expired": 3,
+  "invalidIds": [
+    "h-old",
+    "s-old",
+    "t-old"
+  ],
+  "note": "expire 纯规则:临时类(state7/hypothesis14/trend30)超阈标 invalid(严格 >)、fact/preference 不列永不过期、归档 active 排除不碰",
+  "now": "2026-02-01T00:00:00.000Z"
+}
