@@ -30,7 +30,7 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { SqliteEvidenceStore } from '../src/evidence/store.ts';
 import { SqliteEventStore } from '../src/event/store.ts';
@@ -96,7 +96,7 @@ function renderCognitionList(contents, lang) {
 // ══════════════════════════════════════════════════════════════════════════
 
 /** 解析 judge 的 YES/NO 回答（容错：大小写、带标点、夹在句子里；含糊 → 保守判 NO）。 */
-function parseYesNo(ans) {
+export function parseYesNo(ans) {
   const t = String(ans).trim().toUpperCase();
   const yi = t.search(/\bYES\b/);
   const ni = t.search(/\bNO\b/);
@@ -316,7 +316,7 @@ async function runScenario(scenario, llm) {
  *   structTotal 逐字不变 → 6 个旧盘的前后分仍严格可比（别改成全场景不变量：那会让每场景 +1 条恒 pass 的
  *   check，分母虚涨、把旧基线的分数抬高成假提升——v0.6 Phase 2 起草时就在 short-reply 封顶那条上犯过一次）。
  */
-function checkStructural(scenario, run) {
+export function checkStructural(scenario, run) {
   if (run.error) return [{ name: 'run', pass: false, detail: `updateProfile 抛错: ${run.error}` }];
   const c = run.consolidated;
   const ex = scenario.expect ?? {};
@@ -1298,7 +1298,11 @@ async function main() {
   await mainReal({ limit, discipline, outPrefix, subjectEnv });
 }
 
-main().catch((err) => {
-  console.error('[eval-consolidation] 失败：', err);
-  process.exit(1);
-});
+// 仅在【作为主程序运行】时执行 main。被 import 时只暴露纯函数（checkStructural / parseYesNo），
+// 绝不触发真实评测——否则任何 import 都会读 .env、真调 LLM、覆写 baseline（P2-10 发现并修复的隐患）。
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  main().catch((err) => {
+    console.error('[eval-consolidation] 失败：', err);
+    process.exit(1);
+  });
+}

@@ -1,0 +1,583 @@
+{
+  "checkStructural": {
+    "cases": [
+      {
+        "expected": [
+          {
+            "detail": "conflicted=1",
+            "name": "conflicted≥1",
+            "pass": true
+          },
+          {
+            "detail": "0条active合规",
+            "name": "不变量·confidence∈(0,1000]",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·state封顶∈{candidate,low}",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·证据链引用真实存在",
+            "pass": true
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [],
+            "cogSources": [],
+            "consolidated": {
+              "conflicted": 1,
+              "corrected": 0,
+              "created": [],
+              "createdCount": 0,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": null,
+            "evidenceIds": [],
+            "resolutions": [],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "conflict",
+            "expect": {
+              "conflict": true
+            },
+            "lang": "zh"
+          }
+        },
+        "label": "conflict-hit"
+      },
+      {
+        "expected": [
+          {
+            "detail": "corrected=0",
+            "name": "corrected≥1",
+            "pass": false
+          },
+          {
+            "detail": "0条active合规",
+            "name": "不变量·confidence∈(0,1000]",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·state封顶∈{candidate,low}",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·证据链引用真实存在",
+            "pass": true
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [],
+            "cogSources": [],
+            "consolidated": {
+              "conflicted": 0,
+              "corrected": 0,
+              "created": [],
+              "createdCount": 0,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": null,
+            "evidenceIds": [],
+            "resolutions": [],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "correct",
+            "expect": {
+              "correct": true
+            },
+            "lang": "zh"
+          }
+        },
+        "label": "correct-miss"
+      },
+      {
+        "expected": [
+          {
+            "detail": "created=2",
+            "name": "created∈[1,2]",
+            "pass": true
+          },
+          {
+            "detail": "越界类型: goal",
+            "name": "created类型⊆{fact,preference}",
+            "pass": false
+          },
+          {
+            "detail": "越界来源: inferred",
+            "name": "created来源⊆{stated,confirmed}",
+            "pass": false
+          },
+          {
+            "detail": "0条active合规",
+            "name": "不变量·confidence∈(0,1000]",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·state封顶∈{candidate,low}",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·证据链引用真实存在",
+            "pass": true
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [],
+            "cogSources": [],
+            "consolidated": {
+              "conflicted": 0,
+              "corrected": 0,
+              "created": [
+                {
+                  "contentType": "fact",
+                  "formedBy": "stated"
+                },
+                {
+                  "contentType": "goal",
+                  "formedBy": "inferred"
+                }
+              ],
+              "createdCount": 2,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": null,
+            "evidenceIds": [],
+            "resolutions": [],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "fact-vs-belief",
+            "expect": {
+              "newCognitions": {
+                "formedBy": [
+                  "stated",
+                  "confirmed"
+                ],
+                "max": 2,
+                "min": 1,
+                "types": [
+                  "fact",
+                  "preference"
+                ]
+              }
+            },
+            "lang": "zh"
+          }
+        },
+        "label": "new-cognitions-types-formedby"
+      },
+      {
+        "expected": [
+          {
+            "detail": "created=0",
+            "name": "chitchat→created===0",
+            "pass": true
+          },
+          {
+            "detail": "0条active合规",
+            "name": "不变量·confidence∈(0,1000]",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·state封顶∈{candidate,low}",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·证据链引用真实存在",
+            "pass": true
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [],
+            "cogSources": [],
+            "consolidated": {
+              "conflicted": 0,
+              "corrected": 0,
+              "created": [],
+              "createdCount": 0,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": null,
+            "evidenceIds": [],
+            "resolutions": [],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "chitchat-negative",
+            "expect": {},
+            "lang": "zh"
+          }
+        },
+        "label": "chitchat-ok"
+      },
+      {
+        "expected": [
+          {
+            "detail": "created=1",
+            "name": "chitchat→created===0",
+            "pass": false
+          },
+          {
+            "detail": "0条active合规",
+            "name": "不变量·confidence∈(0,1000]",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·state封顶∈{candidate,low}",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·证据链引用真实存在",
+            "pass": true
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [],
+            "cogSources": [],
+            "consolidated": {
+              "conflicted": 0,
+              "corrected": 0,
+              "created": [
+                {
+                  "contentType": "fact",
+                  "formedBy": "stated"
+                }
+              ],
+              "createdCount": 1,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": null,
+            "evidenceIds": [],
+            "resolutions": [],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "chitchat-negative",
+            "expect": {},
+            "lang": "zh"
+          }
+        },
+        "label": "chitchat-bad"
+      },
+      {
+        "expected": [
+          {
+            "detail": "1/1 条有解析",
+            "name": "带AI上文的原话都落了解析",
+            "pass": true
+          },
+          {
+            "detail": "affirm",
+            "name": "resolution.responseAct⊆{affirm}",
+            "pass": true
+          },
+          {
+            "detail": "0条active合规",
+            "name": "不变量·confidence∈(0,1000]",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·state封顶∈{candidate,low}",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·证据链引用真实存在",
+            "pass": true
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [],
+            "cogSources": [],
+            "consolidated": {
+              "conflicted": 0,
+              "corrected": 0,
+              "created": [],
+              "createdCount": 0,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": null,
+            "evidenceIds": [],
+            "resolutions": [
+              {
+                "hasAiContext": true,
+                "id": "e1",
+                "res": {
+                  "responseAct": "affirm"
+                },
+                "sourceKind": "spoken"
+              }
+            ],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "short-reply",
+            "expect": {
+              "resolutions": {
+                "responseAct": [
+                  "affirm"
+                ]
+              }
+            },
+            "lang": "zh"
+          }
+        },
+        "label": "short-reply-ok"
+      },
+      {
+        "expected": [
+          {
+            "detail": "1/2 条缺解析",
+            "name": "带AI上文的原话都落了解析",
+            "pass": false
+          },
+          {
+            "detail": "越界: affirm",
+            "name": "resolution.responseAct⊆{negate}",
+            "pass": false
+          },
+          {
+            "detail": "0条active合规",
+            "name": "不变量·confidence∈(0,1000]",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·state封顶∈{candidate,low}",
+            "pass": true
+          },
+          {
+            "detail": "ok",
+            "name": "不变量·证据链引用真实存在",
+            "pass": true
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [],
+            "cogSources": [],
+            "consolidated": {
+              "conflicted": 0,
+              "corrected": 0,
+              "created": [],
+              "createdCount": 0,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": null,
+            "evidenceIds": [],
+            "resolutions": [
+              {
+                "hasAiContext": true,
+                "id": "e1",
+                "res": {
+                  "responseAct": "affirm"
+                },
+                "sourceKind": "spoken"
+              },
+              {
+                "hasAiContext": true,
+                "id": "e2",
+                "res": null,
+                "sourceKind": "spoken"
+              }
+            ],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "short-reply",
+            "expect": {
+              "resolutions": {
+                "responseAct": [
+                  "negate"
+                ]
+              }
+            },
+            "lang": "zh"
+          }
+        },
+        "label": "short-reply-missing-and-bad-act"
+      },
+      {
+        "expected": [
+          {
+            "detail": "越界: 1200",
+            "name": "不变量·confidence∈(0,1000]",
+            "pass": false
+          },
+          {
+            "detail": "越界档: stable",
+            "name": "不变量·state封顶∈{candidate,low}",
+            "pass": false
+          },
+          {
+            "detail": "虚构evidenceId 1个",
+            "name": "不变量·证据链引用真实存在",
+            "pass": false
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [
+              {
+                "confidence": 1200,
+                "contentType": "state",
+                "credStatus": "stable",
+                "id": "c1"
+              }
+            ],
+            "cogSources": [
+              {
+                "contentType": "state",
+                "id": "c1",
+                "sources": [
+                  {
+                    "evidenceId": "ghost",
+                    "relation": "support"
+                  }
+                ]
+              }
+            ],
+            "consolidated": {
+              "conflicted": 0,
+              "corrected": 0,
+              "created": [],
+              "createdCount": 0,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": null,
+            "evidenceIds": [
+              "real"
+            ],
+            "resolutions": [],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "emotion-cap",
+            "expect": {},
+            "lang": "zh"
+          }
+        },
+        "label": "invariants-bad"
+      },
+      {
+        "expected": [
+          {
+            "detail": "updateProfile 抛错: boom",
+            "name": "run",
+            "pass": false
+          }
+        ],
+        "input": {
+          "run": {
+            "active": [],
+            "cogSources": [],
+            "consolidated": {
+              "conflicted": 0,
+              "corrected": 0,
+              "created": [],
+              "createdCount": 0,
+              "processedEvents": 1,
+              "reinforced": 0
+            },
+            "error": "boom",
+            "evidenceIds": [],
+            "resolutions": [],
+            "timings": null
+          },
+          "scenario": {
+            "discipline": "conflict",
+            "expect": {
+              "conflict": true
+            },
+            "lang": "zh"
+          }
+        },
+        "label": "run-error"
+      }
+    ],
+    "fn": "checkStructural",
+    "note": "结构性断言(程序判、不调 LLM):expect 各分支 + short-reply 解析覆盖/responseAct + 三不变量 + run.error"
+  },
+  "parseYesNo": {
+    "cases": [
+      {
+        "expected": true,
+        "input": "YES"
+      },
+      {
+        "expected": false,
+        "input": "NO"
+      },
+      {
+        "expected": true,
+        "input": "yes"
+      },
+      {
+        "expected": true,
+        "input": " Yes. "
+      },
+      {
+        "expected": false,
+        "input": "NO, definitely not"
+      },
+      {
+        "expected": true,
+        "input": "YES and NO"
+      },
+      {
+        "expected": false,
+        "input": "NO but YES"
+      },
+      {
+        "expected": false,
+        "input": "maybe"
+      },
+      {
+        "expected": false,
+        "input": ""
+      },
+      {
+        "expected": false,
+        "input": "YESTERDAY"
+      },
+      {
+        "expected": false,
+        "input": "NOPE"
+      },
+      {
+        "expected": false,
+        "input": "是的"
+      }
+    ],
+    "fn": "parseYesNo",
+    "note": "容错解析 judge 的 YES/NO(大小写/标点/夹句中;含糊→保守 NO;两者都有取先出现的)"
+  }
+}

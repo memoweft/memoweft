@@ -41,6 +41,8 @@ import { proposeAsk } from '../src/asking/proposeAsk.ts';
 import { revisitConflicts } from '../src/asking/revisitConflicts.ts';
 import { updateProfile } from '../src/consolidation/updateProfile.ts';
 import { importBundle } from '../src/portable/importBundle.ts';
+// bench 判定纯函数(P2-10):eval-consolidation.mjs 已加 main 守卫,import 不会触发真实评测。
+import { checkStructural, parseYesNo } from '../bench/eval-consolidation.mjs';
 import { validateBundle } from '../src/portable/validateBundle.ts';
 import { BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION } from '../src/portable/model.ts';
 
@@ -933,6 +935,71 @@ function parityImport() {
   };
 }
 
+// ── parity 夹具:§15.3 eval 判定纯函数(checkStructural / parseYesNo)——P2-10 ──
+function parityEvalChecks() {
+  const mkRun = (over = {}) => ({
+    error: over.error ?? null,
+    consolidated: { created: [], createdCount: 0, reinforced: 0, corrected: 0, conflicted: 0, processedEvents: 1, ...(over.consolidated ?? {}) },
+    active: over.active ?? [],
+    cogSources: over.cogSources ?? [],
+    evidenceIds: new Set(over.evidenceIds ?? []),
+    resolutions: over.resolutions ?? [],
+    timings: null,
+  });
+  const cases = [];
+  const add = (label, scenario, run) => {
+    cases.push({
+      label,
+      input: { scenario, run: { ...run, evidenceIds: [...run.evidenceIds] } }, // Set → array 供 JSON
+      expected: checkStructural(scenario, run),
+    });
+  };
+
+  add('conflict-hit', { discipline: 'conflict', lang: 'zh', expect: { conflict: true } }, mkRun({ consolidated: { conflicted: 1 } }));
+  add('correct-miss', { discipline: 'correct', lang: 'zh', expect: { correct: true } }, mkRun());
+  add(
+    'new-cognitions-types-formedby',
+    { discipline: 'fact-vs-belief', lang: 'zh', expect: { newCognitions: { min: 1, max: 2, types: ['fact', 'preference'], formedBy: ['stated', 'confirmed'] } } },
+    mkRun({ consolidated: { createdCount: 2, created: [{ contentType: 'fact', formedBy: 'stated' }, { contentType: 'goal', formedBy: 'inferred' }] } }),
+  );
+  add('chitchat-ok', { discipline: 'chitchat-negative', lang: 'zh', expect: {} }, mkRun());
+  add('chitchat-bad', { discipline: 'chitchat-negative', lang: 'zh', expect: {} }, mkRun({ consolidated: { createdCount: 1, created: [{ contentType: 'fact', formedBy: 'stated' }] } }));
+  add(
+    'short-reply-ok',
+    { discipline: 'short-reply', lang: 'zh', expect: { resolutions: { responseAct: ['affirm'] } } },
+    mkRun({ resolutions: [{ id: 'e1', sourceKind: 'spoken', hasAiContext: true, res: { responseAct: 'affirm' } }] }),
+  );
+  add(
+    'short-reply-missing-and-bad-act',
+    { discipline: 'short-reply', lang: 'zh', expect: { resolutions: { responseAct: ['negate'] } } },
+    mkRun({ resolutions: [{ id: 'e1', sourceKind: 'spoken', hasAiContext: true, res: { responseAct: 'affirm' } }, { id: 'e2', sourceKind: 'spoken', hasAiContext: true, res: null }] }),
+  );
+  add(
+    'invariants-bad',
+    { discipline: 'emotion-cap', lang: 'zh', expect: {} },
+    mkRun({
+      active: [{ id: 'c1', contentType: 'state', credStatus: 'stable', confidence: 1200 }],
+      cogSources: [{ id: 'c1', contentType: 'state', sources: [{ evidenceId: 'ghost', relation: 'support' }] }],
+      evidenceIds: ['real'],
+    }),
+  );
+  add('run-error', { discipline: 'conflict', lang: 'zh', expect: { conflict: true } }, mkRun({ error: 'boom' }));
+
+  const yesNoInputs = ['YES', 'NO', 'yes', ' Yes. ', 'NO, definitely not', 'YES and NO', 'NO but YES', 'maybe', '', 'YESTERDAY', 'NOPE', '是的'];
+  return {
+    checkStructural: {
+      fn: 'checkStructural',
+      note: '结构性断言(程序判、不调 LLM):expect 各分支 + short-reply 解析覆盖/responseAct + 三不变量 + run.error',
+      cases,
+    },
+    parseYesNo: {
+      fn: 'parseYesNo',
+      note: '容错解析 judge 的 YES/NO(大小写/标点/夹句中;含糊→保守 NO;两者都有取先出现的)',
+      cases: yesNoInputs.map((input) => ({ input, expected: parseYesNo(input) })),
+    },
+  };
+}
+
 // ── parity 夹具:SQLite schema(从 openStores 真建库 dump 权威结构;供 Python 建同构表对拍) ──
 //   dump 逐表列结构(pragma_table_info,驱动无关 → node:sqlite/better-sqlite3 一致)+ user_version。
 function buildSchema() {
@@ -1095,6 +1162,7 @@ export async function buildSharedAssets() {
     'parity/asking.json': askingFx,
     'parity/update-profile.json': updateProfileFx,
     'parity/import.json': parityImport(),
+    'parity/eval-checks.json': parityEvalChecks(),
     'parity/schema.json': buildSchema(),
     'parity/fts.json': buildFtsGolden(),
     ...(() => { const bf = buildBundleFixtures(); return { 'parity/bundle.json': bf.bundle, 'parity/bundle-validate.json': bf.validate }; })(),
