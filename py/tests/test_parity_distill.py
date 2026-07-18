@@ -1,7 +1,7 @@
 """distill 证据→事件 parity:Python 建同证据集 + stub llm → messages/event/计数与 TS(distill.json)一致。
 
 钉 messages 逐字节(system=distill prompt/user=材料行 含 sourceLabel/aiContextSuffix/occurredAt.slice)、
-时间锚(digestible[0])、隐私门(observed cloud 挡/infer=false 不消化)、summary trim、D8 覆盖计数(P2-4)。
+时间锚（digestible[0]）、隐私门（observed cloud 挡 / infer=false 不消化）、summary trim 与覆盖计数。
 """
 from __future__ import annotations
 

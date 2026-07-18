@@ -1,5 +1,5 @@
 /**
- * @memoweft/host 冒烟测试（架构归位·批次5 步0）。
+ * @memoweft/host 冒烟测试。
  *
  * 验的是【链路】而非功能：`import 'memoweft'` 能解析到 Core 的 dist，
  * createMemoWeftCore 建得起来、health/listCognitions/close 都在且形状对。
@@ -22,6 +22,6 @@ test('冒烟：import memoweft → 建 core、health 结构对、listCognitions 
     assert.ok(Array.isArray(cognitions), 'listCognitions 返回数组');
     assert.equal(cognitions.length, 0, '空库 → 空数组');
   } finally {
-    core.close(); // 不抛 = 资源收口正常
+    core.close(); // 不抛 = 资源关闭正常
   }
 });

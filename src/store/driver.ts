@@ -1,11 +1,11 @@
 /**
- * SQLite 驱动接缝（T6 步1·纯抽缝，行为零变化）。
+ * SQLite 驱动接口：统一 node:sqlite 与 better-sqlite3 的最小能力面。
  *
  * 为什么要它：整个开库链是【同步】的（openStores / 各 Sqlite*Store 构造 / createMemoWeftCore），
- *   而 `node:sqlite` 到 Node 24 才转正——Node 20/22 存量环境 `import 'memoweft'` 直接在链接阶段炸。
+ *   而 `node:sqlite` 到 Node 24 才稳定——Node 20/22 环境需要 better-sqlite3 回退。
  *   把"用哪个底层 SQLite 实现"收敛成这一个接缝：消费文件只依赖这里的接口类型，
  *   具体加载在 nodeSqliteDriver.ts 用 `createRequire` 同步 require（内置模块与 CJS 的 better-sqlite3 都能同步 require，
- *   且失败可 catch 出人话错误），保持全链同步、不破坏公共 API。
+ *   且加载失败可转换为明确的配置错误），保持全链同步且不破坏公共 API。
  *
  * 接口面刻意最小（只覆盖全库现有用面，别扩）：
  *   - 连接：构造（路径或 ':memory:'）+ exec + prepare + close。
@@ -38,7 +38,7 @@ export interface SqlStatement {
   /** 取全部行；无参或位置参数或单对象绑定。 */
   all(...params: SqlInputValue[]): SqlRow[];
   all(params: Record<string, SqlInputValue>): SqlRow[];
-  /** 执行写；只暴露 changes（受影响行数，可能是 number 或 bigint，调用方 Number() 收口）。 */
+  /** 执行写；只暴露 changes（受影响行数，可能是 number 或 bigint，调用方 Number() 统一转换）。 */
   run(...params: SqlInputValue[]): { changes: number | bigint };
   run(params: Record<string, SqlInputValue>): { changes: number | bigint };
 }

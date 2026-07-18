@@ -1,7 +1,6 @@
-"""关键词召回(FTS5 trigram + bm25)。移植自 src/retrieval/keywordRetriever.ts。
+"""与 TypeScript KeywordRetriever 共享契约的 FTS5 trigram + bm25 关键词召回。
 
-跨语言 parity:FTS5 trigram + bm25 已实测 node:sqlite 与 CPython sqlite3 逐位一致(含 CJK,记忆
-  fts5-trigram-cross-lang-parity);故 DDL/查询照搬,parity 靠 shared/parity/fts.json 对拍。
+shared/parity/fts.json 验证 node:sqlite 与 CPython sqlite3 在包含 CJK 的语料上具有相同 DDL、查询和排序语义。
 """
 from __future__ import annotations
 
@@ -12,7 +11,7 @@ from dataclasses import dataclass
 from .driver import FtsUnavailableError
 
 _ALLOWED_TOKENIZERS = frozenset({"trigram", "unicode61"})
-# FTS5 语法元字符(双引号/前缀星/括号/列限定冒号/NEAR 脱字号);消毒时整串剔除。keywordRetriever.ts:58。
+# FTS5 语法元字符（双引号、前缀星、括号、列限定冒号、NEAR 脱字号）；规范化时全部移除。
 _FTS5_SYNTAX = re.compile(r'["*():^]')
 _WS = re.compile(r"\s+")
 
@@ -20,7 +19,7 @@ _WS = re.compile(r"\s+")
 def to_match_query(query: str) -> str:
     """把用户 query 消毒成安全 FTS5 MATCH 串(去掉元字符→按空白切 term→每 term 双引号包成短语→OR 连接)。
 
-    全空白 / 全元字符 → 空串,调用方据此返回 []。逐位对拍 keywordRetriever.ts:70-75。
+    全空白或全元字符输入返回空串，调用方据此返回 []；语义与 keywordRetriever.ts 一致。
     """
     cleaned = _FTS5_SYNTAX.sub(" ", query)
     terms = [t for t in _WS.split(cleaned) if t]
@@ -35,7 +34,7 @@ class Hit:
 
 
 class KeywordRetriever:
-    """FTS5 trigram 关键词检索器(移植 KeywordRetriever;此阶段只做 create/index/search,不做增量 diff)。"""
+    """FTS5 trigram 关键词检索器（与 KeywordRetriever 对齐；支持 create/index/search）。"""
 
     def __init__(self, db: sqlite3.Connection, tokenizer: str = "trigram") -> None:
         if tokenizer not in _ALLOWED_TOKENIZERS:

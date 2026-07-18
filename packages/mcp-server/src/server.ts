@@ -4,16 +4,16 @@
  * 两件事分开：
  *   1. createCoreFromEnv() —— 从环境变量（MEMOWEFT_DB_PATH）建进程内 MemoWeftCore。
  *      缺 MEMOWEFT_DB_PATH 时明确报错要求指定，【不】建危险缺省库（不误写用户其它库/临时库）。
- *      模型 / 嵌入配置沿用 memoweft 的 .env 装配：缺配不崩，真调用才报（见 createMemoWeftCore 文件头）。
+ *      模型 / 嵌入配置沿用 memoweft 的 .env 装配：配置按需解析，缺失项仅在相应能力被调用时报告。
  *   2. createMcpServer(core) —— 建 McpServer 并注册白名单 tool，返回配好的 server。
- *      测试可注入一个 :memory: 的假 core，不碰真库真网络。
+ *      测试可注入基于 :memory: 的替代 core，从而隔离持久化存储与外部网络。
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { createMemoWeftCore, type MemoWeftCore } from 'memoweft';
 import { registerTools, type RegisterToolsOptions } from './tools.ts';
 
 /** 本包版本（与 package.json 同步；serverInfo 用）。 */
-export const MCP_SERVER_VERSION = '0.1.0';
+export const MCP_SERVER_VERSION = '0.2.0';
 
 /**
  * 从环境变量建 core。
@@ -27,14 +27,14 @@ export function createCoreFromEnv(): MemoWeftCore {
         "(or ':memory:' for an ephemeral in-memory database). Refusing to guess a default path.",
     );
   }
-  // 模型 / 嵌入缺配不崩：createMemoWeftCore 走 loadLLMPool/loadEmbedConfig 降级（真调用才报错）。
+  // 模型与嵌入配置采用按需解析；未配置的能力会在首次使用时返回针对性的配置错误。
   return createMemoWeftCore({ dbPath });
 }
 
 /**
  * 建 MCP server 并注册白名单 tool。
  * @param core 进程内 MemoWeftCore 门面（读写都经它）。
- * @param opts 降级语义选项（logger / recallTimeoutMs，契约 §16.2；缺省无 logger = 静默、超时 200ms）。
+ * @param opts 降级语义选项（logger / recallTimeoutMs；默认静默记录，超时 200ms）。
  * @returns 配好白名单 tool 的 McpServer（尚未 connect transport）。
  */
 export function createMcpServer(core: MemoWeftCore, opts: RegisterToolsOptions = {}): McpServer {

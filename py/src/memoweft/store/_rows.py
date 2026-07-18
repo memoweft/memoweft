@@ -1,6 +1,6 @@
 """行工厂 helper —— 用【局部 Row 游标】查询,不改共享连接的全局 row_factory(免扰 keyword.py 等)。
 
-各 store 共用:按列名取值构造 dataclass,SQL 与 TS 各 store 逐字对齐。
+各 store 共用：按列名取值构造 dataclass，并保持与 TypeScript store 相同的查询契约。
 """
 from __future__ import annotations
 

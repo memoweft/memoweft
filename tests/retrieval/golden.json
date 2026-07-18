@@ -1,110 +1,280 @@
 {
-  "_provenance": "Phase 1 §14.2 黄金检索集。人工从 scout 核实的真实语料底稿（身份/宠物/偏好/项目/状态/假设/趋势/冲突/推断）派生；trait 与 goal 两类底稿薄，标注来源为自拟。严禁用任何现有向量检索输出反向生成（自我偏置）。self-contained：不依赖任何运行时 .jsonl。",
+  "_provenance": "Fully synthetic retrieval fixture. The fictional persona, facts, preferences, projects, and queries were created for this repository and do not describe a real person. Expected ids were defined independently of the retriever under test.",
   "cognitions": [
-    { "id": "cog-001", "content": "用户的名字叫阿舟", "contentType": "fact" },
-    { "id": "cog-002", "content": "用户平时用“云”作为自己的网名", "contentType": "fact" },
-    { "id": "cog-003", "content": "用户今年28岁", "contentType": "fact" },
-    { "id": "cog-004", "content": "用户以前住在上海", "contentType": "fact" },
-    { "id": "cog-005", "content": "用户去年搬家去了新的城市", "contentType": "fact" },
-    { "id": "cog-006", "content": "用户现在住在深圳", "contentType": "fact" },
-    { "id": "cog-007", "content": "用户是一名后端工程师，有十年工作经验", "contentType": "fact" },
-    { "id": "cog-008", "content": "用户是一名独立游戏开发者", "contentType": "fact" },
-    { "id": "cog-009", "content": "用户养了一只橘猫，名字叫团子", "contentType": "fact" },
-    { "id": "cog-010", "content": "团子今年大约三岁", "contentType": "fact" },
-    { "id": "cog-011", "content": "用户可能是单身", "contentType": "fact" },
-    { "id": "cog-012", "content": "用户以前说过自己喜欢喝茶", "contentType": "preference" },
-    { "id": "cog-013", "content": "用户现在改喝咖啡，不再喝茶了", "contentType": "preference" },
-    { "id": "cog-014", "content": "用户偏爱手冲咖啡，尤其是耶加雪菲", "contentType": "preference" },
-    { "id": "cog-015", "content": "用户口味清淡，不吃辣", "contentType": "preference" },
-    { "id": "cog-016", "content": "用户喜欢安静的工作环境", "contentType": "preference" },
-    { "id": "cog-017", "content": "用户偏好远程办公", "contentType": "preference" },
-    { "id": "cog-018", "content": "用户希望别人直接指出他的问题，不要一味顺着他", "contentType": "preference" },
-    { "id": "cog-019", "content": "用户平时比较注意饮食健康", "contentType": "preference" },
-    { "id": "cog-020", "content": "用户正在开发一款像素风格的解谜游戏", "contentType": "project" },
-    { "id": "cog-021", "content": "用户最近在学吉他", "contentType": "project" },
-    { "id": "cog-022", "content": "用户也在学钢琴", "contentType": "project" },
-    { "id": "cog-023", "content": "用户昨晚没睡好", "contentType": "state" },
-    { "id": "cog-024", "content": "用户最近睡眠不规律", "contentType": "state" },
-    { "id": "cog-025", "content": "用户今天觉得有点累，很疲惫", "contentType": "state" },
-    { "id": "cog-026", "content": "用户对手上的项目感到烦躁", "contentType": "state" },
-    { "id": "cog-027", "content": "用户最近情绪比较淡", "contentType": "state" },
-    { "id": "cog-028", "content": "用户可能因为熬夜打游戏太晚，才没睡好", "contentType": "hypothesis" },
-    { "id": "cog-029", "content": "用户最近一段时间持续情绪低落", "contentType": "trend" },
-    { "id": "cog-030", "content": "用户想在年底前上线自己的独立游戏", "contentType": "goal" },
-    { "id": "cog-031", "content": "用户希望今年能用钢琴完整弹下来一首曲子", "contentType": "goal" },
-    { "id": "cog-032", "content": "用户性格比较内向", "contentType": "trait" },
-    { "id": "cog-033", "content": "用户做事一向谨慎", "contentType": "trait" },
-    { "id": "cog-034", "content": "用户喜欢玩解谜和像素风格的游戏", "contentType": "preference" },
-    { "id": "cog-035", "content": "用户工作时喜欢放点轻音乐帮助集中", "contentType": "preference" },
-    { "id": "cog-036", "content": "用户一个人住", "contentType": "fact" }
+    { "id": "cog-001", "content": "用户的名字叫林澄", "contentType": "fact" },
+    { "id": "cog-002", "content": "用户在社区里使用网名“星屿”", "contentType": "fact" },
+    { "id": "cog-003", "content": "用户今年34岁", "contentType": "fact" },
+    { "id": "cog-004", "content": "用户以前住在青岛", "contentType": "fact" },
+    { "id": "cog-005", "content": "用户在2025年春天搬了家", "contentType": "fact" },
+    { "id": "cog-006", "content": "用户现在住在西安", "contentType": "fact" },
+    {
+      "id": "cog-007",
+      "content": "用户是一名数据可视化设计师，有八年工作经验",
+      "contentType": "fact"
+    },
+    { "id": "cog-008", "content": "用户周末在社区天文社做志愿者", "contentType": "fact" },
+    { "id": "cog-009", "content": "用户养了一只白兔，名字叫柚子", "contentType": "fact" },
+    { "id": "cog-010", "content": "柚子大约两岁", "contentType": "fact" },
+    { "id": "cog-011", "content": "用户每周三晚上参加社区合唱团", "contentType": "fact" },
+    { "id": "cog-012", "content": "用户以前经常喝红茶", "contentType": "preference" },
+    { "id": "cog-013", "content": "用户现在主要喝无咖啡因咖啡", "contentType": "preference" },
+    { "id": "cog-014", "content": "用户喜欢带柑橘风味的浅烘咖啡豆", "contentType": "preference" },
+    { "id": "cog-015", "content": "用户偏爱酸味，不喜欢太甜的食物", "contentType": "preference" },
+    { "id": "cog-016", "content": "用户喜欢安静、靠窗的工作位置", "contentType": "preference" },
+    {
+      "id": "cog-017",
+      "content": "用户偏好每周四天远程、一天到办公室",
+      "contentType": "preference"
+    },
+    { "id": "cog-018", "content": "用户希望反馈附带具体例子", "contentType": "preference" },
+    { "id": "cog-019", "content": "用户习惯提前规划一周的餐食", "contentType": "preference" },
+    {
+      "id": "cog-020",
+      "content": "用户正在开发一款本地观星路线规划工具",
+      "contentType": "project"
+    },
+    { "id": "cog-021", "content": "用户最近在学习陶艺", "contentType": "project" },
+    { "id": "cog-022", "content": "用户也在学习西班牙语", "contentType": "project" },
+    { "id": "cog-023", "content": "用户昨晚因为雷雨没有睡好", "contentType": "state" },
+    { "id": "cog-024", "content": "用户旅行期间睡眠不规律", "contentType": "state" },
+    { "id": "cog-025", "content": "用户今天觉得有点疲惫", "contentType": "state" },
+    { "id": "cog-026", "content": "用户对项目的配色系统感到烦躁", "contentType": "state" },
+    { "id": "cog-027", "content": "用户今天情绪平静", "contentType": "state" },
+    { "id": "cog-028", "content": "用户可能因为熬夜看流星雨才没睡好", "contentType": "hypothesis" },
+    { "id": "cog-029", "content": "用户在临近交付时常出现持续低精力", "contentType": "trend" },
+    { "id": "cog-030", "content": "用户想在秋天前发布观星路线规划工具", "contentType": "goal" },
+    { "id": "cog-031", "content": "用户希望年底前达到西班牙语B1水平", "contentType": "goal" },
+    { "id": "cog-032", "content": "用户做事很细致", "contentType": "trait" },
+    { "id": "cog-033", "content": "用户喜欢用结构化实验验证想法", "contentType": "trait" },
+    { "id": "cog-034", "content": "用户喜欢玩合作解谜桌游", "contentType": "preference" },
+    { "id": "cog-035", "content": "用户工作时喜欢播放环境音乐", "contentType": "preference" },
+    { "id": "cog-036", "content": "用户和两位室友一起住", "contentType": "fact" }
   ],
   "cases": [
     { "id": "G-001", "query": "用户的名字是什么", "expect": ["cog-001"], "kind": "direct" },
     { "id": "G-002", "query": "用户的网名是什么", "expect": ["cog-002"], "kind": "direct" },
     { "id": "G-003", "query": "用户今年多少岁", "expect": ["cog-003"], "kind": "direct" },
-    { "id": "G-004", "query": "搬家", "expect": ["cog-005"], "kind": "direct" },
+    { "id": "G-004", "query": "用户什么时候搬家", "expect": ["cog-005"], "kind": "direct" },
     { "id": "G-005", "query": "用户现在住在哪里", "expect": ["cog-006"], "kind": "direct" },
-    { "id": "G-006", "query": "后端工程师", "expect": ["cog-007"], "kind": "direct" },
-    { "id": "G-007", "query": "独立游戏开发", "expect": ["cog-008"], "kind": "direct" },
-    { "id": "G-008", "query": "团子", "expect": ["cog-009", "cog-010"], "kind": "direct" },
-    { "id": "G-009", "query": "咖啡", "expect": ["cog-013", "cog-014"], "kind": "direct" },
-    { "id": "G-010", "query": "口味", "expect": ["cog-015"], "kind": "direct" },
-    { "id": "G-011", "query": "用户喜欢什么样的工作环境", "expect": ["cog-016"], "kind": "direct" },
-    { "id": "G-012", "query": "远程办公", "expect": ["cog-017"], "kind": "direct" },
-    { "id": "G-013", "query": "饮食", "expect": ["cog-019"], "kind": "direct" },
-    { "id": "G-014", "query": "用户在做什么游戏", "expect": ["cog-020"], "kind": "direct" },
-    { "id": "G-015", "query": "吉他", "expect": ["cog-021"], "kind": "direct" },
-    { "id": "G-016", "query": "睡眠", "expect": ["cog-024"], "kind": "direct" },
+    { "id": "G-006", "query": "数据可视化设计师", "expect": ["cog-007"], "kind": "direct" },
+    { "id": "G-007", "query": "社区天文社志愿者", "expect": ["cog-008"], "kind": "direct" },
+    { "id": "G-008", "query": "柚子", "expect": ["cog-009", "cog-010"], "kind": "direct" },
+    { "id": "G-009", "query": "无咖啡因咖啡", "expect": ["cog-013", "cog-014"], "kind": "direct" },
+    { "id": "G-010", "query": "用户喜欢酸味还是甜味", "expect": ["cog-015"], "kind": "direct" },
+    { "id": "G-011", "query": "用户喜欢什么工作位置", "expect": ["cog-016"], "kind": "direct" },
+    { "id": "G-012", "query": "用户的远程办公安排", "expect": ["cog-017"], "kind": "direct" },
+    { "id": "G-013", "query": "用户怎么规划餐食", "expect": ["cog-019"], "kind": "direct" },
+    { "id": "G-014", "query": "用户在开发什么工具", "expect": ["cog-020"], "kind": "direct" },
+    { "id": "G-015", "query": "陶艺", "expect": ["cog-021"], "kind": "direct" },
+    { "id": "G-016", "query": "用户旅行期间的睡眠", "expect": ["cog-024"], "kind": "direct" },
     { "id": "G-017", "query": "用户昨晚睡得怎么样", "expect": ["cog-023"], "kind": "direct" },
     { "id": "G-018", "query": "疲惫", "expect": ["cog-025"], "kind": "direct" },
-    { "id": "G-019", "query": "烦躁", "expect": ["cog-026"], "kind": "direct" },
-    { "id": "G-020", "query": "用户现在情绪怎么样", "expect": ["cog-027"], "kind": "direct" },
-    { "id": "G-021", "query": "用户想在年底前完成什么", "expect": ["cog-030"], "kind": "direct" },
-    { "id": "G-022", "query": "用户性格怎么样", "expect": ["cog-032"], "kind": "direct" },
-    { "id": "G-023", "query": "用户做事是什么风格", "expect": ["cog-033"], "kind": "direct" },
-    { "id": "G-024", "query": "用户是一个人住吗", "expect": ["cog-036"], "kind": "direct" },
-    { "id": "G-025", "query": "用户平时怎么冲咖啡", "expect": ["cog-014"], "kind": "direct" },
-    { "id": "G-026", "query": "用户喜欢玩什么类型的游戏", "expect": ["cog-034"], "kind": "direct" },
-
-    { "id": "G-027", "query": "用户平时爱喝什么", "expect": ["cog-013"], "kind": "paraphrase" },
-    { "id": "G-028", "query": "用户以前爱喝什么", "expect": ["cog-012"], "kind": "paraphrase" },
-    { "id": "G-029", "query": "用户能吃辣吗", "expect": ["cog-015"], "kind": "paraphrase" },
-    { "id": "G-030", "query": "用户喜欢吵闹还是安静的地方", "expect": ["cog-016"], "kind": "paraphrase" },
-    { "id": "G-031", "query": "用户上班需要去办公室吗", "expect": ["cog-017"], "kind": "paraphrase" },
-    { "id": "G-032", "query": "用户希望别人怎么给他提意见", "expect": ["cog-018"], "kind": "paraphrase" },
-    { "id": "G-033", "query": "用户吃东西讲究吗", "expect": ["cog-019"], "kind": "paraphrase" },
-    { "id": "G-034", "query": "用户会弹乐器吗，在练什么", "expect": ["cog-021", "cog-022"], "kind": "paraphrase" },
-    { "id": "G-035", "query": "用户为什么会没睡好", "expect": ["cog-028"], "kind": "paraphrase" },
-    { "id": "G-036", "query": "用户最近心情是不是一直不太好", "expect": ["cog-029"], "kind": "paraphrase" },
-    { "id": "G-037", "query": "用户今年在学习上有什么目标", "expect": ["cog-031"], "kind": "paraphrase" },
-    { "id": "G-038", "query": "用户是不是不太爱说话", "expect": ["cog-032"], "kind": "paraphrase" },
-    { "id": "G-039", "query": "用户做决定的时候冲动吗", "expect": ["cog-033"], "kind": "paraphrase" },
-    { "id": "G-040", "query": "用户有对象吗", "expect": ["cog-011"], "kind": "paraphrase" },
+    { "id": "G-019", "query": "配色系统让用户有什么感受", "expect": ["cog-026"], "kind": "direct" },
+    { "id": "G-020", "query": "用户今天情绪怎么样", "expect": ["cog-027"], "kind": "direct" },
+    { "id": "G-021", "query": "用户想在秋天前完成什么", "expect": ["cog-030"], "kind": "direct" },
+    { "id": "G-022", "query": "用户做事细致吗", "expect": ["cog-032"], "kind": "direct" },
+    { "id": "G-023", "query": "用户如何验证想法", "expect": ["cog-033"], "kind": "direct" },
+    { "id": "G-024", "query": "用户和谁一起住", "expect": ["cog-036"], "kind": "direct" },
+    { "id": "G-025", "query": "用户喜欢什么风味的咖啡豆", "expect": ["cog-014"], "kind": "direct" },
+    { "id": "G-026", "query": "用户喜欢什么桌游", "expect": ["cog-034"], "kind": "direct" },
+    { "id": "G-027", "query": "用户现在平时喝什么", "expect": ["cog-013"], "kind": "paraphrase" },
+    { "id": "G-028", "query": "用户以前常喝哪种饮料", "expect": ["cog-012"], "kind": "paraphrase" },
+    { "id": "G-029", "query": "用户喜欢很甜的食物吗", "expect": ["cog-015"], "kind": "paraphrase" },
+    {
+      "id": "G-030",
+      "query": "用户工作时喜欢吵闹还是安静",
+      "expect": ["cog-016"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-031",
+      "query": "用户每周需要去几天办公室",
+      "expect": ["cog-017"],
+      "kind": "paraphrase"
+    },
+    { "id": "G-032", "query": "怎样给用户反馈最有效", "expect": ["cog-018"], "kind": "paraphrase" },
+    {
+      "id": "G-033",
+      "query": "用户会提前安排每周吃什么吗",
+      "expect": ["cog-019"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-034",
+      "query": "用户最近在学习哪些新技能",
+      "expect": ["cog-021", "cog-022"],
+      "kind": "paraphrase"
+    },
+    { "id": "G-035", "query": "用户为什么可能没睡好", "expect": ["cog-028"], "kind": "paraphrase" },
+    {
+      "id": "G-036",
+      "query": "用户临近交付时精力如何",
+      "expect": ["cog-029"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-037",
+      "query": "用户今年的语言学习目标是什么",
+      "expect": ["cog-031"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-038",
+      "query": "用户处理细节的风格怎样",
+      "expect": ["cog-032"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-039",
+      "query": "用户会凭感觉还是做实验",
+      "expect": ["cog-033"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-040",
+      "query": "用户周三晚上有什么固定活动",
+      "expect": ["cog-011"],
+      "kind": "paraphrase"
+    },
     { "id": "G-041", "query": "用户养宠物了吗", "expect": ["cog-009"], "kind": "paraphrase" },
     { "id": "G-042", "query": "用户做什么工作", "expect": ["cog-007"], "kind": "paraphrase" },
-    { "id": "G-043", "query": "What does the user like to drink now?", "expect": ["cog-013"], "kind": "paraphrase" },
-    { "id": "G-044", "query": "Does the user have any pets?", "expect": ["cog-009"], "kind": "paraphrase" },
-    { "id": "G-045", "query": "What is the user's day job?", "expect": ["cog-007"], "kind": "paraphrase" },
-    { "id": "G-046", "query": "Is the user single?", "expect": ["cog-011"], "kind": "paraphrase" },
-    { "id": "G-047", "query": "What kind of games does the user like to play?", "expect": ["cog-034"], "kind": "paraphrase" },
-    { "id": "G-048", "query": "What instrument is the user learning?", "expect": ["cog-021", "cog-022"], "kind": "paraphrase" },
-    { "id": "G-049", "query": "用户喝咖啡喜欢什么风味", "expect": ["cog-014"], "kind": "paraphrase" },
-    { "id": "G-050", "query": "用户工作的时候喜欢放背景音乐吗", "expect": ["cog-035"], "kind": "paraphrase" },
-
-    { "id": "G-051", "query": "用户从哪个城市搬到了哪个城市", "expect": ["cog-004", "cog-005", "cog-006"], "kind": "multihop" },
-    { "id": "G-052", "query": "用户以前爱喝的和现在爱喝的一样吗", "expect": ["cog-012", "cog-013"], "kind": "multihop" },
-    { "id": "G-053", "query": "用户在做的项目和他的目标分别是什么", "expect": ["cog-020", "cog-030"], "kind": "multihop" },
-    { "id": "G-054", "query": "用户养猫是不是因为一个人住", "expect": ["cog-009", "cog-036"], "kind": "multihop" },
-    { "id": "G-055", "query": "用户没睡好可能和他晚上做什么有关", "expect": ["cog-023", "cog-028"], "kind": "multihop" },
-    { "id": "G-056", "query": "用户最近又累又烦，情绪是不是也不好", "expect": ["cog-025", "cog-026", "cog-029"], "kind": "multihop" },
-    { "id": "G-057", "query": "用户在学的两种乐器分别是什么", "expect": ["cog-021", "cog-022"], "kind": "multihop" },
-    { "id": "G-058", "query": "用户的主业和副业分别是什么", "expect": ["cog-007", "cog-008"], "kind": "multihop" },
-    { "id": "G-059", "query": "用户喝咖啡的习惯和口味偏好是怎样的", "expect": ["cog-013", "cog-014"], "kind": "multihop" },
-    { "id": "G-060", "query": "用户今年在游戏和钢琴上分别有什么目标", "expect": ["cog-030", "cog-031"], "kind": "multihop" },
-    { "id": "G-061", "query": "The user moved cities recently - where from and where to?", "expect": ["cog-004", "cog-005", "cog-006"], "kind": "multihop" },
-    { "id": "G-062", "query": "What are the user's main job and side project?", "expect": ["cog-007", "cog-008", "cog-020"], "kind": "multihop" },
-    { "id": "G-063", "query": "用户性格上既内向又谨慎，具体有哪些特点", "expect": ["cog-032", "cog-033"], "kind": "multihop" },
-    { "id": "G-064", "query": "用户嘴上说的口味和实际注意的饮食一致吗", "expect": ["cog-015", "cog-019"], "kind": "multihop" },
-    { "id": "G-065", "query": "用户偏好的工作环境和办公方式是怎样的", "expect": ["cog-016", "cog-017"], "kind": "multihop" }
+    {
+      "id": "G-043",
+      "query": "What does the user like to drink now?",
+      "expect": ["cog-013"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-044",
+      "query": "Does the user have a pet?",
+      "expect": ["cog-009"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-045",
+      "query": "What is the user's day job?",
+      "expect": ["cog-007"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-046",
+      "query": "What does the user do every Wednesday evening?",
+      "expect": ["cog-011"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-047",
+      "query": "What kind of games does the user like?",
+      "expect": ["cog-034"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-048",
+      "query": "What two skills is the user learning?",
+      "expect": ["cog-021", "cog-022"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-049",
+      "query": "用户偏好的咖啡有什么味道",
+      "expect": ["cog-014"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-050",
+      "query": "用户工作的时候喜欢放背景音乐吗",
+      "expect": ["cog-035"],
+      "kind": "paraphrase"
+    },
+    {
+      "id": "G-051",
+      "query": "用户从哪个城市搬到了哪个城市",
+      "expect": ["cog-004", "cog-005", "cog-006"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-052",
+      "query": "用户以前和现在爱喝的东西一样吗",
+      "expect": ["cog-012", "cog-013"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-053",
+      "query": "用户在做的项目和发布目标分别是什么",
+      "expect": ["cog-020", "cog-030"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-054",
+      "query": "用户的宠物和居住安排是什么",
+      "expect": ["cog-009", "cog-036"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-055",
+      "query": "用户没睡好可能和昨晚做什么有关",
+      "expect": ["cog-023", "cog-028"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-056",
+      "query": "用户在临近交付时又累又烦吗",
+      "expect": ["cog-025", "cog-026", "cog-029"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-057",
+      "query": "用户在学的手艺和语言分别是什么",
+      "expect": ["cog-021", "cog-022"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-058",
+      "query": "用户的职业和周末志愿活动分别是什么",
+      "expect": ["cog-007", "cog-008"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-059",
+      "query": "用户现在喝什么以及偏好什么风味",
+      "expect": ["cog-013", "cog-014"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-060",
+      "query": "用户在产品和语言学习上分别有什么目标",
+      "expect": ["cog-030", "cog-031"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-061",
+      "query": "The user moved cities - where from and where to?",
+      "expect": ["cog-004", "cog-005", "cog-006"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-062",
+      "query": "What are the user's main job, volunteer role, and side project?",
+      "expect": ["cog-007", "cog-008", "cog-020"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-063",
+      "query": "用户在做事方式上有哪些特点",
+      "expect": ["cog-032", "cog-033"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-064",
+      "query": "用户的口味和餐食规划偏好是什么",
+      "expect": ["cog-015", "cog-019"],
+      "kind": "multihop"
+    },
+    {
+      "id": "G-065",
+      "query": "用户偏好的工作环境和办公方式是怎样的",
+      "expect": ["cog-016", "cog-017"],
+      "kind": "multihop"
+    }
   ]
 }

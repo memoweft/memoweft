@@ -7,16 +7,16 @@
  *   ③ 工具结果摄入（写）= `PostToolUse` hook。
  *
  * 边界（照 MemoWeft「Core 无头」纪律）：注入文案只搬 Core `action.ts` 的中性措辞（见 knowledgeBlock.ts），
- *   适配器里不自造人格/人设 prompt。
+ *   适配器不添加专属角色指令。
  *
- * 隐私硬约束（D-0024·不可违反）：provenance / contentType / score / id【绝不】进 additionalContext 注入文本，
+ * 隐私保证：provenance / contentType / score / id【绝不】进 additionalContext 注入文本，
  *   只经 onRecall 交宿主自筛；buildKnowledgeBlock 只用 content/confidence/credStatus。
  *
- * 铁律 3a（代码级 by-construction）：`PostToolUse` 只读 `tool_response`/`tool_use_id`，
+ * tool-result-only ingestion（代码级 by design）：`PostToolUse` 只读 `tool_response`/`tool_use_id`，
  *   【绝不】解构/引用 `tool_input`（tool_input = 调用意图，禁摄入）；本适配器不挂 `PreToolUse`。
  *
  * 类型：从 SDK 用 `import type` 引 hook input / Options（peer + dev 依赖）；运行时不启动真实 SDK——
- *   测试直接调下面的 hook 处理函数、喂构造的 input 对象。
+ *   测试直接调用下面的 hook 处理函数并提供构造的 input 对象。
  */
 import type {
   Options,
@@ -45,14 +45,14 @@ export interface MemoWeftAgentHooksOptions {
    */
   lang?: 'en' | 'zh';
   /**
-   * 召回按认知类型过滤（D-0022/D-0024）：透传进 `core.recall` 的 `contentTypes`（允许名单）。
+   * 召回按认知类型过滤：透传进 `core.recall` 的 `contentTypes`（允许名单）。
    * 不传/空 = 全类型（行为不变）。过滤在 Core 侧做（后过滤，可能欠填），适配器只负责透传。
    */
   contentTypes?: ContentType[];
   /**
-   * 召回解释（D-0021/D-0024）：透传进 `core.recall` 的 `explain`。true → onRecall 收到的每项带 provenance
+   * 召回解释：透传进 `core.recall` 的 `explain`。true → onRecall 收到的每项带 provenance
    *   （其支撑/反证证据链，每条含 allowCloudRead/allowInference 授权位）。缺省 false = 不做额外查询、行为不变。
-   * 隐私硬约束（D-0024·不可违反）：provenance【绝不】进注入 prompt——只经 onRecall 交宿主自筛（见 buildKnowledgeBlock）。
+   * 隐私保证：provenance【绝不】进注入 prompt——只经 onRecall 交宿主自筛（见 buildKnowledgeBlock）。
    */
   explain?: boolean;
   /** 每次成功召回后的回调（可选，便于宿主观测/日志）；召回为空也会以空数组触发。
@@ -60,7 +60,7 @@ export interface MemoWeftAgentHooksOptions {
    *  透传召回 v2 面：items 带 id/contentType/score，explain 时还带 provenance（含授权位）——宿主据此自筛/透视。 */
   onRecall?: (items: RecalledLike[]) => void;
   /**
-   * recall 超时阈值（毫秒，契约 §16.2）。缺省 200ms。超时即视为召回失败 → 降级为不注入。
+   * recall 超时阈值（毫秒，降级契约）。缺省 200ms。超时即视为召回失败 → 降级为不注入。
    * 读路径不重试（超时/抛错直接降级），呼应 Core「召回失败不阻塞对话」纪律。
    */
   recallTimeoutMs?: number;
@@ -71,7 +71,7 @@ export interface MemoWeftAgentHooksOptions {
    */
   ingestTimeoutMs?: number;
   /**
-   * 注入式 logger（可选，契约 §16.2）：召回超时/抛错、或 ingest 一次重试后仍失败降级时记一条【结构化事件】
+   * 注入式 logger（可选，降级契约）：召回超时/抛错、或 ingest 一次重试后仍失败降级时记一条【结构化事件】
    *   （`{ event:'memory_degraded', op, reason }`）。缺省不注入 = 静默降级。
    * 认知纪律 + 隐私：只记事件/原因，绝不记用户内容 / 原话 / 工具返回 / 密钥。
    */
@@ -84,7 +84,7 @@ export interface MemoWeftAgentHooks {
 }
 
 /**
- * ingest（写路径）执行器：契约 §16.2——【真错】重试一次再放弃；仍失败经 logger 记一条结构化事件后【静默吞】。
+ * ingest（写路径）执行器：契约 ——【真错】重试一次再放弃；仍失败经 logger 记一条结构化事件后【静默吞】。
  * 绝不向 SDK 抛（本函数从不 reject）。ingest 的降级 reason 恒为 'error'（含超时也归 error）。
  * 幂等前提（重要）：重试去重靠【稳定非空 originId】（spoken 用 prompt_id、tool 用 tool_use_id）。当 prompt_id
  *   缺失 → originId=null 时 Core 不去重，故【超时不重试】：withTimeout 只 race、不取消底层写，超时后底层 ingest
@@ -154,7 +154,7 @@ export function createMemoWeftAgentHooks(
 
   // ── ① 召回注入（读）+ ② 用户原话摄入（写）= 同一个 UserPromptSubmit hook ──
   //
-  // by-construction 干净（隐私）：注入走【返回值】的 additionalContext，不碰 input.prompt；
+  // by design 干净（隐私）：注入走【返回值】的 additionalContext，不碰 input.prompt；
   //   故存进证据的原话（input.prompt）永不含召回注入内容。
   // 顺序（纪律）：先存原话（ingestUserMessage, spoken），再 recall → additionalContext。
   const userPromptSubmit: HookCallback = async (input) => {
@@ -164,14 +164,14 @@ export function createMemoWeftAgentHooks(
     if (prompt.trim() === '') return {};
 
     // ② 写：把【用户这轮原话】沉淀成 spoken 证据。originId 用 prompt_id（一轮 prompt 的稳定 UUID）保证幂等。
-    //    不传任何授权位——ingestUserMessage 存 spoken，本就不涉上云授权位（红线）。
+    //    不传任何授权位——ingestUserMessage 存 spoken，该入口不接受云读取授权覆盖。
     await runIngestWithRetry(
       () => core.ingestUserMessage({ content: prompt, originId: i.prompt_id ?? null, subjectId }),
       ingestTimeoutMs,
       logger,
     );
 
-    // ① 读：召回 → additionalContext。契约 §16.2：withTimeout 包 recallTimeoutMs；读路径不重试，超时/抛错即降级为不注入。
+    // ① 读：召回 → additionalContext。契约 ：withTimeout 包 recallTimeoutMs；读路径不重试，超时/抛错即降级为不注入。
     let recalled: RecalledCognition[];
     try {
       recalled = await withTimeout(
@@ -187,11 +187,11 @@ export function createMemoWeftAgentHooks(
       });
       return {};
     }
-    // 观测回调 + 拼注入块一并纳入降级 guard（§16.2）：宿主注入的 onRecall 或拼块万一抛错，
+    // 观测回调 + 拼注入块一并纳入降级 guard：宿主注入的 onRecall 或拼块万一抛错，
     //   绝不让它 reject 本 hook / 掀翻这轮对话——降级为不注入（记一条 recall 降级事件）。
     try {
       onRecall?.(recalled);
-      // 隐私硬约束（D-0024）：buildKnowledgeBlock 只用 content/confidence/credStatus——
+      // 隐私保证：buildKnowledgeBlock 只用 content/confidence/credStatus——
       //   provenance/contentType/score/id 绝不进 additionalContext。
       const block = buildKnowledgeBlock(recalled, lang);
       if (block === '') return {};
@@ -211,15 +211,16 @@ export function createMemoWeftAgentHooks(
 
   // ── ③ 工具结果摄入（写）= PostToolUse hook ──
   //
-  // 铁律 3a（代码级 by-construction）：【只】读 tool_response / tool_use_id，绝不解构/引用 tool_input
+  // tool-result-only ingestion（代码级 by design）：【只】读 tool_response / tool_use_id，绝不解构/引用 tool_input
   //   （tool_input = LLM 的调用意图/入参，是助手输出，永不成为证据）。
   const postToolUse: HookCallback = async (input) => {
     const i = input as PostToolUseHookInput;
     // 只碰 tool_response（外部客观数据）与 tool_use_id（幂等键）。tool_input 一个字都不读。
     const text = toolResponseText(i.tool_response);
     if (text === null || text.trim() === '') return {}; // 空/无载荷不落库
-    const originId = typeof i.tool_use_id === 'string' && i.tool_use_id !== '' ? i.tool_use_id : null;
-    // 落库走 ingestToolResult → sourceKind='tool' → 默认不上云（config.toolDefaults 兜底）。
+    const originId =
+      typeof i.tool_use_id === 'string' && i.tool_use_id !== '' ? i.tool_use_id : null;
+    // 落库走 ingestToolResult → sourceKind='tool' → 默认不进入内建云写模型 prompt（config.toolDefaults 兜底）。
     await runIngestWithRetry(
       () => core.ingestToolResult({ content: text, originId, subjectId }),
       ingestTimeoutMs,

@@ -1,6 +1,5 @@
 /**
- * 可调参数集中地（地图 cell 11 / 16：散落参数收一处，运行后按真实体验校准）。
- * 阶段 0：身份、隐私默认、回话窗口。
+ * Central configuration for identity, privacy, recall, consolidation, and background behavior.
  */
 
 /** 库产出与文案的语言。缺省 'en'（进英文市场默认）。 */
@@ -12,33 +11,39 @@ export interface MemoWeftConfig {
   /** 库产出语言（提示词 / 兜底文案 / 事件摘要等）：缺省 'en'；env `MEMOWEFT_LANG=zh` 切中文；宿主可运行期改 `config.language`。
    *  只影响文本产出，绝不进置信度自算（confidence.ts 不吃它）。 */
   language?: Lang;
-  /** 隐私模式：true → 证据默认不允许上云端模型。 */
+  /** 隐私模式：true → 证据默认不进入 MemoWeft 内建云写模型 prompt。 */
   privacyMode: boolean;
   /** 证据授权默认值（cloud_read 跟随 privacyMode，见 cloudReadDefault）。 */
   evidenceDefaults: { allowLocalRead: boolean; allowInference: boolean };
-  /** observed（行为观察）证据的保守默认授权（4-A）：本地可读、默认不上云、可推画像。
+  /** observed（行为观察）证据的保守默认授权：可进入本地写模型 prompt、默认不进入内建云写模型 prompt、可推画像。
    *  由 put 按 sourceKind 套用（最后防线）；ingestObservations 显式传值属双保险。故 spoken 行为不变。 */
   observedDefaults: { allowLocalRead: boolean; allowCloudRead: boolean; allowInference: boolean };
-  /** tool（工具执行结果）证据的保守默认授权（AD-3/D-0013）：本地可读、默认不上云、可推画像。
+  /** tool（工具执行结果）证据的保守默认授权：可进入本地写模型 prompt、默认不进入内建云写模型 prompt、可推画像。
    *  工具返回值常含敏感外部数据（网页/文件/API 响应），与 observed 同级保守；由 put 按 sourceKind 套用（最后防线）。 */
   toolDefaults: { allowLocalRead: boolean; allowCloudRead: boolean; allowInference: boolean };
-  /** 回话带最近几轮（阶段 0：简单轮数窗口，非召回）。 */
+  /** 会话带最近几轮：简单轮数窗口，非召回。 */
   workingMemory: { maxTurns: number };
-  /** 召回（阶段 1b + 4-B 衰减门控）：注入回话的相关认知条数 + 有效置信门槛。 */
+  /** 召回与衰减门控：注入回话的相关认知条数 + 有效置信门槛。 */
   retrieval: {
     topK: number;
-    /** 有效置信（衰减后）低于此值的认知不注入回话——淡了的情绪/过气的假设别硬塞（规则 8）。 */
+    /** 有效置信（衰减后）低于此值的认知不注入对话，避免召回已衰减的情绪或过期假设。 */
     minEffectiveConfidence: number;
-    /** 召回相似度门控：query 与认知的余弦分低于此值 → 直接不注入（防 top-k 把不相关认知也召回硬塞）。
+    /** 召回相似度门控：query 与认知的余弦分低于此值 → 直接不注入（避免 top-k 返回不相关认知）。
      *  0 = 关闭（默认，不改现有行为）。想开时按【你的 embedder】的真实分定——值随嵌入器变（vector 余弦 vs keyword -bm25 vs hybrid RRF 不同量纲，只对 vector 余弦语义清晰）。
-     *  bge-m3 黄金集实测（65 用例·top5）：gold 命中余弦中位 0.77、最低 0.559；非-gold 中位 0.64。安全甜点 **0.55**（零召回损失、砍 ~9% 噪声）；
-     *  0.5 更保守（砍 ~3%）；≥0.6 开始误杀 gold。详见 docs/internal/phase0-calibration.md。 */
+     *  默认阈值为 0.55；实际分布取决于 embedder 和语料，应使用代表性数据调参。降低阈值通常提高召回，高阈值通常减少噪声。
+     *  0.5 更保守（砍 ~3%）；≥0.6 开始误杀 gold。请在自己的 embedder 与语料上重新校准。 */
     minSimilarity: number;
   };
-  /** 画像把握度算法参数（阶段 1a；MemoWeft 自算，非 LLM 自报。运行后校准）。 */
+  /** 画像把握度算法参数（a；MemoWeft 自算，非 LLM 自报。运行后校准）。 */
   consolidation: {
-    /** 按形成方式的起步分（推测最低——难点 1：特质做不到，只当假设）。 */
-    baseByFormedBy: { stated: number; observed: number; ruled: number; confirmed: number; inferred: number };
+    /** 按形成方式设置基础分；推断的初始置信最低，特质只能作为待验证假设。 */
+    baseByFormedBy: {
+      stated: number;
+      observed: number;
+      ruled: number;
+      confirmed: number;
+      inferred: number;
+    };
     /** 每多一条支持证据加分、封顶条数。 */
     supportStep: number;
     supportCap: number;
@@ -48,24 +53,24 @@ export interface MemoWeftConfig {
     minConfidence: number;
     /** cred_status 阈值：≥stable 稳定 / ≥limited 有限 / ≥low 低置信 / 否则候选。 */
     credThresholds: { stable: number; limited: number; low: number };
-    /** 临时类内容（如 state）：置信封顶、永不进"稳定/有限"（分型时间策略 v1，cell 8 规则 8）。 */
+    /** 临时类内容（如 state）：置信封顶、永不进"稳定/有限"（分型时间策略）。 */
     transientTypes: string[];
     transientCap: number;
   };
-  /** M4 归因（阶段 3）：从现象 + 时间窗证据推可解释假设（cell 8 规则 6）。 */
+  /** 归因：从现象和时间窗证据推导可解释、可推翻的假设。 */
   attribution: {
     /** 归因时间窗：从现象发生时刻回看多少小时拉候选证据（贴合"昨晚"这类）。 */
     windowHours: number;
-    /** 假设把握度封顶：假设只敢低声说（规则 6 / 难点 1），不让它越攒越像定论。 */
+    /** 假设置信度上限：防止推断因支撑累积而被提升为确定结论。 */
     hypothesisCap: number;
     /** 一次 attribute 最多归因几个【最近未归因】现象（=1：只解释用户当下抱怨，防归因爆炸）。 */
     maxPhenomenaPerRun: number;
     /** 单条假设最多挂几条【原因】证据（硬封顶，防 LLM 乱挂一堆不相关证据撑置信）。 */
     maxCausesPerHypothesis: number;
-    /** ④治脑补：现象要【攒够 / 反复出现】≥N 条支撑证据才归因，别每句"好累"就推因果（N 可配，dogfood 后调）。 */
+    /** 归因最小支撑数：现象至少有 N 条支撑证据才允许推导原因，避免从单次状态推断因果。 */
     minPhenomenonSupport: number;
   };
-  /** 周期后台（阶段 4-B）：分型衰减 + 自然过期 + 跨会话趋势（落地 cell 8 规则 8 / cell 12）。 */
+  /** 周期后台：分型衰减 + 自然过期 + 跨会话趋势。 */
   background: {
     /** 各类型半衰期（天）：缺省/≤0 = 不衰减（明确偏好/fact 几乎不忘）。有效置信 = confidence × 2^(-age/半衰期)，读时算不持久化。 */
     halfLifeDays: Record<string, number>;
@@ -76,7 +81,7 @@ export interface MemoWeftConfig {
     /** 窗口内同类状态证据至少出现几次才算"趋势"（规则筛频率，保证真有重复）。 */
     trendMinCount: number;
   };
-  /** M5 带证据主动询问（阶段 3）：拿不准就带证据问；时机保守（cell 12 开放问题）。 */
+  /** 带证据主动询问：拿不准时提供证据并保守选择提问时机。 */
   asking: {
     /** 一轮最多产几个提问（保守：1）。 */
     maxAsks: number;
@@ -85,7 +90,7 @@ export interface MemoWeftConfig {
     /** 只问这些可信状态的假设（保守：候选 / 低置信）。 */
     askableStatuses: string[];
   };
-  /** 画像更新触发策略（治"勤"·核心①，2026-07-01）：别每次聊完就更新，攒批 / 歇久了才更新。 */
+  /** 画像更新触发策略：积累足够新材料或超过空闲阈值后更新，避免每轮重复计算。 */
   profileUpdate: {
     /** 攒够 N 条新对话就排一次画像更新。 */
     batchSize: number;
@@ -93,12 +98,12 @@ export interface MemoWeftConfig {
     idleMinutes: number;
   };
   // 采集参数（多久采一次 / 碎片阈值）已随真实采集迁出 Core，属采集插件自持
-  //   （plugins/collector-active-window/，见 boundaries.md §4.1）——Core config 不再承载。
+  //   （plugins/collector-active-window/）；Core config 不承载操作系统采集策略。
 }
 
 export const config: MemoWeftConfig = {
-  identity: { subjectId: 'owner', hostId: 'local' }, // hostId 默认 0.4.0 从 'testbench' 改中性 'local'（T4）；host_id 非查询键，老库照读、仅新证据用新名。
-  // 缺省 en（A2·进英文市场）；只有 MEMOWEFT_LANG=zh 才切中文，其它值 / 未设 = en。
+  identity: { subjectId: 'owner', hostId: 'local' }, // host_id 不是查询键；旧库保持可读，新证据使用中性的 local 默认值。
+  // 默认使用英文；只有 MEMOWEFT_LANG=zh 才切换中文，其它值或未设置时均为英文。
   language: process.env.MEMOWEFT_LANG === 'zh' ? 'zh' : 'en',
   privacyMode: false,
   evidenceDefaults: { allowLocalRead: true, allowInference: true },
@@ -107,7 +112,7 @@ export const config: MemoWeftConfig = {
   workingMemory: { maxTurns: 8 },
   retrieval: { topK: 5, minEffectiveConfidence: 80, minSimilarity: 0 },
   consolidation: {
-    baseByFormedBy: { stated: 600, observed: 350, ruled: 450, confirmed: 280, inferred: 200 }, // confirmed（附和，D-0033）夹 inferred/observed 之间：自然封顶 280+支持满200=480<limited500 → 纯附和顶天"低置信"
+    baseByFormedBy: { stated: 600, observed: 350, ruled: 450, confirmed: 280, inferred: 200 }, // confirmed（附和，）夹 inferred/observed 之间：自然封顶 280+支持满200=480<limited500 → 纯附和顶天"低置信"
     supportStep: 40,
     supportCap: 5,
     contradictPenalty: 120,
@@ -120,29 +125,29 @@ export const config: MemoWeftConfig = {
     windowHours: 24, // 现象（如"昨晚没睡好"）回看 24h，能捞到"凌晨 3:30 玩游戏"
     hypothesisCap: 250, // 假设封顶 250：稳落在候选/低置信带，配合 asking.confidenceBand
     maxPhenomenaPerRun: 1, // 只归因最近一条未归因现象（防一次扫全部 state 爆炸出噪声假设）
-    maxCausesPerHypothesis: 2, // 单条假设最多挂 2 条原因证据（dogfood 暴露：会乱挂一堆无关证据）
-    minPhenomenonSupport: 2, // ④治脑补：现象攒够≥2 条支撑（≈反复出现两次）才归因，偶发一次不推（dogfood 后调）
+    maxCausesPerHypothesis: 2, // 单条假设最多挂 2 条原因证据（integration testing 暴露：会乱挂一堆无关证据）
+    minPhenomenonSupport: 2, // 至少两条支撑才允许归因，避免从偶发状态推断因果
   },
   asking: {
     maxAsks: 1, // 保守：一轮最多问 1 个，别烦用户
     confidenceBand: { min: 100, max: 400 }, // 将信将疑才问；太低不敢问、太高没必要问
-    askableStatuses: ['candidate', 'low'], // 只问低置信假设（规则 6）
+    askableStatuses: ['candidate', 'low'], // 主动询问仅面向低置信假设。
   },
   profileUpdate: {
-    batchSize: 12,   // 核心①：攒够 12 条新对话才更新画像（别一聊完就算，太勤又费；dogfood 调参 5→12：整理次数↓→画像重发↓→更省 token，且 distill 手里前后文更多、引用消解更准；idle 兜底不变，静默期照常整理）
+    batchSize: 12, // 批量整理可减少画像重复发送，并为引用消解保留更完整的上下文；空闲阈值仍提供及时更新兜底
     idleMinutes: 30, // 或空闲 30 分钟没动静就更新一次（与 batchSize 先到先触发）
   },
   background: {
     // 半衰期（天）：情绪/假设忘得快，目标/项目中等，趋势/特质慢；fact/preference 不列=不衰减（明确偏好不自动忘）。
     halfLifeDays: { state: 1.5, hypothesis: 2, goal: 14, project: 14, trend: 7, trait: 60 },
-    // 自然过期（天，距上次印证）：情绪/假设/趋势会过期失效；其余不列=永不自动失效（规则 8）。
+    // 自然过期（天，距上次印证）：情绪/假设/趋势会过期失效；未列出的类型不会自动失效。
     expireAfterDays: { state: 7, hypothesis: 14, trend: 30 },
     trendWindowDays: 14, // 看近两周
     trendMinCount: 3, // 窗口内状态证据 ≥3 次才聚趋势
   },
 };
 
-/** allow_cloud_read 的默认值：跟随配置——隐私模式下默认不上云。 */
+/** allow_cloud_read 的默认值：跟随配置——隐私模式下默认不进入内建云写模型 prompt。 */
 export function cloudReadDefault(c: MemoWeftConfig = config): boolean {
   return !c.privacyMode;
 }

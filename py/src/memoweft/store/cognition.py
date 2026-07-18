@@ -1,4 +1,4 @@
-"""认知存储层 —— 移植自 src/cognition/store.ts。两表:cognition + cognition_evidence(溯源链)。
+"""与 TypeScript cognition store 契约一致的 cognition 与 cognition_evidence 存储层。
 
 判断层:content/formed_by/confidence/cred_status/时态位。授权位在 evidence 层,不在这里。
 """
@@ -34,7 +34,7 @@ def _from_row(r: sqlite3.Row) -> Cognition:
 
 
 class SqliteCognitionStore:
-    """认知存储(cognition/store.ts:127-337)。db = open_db 返回的共享连接。"""
+    """使用 open_db 共享连接的认知存储。"""
 
     def __init__(self, db: sqlite3.Connection, clock: Clock = system_clock) -> None:
         self._db = db
@@ -55,7 +55,7 @@ class SqliteCognitionStore:
             invalid_at=inp.invalid_at,
             asked_at=None,  # 新建一律未问过(提问后由 proposeAsk 经 update 写)
             archived_at=None,  # 新建一律未归档
-            muted_at=None,  # 新建一律未静音(D-0023)
+            muted_at=None,  # 新建一律未静音()
             created_at=now,
             updated_at=now,
         )
@@ -97,7 +97,7 @@ class SqliteCognitionStore:
         return [_from_row(r) for r in rows]
 
     def active(self, subject_id: str) -> list[Cognition]:
-        # active = 未失效【且未归档】(批次3 归档全面雪藏)。排序同 all。
+        # active = 未失效【且未归档】( 归档全面雪藏)。排序同 all。
         rows = row_all(
             self._db,
             "SELECT * FROM cognition WHERE subject_id = ? AND invalid_at IS NULL AND archived_at IS NULL "

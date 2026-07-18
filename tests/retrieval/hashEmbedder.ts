@@ -1,5 +1,5 @@
 /**
- * HashEmbedder（Phase 1 · §14.1）：确定性测试用嵌入器。
+ * HashEmbedder：确定性测试用嵌入器。
  *
  * 用途：给黄金集 / demo / CI 提供**零网络、零成本、完全可复现**的 embedder。
  * 真实语义靠云端臂（OpenAICompatEmbedder）；这条确定性臂只做**词面回归**——
@@ -8,7 +8,7 @@
  * 算法 = feature hashing（词袋哈希）：
  *   1. tokenize：lowercase；拉丁/数字按 Unicode 连续段切词（`\p{L}+|\p{N}+`）；
  *      CJK 连续汉字段**额外**切成 char-bigram + 单字——保证"饮食"这类 2 字中文词
- *      与含它的文本有 token 重叠（本项目中文召回的关键，见 DECISIONS D-0001 同源理据）。
+ *      与含它的文本有 token 重叠（本项目中文召回的关键，见 DECISIONS  同源理据）。
  *   2. 每个 token 用 FNV-1a 32 位哈希（纯位运算、不引依赖）映射到维度 [0, dim)，权重累加（TF）。
  *   3. 对向量做 L2 归一化；空文本 / 无 token → 全零向量（归一化后仍全零）。
  *

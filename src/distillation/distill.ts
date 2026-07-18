@@ -1,7 +1,7 @@
 /**
- * 事件化（地图 cell 4 写路径）：把"还没整理成事件"的近期对话 → 总结成一个带情境的事件。
+ * 事件化写路径：把尚未整理成事件的近期证据总结为带情境的事件。
  *
- * 红线：只总结【用户的话 + 情境】，不含助手回话、不加 AI 推测评价（禁止系统自证 + 记≠改画像）。
+ * 隐私不变量：只总结【用户的话 + 情境】，不含助手回话、不加 AI 推测评价（禁止系统自证 + 记≠改画像）。
  */
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { EventStore } from '../event/store.ts';
@@ -25,9 +25,9 @@ export interface DistillResult {
   event: Event | null;
   /** 本轮开始时未覆盖的证据数（起始待处理量）。 */
   pendingCount: number;
-  /** 【挂账信号·档2】当前写模型 tier 读不到、因而没被消化的证据数（= pending 里 tier 不可读的那些）。
+  /** 【挂账信号·模型路由】当前写模型 tier 读不到、因而没被消化的证据数（= pending 里 tier 不可读的那些）。
    *  >0 表示"有证据卡着、当前模型 tier 消化不了"——配本地写模型 / 授权上云可解（供向导/宿主提示用）。
-   *  只看读取权（云/本地），不含 inference=false（那是用户对某条证据的推理授权撤销，非配置缺口）。 */
+   *  只看内建写模型 prompt 的证据选择（云/本地），不含 inference=false（那是用户对某条证据的推理授权撤销，非配置缺口）。 */
   tierBlockedCount: number;
   llmCalls: number;
 }
@@ -39,33 +39,39 @@ export async function distill(subjectId: string, deps: DistillDeps): Promise<Dis
     .filter((e) => !covered.has(e.id))
     .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
 
-  if (pending.length === 0) return { event: null, pendingCount: 0, tierBlockedCount: 0, llmCalls: 0 };
+  if (pending.length === 0)
+    return { event: null, pendingCount: 0, tierBlockedCount: 0, llmCalls: 0 };
 
   // 隐私关（按当前写模型 tier 筛）+ 推理门（allowInference）：只把【当前模型可读】且【可推画像】的原话
-  //   喂给 LLM 建事件。tier=cloud 筛 allowCloudRead；tier=local 筛 allowLocalRead（本地模型能读 observed）。
+  //   纳入 LLM 的事件构建输入。tier=cloud 筛 allowCloudRead；tier=local 筛 allowLocalRead（本地模型能读 observed）。
   //   inference 门：event summary 会喂进 consolidate 画像，故 inference=false 的证据连事件都不进
   //   （防其内容经 summary 间接渗进画像；与 consolidate/attribute 三处一致）。tier 绑在 deps.llm 上，缺省 'cloud'。
   const tier = deps.llm.tier ?? 'cloud';
   const readable = filterReadableByTier(pending, tier); // 当前 tier 读得到的
-  const digestible = readable.filter((e) => e.allowInference); // 读得到且可推画像的 → 真喂给 LLM
+  const digestible = readable.filter((e) => e.allowInference); // 仅将可读且允许推理的证据提供给 LLM。
   const tierBlockedCount = pending.length - readable.length; // 挂账信号：tier 读不到的（配本地/授权可解）
-  // 本批无一条【当前模型可消化】→ 不拿空材料调模型、不建 event。被挡的证据（tier 不可读 / inference=false）
+  // 没有当前模型可消化的证据时，不用空材料调用模型，也不创建 event。被过滤的证据（tier 不可读 / inference=false）
   //   【不算已覆盖】、留在 pending 下轮再扫——换本地模型 / 授权上云 / 重开推理授权后才被补消化。
-  if (digestible.length === 0) return { event: null, pendingCount: pending.length, tierBlockedCount, llmCalls: 0 };
+  if (digestible.length === 0)
+    return { event: null, pendingCount: pending.length, tierBlockedCount, llmCalls: 0 };
 
   const lang = resolveLang(deps.config);
-  // 来源感知（D-0018）:每行带来源标注,让 distill 的事件描述保留"这是用户亲口 / 行为观察 / 工具返回"的区分,
+  // 来源感知：每行带来源标注，让 distill 的事件描述保留“用户亲口 / 行为观察 / 工具返回”的区分，
   //   下游 consolidate 据此定 formedBy(observed/tool 不被误当 stated)。
-  // 附和/AI 上下文（D-0033 Phase 1b）:对已过隐私门(tier+inference)的 digestible 证据,把它的
+  // 附和/AI 上下文：对已通过隐私门（tier + inference）的 digestible 证据，把它的
   //   preceding_ai_context【追加进本行】(经专用只读 precedingAiContextOf,不进 Evidence 读结构)——
   //   让 distill 看懂孤儿回应指向什么。缺省无 AI 上文 → 后缀为空 = no-op(既有语料不受影响)。
-  //   注:AI 上文只是行内上下文文本、无独立 id,不会成为可溯源证据(3a 由 consolidate 的 support 白名单结构性守死)。
+  //   注：AI 上文只是行内上下文文本、无独立 id；consolidate 的 support 白名单确保它不会成为可溯源证据。
   const lines = digestible
-    .map((e) => `(${e.occurredAt.slice(0, 16)}) ${sourceLabel(e.sourceKind, lang)}${e.rawContent}${aiContextSuffix(deps.evidenceStore.precedingAiContextOf(e.id), lang)}`)
+    .map(
+      (e) =>
+        `(${e.occurredAt.slice(0, 16)}) ${sourceLabel(e.sourceKind, lang)}${e.rawContent}${aiContextSuffix(deps.evidenceStore.precedingAiContextOf(e.id), lang)}`,
+    )
     .join('\n');
-  const userHead = lang === 'zh'
-    ? '按时间顺序的材料（每行带来源标注；[行为观察] / [工具返回] 不是用户原话）：'
-    : "Material in chronological order (each line is tagged with its source; [observed behavior] / [tool result] are NOT the user's own words):";
+  const userHead =
+    lang === 'zh'
+      ? '按时间顺序的材料（每行带来源标注；[行为观察] / [工具返回] 不是用户原话）：'
+      : "Material in chronological order (each line is tagged with its source; [observed behavior] / [tool result] are NOT the user's own words):";
   const messages: ChatMessage[] = [
     { role: 'system', content: DISTILL_PROMPT.text[lang] },
     { role: 'user', content: `${userHead}\n${lines}` },
@@ -75,7 +81,7 @@ export async function distill(subjectId: string, deps: DistillDeps): Promise<Dis
   const summary = (await deps.llm.chat(messages)).trim();
   const llmCalls = deps.llm.callCount - before;
 
-  // 覆盖修复（D8）：event 只覆盖【真消化进 summary 的】证据；被挡的不覆盖、留 pending 可再扫
+  // 覆盖策略：event 只覆盖【真消化进 summary 的】证据；被挡的不覆盖、留 pending 可再扫
   //   （否则 observed 与对话证据混批时会被静默标"已覆盖"却从未消化、且再也扫不到——卖点被架空）。
   const event = deps.eventStore.put({
     subjectId,

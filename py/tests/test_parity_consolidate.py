@@ -1,7 +1,7 @@
 """consolidate 四分支 parity:Python 建同 setup + stub llm 固定 LLMOut → 与 TS(shared/parity/consolidate.json)一致。
 
 钉 messages 逐字节 + created 结构(new/并存 stated/correct)+ reinforce confidence(恒继承 confirmed)+ correct 失效 +
-conflict conflicted + resolution 落库 + markConsolidated + existing 排序 + 私有 resolve_evidence_id 短标号(P2-5)。
+验证 conflict conflicted + resolution 落库 + markConsolidated + existing 排序 + 私有 resolve_evidence_id 短标号。
 """
 from __future__ import annotations
 

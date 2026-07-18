@@ -74,7 +74,7 @@ def test_evidence_origin_idempotent() -> None:
 
 
 def test_evidence_preceding_ai_context_structural_wall() -> None:
-    # AI 上文只写入、经专用只读取,永不进 Evidence 读结构(3a/D-0033 结构墙)。
+    # AI 上文是非证据上下文：只写入、经专用方法读取，永不进入 Evidence 读结构。
     db = open_db(":memory:")
     try:
         store = SqliteEvidenceStore(db, clock=_fixed)
@@ -213,7 +213,7 @@ def test_cognition_update_tristate() -> None:
         assert up5 is not None and up5.archived_at is None
         assert [c.id for c in store.active("owner")] == [cog.id]  # 回到 active
 
-        # formed_by 升级(D-0033 confirmed→stated 路径)
+        # formed_by 升级( confirmed→stated 路径)
         up6 = store.update(cog.id, CognitionPatch(formed_by="stated"))
         assert up6 is not None and up6.formed_by == "stated"
 

@@ -1,6 +1,6 @@
 """strip_reasoning + read_reply_text parity:Python 与 TS(shared/parity/llm-text.json)逐例一致。
 
-钉 <think> 剥离正则(大小写/跨行)+ js_trim + reasoning_content 兜底取值顺序(P2-3)。
+验证 <think> 剥离正则（大小写/跨行）+ js_trim + reasoning_content 兜底取值顺序。
 """
 from __future__ import annotations
 

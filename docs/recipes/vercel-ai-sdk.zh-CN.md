@@ -8,17 +8,20 @@
 
 ## 安装
 
+npm 已发布的适配器为 `0.1.0`；请安装这个固定且兼容的组合：
+
 ```bash
-npm i ai memoweft @memoweft/adapter-ai-sdk
+npm i ai memoweft@0.5.1 @memoweft/adapter-ai-sdk@0.1.0
 ```
 
-`ai` `^7` 和 `memoweft` `^0.5.0` 是 peer 依赖。provider 自备，比如 `@ai-sdk/openai`。
+`main` 上的 `0.2.0` 是尚未发布的 workspace 版本。需要配合 Core `0.5.1` 或 `0.6` 时，请从本检出构建；它的 peer 范围是 `memoweft` `^0.5.1 || ^0.6.0`。不要用 `--legacy-peer-deps` 把已发布的 `0.1.0` 强行配到 Core `0.6`。`ai` `^7` 同样是 peer 依赖；provider 自备，比如 `@ai-sdk/openai`。
 
 ## 接线
 
 `createMemoWeftMiddleware` 负责读（先召回再注入）；`createPersistOnEnd` 负责写（先取用户的话再存）。
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 import { generateText, wrapLanguageModel } from 'ai';
 import { openai } from '@ai-sdk/openai';
@@ -46,19 +49,24 @@ const { text } = await generateText({
 
 ## 为什么 `userMessage` 要你自己传
 
-`onEnd` 只带结果侧的字段（text、usage、steps），不带原始输入，而且发给 provider 的请求早已被读中间件改写过。所以用户真实说的那句话，唯一干净的来源就是你手里已经握着的那个值。传一个稳定的 `originId`（你的轮次 id）保证幂等：同一轮最多只存一条证据（evidence）。召回或摄入失败**只降级，绝不阻塞**回复。只存用户的话，绝不存助手的回复（Core 纪律）。
+`onEnd` 只带结果侧的字段（text、usage、steps），不带原始输入，而且发给 provider 的请求早已被读中间件改写过。所以用户真实说的那句话，唯一干净的来源就是你手里已经握着的那个值。传一个稳定的 `originId`（你的轮次 id）保证幂等：同一轮最多只存一条证据（evidence）。召回或摄入失败时，由宿主继续其正常的回复处理。只存用户的话，绝不存助手的回复（Core 纪律）。
 
 ## 工具结果也一并存下
 
-如果这一轮跑了工具，把工具**返回的输出**当作 `tool` 证据存下来，绝不存模型的调用入参（铁律 3a）。
+如果这一轮跑了工具，把工具**返回的输出**当作 `tool` 证据存下来，绝不存模型的调用入参。这样可以维持外部结果与模型生成意图之间的来源边界。
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 import { persistToolResults } from '@memoweft/adapter-ai-sdk';
 
 const result = await generateText({ model, prompt: userMessage, tools });
 // Reads only role:'tool' messages; returns how many results were stored.
-await persistToolResults(core, { subjectId: 'alice', messages: result.response.messages, originIdPrefix: 'turn-2' });
+await persistToolResults(core, {
+  subjectId: 'alice',
+  messages: result.response.messages,
+  originIdPrefix: 'turn-2',
+});
 ```
 
 ## 不用模型也能验证写路径
@@ -70,7 +78,11 @@ import { createMemoWeftCore } from 'memoweft';
 import { persistUserTurn } from '@memoweft/adapter-ai-sdk';
 
 const core = createMemoWeftCore({ dbPath: ':memory:' });
-await persistUserTurn(core, { subjectId: 'alice', userMessage: 'I strongly prefer short, direct answers.', originId: 'turn-1' });
+await persistUserTurn(core, {
+  subjectId: 'alice',
+  userMessage: 'I strongly prefer short, direct answers.',
+  originId: 'turn-1',
+});
 
 for (const e of core.memory.listEvidence({ subjectId: 'alice' })) {
   console.log(e.sourceKind, '·', e.rawContent); // -> spoken · I strongly prefer short, direct answers.

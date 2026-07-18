@@ -1,25 +1,25 @@
 /**
  * MemoWeft MCP tools —— 白名单注册（外部 AI 客户端自主可调的协议面）。
  *
- * 安全硬约束（见 README 的 SECURITY 段 + 任务书 D3）：
+ * Security boundary (see the package README):
  *   - 只暴露 8 个 tool：5 读 + 3 轻写（存一句用户原话 / 存一条工具返回结果 / 静音一条认知）。
  *     两个 ingest 写工具都只【存一条原料证据】——不改画像、不消化、不改上云授权，落库均默认不上云；
- *     mute 写工具只翻转某条认知的召回可见性（D-0023 召回负反馈）——仅从召回雪藏、认知仍 active、
- *     仍参与 consolidation/画像演化，与置信度正交（铁律 3b）、不删不改上云授权。
+ *     mute 写工具只翻转某条认知的召回可见性（ 召回负反馈）——仅从召回雪藏、认知仍 active、
+ *     仍参与 consolidation/画像演化，与置信度正交（mute semantics）、不删不改上云授权。
  *   - 破坏性 / 改上云授权 / 整套消化改画像的 Core 方法【一律不注册】——
  *     invalidate、remove、merge、archive、reset、updateEvidenceAuthorization、
  *     handleConversationTurn、updateProfile、ingestObservation、portable 都不出现在这里。
  *     （muteCognition 现已注册为 memoweft_mute_cognition：它只从召回雪藏、不删、不改上云授权、不动置信度，
  *      属可控轻写、非破坏面——故从"不注册黑名单"移出、进白名单。）
- *   - memoweft_ingest_tool_result 只摄入工具执行的【返回结果】(外部客观数据=合法证据，AD-3/D-0013)，
- *     不摄入 LLM 的工具调用意图/入参(那是助手输出，禁摄入，铁律 3a)。
- *   - tool description 用中性协议措辞，不复活人设（Core 无头）。
+ *   - memoweft_ingest_tool_result 只摄入工具执行的【返回结果】（外部返回数据），
+ *     不摄入 LLM 的工具调用意图/入参(那是助手输出，禁摄入，tool-result-only ingestion)。
+ *   - tool description 使用中性协议措辞，不引入角色设定（Core 保持无头）。
  *
  * 这一层只做"把 Core 门面翻译成 MCP tool"：取参 → 调门面 → 把结果包成
  * structuredContent + 一段可读 text。
  *
- * 降级（契约 §16.2「记忆层故障→降级不中断」，见 D-0012）：记忆层内部故障/超时不再让进程崩、
- *   不再以协议错误上浮记忆层内部错——handler 兜 core.* 的抛错/超时：
+ * Degradation contract: memory-layer failures and timeouts do not crash the process or surface as protocol errors.
+ *   Handlers contain errors and timeouts from core.*:
  *     · 读工具（recall / list_* / graph）→ 返回空结果 + isError:false，对话不中断；recall 另包 200ms 超时；
  *     · 写工具（ingest / mute）→ 一次重试后仍失败则返回未落库/未变更标记 + isError:false；
  *     · 降级都经【注入的 logger】记一条结构化事件（缺省无 logger = 静默）。
@@ -49,7 +49,7 @@ export const READ_TOOL_NAMES = [
 export const WRITE_TOOL_NAMES = [
   'memoweft_ingest_user_message',
   'memoweft_ingest_tool_result',
-  // 可控轻写（D-0023 召回负反馈）：静音/取消静音一条认知——仅从召回雪藏、认知仍 active、与置信度正交（铁律 3b）。
+  // 可控轻写（ 召回负反馈）：静音/取消静音一条认知——仅从召回雪藏、认知仍 active、与置信度正交（mute semantics）。
   'memoweft_mute_cognition',
 ] as const;
 
@@ -73,7 +73,7 @@ const CONTENT_TYPE_VALUES = [
   'trend',
 ] as const;
 
-/** 结果统一包成 { structuredContent, content:[text] }：结构给机器读，text 给人读/兜底。 */
+/** 统一返回结构化结果与等价文本；前者供协议客户端解析，后者供显示及兼容性回退。 */
 function ok(payload: unknown): {
   structuredContent: { result: unknown };
   content: { type: 'text'; text: string }[];
@@ -84,7 +84,7 @@ function ok(payload: unknown): {
   };
 }
 
-/** registerTools 选项（降级语义，契约 §16.2）。 */
+/** registerTools 选项（降级语义，降级契约）。 */
 export interface RegisterToolsOptions {
   /**
    * 注入式 logger（可选）：记忆层故障/超时降级时记一条【结构化事件】
@@ -92,7 +92,7 @@ export interface RegisterToolsOptions {
    * 认知纪律 + 隐私：只记事件元信息，绝不记用户内容 / 原话 / 密钥。
    */
   logger?: McpServerLogger;
-  /** recall 超时阈值（毫秒）。缺省 200ms（契约 §16.2）。 */
+  /** recall 超时阈值（毫秒）。缺省 200ms（降级契约）。 */
   recallTimeoutMs?: number;
 }
 
@@ -100,16 +100,25 @@ export interface RegisterToolsOptions {
  * 把白名单 tool 注册到给定 McpServer。
  * @param server 已建好的 McpServer（serverInfo/capabilities 由 createMcpServer 定）。
  * @param core   进程内的 MemoWeftCore 门面（读写都经它，绝不直接碰 store）。
- * @param opts   降级语义选项（logger / recallTimeoutMs，契约 §16.2）。
+ * @param opts   降级语义选项（logger / recallTimeoutMs，降级契约）。
  */
-export function registerTools(server: McpServer, core: MemoWeftCore, opts: RegisterToolsOptions = {}): void {
+export function registerTools(
+  server: McpServer,
+  core: MemoWeftCore,
+  opts: RegisterToolsOptions = {},
+): void {
   const { logger, recallTimeoutMs = DEFAULT_RECALL_TIMEOUT_MS } = opts;
 
   /**
    * 读工具降级包裹：跑 core 读操作 → 成功回真结果；记忆层抛错/超时 → 记一条 + 返回 emptyValue（降级）。
    * recall 另包 recallTimeoutMs 超时（op==='recall'）；list_* 与 graph 只兜抛错（op==='read'）。
    */
-  async function guardRead<T>(tool: string, op: 'recall' | 'read', empty: T, run: () => Promise<T>): Promise<T> {
+  async function guardRead<T>(
+    tool: string,
+    op: 'recall' | 'read',
+    empty: T,
+    run: () => Promise<T>,
+  ): Promise<T> {
     try {
       return op === 'recall' ? await withTimeout(run(), recallTimeoutMs) : await run();
     } catch (err) {
@@ -135,14 +144,14 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
           .string()
           .optional()
           .describe('Subject to recall for; defaults to the configured subject.'),
-        // 召回 v2 面（additive，D-0022/D-0024）：按认知类型过滤（允许名单）；不传/空 = 全类型（行为不变）。
+        // 召回 v2 面（additive，/）：按认知类型过滤（允许名单）；不传/空 = 全类型（行为不变）。
         contentTypes: z
           .array(z.enum(CONTENT_TYPE_VALUES))
           .optional()
           .describe(
             'Only recall cognitions whose content type is in this allow-list (e.g. "preference", "goal"). Omit for all types.',
           ),
-        // 召回 v2 面（additive，D-0021/D-0024）：带出每条认知的支撑/反证证据链（provenance）。
+        // 召回 v2 面（additive，/）：带出每条认知的支撑/反证证据链（provenance）。
         explain: z
           .boolean()
           .optional()
@@ -167,12 +176,12 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
             confidence: c.confidence,
             credStatus: c.credStatus,
             score: c.score,
-            // 认知类型（D-0022）：召回结果逐字带回，供客户端看类型 + 印证 contentTypes 过滤已透传。
+            // 认知类型：召回结果逐字带回，供客户端看类型 + 印证 contentTypes 过滤已透传。
             contentType: c.contentType,
           };
           if (!explain || !c.provenance) return base;
-          // 岔口②·tier 预筛（D-0024，人类已批）——隐私硬约束：provenance 的 summary 是证据【原文】
-          //   （observed/tool 默认 allowCloudRead=false，比派生认知更敏感）。故【仅】allowCloudRead=true 的证据
+          // tier privacy filter：provenance 的 summary 是证据【原文】（observed/tool 默认
+          //   allowCloudRead=false，比派生认知更敏感）。根据隐私保证，仅 allowCloudRead=true 的证据
           //   保留 summary；allowCloudRead=false 的受限项隐去 summary、只回 { evidenceId, relation, sourceKind }
           //   + 授权位元数据（授权位是 metadata 非敏感载荷，留着让宿主转发云模型前仍能按 tier 自筛——与
           //   mcp-server "tool 证据默认 local-only" 姿态一致）。
@@ -218,7 +227,11 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async ({ subjectId }) =>
-      ok(await guardRead('memoweft_list_cognitions', 'read', [], async () => core.memory.listCognitions({ subjectId }))),
+      ok(
+        await guardRead('memoweft_list_cognitions', 'read', [], async () =>
+          core.memory.listCognitions({ subjectId }),
+        ),
+      ),
   );
 
   // ── 读 3：列取证据（原始来源）────────────────────────────────────────
@@ -237,7 +250,11 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async ({ subjectId }) =>
-      ok(await guardRead('memoweft_list_evidence', 'read', [], async () => core.memory.listEvidence({ subjectId }))),
+      ok(
+        await guardRead('memoweft_list_evidence', 'read', [], async () =>
+          core.memory.listEvidence({ subjectId }),
+        ),
+      ),
   );
 
   // ── 读 4：列取事件（证据聚合）───────────────────────────────────────
@@ -256,7 +273,11 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async ({ subjectId }) =>
-      ok(await guardRead('memoweft_list_events', 'read', [], async () => core.memory.listEvents({ subjectId }))),
+      ok(
+        await guardRead('memoweft_list_events', 'read', [], async () =>
+          core.memory.listEvents({ subjectId }),
+        ),
+      ),
   );
 
   // ── 读 5：记忆图谱 payload（nodes/edges/stats）──────────────────────
@@ -308,21 +329,36 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
           .optional()
           .describe('Idempotency key: repeated ingests with the same originId store only once.'),
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ content, subjectId, originId }) => {
-      // 降级（契约 §16.2）：写路径失败重试一次；仍失败 → 记一条 + 返回未落库标记，isError:false 不中断。
+      // 降级（降级契约）：写路径失败重试一次；仍失败 → 记一条 + 返回未落库标记，isError:false 不中断。
       try {
         const ev = await retryOnce(() => core.ingestUserMessage({ content, subjectId, originId }));
-        return ok({ id: ev.id, subjectId: ev.subjectId, sourceKind: ev.sourceKind, recordedAt: ev.recordedAt });
+        return ok({
+          id: ev.id,
+          subjectId: ev.subjectId,
+          sourceKind: ev.sourceKind,
+          recordedAt: ev.recordedAt,
+        });
       } catch {
-        logger?.({ event: 'memory_degraded', tool: 'memoweft_ingest_user_message', op: 'ingest', reason: 'error' });
+        logger?.({
+          event: 'memory_degraded',
+          tool: 'memoweft_ingest_user_message',
+          op: 'ingest',
+          reason: 'error',
+        });
         return ok({ stored: false, degraded: true });
       }
     },
   );
 
-  // ── 写·轻：存一条工具执行【返回结果】为 tool 证据（AD-3/D-0013，默认不上云、不改画像）──
+  // ── 写·轻：存一条工具执行【返回结果】为 tool 证据（默认不上云、不改画像）──
   server.registerTool(
     'memoweft_ingest_tool_result',
     {
@@ -333,7 +369,10 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
         'tool-call arguments or intent, does not update the profile, run consolidation, or grant any cloud-read ' +
         'authorization. Tool-result evidence defaults to local-only (not cloud-readable).',
       inputSchema: {
-        content: z.string().min(1).describe('The verbatim result payload returned by the tool execution.'),
+        content: z
+          .string()
+          .min(1)
+          .describe('The verbatim result payload returned by the tool execution.'),
         subjectId: z
           .string()
           .optional()
@@ -341,26 +380,43 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
         originId: z
           .string()
           .optional()
-          .describe('Idempotency key (e.g. the toolCallId): repeated ingests with the same originId store only once.'),
+          .describe(
+            'Idempotency key (e.g. the toolCallId): repeated ingests with the same originId store only once.',
+          ),
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
     },
     async ({ content, subjectId, originId }) => {
-      // 降级（契约 §16.2）：写路径失败重试一次；仍失败 → 记一条 + 返回未落库标记，isError:false 不中断。
+      // 降级（降级契约）：写路径失败重试一次；仍失败 → 记一条 + 返回未落库标记，isError:false 不中断。
       try {
         const ev = await retryOnce(() => core.ingestToolResult({ content, subjectId, originId }));
-        return ok({ id: ev.id, subjectId: ev.subjectId, sourceKind: ev.sourceKind, recordedAt: ev.recordedAt });
+        return ok({
+          id: ev.id,
+          subjectId: ev.subjectId,
+          sourceKind: ev.sourceKind,
+          recordedAt: ev.recordedAt,
+        });
       } catch {
-        logger?.({ event: 'memory_degraded', tool: 'memoweft_ingest_tool_result', op: 'ingest', reason: 'error' });
+        logger?.({
+          event: 'memory_degraded',
+          tool: 'memoweft_ingest_tool_result',
+          op: 'ingest',
+          reason: 'error',
+        });
         return ok({ stored: false, degraded: true });
       }
     },
   );
 
-  // ── 写·轻：静音/取消静音一条认知（D-0023 召回负反馈，可控轻写）──────────────
+  // ── 写·轻：静音/取消静音一条认知（ 召回负反馈，可控轻写）──────────────
   //   只翻转 mutedAt：muted:true → 仅从召回雪藏（认知仍 active、仍参与 consolidation/画像演化，
-  //   区别于 archive 的全面雪藏、invalidate 的不再为真）；muted:false → 恢复召回。
-  //   与置信度正交（铁律 3b：不碰 confidence 自算）、不改上云授权、不删。
+  //   区别于 archive 的全面隐藏、invalidate 的不再有效）；muted:false → 恢复召回。
+  //   与置信度正交（mute semantics：不碰 confidence 自算）、不改上云授权、不删。
   server.registerTool(
     'memoweft_mute_cognition',
     {
@@ -373,20 +429,33 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
         cognitionId: z.string().min(1).describe('The id of the cognition to mute or unmute.'),
         muted: z
           .boolean()
-          .describe('true = exclude the cognition from recall (mute); false = restore it to recall (unmute).'),
+          .describe(
+            'true = exclude the cognition from recall (mute); false = restore it to recall (unmute).',
+          ),
         reason: z
           .string()
           .optional()
-          .describe('Optional reason recorded in the management audit log; a neutral default is used when omitted.'),
+          .describe(
+            'Optional reason recorded in the management audit log; a neutral default is used when omitted.',
+          ),
       },
-      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ cognitionId, muted, reason }) => {
-      // 降级（契约 §16.2）：写路径失败重试一次；仍失败 → 记一条 + 返回未变更标记，isError:false 不中断。
+      // 降级（降级契约）：写路径失败重试一次；仍失败 → 记一条 + 返回未变更标记，isError:false 不中断。
       //   muteCognition 是同步门面方法，包进 retryOnce 以照现有写 tool 的降级范式（稳定 cognitionId → 重试幂等）。
       try {
         const cog = await retryOnce(async () =>
-          core.memory.muteCognition({ cognitionId, muted, reason: reason ?? 'mute toggled via mcp tool' }),
+          core.memory.muteCognition({
+            cognitionId,
+            muted,
+            reason: reason ?? 'mute toggled via mcp tool',
+          }),
         );
         // 不存在的认知 → core 返回 null（不是记忆层故障）：如实回 not-found，不吞成降级。
         if (!cog) return ok({ muted: false, cognition: null });
@@ -402,7 +471,12 @@ export function registerTools(server: McpServer, core: MemoWeftCore, opts: Regis
           },
         });
       } catch {
-        logger?.({ event: 'memory_degraded', tool: 'memoweft_mute_cognition', op: 'ingest', reason: 'error' });
+        logger?.({
+          event: 'memory_degraded',
+          tool: 'memoweft_mute_cognition',
+          op: 'ingest',
+          reason: 'error',
+        });
         return ok({ muted: false, degraded: true });
       }
     },

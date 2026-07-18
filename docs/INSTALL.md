@@ -10,17 +10,17 @@
 
 ## 0. Prerequisites
 
-| Requirement | Notes |
-| --- | --- |
-| **Node ≥ 24 (works out of the box) or Node 20/22 + `better-sqlite3` (fallback)** | Storage is backed by SQLite. The driver **prefers the built-in `node:sqlite`** and only falls back to the optional `better-sqlite3` if that cannot be loaded. On Node ≥ 24 `node:sqlite` is stable and needs zero extra deps; on Node 20 it is absent, so you **must** install `better-sqlite3` (`npm i better-sqlite3`, see §1.2); on Node 22 it depends on whether your version / flags already expose `node:sqlite` — install `better-sqlite3` only when it is not available. |
-| **One OpenAI-compatible chat model endpoint** | The recommended default is a cloud endpoint: least setup, easiest for a developer to get running. Anything compatible with `/chat/completions` works. |
-| **Optional: a small/fast write-path model endpoint** | Used for `distill → consolidate → attribute`. If unset, it falls back to the chat model. |
-| **Optional: an embedding endpoint** | Used for semantic recall. If unset, recall falls back to keyword search (FTS5) — the profile is still written; you lose only *semantic* recall, not recall itself. |
-| **Zero runtime dependencies** | Runtime `dependencies` is empty; storage / HTTP / vector math all use Node built-ins. `better-sqlite3` is only an **optional peer dependency** — Node ≥ 24 users never need to install it. |
+| Requirement                                                   | Notes                                                                                                                                                                                                                |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node ≥ 24 (recommended), or Node 20/22 + `better-sqlite3`** | Storage is backed by SQLite. MemoWeft prefers the built-in `node:sqlite` and falls back to the optional peer driver. For a predictable setup on Node 20 or 22, install `better-sqlite3` with `npm i better-sqlite3`. |
+| **One OpenAI-compatible chat model endpoint**                 | The recommended default is a cloud endpoint: least setup, easiest for a developer to get running. Anything compatible with `/chat/completions` works.                                                                |
+| **Optional: a small/fast write-path model endpoint**          | Used for `distill → consolidate → attribute`. If unset, it falls back to the chat model.                                                                                                                             |
+| **Optional: an embedding endpoint**                           | Used for semantic recall. If unset, recall falls back to keyword search (FTS5) — the profile is still written; you lose only _semantic_ recall, not recall itself.                                                   |
+| **Small dependency boundary**                                 | Runtime `dependencies` is empty on Node 24. Node 20/22 use the optional `better-sqlite3` peer driver.                                                                                                                |
 
-> ⚙️ **Install the optional `better-sqlite3` driver when `node:sqlite` cannot be loaded.** MemoWeft **prefers the built-in `node:sqlite`** and only falls back to `better-sqlite3` (a native module, see §1.2) when it cannot be loaded. `node:sqlite` only became stable in Node 24; on Node 20 it is absent, so you **must** install `better-sqlite3`; on Node 22 availability depends on your Node version / flags — install `better-sqlite3` only when it is not available (once installed it is picked only when `node:sqlite` cannot be loaded, and never overrides an already-usable built-in driver). Developing the library itself (running the `.ts` examples / testbench from the repo) has a stricter bar: Node 22 needs 22.18+ to strip `.ts` types natively and Node 20 cannot do it at all — use Node ≥ 24 to run `.ts`. **Using it as a library** (`import 'memoweft'`, which consumes the compiled `.js`) only needs a usable driver.
+> ⚙️ `better-sqlite3` is a native module and may need a platform-specific prebuilt binary or local compiler toolchain. Node 24 is the simplest path because it uses stable built-in `node:sqlite`. Running this repository's `.ts` examples also requires Node 24; package consumers load compiled JavaScript.
 
-> ℹ️ **Cloud-first, not cloud-blind.** MemoWeft recommends starting with a cloud endpoint for speed, but every piece of evidence still carries authorization bits such as `allowCloudRead`. The host owns the privacy policy and consent UI; MemoWeft keeps the model-swap and filtering hooks. See the full modes in [`deployment.md`](./deployment.md).
+> ℹ️ **Cloud-first, not cloud-blind.** MemoWeft recommends starting with a cloud endpoint for lower setup cost, but every evidence record carries authorization bits such as `allowCloudRead`. MemoWeft uses them when selecting records for its write-path prompts; they are not access control or encryption. The host owns privacy policy, consent UI, storage security, and other data flows. See the full modes in [`deployment.md`](./deployment.md).
 
 ---
 
@@ -34,7 +34,7 @@ MemoWeft is published on npm. Host developers install it directly:
 npm install memoweft
 ```
 
-Then `import { createMemoWeftCore } from 'memoweft'` (usage in the README "As a library" section / [`integration.md`](./integration.md)). The install has **zero runtime dependencies** (Node ≥ 24 uses the built-in `node:sqlite`). TypeScript projects just add `@types/node` as usual.
+Then `import { createMemoWeftCore } from 'memoweft'` (usage in the README and [`integration.md`](./integration.md)). On Node 24 the package uses built-in `node:sqlite`; Node 20/22 consumers also install the optional peer driver shown below.
 
 ### 1.2 Node 20/22: install the optional `better-sqlite3` driver
 
@@ -46,19 +46,19 @@ npm i better-sqlite3
 
 Once installed, MemoWeft picks it as the backing driver automatically when it opens the database; everything else is identical. A few notes:
 
-- `better-sqlite3` is a **native module**. It usually installs a prebuilt binary in seconds; if there is no matching prebuilt for your platform / Node version, it falls back to compiling with `node-gyp` (which needs Python + a C++ toolchain). So a successful install is **not guaranteed** — the most reliable path when it fails is upgrading Node to ≥ 24 (built-in driver, zero deps).
+- `better-sqlite3` is a **native module**. It often installs a prebuilt binary; if there is no matching prebuilt for your platform / Node version, it falls back to compiling with `node-gyp` (which needs Python + a C++ toolchain). If installation fails, upgrading Node to ≥ 24 uses the built-in driver and avoids that optional dependency.
 - If it is not installed and you are not on Node ≥ 24, `import 'memoweft'` throws a plain-language error listing the two ways out (upgrade to Node ≥ 24 / install `better-sqlite3`).
 
-### 1.3 From source (developing the library / running the reference host & testbench)
+### 1.3 From source (developing the library / running the reference host & optional diagnostic tool)
 
 ```bash
 git clone https://github.com/memoweft/memoweft.git
 cd memoweft
-npm install        # dev dependencies only; no runtime deps
+npm ci
 npm run typecheck && npm test && npm run build   # all green = environment ready
 ```
 
-The reference host `npm start -w @memoweft/host` (:7788) and the testbench `npm run testbench` (:7888) both run from source. For the publish flow, see [`PUBLISHING.md`](./PUBLISHING.md).
+The reference host `npm start -w @memoweft/host` (:7788) and the optional diagnostic tool `npm run testbench` (:7888) both run from source. For the publish flow, see [`PUBLISHING.md`](./PUBLISHING.md).
 
 ---
 
@@ -74,7 +74,7 @@ cp .env.example .env
 
 The code reads the `MEMOWEFT_*` primary names first and falls back to the legacy `DLA_*` names:
 
-- **New installs**: always use `MEMOWEFT_*`.
+- **New installs**: use `MEMOWEFT_*`.
 - **Existing users**: an existing `.env` with `DLA_*` keeps working.
 - If neither prefix is set: a real model call errors.
 
@@ -105,7 +105,7 @@ MEMOWEFT_EMBED_MODEL=your-embedding-model
 
 This mode has the least setup and is good for:
 
-- quickly trying out the testbench;
+- quickly trying out the diagnostic tool;
 - letting other developers integrate with minimal cost;
 - validating the main `chat → remember → recall → inject into reply` loop first.
 
@@ -117,17 +117,17 @@ For real applications, move from Cloud-first to Cloud-guarded: models can still 
 
 Recommended defaults:
 
-| Evidence source | Default cloud policy | Rationale |
-| --- | --- | --- |
-| User chat / explicitly entered memory | Host may default to `allowCloudRead=true` | The user is already interacting with the AI host. |
-| User-manually-approved observations | Host decides | Needs a clear consent toggle. |
-| Desktop window / device observations | Default `allowCloudRead=false` | May contain app names, window titles, file paths. |
-| Screen OCR / clipboard / file contents | Default `allowCloudRead=false` | High-risk private content. |
-| Sleep / heart rate / health data | Default `allowCloudRead=false` | Sensitive personal data. |
+| Evidence source                        | Default cloud policy                      | Rationale                                         |
+| -------------------------------------- | ----------------------------------------- | ------------------------------------------------- |
+| User chat / explicitly entered memory  | Host may default to `allowCloudRead=true` | The user is already interacting with the AI host. |
+| User-manually-approved observations    | Host decides                              | Needs a clear consent toggle.                     |
+| Desktop window / device observations   | Default `allowCloudRead=false`            | May contain app names, window titles, file paths. |
+| Screen OCR / clipboard / file contents | Default `allowCloudRead=false`            | High-risk private content.                        |
+| Sleep / heart rate / health data       | Default `allowCloudRead=false`            | Sensitive personal data.                          |
 
 > MemoWeft only provides the authorization bits and filtering; the host must turn user consent, revocation, review, and correction into an explicit experience.
 
-> ⚠️ **Data at rest is unencrypted; disk encryption is the host/OS responsibility.** MemoWeft stores the three memory layers in a standard SQLite database (e.g. `./dla.db`), and the file itself is **not** encrypted. If the host needs "getting the disk ≠ getting the memory", rely on host- / OS-level disk encryption (BitLocker, FileVault, LUKS). `allowCloudRead` governs *what content may enter a cloud prompt*, which is not the same as local encryption at rest. See [`deployment.md`](./deployment.md) for the full policy.
+> ⚠️ **Data at rest is unencrypted; disk encryption is the host/OS responsibility.** MemoWeft stores the three memory layers in a standard SQLite database (e.g. `./dla.db`), and the file itself is **not** encrypted. If the host needs "getting the disk ≠ getting the memory", rely on host- / OS-level disk encryption (BitLocker, FileVault, LUKS). `allowCloudRead` governs _what content may enter a cloud prompt_, which is not the same as local encryption at rest. See [`deployment.md`](./deployment.md) for the full policy.
 
 ---
 
@@ -147,7 +147,7 @@ MEMOWEFT_WRITE_LLM_API_KEY=local
 MEMOWEFT_WRITE_LLM_MODEL=your-local-model
 
 # The embedder can be a local Ollama / LM Studio / other compatible service
-MEMOWEFT_EMBED_BASE_URL=http://localhost:11435/v1
+MEMOWEFT_EMBED_BASE_URL=http://localhost:11434/v1
 MEMOWEFT_EMBED_API_KEY=ollama
 MEMOWEFT_EMBED_MODEL=bge-m3
 ```
@@ -158,33 +158,33 @@ Local / hybrid suits desktop assistants, sensitive behavior observations, and lo
 
 ## 6. The nine env keys at a glance
 
-| Purpose | Primary name | Legacy alias | If unset |
-| --- | --- | --- | --- |
-| Chat model | `MEMOWEFT_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_LLM_*` | Errors on a real call |
-| Write-path model | `MEMOWEFT_WRITE_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_WRITE_LLM_*` | Falls back to chat model |
-| Embedding recall | `MEMOWEFT_EMBED_{BASE_URL,API_KEY,MODEL}` | `DLA_EMBED_*` | Recall falls back to keyword (FTS5) |
+| Purpose          | Primary name                                  | Legacy alias      | If unset                            |
+| ---------------- | --------------------------------------------- | ----------------- | ----------------------------------- |
+| Chat model       | `MEMOWEFT_LLM_{BASE_URL,API_KEY,MODEL}`       | `DLA_LLM_*`       | Errors on a real call               |
+| Write-path model | `MEMOWEFT_WRITE_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_WRITE_LLM_*` | Falls back to chat model            |
+| Embedding recall | `MEMOWEFT_EMBED_{BASE_URL,API_KEY,MODEL}`     | `DLA_EMBED_*`     | Recall falls back to keyword (FTS5) |
 
 > ⚠️ Do not commit `.env`. It contains secrets and should be ignored by `.gitignore`.
 
 ---
 
-## 7. Run the testbench
+## 7. Run the optional diagnostic tool
 
-The testbench is a local web page: the left side is a normal chat, the right side is MemoWeft's "x-ray view". You can watch how evidence lands in the store, how it is distilled into events, how it settles into a profile, and what the system wants to proactively ask.
+The diagnostic tool is a local web page: the left side is a normal chat, the right side is MemoWeft's diagnostic view. You can watch how evidence lands in the store, how it is distilled into events, how it settles into a profile, and what the system wants to proactively ask. It is optional and is not required for a deployment.
 
 ```bash
 npm run testbench
 # open http://localhost:7888
 ```
 
-Testbench features:
+Diagnostic tool features:
 
-- Uses a separate `testbench/testbench-evidence.db` so it never pollutes your real database.
-- Uses vector recall when `MEMOWEFT_EMBED_*` is configured; otherwise falls back to keyword recall (FTS5).
+- Uses a separate `testbench/testbench-evidence.db` rather than the database path used in the installation examples.
+- Uses vector recall when `MEMOWEFT_EMBED_*` is configured; the diagnostic tool explicitly uses empty recall when it is not. The public Core factory itself falls back to FTS5 keyword recall.
 - Writes each turn's internals to `logs/run-*.jsonl` for diagnosis.
 - Supports chatting, inspecting evidence / events / profile, manual profile updates, attribution, proactive asks, and injecting active-window observations.
 
-> Not seeing profile updates? The testbench batches by default: it only auto-runs `updateProfile` after 5 new conversations or 30 minutes idle. To see the effect immediately, click "Update profile now".
+> Not seeing profile updates? The diagnostic tool server has its own scheduler: it queues `updateProfile` after 5 new conversations or 30 minutes idle. This is diagnostic-tool behavior, not an automatic Core scheduler; use "Update profile now" to request a run.
 
 ---
 
@@ -199,7 +199,7 @@ node examples/minimal.ts
 
 It demonstrates (all via the unified entry `createMemoWeftCore`):
 
-1. One-line assembly with `createMemoWeftCore({ dbPath })`: the three-layer stores + retriever + model pool at once, all read from `.env`, degrading gracefully instead of crashing when config is missing.
+1. One-line assembly with `createMemoWeftCore({ dbPath })`: the three-layer stores + retriever + model pool at once, with environment configuration read from `.env`. Storage and management can be constructed without model configuration; an operation that needs an unconfigured model reports an error when invoked.
 2. `core.ingestUserMessage()` writes one user-spoken piece of evidence.
 3. `core.updateProfile()` runs the full write path (distill → consolidate → attribute → reindex) to build the profile.
 4. `core.handleConversationTurn()` handles the next message: recall the relevant profile and inject it into the reply.
@@ -216,20 +216,21 @@ Prefer going through the unified entry `createMemoWeftCore` for everything, inst
 ```ts
 import { createMemoWeftCore, MEMOWEFT_VERSION } from 'memoweft';
 
-const core = createMemoWeftCore({ dbPath: './my-app.db' });
+const core = createMemoWeftCore({ dbPath: ':memory:' });
+core.close();
 ```
 
-| What you want to do | What to use |
-| --- | --- |
-| Assemble a core in one line (stores + recall + models) | `createMemoWeftCore({ dbPath })` |
-| Check whether it can chat / recall | `core.health()` → `{ llmReady, embedReady }` |
-| Write a user-spoken piece of evidence | `core.ingestUserMessage({ content, subjectId?, hostId? })` |
-| Ingest behavior observations | `core.ingestObservation({ observations })` |
-| Write path (update profile) | `core.updateProfile({ subjectId? })` |
-| Read path (handle one conversation turn) | `core.handleConversationTurn({ message, subjectId? })` |
-| Recall relevant cognitions | `core.recall({ query, subjectId? })` |
-| Controlled memory management | `core.memory.*` |
-| Portable memory bundle | `core.portable.*` |
+| What you want to do                                    | What to use                                                |
+| ------------------------------------------------------ | ---------------------------------------------------------- |
+| Assemble a core in one line (stores + recall + models) | `createMemoWeftCore({ dbPath })`                           |
+| Check whether it can chat / recall                     | `core.health()` → `{ llmReady, embedReady }`               |
+| Write a user-spoken piece of evidence                  | `core.ingestUserMessage({ content, subjectId?, hostId? })` |
+| Ingest behavior observations                           | `core.ingestObservation({ observations })`                 |
+| Write path (update profile)                            | `core.updateProfile({ subjectId? })`                       |
+| Read path (handle one conversation turn)               | `core.handleConversationTurn({ message, subjectId? })`     |
+| Recall relevant cognitions                             | `core.recall({ query, subjectId? })`                       |
+| Controlled memory management                           | `core.memory.*`                                            |
+| Portable memory bundle                                 | `core.portable.*`                                          |
 
 For the full export list, see [`src/index.ts`](../src/index.ts) and [`docs/integration.md`](./integration.md).
 
@@ -237,13 +238,13 @@ For the full export list, see [`src/index.ts`](../src/index.ts) and [`docs/integ
 
 ## 10. Command reference
 
-| Command | Purpose |
-| --- | --- |
-| `npm run typecheck` | Type check |
-| `npm test` | Run tests |
-| `npm run build` | Produce `dist/` |
-| `npm run testbench` | Start the testbench |
-| `npm run experience` | Testbench alias |
+| Command              | Purpose                            |
+| -------------------- | ---------------------------------- |
+| `npm run typecheck`  | Type check                         |
+| `npm test`           | Run tests                          |
+| `npm run build`      | Produce `dist/`                    |
+| `npm run testbench`  | Start the optional diagnostic tool |
+| `npm run experience` | Diagnostic tool alias              |
 
 ---
 
@@ -263,7 +264,7 @@ It should not. Desktop / device / health / screen observations should default to
 
 ### Is the memory database file encrypted?
 
-No. Data at rest is currently unencrypted: the three memory layers live in a standard SQLite database and the file is not encrypted. Disk encryption is the host/OS responsibility (see §4).
+No. Data at rest is currently unencrypted: the three memory layers live in a standard SQLite database and the file is not encrypted. Disk encryption is the host/OS responsibility; see [Deployment and privacy](./deployment.md).
 
 ### Does MemoWeft handle privacy compliance for me?
 

@@ -2,17 +2,24 @@
 
 > 中文版 · [README.zh-CN.md](./README.zh-CN.md)
 
+> [!IMPORTANT]
+> **Unreleased source preview.** This adapter is not published on npm. Its package name resolves inside this repository's npm workspace only.
+
 **LangChain adapter for [MemoWeft](https://github.com/memoweft/memoweft).** Give your `@langchain/core` app long-term memory across three seams: **read** = a `BaseRetriever` that recalls relevant memory as `Document[]` for you to stitch into your prompt; **write** = a `BaseCallbackHandler` that persists each tool result, plus a host closure that persists the user's own words.
 
 This is an **external integration package**. It wraps MemoWeft's public Core facade (`createMemoWeftCore`) — it does not touch Core internals. `@langchain/core` is a peer dependency (bring your own).
 
-## Install
+## Try from a source checkout
 
 ```bash
-npm i @langchain/core memoweft @memoweft/adapter-langchain
+git clone https://github.com/memoweft/memoweft.git
+cd memoweft
+npm ci
+npm run build
+npm run build --workspace @memoweft/adapter-langchain
 ```
 
-`@langchain/core` `^1` and `memoweft` `^0.5.0 || ^0.6.0` are peer dependencies. `langchain` `^1` (the umbrella that ships the v1 agent middleware API) is an **optional** peer — you only need it if you use the v1 middleware entry below; the retriever + callback path needs only `@langchain/core`.
+`@langchain/core` `^1` and `memoweft` `^0.6.0` are peer dependencies. `langchain` `^1` (the umbrella that ships the v1 agent middleware API) is an **optional** peer — you only need it if you use the v1 middleware entry below; the retriever + callback path needs only `@langchain/core`.
 
 ## LangChain v1 agent middleware (recommended for `createAgent`)
 
@@ -26,7 +33,7 @@ import { createMemoWeftMiddleware } from '@memoweft/adapter-langchain';
 const core = createMemoWeftCore({ dbPath: './memory.db' });
 
 const agent = createAgent({
-  model,                                   // bring your own chat model
+  model, // bring your own chat model
   tools,
   middleware: [createMemoWeftMiddleware(core, { lang: 'en' })],
 });
@@ -36,7 +43,7 @@ What the middleware wires, and on which hook:
 
 - **Recall injection (read) — `wrapModelCall`.** Before each model call it recalls memory for the turn's last human message and injects the neutral knowledge block into the request's **`systemMessage`** for that call only — ephemeral, so it never accumulates in conversation state. This is the injection the retriever path can't do on its own (callbacks are observe-only).
 - **The user's words (write) — `beforeAgent`.** The turn's last human message is stored once as `spoken` evidence (idempotent on the message id).
-- **Tool results (write) — `wrapToolCall`.** Only the tool's returned `ToolMessage.content` is stored as `tool` evidence; the tool call's arguments are never read (iron rule 3a, by construction).
+- **Tool results (write) — `wrapToolCall`.** The evidence boundary is enforced by construction: only the returned `ToolMessage.content` is stored as `tool` evidence, and tool-call arguments are never read.
 - **Assistant reply (context) — `afterAgent`.** With memoweft `0.6`, the final AI reply is reported via `recordAssistantReply` so the **next** turn's short answer ("yes", "the latter") can be understood against it. It is **context only, never evidence**. On `0.5` this is skipped (runtime capability probe) and everything else still works.
 
 Conversation threading uses `runtime.configurable.thread_id` as the MemoWeft `conversationId` by default (override with `conversationId` / `getConversationId` in options). Privacy and degradation are identical to the retriever path below (provenance never injected, recall bounded by `recallTimeoutMs`, writes retry once).
@@ -77,15 +84,15 @@ const reply = await chain.invoke({ memory, question }, { callbacks: [mw.writeCal
 
 Three paths, three pieces:
 
-- **① Recall injection (read) — `retriever` + `formatKnowledge`.** `mw.retriever` is a `MemoWeftRetriever extends BaseRetriever`; `retriever.invoke(query)` recalls and returns `Document[]` (`pageContent` = the cognition's content; `metadata` carries host-facing `confidence` / `credStatus` / `id` / `contentType` / `score`). `mw.formatKnowledge(docs)` renders them into the neutral knowledge block — MemoWeft's own wording, ported verbatim from Core's `knowledgeBlock`. Low-confidence items are explicitly marked *"only guesses — do not treat as established facts."* The adapter **adds no persona / character prompt** of its own; where the block goes in the prompt is your call.
+- **① Recall injection (read) — `retriever` + `formatKnowledge`.** `mw.retriever` is a `MemoWeftRetriever extends BaseRetriever`; `retriever.invoke(query)` recalls and returns `Document[]` (`pageContent` = the cognition's content; `metadata` carries host-facing `confidence` / `credStatus` / `id` / `contentType` / `score`). `mw.formatKnowledge(docs)` renders them into the neutral knowledge block — MemoWeft's own wording, ported verbatim from Core's `knowledgeBlock`. Low-confidence items are explicitly marked _"only guesses — do not treat as established facts."_ The adapter **adds no persona / character prompt** of its own; where the block goes in the prompt is your call.
 - **② The user's words (write) — `persistUserTurn`.** Call `mw.persistUserTurn({ text, originId })` at the call site, **before** injection, passing the words you already hold. Do not fish them back out of chain events: the model input has already been injected with recalled memory, so re-reading it would store the injected memory as if it were the user's words. Stored as `spoken` evidence.
-- **③ Tool results (write) — `writeCallback`.** Add `mw.writeCallback` to any chain's `config.callbacks`. It implements **only** `handleToolEnd` (the tool's real **result**) → stored as `tool` evidence, keyed by `runId` for idempotency. It **never** declares `handleToolStart` — so the model's tool-call **intent / arguments** never reach the adapter (iron rule 3a, enforced *by construction*: `CallbackManager` only dispatches `if (handler.handleToolStart)`).
+- **③ Tool results (write) — `writeCallback`.** Add `mw.writeCallback` to any chain's `config.callbacks`. It implements **only** `handleToolEnd` (the tool's real **result**) → stored as `tool` evidence, keyed by `runId` for idempotency. It never declares `handleToolStart`, so the source-role boundary is enforced by construction: `CallbackManager` cannot dispatch tool-call **intent / arguments** to this adapter.
 
-## Privacy hard constraint (D-0024)
+## Privacy hard constraint
 
 `provenance` (evidence text + authorization bits) **never** enters `pageContent` or `Document.metadata`, and never enters the `formatKnowledge` block. `pageContent` holds only `content`; `buildKnowledgeBlock` uses only `content` / `confidence` / `credStatus`. The richer recall surface — `id`, `contentType`, `score`, and (with `explain`) `provenance` including `allowCloudRead` / `allowInference` bits — is handed to the host **only** through the `onRecall` callback, so you can filter before forwarding anything to a cloud model. Because injection lands in your prompt (never back into the captured user words), the stored `spoken` evidence can never contain injected memory.
 
-## Degradation (§16.2)
+## Degradation
 
 - Recall is bounded by `recallTimeoutMs` (default 200ms). On timeout or error `retriever.invoke` returns `[]` — the turn proceeds **without injection**; recall failure never blocks the reply. The read path does not retry.
 - Writes (`ingest`) retry once on real errors; a still-failing write is logged (if a `logger` is provided) and swallowed. Nothing is ever thrown to the chain or the caller.
@@ -102,7 +109,7 @@ See [`examples/basic.ts`](./examples/basic.ts) — a two-turn chat that stores e
 
 ## Why not implement `BaseMemory`
 
-LangChain's `BaseMemory` is a **conversation buffer** — it stuffs prior turns back into the prompt. That is orthogonal to MemoWeft's long-term memory, which **separates facts from guesses, computes confidence by rule (not model self-report), stores only the user's words and tool results, and never stores the assistant reply.** Forcing MemoWeft into `BaseMemory` would store assistant replies and injected memory as "history" (dirty data, violating iron rule 3a and D-0024). So the adapter uses three seams — a retriever (read) plus a callback and a closure (write) — instead of `BaseMemory`.
+LangChain's `BaseMemory` is a **conversation buffer** — it stuffs prior turns back into the prompt. That is orthogonal to MemoWeft's long-term memory, which **separates facts from guesses, computes confidence by rule (not model self-report), stores only the user's words and tool results, and never stores the assistant reply.** Forcing MemoWeft into `BaseMemory` would store assistant replies and injected memory as "history", violating MemoWeft's no-self-evidence rule. So the adapter uses three seams — a retriever (read) plus a callback and a closure (write) — instead of `BaseMemory`.
 
 ## What it does not do
 

@@ -1,8 +1,8 @@
-"""跨会话趋势 —— 移植自 src/background/trends.ts。反复出现的瞬时状态 → 聚成持续模式认知(formed_by=ruled)。
+"""跨会话趋势聚合，与 TypeScript trends 实现保持行为一致。
 
 先规则保证"窗口内同类状态真出现够多次"(trend_min_count),再让 LLM 归纳命名——频率客观、LLM 只负责归纳。
-纪律:用 all()【历史口径】(含已失效/归档,看"曾反复出现");**排除 confirmed**(D-0033 结构性对抗护栏,防诱导附和被数成趋势);
-  同一批证据聚过不重复(dedup);隐私门只筛 tier、**不筛 allow_inference**(与 attribute 不同)。同步(见 D-0043)。
+使用 all() 的历史口径（包含已失效或归档项）判断是否曾反复出现，并排除 confirmed 以避免把诱导附和计为趋势；
+  已聚合的证据不会重复生成趋势；隐私边界按 tier 过滤，但不按 allow_inference 过滤（与 attribute 不同）。
 """
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ class TrendResult:
 def _build_messages(
     items: list[tuple[str, str, str, str]], lang: Lang
 ) -> tuple[list[ChatMessage], dict[str, str]]:
-    """items = (evidence_id, state_content, text, occurred_at)。短标号 [e1](D-0036)。对齐 trends.ts:46-71。"""
+    """将 (evidence_id, state_content, text, occurred_at) 项渲染为带短标号 [e1] 的消息。"""
     zh = lang == "zh"
     tag_to_id: dict[str, str] = {}
     parts: list[str] = []
@@ -64,11 +64,11 @@ def aggregate_trends(
     cfg: Config = CONFIG,
     lang: Optional[Lang] = None,
 ) -> TrendResult:
-    """对齐 trends.ts:77-157。"""
+    """聚合满足窗口、频次、隐私与去重约束的跨会话趋势。"""
     lg = lang if lang is not None else resolve_lang()
     window_start = ms_to_iso(epoch_ms(now) - cfg.trend_window_days * 86_400_000)
 
-    # all() 历史口径 + 排除 confirmed(护栏,勿删)。
+    # 历史口径使用 all()，并排除 confirmed，避免将诱导附和计为趋势。
     states = [c for c in cognition_store.all(subject_id) if c.content_type == "state" and c.formed_by != "confirmed"]
     items: list[tuple[str, str, str, str]] = []
     window_evidence: set[str] = set()
@@ -90,7 +90,7 @@ def aggregate_trends(
     if len(items) < cfg.trend_min_count:
         return TrendResult(trends=[], considered_count=len(items), llm_calls=0)  # 规则筛:不够频
 
-    # dedup:已有 active 趋势覆盖过的证据——这批全被盖过就别重复聚。
+    # 若当前证据集合已被 active 趋势完整覆盖，则不重复生成趋势。
     covered: set[str] = set()
     for t in [c for c in cognition_store.active(subject_id) if c.content_type == "trend"]:
         for lk in cognition_store.sources_of(t.id):
@@ -118,7 +118,7 @@ def aggregate_trends(
             )
         )
         if len(cited) == 0:
-            continue  # 没引到真实状态证据 → 不硬编
+            continue  # 未引用有效状态证据时不生成趋势。
         confidence = compute_confidence(
             ConfidenceInputs(content_type="trend", formed_by="ruled", support_count=len(cited), contradict_count=0), cfg
         )

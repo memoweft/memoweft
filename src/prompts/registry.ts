@@ -1,12 +1,12 @@
 /**
- * 受治理提示词的聚合注册表（§15.3 提示词集中版本化 / DECISIONS D-0009）。
+ * 受治理提示词的聚合注册表。
  *
  * 把 8 条受治理提示词（原先散落在各模块的 export 常量）收敛到一处：
  *   - PROMPT_REGISTRY：全部 8 条，按 id 字母序排列（便于 diff 时肉眼比对哈希快照）。
  *   - promptVersions()：id → version 映射，供 bench 评测器把「本轮用了哪版提示词」记进报告元数据。
  *
  * 哈希闸门：tests/prompts/registry.test.ts + tests/prompts/prompt-hashes.snapshot。
- * 改任一条提示词内容必须 bump 其 version，否则快照会立刻变红（§15.3 / D-0009）。
+ * 改任一条提示词内容必须 bump 其 version，否则快照会立刻变红（提示词变更规则）。
  * 生成/更新快照：`npm run prompts:update`（scripts/prompt-hashes.mjs）。
  */
 import type { VersionedPrompt } from './types.ts';

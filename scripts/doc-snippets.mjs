@@ -3,7 +3,15 @@
 // 紧邻围栏上方有 <!-- snippet:skip ... --> 的跳过(需模型 / 长驻服务 / 需完整写路径等)。
 // 前置:先 `npm run build` —— 片段以 `import 'memoweft'` 解析到 dist(包 self-reference)。
 // 用法:node scripts/doc-snippets.mjs   (cwd = 仓库根)
-import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
+import {
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+  mkdirSync,
+  rmSync,
+  existsSync,
+} from 'node:fs';
 import { join, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
@@ -42,7 +50,10 @@ function extractRunnable(file) {
     const skip = j >= 0 && /<!--\s*snippet:skip/.test(lines[j]);
     const body = [];
     let k = i + 1;
-    for (; k < lines.length; k++) { if (/^```\s*$/.test(lines[k])) break; body.push(lines[k]); }
+    for (; k < lines.length; k++) {
+      if (/^```\s*$/.test(lines[k])) break;
+      body.push(lines[k]);
+    }
     if (!skip) out.push({ file, line: i + 1, code: body.join('\n') });
     i = k;
   }
@@ -61,10 +72,19 @@ snippets.forEach((s, idx) => {
     console.log(`ok    ${label}`);
   } catch (e) {
     const msg = (e.stderr || e.stdout || e.message || '').toString().trim();
-    console.log(`FAIL  ${label}\n${msg.split('\n').map((l) => '        ' + l).join('\n')}`);
+    console.log(
+      `FAIL  ${label}\n${msg
+        .split('\n')
+        .map((l) => '        ' + l)
+        .join('\n')}`,
+    );
     fail++;
   }
 });
 rmSync(TMP, { recursive: true, force: true });
-console.log(fail === 0 ? `\nAll ${snippets.length} runnable snippets passed.` : `\n${fail}/${snippets.length} runnable snippets FAILED.`);
+console.log(
+  fail === 0
+    ? `\nAll ${snippets.length} runnable snippets passed.`
+    : `\n${fail}/${snippets.length} runnable snippets FAILED.`,
+);
 process.exit(fail === 0 ? 0 : 1);

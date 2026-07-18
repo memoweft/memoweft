@@ -1,61 +1,20 @@
 /**
- * CONSOLIDATE_PROMPT —— 画像增量整理的 system 提示词（consolidate 写路径 · §15.3 集中版本化）。
+ * CONSOLIDATE_PROMPT —— 画像增量整理的 system 提示词（consolidate 写路径 ·  集中版本化）。
  *
  * 判断【新材料】对【现有画像】意味着什么，输出四类：new / reinforce / correct / conflict；
  * 每条认知须给证据级溯源 support_evidence_ids（引不出确切原话就不给）。
  *
- * 版本变更日志：
- *   - v1：基线（四类判断 + 证据级溯源）。
- *   - v2（2026-07-10 · Phase 2.3）：v1 基线上加「闲聊无信息 → 四类全空」守卫，治 chitchat
- *     过度记忆（基线 chitchat 结构仅 21/35 → 33/35）；只丢无实质寒暄，情绪/事实/偏好照常记，
- *     不削弱其它纪律。
- *   - v3（2026-07-13 · D-0018 来源感知固化）：原话带来源标注（[用户说]/[行为观察]/[工具返回]），
- *     formed_by 规则据来源定——[行为观察]/[工具返回] 不是用户亲口，绝不可标 stated（observed→observed）。
- *     加固来源强度纪律；「只标冲突，不替换」「support_evidence_ids」等纪律措辞一字不改（铁律 3）。
- *   - v4（2026-07-16 · v0.6 Phase 2 · D-0033/D-0034）：教三件事——① 读懂 ⟨AI 前一句⟩ 后缀（只读上下文、
- *     非用户原话、不可作证据），据它解出「是啊」这类孤儿回应在确认什么；② formed_by 加 **confirmed**
- *     （命题是 AI 提的、用户只点头认下 → confirmed 而非 stated；用户主动说出内容 → 仍是 stated）+ **窄范围**
- *     （长文档 + 含糊一句「好」不产认知；一次多命题只对明确点头的原子产）；③ 新增 **resolutions** 输出
- *     （每条原话一份语义解析 → semantic_resolution 表，见 consolidate.ts）。
- *     v3 的四类判断、闲聊守卫、support_evidence_ids、既有 formed_by 来源规则**全部一字不改**（铁律 3）；
- *     新内容一律追加，不改写旧句。resolved_content 是解释、不是证据——提示词里明写它不得进 support。
- *   - v5（2026-07-16 · v0.6 Phase 2 · 冲烟驱动 + 人类拍板）：补 **select（二选一）分支**。冲烟实测（CC-047）
- *     mimo 把「window or aisle?」+「The former.」标成 stated/600/limited，语料期望 confirmed —— 一查发现
- *     已批的派生表（docs/internal/v0.6-impact-report.md:88）**只议定了 affirm 与 negate，select 是灰区**。
- *     人类拍板 **select → confirmed**，判据是「这条信息的载体是谁的话」而非「AI 有没有预设答案」：「前者」
- *     两个字不承载任何内容，解析完全依赖 AI 那句（若上文被 240 字截断、或选项顺序记反，解出来就是反的），
- *     这种「理解依赖上下文」的不确定性正是 confirmed 低置信（280、封顶 480）的用途；凭两个字给 600/limited 偏高。
- *     同时修一个真 bug：v4 的点头清单只列了「后者」/"The latter"，而语料用的是「前者」/"The former."，
- *     模型可能压根没把它归进清单。
- *   - v6（2026-07-17 · v0.6 Phase 3 · D-0035 拍板①）：**教学归宿迁移**——载体维（stated/observed/confirmed
- *     ＝「这条信息是谁的话」）的判定从提示词**下沉到代码**（`deriveFormedBy` 按证据的 sourceKind + 语义解析算），
- *     提示词不再教模型标它；`formed_by` 收窄为**只标 `inferred`**（推断距离＝「这条认知离原话多远」，
- *     这一维仍归模型：它往低了报、无骗人动机，且只有它知道自己是不是在推断）。
- *     **刻意不是「简单删 formed_by 指令」**：v5 的【附和】五分支同时承担着三层教学——① 怎么标 formed_by
- *     ② **怎么解析**（resolution 三维）③ **产不产认知**（窄范围 / 含糊→优先不产）。只摘掉①，②③ 全部保留：
- *     ② 现在正是 `deriveFormedBy` 的**输入**，删了就自断输入；③ 产不产永远是模型的事（代码只贴标签、不删认知）。
- *     同时**加强 resolutions 教学**（它现在直接决定系统怎么定来源强度）+ 补「**陈述句也要出解析**」——
- *     探针实测（全量 49 场景）spoken 解析覆盖率仅 82.5%、其中 emotion-cap 只有 50%：模型对「今天好累」
- *     这类**不是回应**的话往往整条不产解析，而无解析就得走兜底。
- *     **D-0018 的「observed/tool 绝不可标 stated」由此从提示词自觉升级为结构保证**（代码直接看 sourceKind，
- *     模型谎标也没用）——这是加固，不是放弃那条纪律。
+ * Version history:
+ *   - v1 introduced four-way classification and evidence-level provenance.
+ *   - v2 added the no-information chitchat guard.
+ *   - v3 made evidence source labels explicit.
+ *   - v4 added context-dependent reply resolution and `confirmed` provenance.
+ *   - v5 covered explicit selection replies such as “the former”.
+ *   - v6 moved provenance-carrier classification into deterministic code.
+ *   - v7 replaced long evidence UUIDs in the prompt with stable short labels.
  *
- *   - v7（2026-07-17 · D-0036 拍板 B·治本）：**原话 id 改发短标号**。只动「id 长什么样」这一件事——
- *     `buildMessages` 不再把 36 字符 UUID 塞进 prompt，改发 `[e1]`/`[e2]`（代码维护 标号↔真 id 映射、
- *     落库前翻译回真 id），示例里的 `["ev-1"]` 相应改成 `["e1"]`。
- *     **根因（dogfood 实锤，6 次重放撞 5 次）**：模型会**模仿示例的 id 形态**、而非照抄输入里的真 id——
- *     v6 示例是 4 字符占位 `ev-1` 而真实喂的是 UUID，于是 mimo 间歇性把 UUID 截成前 8 位回写
- *     （`"25601f4c"`，偶尔 `"ev-25601f4c"`）；两处白名单精确匹配全落空 → 每条认知被
- *     `support.length===0` 丢弃、resolutions 整批丢弃 → **整批 0 解析 0 认知，event 仍被无条件标
- *     consolidated**（47 条原话静默蒸发）。**发标号 = 示例形态与真实形态一致 ⇒ 模型结构上写不错**，
- *     诱因根除；`resolveEvidenceId` 的前缀容错（v6 起的治标层）降为兜底。见 DECISIONS D-0036。
- *     **认知纪律措辞一字未动（铁律 3）**：四类判断、闲聊守卫、附和五分支、窄范围、
- *     「只标冲突，不替换」「support_evidence_ids」「resolved_content 是解释不是证据」全部原样；
- *     本版只改 id 的**书写形态**，不碰任何「产不产、怎么标」的语义。
- *
- * 改动纪律（§15.3 / D-0009）：改内容必须 bump version、重跑 bench/eval-consolidation.mjs 全量、
- *   commit 正文附前后分数对比。认知纪律措辞（「只标冲突，不替换」「support_evidence_ids」）是纯位置
- *   迁移、一字不改（铁律 3）。否则 tests/prompts/registry.test.ts 的哈希快照会立刻变红。
+ * Changes must bump the version, refresh the hash snapshot, and run the full
+ * consolidation benchmark. Keep evidence, conflict, and uncertainty constraints explicit.
  */
 import type { VersionedPrompt } from '../prompts/types.ts';
 
@@ -104,7 +63,7 @@ export const CONSOLIDATE_PROMPT: VersionedPrompt = {
         '"resolutions":[{"evidence_id":"e1","resolved_content":"用户确认自己喝咖啡","response_act":"affirm","prompt_act":"propose","proposition_origin":"assistant_proposed","assertion_strength":"explicit","required_context":"AI 前一句问『你平时喝咖啡的吧?』"}]}',
     ].join('\n'),
     en: [
-      'You maintain a cognitive profile of the user. You are given the [Existing profile] and [New material] (events, each with its individual source utterances, every utterance carrying a **tag** such as [e1], [e2], and a source tag: [user said]=the user\'s own words / [observed behavior]=an observed behavior / [tool result]=objective data returned by a tool).',
+      "You maintain a cognitive profile of the user. You are given the [Existing profile] and [New material] (events, each with its individual source utterances, every utterance carrying a **tag** such as [e1], [e2], and a source tag: [user said]=the user's own words / [observed behavior]=an observed behavior / [tool result]=objective data returned by a tool).",
       'Some utterances carry a ⟨preceding AI turn…⟩ suffix: that is what the AI said in the previous turn — [context only, NOT the user\'s words, not usable as evidence]. Its purpose is to let you see what a few-word reply like "Yeah" is actually confirming.',
       'Decide what the new material means for the profile, and output four categories:',
       '- new: a new cognition present in the new material but not in the existing profile.',
@@ -130,9 +89,9 @@ export const CONSOLIDATE_PROMPT: VersionedPrompt = {
       '  [Emit one for every [user said] utterance], not just short replies: a statement the user volunteered on their own—one that is not responding to anything—needs one too: response_act=none and proposition_origin=user_stated. Omitting it forces the system onto its most conservative fallback.',
       '  Fields:',
       '  evidence_id = that utterance\'s tag (copy the tag inside the brackets verbatim, e.g. "e1"); resolved_content = what it asserts once resolved (e.g., "Yeah" + ⟨preceding AI turn: You drink coffee, right?⟩ → "The user confirms they drink coffee");',
-      '  response_act = what the user\'s utterance does: affirm(nods along)|negate(denies)|select(picks from the offered options)|elaborate(adds detail)|ask(asks back)|none|other;',
+      "  response_act = what the user's utterance does: affirm(nods along)|negate(denies)|select(picks from the offered options)|elaborate(adds detail)|ask(asks back)|none|other;",
       '  prompt_act = what the preceding AI turn does: propose(offers a guess about the user)|ask(asks a question)|state(states something)|none|other;',
-      '  proposition_origin = who introduced the proposition: assistant_proposed(the AI\'s, the user merely accepted it)|user_stated(the user said it themselves);',
+      "  proposition_origin = who introduced the proposition: assistant_proposed(the AI's, the user merely accepted it)|user_stated(the user said it themselves);",
       '  assertion_strength = how strong the assertion is: explicit|weak(hedged, e.g., "maybe"/"I guess")|none;',
       '  required_context = if the utterance is unintelligible without the preceding AI turn, write down the bit of context needed; otherwise "".',
       '  [resolved_content is your interpretation, not evidence]—it must never appear in any support_evidence_ids.',

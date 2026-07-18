@@ -1,8 +1,8 @@
-"""事件化(distill)—— 移植自 src/distillation/distill.ts。把"还没整理成事件"的近期证据总结成一个带情境的事件。
+"""事件化（distill），与 TypeScript distillation 实现保持行为一致。
 
 隐私门:tier 读取权(cloud 筛 allow_cloud_read / local 筛 allow_local_read)+ inference 门(allow_inference);
-被挡证据【不算已覆盖】、留 pending 下轮再扫(D8 覆盖修复)。红线:只总结用户话 + 情境,不含助手回话。
-async 取舍:同步(llm.chat 同步),见 D-0043。
+被挡证据【不算已覆盖】、留 pending 下轮再扫。隐私不变量：只总结用户话 + 情境，不含助手回话。
+async 取舍:同步(llm.chat 同步),。
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def distill(
     lang: Optional[Lang] = None,
     cfg: Config = CONFIG,
 ) -> DistillResult:
-    """对齐 distill.ts:35-88。两道早退 + tier+inference 隐私门 + 时间锚 + D8 覆盖修复。"""
+    """对齐 TypeScript 公开实现。两道早退 + tier+inference 隐私门 + 时间锚 + 覆盖策略。"""
     evidence = [e for e in evidence_store.all() if e.subject_id == subject_id]
     covered = set(event_store.covered_evidence_ids(subject_id))
     pending = sorted((e for e in evidence if e.id not in covered), key=lambda e: e.occurred_at)
@@ -75,7 +75,7 @@ def distill(
     summary = js_trim(llm.chat(messages))
     llm_calls = llm.call_count - before
 
-    # D8 覆盖修复:event 只覆盖【真消化进 summary 的】digestible;被挡的不覆盖、留 pending 可再扫。
+    # 覆盖策略：event 只覆盖【真消化进 summary 的】digestible;被挡的不覆盖、留 pending 可再扫。
     event = event_store.put(
         EventInput(
             subject_id=subject_id,

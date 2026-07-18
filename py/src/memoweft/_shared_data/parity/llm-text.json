@@ -1,0 +1,98 @@
+{
+  "readReplyText": {
+    "cases": [
+      {
+        "expected": "答案",
+        "input": {
+          "content": "答案"
+        }
+      },
+      {
+        "expected": "回落到 reasoning",
+        "input": {
+          "content": "",
+          "reasoning_content": "回落到 reasoning"
+        }
+      },
+      {
+        "expected": "空白回落",
+        "input": {
+          "content": "   ",
+          "reasoning_content": "空白回落"
+        }
+      },
+      {
+        "expected": "答案",
+        "input": {
+          "content": "答案",
+          "reasoning_content": "思考"
+        }
+      },
+      {
+        "expected": "",
+        "input": {
+          "content": "",
+          "reasoning_content": ""
+        }
+      },
+      {
+        "expected": "only reasoning",
+        "input": {
+          "reasoning_content": "only reasoning"
+        }
+      },
+      {
+        "expected": null,
+        "input": {}
+      },
+      {
+        "expected": null,
+        "input": null
+      }
+    ],
+    "fn": "readReplyText",
+    "note": "content 非空优先;否则 reasoning_content 回落;都空→content(\"\")或 undefined(→null)"
+  },
+  "stripReasoning": {
+    "cases": [
+      {
+        "expected": "no think here",
+        "input": "no think here"
+      },
+      {
+        "expected": "答案",
+        "input": "<think>思考过程</think>答案"
+      },
+      {
+        "expected": "答案前答案后",
+        "input": "答案前<think>x</think>答案后"
+      },
+      {
+        "expected": "结果",
+        "input": "<think>a</think><think>b</think>结果"
+      },
+      {
+        "expected": "无闭合<think>思考没结束了",
+        "input": "无闭合<think>思考没结束了"
+      },
+      {
+        "expected": "正文",
+        "input": "<THINK>大写标签</THINK>正文"
+      },
+      {
+        "expected": "{\"a\":1}",
+        "input": "<think>含{花括号}和\"引号\"</think>{\"a\":1}"
+      },
+      {
+        "expected": "收尾空白",
+        "input": "  <think>x</think>  收尾空白  "
+      },
+      {
+        "expected": "",
+        "input": ""
+      }
+    ],
+    "fn": "stripReasoning",
+    "note": "剥成对 <think>…</think>(大小写不敏感/跨行)+ trim;无闭合不剥"
+  }
+}

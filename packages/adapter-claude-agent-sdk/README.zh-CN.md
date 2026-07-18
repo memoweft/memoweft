@@ -2,17 +2,24 @@
 
 > English · [README.md](./README.md)
 
+> [!IMPORTANT]
+> **尚未发布的源码预览。** 此适配器尚未发布到 npm；文中的包名目前仅能在本仓库的 npm workspace 中解析。
+
 **[MemoWeft](https://github.com/memoweft/memoweft) 的 Claude Agent SDK 适配器。** 通过 **hooks** 给你的 Claude Agent SDK 应用接上长期记忆：**读** = 召回相关记忆并注入本轮；**写** = 沉淀用户原话与每条工具结果。
 
 这是一个**外部集成包**。它封装 MemoWeft 的公开 Core facade（`createMemoWeftCore`），不碰 Core 内部。`@anthropic-ai/claude-agent-sdk` 是 peer 依赖（自带）。
 
-## 安装
+## 从源码检出试用
 
 ```bash
-npm i @anthropic-ai/claude-agent-sdk memoweft @memoweft/adapter-claude-agent-sdk
+git clone https://github.com/memoweft/memoweft.git
+cd memoweft
+npm ci
+npm run build
+npm run build --workspace @memoweft/adapter-claude-agent-sdk
 ```
 
-`@anthropic-ai/claude-agent-sdk` `^0.3.207` 与 `memoweft` `^0.5.0` 是 peer 依赖。
+`@anthropic-ai/claude-agent-sdk` `^0.3.207` 与 `memoweft` `^0.5.1 || ^0.6.0` 是 peer 依赖。
 
 ## 一个工厂、两个 hook、三条路径
 
@@ -34,18 +41,18 @@ for await (const msg of query({
 }
 ```
 
-- **`UserPromptSubmit`** 每轮做两件事：先**存用户原话**（`core.ingestUserMessage`，一条 `spoken` 证据），再**召回**相关记忆、经 hook 返回值（`hookSpecificOutput.additionalContext`）注入。注入走返回值、不改 `input.prompt`，所以存下的原话永不含注入内容——**by-construction** 干净。
-- **`PostToolUse`** 存每条**工具结果**（`core.ingestToolResult`，一条 `tool` 证据）。它**只**读 `tool_response` 与 `tool_use_id`，**绝不**读/引用 `tool_input`（模型的调用意图不是证据；AD-3 / 铁律 3a，代码级落实）。
+- **`UserPromptSubmit`** 每轮做两件事：先**存用户原话**（`core.ingestUserMessage`，一条 `spoken` 证据），再**召回**相关记忆、经 hook 返回值（`hookSpecificOutput.additionalContext`）注入。注入走返回值、不改 `input.prompt`，所以存下的原话永不含注入内容——**by design** 干净。
+- **`PostToolUse`** 存每条**工具结果**（`core.ingestToolResult`，一条 `tool` 证据）。它**只**读 `tool_response` 与 `tool_use_id`，**绝不**读/引用 `tool_input`，因此模型的调用意图不可能成为证据。
 
 注入块用 MemoWeft 自己的中性措辞（逐字照搬 Core 的 `knowledgeBlock`）。低置信条目明确标注*"只是假设——别当定论"*。适配器**不自造任何人格/人设 prompt**。
 
-## 隐私硬约束（D-0024）
+## 隐私保证
 
 `provenance`（证据原文 + 授权位）、`contentType`、`score`、`id` **绝不**进注入的 `additionalContext`。`buildKnowledgeBlock` 只用 `content` / `confidence` / `credStatus`。更完整的召回面**只**经 `onRecall` 回调交给宿主，宿主转发云模型前自行按授权位过滤。
 
-## 降级（§16.2）
+## 降级策略
 
-- 召回受 `recallTimeoutMs`（默认 200ms）约束。超时/抛错则本轮**不注入**继续——召回失败绝不阻塞回话。读路径不重试。
+- 召回受 `recallTimeoutMs`（默认 200ms）约束。超时/抛错则本轮**不注入**继续——召回失败绝不阻塞对话。读路径不重试。
 - 写（`ingest`）失败重试一次；仍失败则记事件（若注入了 `logger`）并静默吞。任何情况都不向 SDK 抛。
 
 ## 选项
@@ -89,7 +96,7 @@ for await (const msg of query({
 ## 它不做什么
 
 - 不加人格/人设 prompt（Core 无头——语气/角色是宿主的事）。
-- 不存助手回话，只存用户原话与工具结果。
+- 不存助手回复，只存用户原话与工具结果。
 - 绝不读 `tool_input`，写路径不传任何上云授权位。
 
 ## 许可

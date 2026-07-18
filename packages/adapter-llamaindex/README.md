@@ -2,25 +2,32 @@
 
 > 中文版 · [README.zh-CN.md](./README.zh-CN.md)
 
+> [!IMPORTANT]
+> **Unreleased source preview.** This adapter is not published on npm. Its package name resolves inside this repository's npm workspace only.
+
 > ## ⚠️ Legacy — frozen (upstream archived)
 >
 > **LlamaIndex.TS ([run-llama/LlamaIndexTS](https://github.com/run-llama/LlamaIndexTS)) was archived read-only on 2026-04-30 and is officially deprecated / no longer maintained** (its team moved to the Python line and LlamaCloud). This adapter is therefore **frozen at its current functionality**: it still works, but it will **not** gain new MemoWeft faces — in particular it does **not** implement MemoWeft 0.6's conversation-context line (`recordAssistantReply`) that the actively-maintained adapters received. Its upstream dependencies (`llamaindex` / `@llamaindex/workflow`) will drift as the ecosystem moves.
 >
-> **If you are starting new work, prefer a maintained framework** — see [`@memoweft/adapter-mastra`](../adapter-mastra) or [`@memoweft/adapter-langchain`](../adapter-langchain). This package is kept for existing users only. See `DECISIONS.md` D-0041.
+> **If you are starting new work, prefer a maintained framework** — see [`@memoweft/adapter-mastra`](../adapter-mastra) or [`@memoweft/adapter-langchain`](../adapter-langchain). This package is kept for existing users only.
 
 **LlamaIndex adapter for [MemoWeft](https://github.com/memoweft/memoweft).** Give your LlamaIndex agent (`llamaindex` + `@llamaindex/workflow`) long-term memory across three seams: **read** = a `BaseMemoryBlock` that recalls relevant memory and injects it as a neutral `role:'memory'` message every model call; **write** = a pass-through wrapper around `agent.runStream(...)` that persists the user's own words and each tool result while re-yielding every event untouched.
 
 This is an **external integration package**. It wraps MemoWeft's public Core facade (`createMemoWeftCore`) — it does not touch Core internals. `llamaindex` and `@llamaindex/workflow` are peer dependencies (bring your own).
 
-> **Upstream note (updated 2026-07-18).** LlamaIndex.TS is no longer mid-restructuring — the **entire `run-llama/LlamaIndexTS` repository was archived read-only on 2026-04-30** (last publish 2025-12). The granular `@llamaindex/*` packages and the umbrella `llamaindex@^0.12` this adapter peers on are all frozen upstream: no further releases, no bug fixes. The event-driven agent API it uses (`agent` / `runStream` / `agentToolCallResultEvent`) lives in `@llamaindex/workflow`. The adapter still works against the last-published versions, but is frozen with the framework. Originally recorded in `DECISIONS.md` D-0029; freeze decision in D-0041.
+> **Upstream note (updated 2026-07-18).** The **entire `run-llama/LlamaIndexTS` repository was archived read-only on 2026-04-30** (last publish 2025-12). The granular `@llamaindex/*` packages and the umbrella `llamaindex@^0.12` this adapter peers on are frozen upstream: no further releases or bug fixes. The event-driven agent API it uses (`agent` / `runStream` / `agentToolCallResultEvent`) lives in `@llamaindex/workflow`. The adapter still works against the last-published versions, but is frozen with the framework.
 
-## Install
+## Try from a source checkout
 
 ```bash
-npm i llamaindex @llamaindex/workflow memoweft @memoweft/adapter-llamaindex
+git clone https://github.com/memoweft/memoweft.git
+cd memoweft
+npm ci
+npm run build
+npm run build --workspace @memoweft/adapter-llamaindex
 ```
 
-`@llamaindex/core` `^0.6.23`, `@llamaindex/workflow` `^1.1.25`, and `memoweft` `^0.5.0` are peer dependencies.
+`llamaindex` `^0.12`, `@llamaindex/workflow` `^1.1.24`, and `memoweft` `^0.5.1 || ^0.6.0` are peer dependencies.
 
 ## Why recall goes through a memory block, and writes through a stream tap
 
@@ -46,22 +53,25 @@ const memory = createMemory({ memoryBlocks: [mw.memoryBlock] });
 const myAgent = agent({ llm, tools, memory }); // bring your own ToolCallLLM + tools
 
 // ②③ write: wrap runStream — re-yields every event untouched, persisting the user's words + tool results in passing.
-for await (const ev of mw.persistFromAgentStream(myAgent.runStream(userText), { userMessage: userText, originId: turnId })) {
+for await (const ev of mw.persistFromAgentStream(myAgent.runStream(userText), {
+  userMessage: userText,
+  originId: turnId,
+})) {
   // …consume ev as usual (events pass through untouched)…
 }
 ```
 
 Three paths, three pieces:
 
-- **① Recall injection (read) — `memoryBlock`.** `mw.memoryBlock` is a `MemoWeftMemoryBlock extends BaseMemoryBlock`. `Memory` calls `block.get(messages)` before each model call; the block takes the last user message as the query, recalls, and returns **one** `role:'memory'` message whose content is the neutral knowledge block — MemoWeft's own wording, ported verbatim from Core's `knowledgeBlock`. Low-confidence items are explicitly marked *"only guesses — do not treat as established facts."* The adapter **adds no persona / character prompt** of its own. (`priority: 0` means the block is always included in the memory context.)
+- **① Recall injection (read) — `memoryBlock`.** `mw.memoryBlock` is a `MemoWeftMemoryBlock extends BaseMemoryBlock`. `Memory` calls `block.get(messages)` before each model call; the block takes the last user message as the query, recalls, and returns **one** `role:'memory'` message whose content is the neutral knowledge block — MemoWeft's own wording, ported verbatim from Core's `knowledgeBlock`. Low-confidence items are explicitly marked _"only guesses — do not treat as established facts."_ The adapter **adds no persona / character prompt** of its own. (`priority: 0` means the block is always included in the memory context.)
 - **② The user's words (write) — via `persistFromAgentStream`'s `userMessage`.** Pass the words you already hold (**before** injection) as `extras.userMessage`. Do not fish them back out of the stream: the model input has already been injected with recalled memory, so re-reading it would store the injected memory as if it were the user's words. Stored as `spoken` evidence. (A standalone `persistUserTurn({ text, originId })` closure is also provided for hosts that drive `runStream` themselves.)
-- **③ Tool results (write) — via `persistFromAgentStream`'s event tap.** The wrapper re-yields every event and persists **only** the ones matching `agentToolCallResultEvent` (the tool's real **result**, `event.data.toolOutput.result`) → stored as `tool` evidence, keyed by `toolId` for idempotency. It **never** matches `agentToolCallEvent` — so the model's tool-call **intent / arguments** never reach the write path (iron rule 3a, enforced *by construction*: the result discriminator physically excludes the call-intent and assistant-output event types).
+- **③ Tool results (write) — via `persistFromAgentStream`'s event tap.** The wrapper re-yields every event and persists **only** the ones matching `agentToolCallResultEvent` (the tool's real **result**, `event.data.toolOutput.result`) → stored as `tool` evidence, keyed by `toolId` for idempotency. The result discriminator excludes `agentToolCallEvent`, so the source-role boundary is enforced by construction: tool-call **intent / arguments** and assistant-output events cannot reach the write path.
 
-## Privacy hard constraint (D-0024)
+## Privacy hard constraint
 
 `provenance` (evidence text + authorization bits) **never** enters the injected `role:'memory'` message, and never enters the `formatKnowledge` block. The injected content uses only `content` / `confidence` / `credStatus` (`buildKnowledgeBlock`). The richer recall surface — `id`, `contentType`, `score`, and (with `explain`) `provenance` including `allowCloudRead` / `allowInference` bits — is handed to the host **only** through the `onRecall` callback, so you can filter before forwarding anything to a cloud model. Because injection lands in the model prompt (never back into the captured user words), the stored `spoken` evidence can never contain injected memory.
 
-## Degradation (§16.2)
+## Degradation
 
 - Recall is bounded by `recallTimeoutMs` (default 200ms). On timeout or error `block.get()` returns `[]` — the turn proceeds **without injection**; recall failure never blocks the reply, and never throws to `Memory`. The read path does not retry.
 - Writes (`ingest`) retry once on real errors (a timed-out write is not retried, since it may have committed); a still-failing write is logged (if a `logger` is provided) and swallowed. Ingestion failure **never** throws to or interrupts the stream — every event is re-yielded regardless.

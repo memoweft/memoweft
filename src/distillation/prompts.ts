@@ -1,17 +1,17 @@
 /**
- * DISTILL_PROMPT —— 事件化的 system 提示词（distill 写路径 · §15.3 集中版本化）。
+ * DISTILL_PROMPT —— 事件化的 system 提示词（集中版本化）。
  *
  * 把用户的几句话总结成一段带情境的「事件」描述；只总结用户表达 + 情境，不含助手回话、
  * 不加 AI 推测评价（禁止系统自证 · 记≠改画像）。
  *
  * 版本变更日志：
  *   - v1：基线。
- *   - v2（2026-07-13 · D-0018 来源感知固化）：材料按来源标注（[用户说]/[行为观察]/[工具返回]），
+ *   - v2：材料按来源标注（[用户说]/[行为观察]/[工具返回]），
  *     提示词从"只总结用户表达"泛化为"保留来源区分"——行为观察/工具返回不写成"用户说"，
- *     好让下游 consolidate 正确定 formedBy（observed/tool 不被误当 stated）。3a 纪律措辞（不出现助手话/
- *     不加推测）一字不改（铁律 3）。
+ *     好让下游 consolidate 正确定 formedBy（observed/tool 不被误当 stated）。助手输出排除与禁止新增推测的
+ *     关键约束保持不变。
  *
- * 改动纪律（§15.3 / D-0009）：改内容必须 bump version、重跑 bench/eval-consolidation.mjs 全量、
+ * 改动纪律（提示词变更规则）：改内容必须 bump version、重跑 bench/eval-consolidation.mjs 全量、
  *   commit 正文附前后分数对比。否则 tests/prompts/registry.test.ts 的哈希快照会变红。
  */
 import type { VersionedPrompt } from '../prompts/types.ts';
@@ -31,7 +31,7 @@ export const DISTILL_PROMPT: VersionedPrompt = {
     ].join('\n'),
     en: [
       'You summarize a few pieces of material about the user into a single situated "event" description. Material is given line by line, each tagged with its source:',
-      '[user said]=the user\'s own words; [observed behavior]=an observed behavior (not something the user said); [tool result]=objective data returned by a tool/external source.',
+      "[user said]=the user's own words; [observed behavior]=an observed behavior (not something the user said); [tool result]=objective data returned by a tool/external source.",
       'Rules:',
       '1. String the material into a situated description in chronological order; [preserve the source distinction]—do not render observed behaviors / tool results as things the "user said"; state them as they are (e.g., "observed the user still gaming at 3am").',
       '2. Do not add your own guesses, judgments, or advice; do not include any "assistant" remarks.',

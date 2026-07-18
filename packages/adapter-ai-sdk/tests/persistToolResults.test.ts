@@ -1,7 +1,7 @@
 /**
- * persistToolResults 离线护栏（AD-3/D-0013）：不打真模型，直接喂消息数组。
- * 验收：
- *  - 只摄入 role==='tool' 消息的 tool-result 载荷（铁律 3a）：assistant 的 tool-call 意图/入参、
+ * persistToolResults 离线测试（tool-result-only ingestion）：不调用实际模型，直接提供消息数组。
+ * Test coverage:
+ *  - 只摄入 role==='tool' 消息的 tool-result 载荷（tool-result-only ingestion）：assistant 的 tool-call 意图/入参、
  *    assistant content 里混着的 tool-result（provider 执行）一概不读；
  *  - output.type 'text' 取原文、'json' 序列化；error-* / execution-denied / 空载荷不落库；
  *  - originIdPrefix + toolCallId 组合成幂等键透传；不传前缀 = 不去重（originId null）；
@@ -38,7 +38,12 @@ function weatherTurn(): ModelMessage[] {
     {
       role: 'assistant',
       content: [
-        { type: 'tool-call', toolCallId: 'call-1', toolName: 'get_weather', input: { city: 'Xiamen' } },
+        {
+          type: 'tool-call',
+          toolCallId: 'call-1',
+          toolName: 'get_weather',
+          input: { city: 'Xiamen' },
+        },
       ],
     },
     {
@@ -56,16 +61,23 @@ function weatherTurn(): ModelMessage[] {
   ] as ModelMessage[];
 }
 
-test('只摄入 tool 消息的 result 载荷：意图/入参与助手回话一概不进（铁律 3a）', async () => {
+test('只摄入 tool 消息的 result 载荷：意图/入参与助手回话一概不进（tool-result-only ingestion）', async () => {
   const { core, ingested } = fakeCore();
-  const stored = await persistToolResults(core, { messages: weatherTurn(), originIdPrefix: 'turn-7' });
+  const stored = await persistToolResults(core, {
+    messages: weatherTurn(),
+    originIdPrefix: 'turn-7',
+  });
   assert.equal(stored, 1, '恰好落一条');
   assert.equal(ingested.length, 1);
   const rec = ingested[0]!;
-  assert.equal(rec.content, JSON.stringify({ city: 'Xiamen', tempC: 31, sky: 'sunny' }), 'json 输出序列化后原样存');
+  assert.equal(
+    rec.content,
+    JSON.stringify({ city: 'Xiamen', tempC: 31, sky: 'sunny' }),
+    'json 输出序列化后原样存',
+  );
   assert.ok(!rec.content.includes('get_weather'), '工具名/调用意图不在载荷里');
   assert.equal(rec.originId, 'turn-7:call-1', '幂等键 = 前缀:toolCallId');
-  // 隐私红线：不显式传授权位（由 Core toolDefaults 兜底不上云）。
+  // 写路径边界：不显式传授权位（由 Core toolDefaults 兜底，不进入内建云写模型 prompt）。
   assert.equal('allowCloudRead' in rec, false);
   assert.equal('allowLocalRead' in rec, false);
   assert.equal('allowInference' in rec, false);
@@ -77,7 +89,12 @@ test('assistant content 里混着的 tool-result（provider 执行）保守跳�
     {
       role: 'assistant',
       content: [
-        { type: 'tool-result', toolCallId: 'call-p', toolName: 'web_search', output: { type: 'text', value: 'provider ran this' } },
+        {
+          type: 'tool-result',
+          toolCallId: 'call-p',
+          toolName: 'web_search',
+          output: { type: 'text', value: 'provider ran this' },
+        },
       ],
     },
   ] as ModelMessage[];
@@ -86,16 +103,36 @@ test('assistant content 里混着的 tool-result（provider 执行）保守跳�
   assert.equal(ingested.length, 0);
 });
 
-test("output 类型分流：text 取原文;error-*/execution-denied/空串不落库", async () => {
+test('output 类型分流：text 取原文;error-*/execution-denied/空串不落库', async () => {
   const { core, ingested } = fakeCore();
   const messages = [
     {
       role: 'tool',
       content: [
-        { type: 'tool-result', toolCallId: 'c1', toolName: 't', output: { type: 'text', value: 'plain result' } },
-        { type: 'tool-result', toolCallId: 'c2', toolName: 't', output: { type: 'error-text', value: 'HTTP 404' } },
-        { type: 'tool-result', toolCallId: 'c3', toolName: 't', output: { type: 'execution-denied', reason: 'user said no' } },
-        { type: 'tool-result', toolCallId: 'c4', toolName: 't', output: { type: 'text', value: '   ' } },
+        {
+          type: 'tool-result',
+          toolCallId: 'c1',
+          toolName: 't',
+          output: { type: 'text', value: 'plain result' },
+        },
+        {
+          type: 'tool-result',
+          toolCallId: 'c2',
+          toolName: 't',
+          output: { type: 'error-text', value: 'HTTP 404' },
+        },
+        {
+          type: 'tool-result',
+          toolCallId: 'c3',
+          toolName: 't',
+          output: { type: 'execution-denied', reason: 'user said no' },
+        },
+        {
+          type: 'tool-result',
+          toolCallId: 'c4',
+          toolName: 't',
+          output: { type: 'text', value: '   ' },
+        },
       ],
     },
   ] as unknown as ModelMessage[];
@@ -105,7 +142,7 @@ test("output 类型分流：text 取原文;error-*/execution-denied/空串不落
 });
 
 test('畸形 json 输出（value 序列化为 undefined）静默跳过、绝不向外抛（回归护栏）', async () => {
-  // 铁律护栏:JSON.stringify(undefined | function | symbol) === undefined（非 string、非抛错）。
+  // serialization guard:JSON.stringify(undefined | function | symbol) === undefined（非 string、非抛错）。
   //   若 toolOutputText 直接返回它，extractToolResults 的 text.trim() 会抛 TypeError 逃逸出函数、崩宿主 turn。
   //   真实可达:自定义 tool.toModelOutput 返回 { type:'json', value: obj.missingField } → value:undefined（SDK 不再归一化）。
   const { core, ingested } = fakeCore();
@@ -113,10 +150,25 @@ test('畸形 json 输出（value 序列化为 undefined）静默跳过、绝不�
     {
       role: 'tool',
       content: [
-        { type: 'tool-result', toolCallId: 'c1', toolName: 't', output: { type: 'json', value: undefined } },
+        {
+          type: 'tool-result',
+          toolCallId: 'c1',
+          toolName: 't',
+          output: { type: 'json', value: undefined },
+        },
         { type: 'tool-result', toolCallId: 'c2', toolName: 't', output: { type: 'json' } }, // value 键缺失
-        { type: 'tool-result', toolCallId: 'c3', toolName: 't', output: { type: 'json', value: () => 1 } }, // function → stringify 得 undefined
-        { type: 'tool-result', toolCallId: 'c4', toolName: 't', output: { type: 'json', value: { ok: true } } },
+        {
+          type: 'tool-result',
+          toolCallId: 'c3',
+          toolName: 't',
+          output: { type: 'json', value: () => 1 },
+        }, // function → stringify 得 undefined
+        {
+          type: 'tool-result',
+          toolCallId: 'c4',
+          toolName: 't',
+          output: { type: 'json', value: { ok: true } },
+        },
       ],
     },
   ] as unknown as ModelMessage[];
@@ -141,8 +193,18 @@ test('单条失败重试一次成功 → 不降级;两次都失败 → logger+on
       {
         role: 'tool',
         content: [
-          { type: 'tool-result', toolCallId: 'c1', toolName: 't', output: { type: 'text', value: 'r1' } },
-          { type: 'tool-result', toolCallId: 'c2', toolName: 't', output: { type: 'text', value: 'r2' } },
+          {
+            type: 'tool-result',
+            toolCallId: 'c1',
+            toolName: 't',
+            output: { type: 'text', value: 'r1' },
+          },
+          {
+            type: 'tool-result',
+            toolCallId: 'c2',
+            toolName: 't',
+            output: { type: 'text', value: 'r2' },
+          },
         ],
       },
     ] as unknown as ModelMessage[],
@@ -160,8 +222,18 @@ test('单条失败重试一次成功 → 不降级;两次都失败 → logger+on
       {
         role: 'tool',
         content: [
-          { type: 'tool-result', toolCallId: 'c1', toolName: 't', output: { type: 'text', value: 'r1' } },
-          { type: 'tool-result', toolCallId: 'c2', toolName: 't', output: { type: 'text', value: 'r2' } },
+          {
+            type: 'tool-result',
+            toolCallId: 'c1',
+            toolName: 't',
+            output: { type: 'text', value: 'r1' },
+          },
+          {
+            type: 'tool-result',
+            toolCallId: 'c2',
+            toolName: 't',
+            output: { type: 'text', value: 'r2' },
+          },
         ],
       },
     ] as unknown as ModelMessage[],
@@ -169,7 +241,11 @@ test('单条失败重试一次成功 → 不降级;两次都失败 → logger+on
     onError: (e) => errs.push(e),
   });
   assert.equal(storedB, 1, '失败那条放弃,后续条目不受影响');
-  assert.deepEqual(events, [{ event: 'memory_degraded', op: 'ingest', reason: 'error' }], '恰好一条结构化降级事件');
+  assert.deepEqual(
+    events,
+    [{ event: 'memory_degraded', op: 'ingest', reason: 'error' }],
+    '恰好一条结构化降级事件',
+  );
   assert.equal(errs.length, 1, 'onError 收到原始错误');
 });
 
@@ -178,8 +254,14 @@ test('形状防御：非法消息/part 静默跳过，不抛', async () => {
   const messages = [
     null,
     { role: 'tool' }, // 无 content
-    { role: 'tool', content: [null, { type: 'tool-result', toolCallId: 'c1', toolName: 't', output: null }] },
-    { role: 'tool', content: [{ type: 'tool-approval-response', approvalId: 'a1', approved: true }] },
+    {
+      role: 'tool',
+      content: [null, { type: 'tool-result', toolCallId: 'c1', toolName: 't', output: null }],
+    },
+    {
+      role: 'tool',
+      content: [{ type: 'tool-approval-response', approvalId: 'a1', approved: true }],
+    },
   ] as unknown as ModelMessage[];
   const stored = await persistToolResults(core, { messages });
   assert.equal(stored, 0);

@@ -1,465 +1,1435 @@
 <!--
-  MemoWeft Host · 最小聊天（批次5 步1）。
+  MemoWeft Reference Host · 本地单用户参考界面。
   单文件、内联 CSS/JS、零外部依赖（不引 CDN，本地无网也能用）。
   文案遵 docs/glossary.md：用户词（记住了/想起/对你的了解），不出现 evidence/cognition/updateProfile
   等工程词，不说"真正理解你"，不用"她"指代 MemoWeft。
 -->
 <meta charset="utf-8" />
+<meta name="language" content="zh-CN" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>MemoWeft</title>
 <style>
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --line: #e6e8ec; --text: #1d2733; --muted: #6b7684;
-    --user: #2f6fed; --user-text: #ffffff; --assistant: #eef1f5; --assistant-text: #1d2733;
-    --warn-bg: #fff6e0; --warn-line: #f0d68a; --warn-text: #8a6d00;
-    --ok: #1f9d61; --accent: #2f6fed; --radius: 14px; --radius-pill: 999px;
-    --fs: 15px; --fs-sm: 13px; --fs-xs: 12px;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --line: #e6e8ec;
+    --text: #1d2733;
+    --muted: #6b7684;
+    --user: #2f6fed;
+    --user-text: #ffffff;
+    --assistant: #eef1f5;
+    --assistant-text: #1d2733;
+    --warn-bg: #fff6e0;
+    --warn-line: #f0d68a;
+    --warn-text: #8a6d00;
+    --ok: #1f9d61;
+    --accent: #2f6fed;
+    --radius: 14px;
+    --radius-pill: 999px;
+    --fs: 15px;
+    --fs-sm: 13px;
+    --fs-xs: 12px;
   }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
+  * {
+    box-sizing: border-box;
+  }
+  html,
   body {
-    font: var(--fs)/1.55 -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
-    color: var(--text); background: var(--bg);
-    display: flex; flex-direction: column; height: 100vh;
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    font:
+      var(--fs)/1.55 -apple-system,
+      'Segoe UI',
+      'Microsoft YaHei',
+      Roboto,
+      sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
     /* 左侧栏（固定定位）占 var(--sidebar-w)，给主列留出左内边距，让主列各态的 margin:0 auto 仍在剩余宽里居中。 */
     --sidebar-w: 240px;
     padding-left: var(--sidebar-w);
   }
   /* 向导态 / 记忆管理态是全屏页，藏侧栏、主列铺满（去掉左内边距）。 */
-  body.mode-wizard, body.mode-memory { padding-left: 0; }
-  body.mode-wizard #sidebar, body.mode-memory #sidebar { display: none; }
+  body.mode-wizard,
+  body.mode-memory {
+    padding-left: 0;
+  }
+  body.mode-wizard #sidebar,
+  body.mode-memory #sidebar {
+    display: none;
+  }
 
   /* ── 左侧对话列表侧栏 ── */
   #sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-w); z-index: 20;
-    background: var(--panel); border-right: 1px solid var(--line);
-    display: flex; flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-w);
+    z-index: 20;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
   }
   .sb-head {
-    flex: 0 0 auto; padding: 12px 14px; border-bottom: 1px solid var(--line);
-    display: flex; align-items: center; gap: 8px;
+    flex: 0 0 auto;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .sb-head .sb-title { font-weight: 700; font-size: var(--fs-sm); color: var(--text); }
+  .sb-head .sb-title {
+    font-weight: 700;
+    font-size: var(--fs-sm);
+    color: var(--text);
+  }
   #sbNew {
-    margin-left: auto; border: 1px solid var(--line); background: var(--bg); color: var(--text);
-    cursor: pointer; border-radius: var(--radius-pill); padding: 4px 12px;
-    font: inherit; font-size: var(--fs-xs); font-weight: 600; white-space: nowrap;
+    margin-left: auto;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    border-radius: var(--radius-pill);
+    padding: 4px 12px;
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    white-space: nowrap;
   }
-  #sbNew:hover { border-color: var(--accent); color: var(--accent); }
-  #sbList { flex: 1 1 auto; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
-  .sb-empty { color: var(--muted); font-size: var(--fs-xs); text-align: center; padding: 20px 8px; line-height: 1.6; }
+  #sbNew:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  #sbList {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sb-empty {
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    text-align: center;
+    padding: 20px 8px;
+    line-height: 1.6;
+  }
   .sb-item {
-    position: relative; border: 1px solid transparent; border-radius: 10px; padding: 9px 11px; cursor: pointer;
-    display: flex; flex-direction: column; gap: 2px; transition: background .12s, border-color .12s;
+    position: relative;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 9px 11px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition:
+      background 0.12s,
+      border-color 0.12s;
   }
-  .sb-item:hover { background: var(--bg); }
-  .sb-item.on { background: #eaf1ff; border-color: var(--accent); }
+  .sb-item:hover {
+    background: var(--bg);
+  }
+  .sb-item.on {
+    background: #eaf1ff;
+    border-color: var(--accent);
+  }
   .sb-item .sb-preview {
-    font-size: var(--fs-sm); color: var(--text); line-height: 1.45;
+    font-size: var(--fs-sm);
+    color: var(--text);
+    line-height: 1.45;
     /* 单行截断，长预览不撑破侧栏 */
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 22px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 22px;
   }
-  .sb-item.on .sb-preview { color: var(--accent); font-weight: 600; }
-  .sb-item .sb-time { font-size: var(--fs-xs); color: var(--muted); }
+  .sb-item.on .sb-preview {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .sb-item .sb-time {
+    font-size: var(--fs-xs);
+    color: var(--muted);
+  }
   .sb-arch {
-    position: absolute; top: 8px; right: 8px; border: none; background: transparent; color: var(--muted);
-    cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 4px; border-radius: 6px;
-    opacity: 0; transition: opacity .12s;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.12s;
   }
-  .sb-item:hover .sb-arch { opacity: 1; }
-  .sb-arch:hover { background: rgba(0,0,0,.07); color: #b4232a; }
+  .sb-item:hover .sb-arch {
+    opacity: 1;
+  }
+  .sb-arch:hover {
+    background: rgba(0, 0, 0, 0.07);
+    color: #b4232a;
+  }
 
   /* 顶栏：标题 + 后台整理状态 pill */
   header {
-    flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
-    padding: 12px 18px; background: var(--panel); border-bottom: 1px solid var(--line);
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
   }
-  header .brand { font-weight: 700; font-size: 16px; letter-spacing: .2px; }
-  header .brand small { font-weight: 400; color: var(--muted); font-size: var(--fs-xs); margin-left: 6px; }
+  header .brand {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.2px;
+  }
+  header .brand small {
+    font-weight: 400;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    margin-left: 6px;
+  }
   #bgstatus {
-    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
-    padding: 4px 11px; border-radius: var(--radius-pill); background: var(--bg);
-    border: 1px solid var(--line); color: var(--muted); font-size: var(--fs-xs);
-    font-weight: 500; white-space: nowrap; transition: all .2s ease;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border-radius: var(--radius-pill);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.2s ease;
   }
-  #bgstatus::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
-  #bgstatus.st-busy { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
-  #bgstatus.st-busy::before { background: var(--warn-text); animation: pulse 1s ease-in-out infinite; }
-  #bgstatus.st-pending { background: #eaf1ff; color: var(--accent); border-color: transparent; }
-  #bgstatus.st-pending::before { background: var(--accent); }
-  #bgstatus.st-done { background: #e7f6ee; color: var(--ok); border-color: transparent; }
-  #bgstatus.st-done::before { background: var(--ok); }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  #bgstatus::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex: 0 0 auto;
+  }
+  #bgstatus.st-busy {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    border-color: transparent;
+  }
+  #bgstatus.st-busy::before {
+    background: var(--warn-text);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  #bgstatus.st-pending {
+    background: #eaf1ff;
+    color: var(--accent);
+    border-color: transparent;
+  }
+  #bgstatus.st-pending::before {
+    background: var(--accent);
+  }
+  #bgstatus.st-done {
+    background: #e7f6ee;
+    color: var(--ok);
+    border-color: transparent;
+  }
+  #bgstatus.st-done::before {
+    background: var(--ok);
+  }
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
 
   /* 未配模型黄条 */
   #warnbar {
-    flex: 0 0 auto; display: none; padding: 9px 18px;
-    background: var(--warn-bg); border-bottom: 1px solid var(--warn-line);
-    color: var(--warn-text); font-size: var(--fs-sm);
+    flex: 0 0 auto;
+    display: none;
+    padding: 9px 18px;
+    background: var(--warn-bg);
+    border-bottom: 1px solid var(--warn-line);
+    color: var(--warn-text);
+    font-size: var(--fs-sm);
   }
-  #warnbar.show { display: block; }
-  #warnbar code { background: rgba(0,0,0,.06); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+  #warnbar.show {
+    display: block;
+  }
+  #warnbar code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 12px;
+  }
 
   /* 聊天区 */
   #chat {
-    flex: 1 1 auto; overflow-y: auto; padding: 20px 0;
-    display: flex; flex-direction: column; gap: 12px;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
-  .chat-inner { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 18px; display: flex; flex-direction: column; gap: 12px; }
-  .empty { color: var(--muted); text-align: center; font-size: var(--fs-sm); margin: auto 0; padding: 40px 0; }
+  .chat-inner {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    font-size: var(--fs-sm);
+    margin: auto 0;
+    padding: 40px 0;
+  }
 
-  .msg { display: flex; }
-  .msg.user { justify-content: flex-end; }
-  .msg.assistant { justify-content: flex-start; }
-  .bubble {
-    max-width: 78%; padding: 9px 14px; border-radius: var(--radius);
-    white-space: pre-wrap; word-break: break-word; font-size: var(--fs);
+  .msg {
+    display: flex;
   }
-  .msg.user .bubble { background: var(--user); color: var(--user-text); border-bottom-right-radius: 5px; }
-  .msg.assistant .bubble { background: var(--assistant); color: var(--assistant-text); border-bottom-left-radius: 5px; }
+  .msg.user {
+    justify-content: flex-end;
+  }
+  .msg.assistant {
+    justify-content: flex-start;
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 9px 14px;
+    border-radius: var(--radius);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: var(--fs);
+  }
+  .msg.user .bubble {
+    background: var(--user);
+    color: var(--user-text);
+    border-bottom-right-radius: 5px;
+  }
+  .msg.assistant .bubble {
+    background: var(--assistant);
+    color: var(--assistant-text);
+    border-bottom-left-radius: 5px;
+  }
 
   /* 思考中三点 */
-  .thinking-dots { display: inline-flex; gap: 4px; padding: 3px 0; }
-  .thinking-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); opacity: .4; animation: bob 1.2s ease-in-out infinite; }
-  .thinking-dots span:nth-child(2) { animation-delay: .18s; }
-  .thinking-dots span:nth-child(3) { animation-delay: .36s; }
-  @keyframes bob { 0%,60%,100% { opacity: .35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+  .thinking-dots {
+    display: inline-flex;
+    gap: 4px;
+    padding: 3px 0;
+  }
+  .thinking-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    opacity: 0.4;
+    animation: bob 1.2s ease-in-out infinite;
+  }
+  .thinking-dots span:nth-child(2) {
+    animation-delay: 0.18s;
+  }
+  .thinking-dots span:nth-child(3) {
+    animation-delay: 0.36s;
+  }
+  @keyframes bob {
+    0%,
+    60%,
+    100% {
+      opacity: 0.35;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
 
   /* 输入区 */
-  footer { flex: 0 0 auto; border-top: 1px solid var(--line); background: var(--panel); padding: 12px 18px; }
-  .composer { width: 100%; max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+  footer {
+    flex: 0 0 auto;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    padding: 12px 18px;
+  }
+  .composer {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
   #text {
-    flex: 1 1 auto; resize: none; border: 1px solid var(--line); border-radius: 12px;
-    padding: 10px 12px; font: inherit; color: var(--text); background: var(--bg);
-    max-height: 160px; min-height: 44px; line-height: 1.5;
+    flex: 1 1 auto;
+    resize: none;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    max-height: 160px;
+    min-height: 44px;
+    line-height: 1.5;
   }
-  #text:focus { outline: none; border-color: var(--accent); background: var(--panel); }
+  #text:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--panel);
+  }
   #send {
-    flex: 0 0 auto; border: none; border-radius: 12px; background: var(--accent); color: #fff;
-    padding: 0 20px; height: 44px; font: inherit; font-weight: 600; cursor: pointer; transition: opacity .15s;
+    flex: 0 0 auto;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff;
+    padding: 0 20px;
+    height: 44px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
   }
-  #send:disabled { opacity: .5; cursor: default; }
-  .hint { width: 100%; max-width: 720px; margin: 6px auto 0; color: var(--muted); font-size: var(--fs-xs); }
+  #send:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .hint {
+    width: 100%;
+    max-width: 720px;
+    margin: 6px auto 0;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+  }
 
   /* ── 配置向导（首启没配好模型时进这一态；配好后走聊天，向导隐藏）── */
-  #wizard { display: none; flex: 1 1 auto; overflow-y: auto; padding: 28px 18px 40px; }
-  body.mode-wizard #wizard { display: block; }        /* 向导态：显示向导 */
-  body.mode-wizard #chat, body.mode-wizard footer { display: none; } /* 向导态：藏聊天与输入区 */
-  .wiz { width: 100%; max-width: 620px; margin: 0 auto; }
-  .wiz h1 { font-size: 21px; margin: 0 0 6px; letter-spacing: .2px; }
-  .wiz .lead { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 22px; line-height: 1.6; }
+  #wizard {
+    display: none;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 28px 18px 40px;
+  }
+  body.mode-wizard #wizard {
+    display: block;
+  } /* 向导态：显示向导 */
+  body.mode-wizard #chat,
+  body.mode-wizard footer {
+    display: none;
+  } /* 向导态：藏聊天与输入区 */
+  .wiz {
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+  .wiz h1 {
+    font-size: 21px;
+    margin: 0 0 6px;
+    letter-spacing: 0.2px;
+  }
+  .wiz .lead {
+    color: var(--muted);
+    font-size: var(--fs-sm);
+    margin: 0 0 22px;
+    line-height: 1.6;
+  }
   .wiz-group {
-    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 16px 18px; margin-bottom: 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 14px;
   }
-  .wiz-group > h2 { font-size: 15px; margin: 0 0 3px; display: flex; align-items: center; gap: 8px; }
+  .wiz-group > h2 {
+    font-size: 15px;
+    margin: 0 0 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .wiz-group .tag {
-    font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: var(--radius-pill);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: var(--radius-pill);
   }
-  .wiz-group .tag.req { background: #eaf1ff; color: var(--accent); }
-  .wiz-group .tag.opt { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
-  .wiz-group .desc { color: var(--muted); font-size: var(--fs-xs); margin: 0 0 12px; line-height: 1.55; }
-  .wiz-field { margin-bottom: 10px; }
-  .wiz-field:last-child { margin-bottom: 0; }
-  .wiz-field label { display: block; font-size: var(--fs-xs); color: var(--muted); margin-bottom: 4px; }
+  .wiz-group .tag.req {
+    background: #eaf1ff;
+    color: var(--accent);
+  }
+  .wiz-group .tag.opt {
+    background: var(--bg);
+    color: var(--muted);
+    border: 1px solid var(--line);
+  }
+  .wiz-group .desc {
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    margin: 0 0 12px;
+    line-height: 1.55;
+  }
+  .wiz-field {
+    margin-bottom: 10px;
+  }
+  .wiz-field:last-child {
+    margin-bottom: 0;
+  }
+  .wiz-field label {
+    display: block;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
   .wiz-field input {
-    width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
-    font: inherit; font-size: var(--fs-sm); color: var(--text); background: var(--bg);
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 11px;
+    font: inherit;
+    font-size: var(--fs-sm);
+    color: var(--text);
+    background: var(--bg);
   }
-  .wiz-field input:focus { outline: none; border-color: var(--accent); background: var(--panel); }
-  .wiz-check { display: flex; align-items: flex-start; gap: 9px; font-size: var(--fs-sm); }
-  .wiz-check input { margin-top: 3px; flex: 0 0 auto; }
-  .wiz-check .ck-text small { display: block; color: var(--muted); font-size: var(--fs-xs); margin-top: 2px; }
-  .wiz-actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .wiz-field input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--panel);
+  }
+  .wiz-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: var(--fs-sm);
+  }
+  .wiz-check input {
+    margin-top: 3px;
+    flex: 0 0 auto;
+  }
+  .wiz-check .ck-text small {
+    display: block;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    margin-top: 2px;
+  }
+  .wiz-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+  }
   #wizGen {
-    border: none; border-radius: 12px; background: var(--accent); color: #fff;
-    padding: 0 24px; height: 44px; font: inherit; font-weight: 600; cursor: pointer;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff;
+    padding: 0 24px;
+    height: 44px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
   }
-  #wizGen:disabled { opacity: .5; cursor: default; }
-  #wizErr { color: #b4232a; font-size: var(--fs-sm); display: none; }
-  #wizResult { display: none; margin-top: 20px; }
-  #wizResult h2 { font-size: 15px; margin: 0 0 8px; }
-  #wizEnv {
-    width: 100%; min-height: 180px; resize: vertical; border: 1px solid var(--line);
-    border-radius: 10px; padding: 12px; background: #0f1722; color: #d6e2f0;
-    font: 13px/1.6 "SF Mono", "Consolas", "Courier New", monospace; white-space: pre;
+  #wizGen:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
-  .wiz-result-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
-  #wizCopy {
-    border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text);
-    padding: 8px 16px; font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+  #wizErr {
+    color: #b4232a;
+    font-size: var(--fs-sm);
+    display: none;
   }
-  #wizCopy:hover { border-color: var(--accent); color: var(--accent); }
-  #wizCopied { font-size: var(--fs-xs); color: var(--ok); display: none; }
+  #wizResult {
+    display: none;
+    margin-top: 20px;
+  }
+  #wizResult h2 {
+    font-size: 15px;
+    margin: 0 0 8px;
+  }
   .wiz-save-hint {
-    margin-top: 14px; padding: 12px 14px; background: var(--warn-bg); border: 1px solid var(--warn-line);
-    border-radius: 10px; color: var(--warn-text); font-size: var(--fs-sm); line-height: 1.6;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-line);
+    border-radius: 10px;
+    color: var(--warn-text);
+    font-size: var(--fs-sm);
+    line-height: 1.6;
   }
-  .wiz-save-hint code { background: rgba(0,0,0,.08); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+  .wiz-save-hint code {
+    background: rgba(0, 0, 0, 0.08);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 12px;
+  }
   #warnbar .gobtn {
-    margin-left: 10px; border: none; background: var(--warn-text); color: #fff; cursor: pointer;
-    border-radius: 8px; padding: 3px 12px; font: inherit; font-size: var(--fs-xs); font-weight: 600;
+    margin-left: 10px;
+    border: none;
+    background: var(--warn-text);
+    color: #fff;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 3px 12px;
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: 600;
   }
 
   /* 顶栏体验选择器：换"聊天方式/人设"（普通助手 / 星瑶）。与 pill 风格一致，靠左排在 brand 后。 */
   #expPick {
-    display: inline-flex; align-items: center; gap: 7px;
-    color: var(--muted); font-size: var(--fs-xs); white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
   }
-  #expPick .exp-label { font-weight: 500; }
+  #expPick .exp-label {
+    font-weight: 500;
+  }
   #expSelect {
-    border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer;
-    border-radius: var(--radius-pill); padding: 4px 11px; font: inherit; font-size: var(--fs-xs);
-    font-weight: 600; max-width: 160px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    border-radius: var(--radius-pill);
+    padding: 4px 11px;
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    max-width: 160px;
   }
-  #expSelect:hover { border-color: var(--accent); color: var(--accent); }
-  #expSelect:focus { outline: none; border-color: var(--accent); }
-  #expSelect:disabled { opacity: .55; cursor: default; }
+  #expSelect:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  #expSelect:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  #expSelect:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
 
-  /* 顶栏 S0 记忆胶囊「它记住我 N 件事 ›」入口按钮（切到记忆抽屉/记忆管理页） */
+  /* 顶栏记忆胶囊「它记住我 N 件事 ›」入口按钮（切到记忆抽屉/记忆管理页） */
   #memPill {
-    display: inline-flex; align-items: center; gap: 6px;
-    border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer;
-    border-radius: var(--radius-pill); padding: 4px 13px; font: inherit; font-size: var(--fs-xs);
-    font-weight: 600; white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    border-radius: var(--radius-pill);
+    padding: 4px 13px;
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    white-space: nowrap;
   }
-  #memPill:hover { border-color: var(--accent); color: var(--accent); }
-  #memPill .pill-chev { font-size: 12px; line-height: 1; opacity: .7; }
+  #memPill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  #memPill .pill-chev {
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.7;
+  }
 
   /* 顶栏「立即整理记忆」按钮 */
   #btnRefresh {
-    border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer;
-    border-radius: var(--radius-pill); padding: 4px 13px; font: inherit; font-size: var(--fs-xs);
-    font-weight: 600; white-space: nowrap;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    border-radius: var(--radius-pill);
+    padding: 4px 13px;
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    white-space: nowrap;
   }
-  #btnRefresh:hover { border-color: var(--accent); color: var(--accent); }
-  #btnRefresh:disabled { opacity: .55; cursor: default; }
+  #btnRefresh:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  #btnRefresh:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
 
-  /* S1 记忆气泡：后台/立即整理出新理解时，就地织进聊天流「记住了：X · 把握度档 · 改/删」的淡色细行。 */
-  .mem-note { display: flex; justify-content: center; padding: 2px 0; }
+  /* 记忆气泡：后台/立即整理出新理解时，就地织进聊天流「记住了：X · 把握度档 · 改/删」的淡色细行。 */
+  .mem-note {
+    display: flex;
+    justify-content: center;
+    padding: 2px 0;
+  }
   .mem-note .mn-inner {
-    display: flex; align-items: flex-start; gap: 8px; max-width: 85%;
-    background: #eef4ff; border: 1px solid #d5e3ff; border-radius: 12px;
-    padding: 8px 13px; font-size: var(--fs-sm); color: #33507e; line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: 85%;
+    background: #eef4ff;
+    border: 1px solid #d5e3ff;
+    border-radius: 12px;
+    padding: 8px 13px;
+    font-size: var(--fs-sm);
+    color: #33507e;
+    line-height: 1.5;
   }
-  .mem-note .mn-ic { color: var(--accent); flex: 0 0 auto; font-size: 10px; margin-top: 5px; }
-  .mem-note .mn-body { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-  .mem-note .mn-lead { font-weight: 600; }
-  .mem-note .mn-txt { word-break: break-word; }
+  .mem-note .mn-ic {
+    color: var(--accent);
+    flex: 0 0 auto;
+    font-size: 10px;
+    margin-top: 5px;
+  }
+  .mem-note .mn-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .mem-note .mn-lead {
+    font-weight: 600;
+  }
+  .mem-note .mn-txt {
+    word-break: break-word;
+  }
   .mem-note .mn-band {
-    font-size: var(--fs-xs); padding: 1px 8px; border-radius: var(--radius-pill);
-    background: #fff; border: 1px solid #cfe0ff; color: #5b7bb8; white-space: nowrap;
+    font-size: var(--fs-xs);
+    padding: 1px 8px;
+    border-radius: var(--radius-pill);
+    background: #fff;
+    border: 1px solid #cfe0ff;
+    color: #5b7bb8;
+    white-space: nowrap;
   }
-  .mem-note .mn-band.warn { background: var(--warn-bg); border-color: transparent; color: var(--warn-text); }
-  .mem-note .mn-band.ok { background: #e7f6ee; border-color: transparent; color: var(--ok); }
-  .mem-note .mn-acts { display: inline-flex; gap: 6px; margin-left: 2px; }
+  .mem-note .mn-band.warn {
+    background: var(--warn-bg);
+    border-color: transparent;
+    color: var(--warn-text);
+  }
+  .mem-note .mn-band.ok {
+    background: #e7f6ee;
+    border-color: transparent;
+    color: var(--ok);
+  }
+  .mem-note .mn-acts {
+    display: inline-flex;
+    gap: 6px;
+    margin-left: 2px;
+  }
   .mem-note .mn-acts button {
-    border: 1px solid #cfe0ff; background: #fff; color: #4166a8; cursor: pointer;
-    border-radius: 7px; padding: 2px 9px; font: inherit; font-size: var(--fs-xs); font-weight: 600;
+    border: 1px solid #cfe0ff;
+    background: #fff;
+    color: #4166a8;
+    cursor: pointer;
+    border-radius: 7px;
+    padding: 2px 9px;
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: 600;
   }
-  .mem-note .mn-acts button:hover { border-color: var(--accent); color: var(--accent); }
-  .mem-note .mn-acts button.del:hover { border-color: #b4232a; color: #b4232a; }
+  .mem-note .mn-acts button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .mem-note .mn-acts button.del:hover {
+    border-color: #b4232a;
+    color: #b4232a;
+  }
 
   /* ── 记忆管理页（body.mode-memory 时显示，藏聊天/输入/向导）── */
-  #memory { display: none; flex: 1 1 auto; overflow-y: auto; padding: 22px 18px 40px; }
-  body.mode-memory #memory { display: block; }
-  body.mode-memory #chat, body.mode-memory footer, body.mode-memory #wizard { display: none; }
-  .mem { width: 100%; max-width: 720px; margin: 0 auto; }
-  .mem-top { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-  .mem-top h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
-  #memBack {
-    margin-left: auto; border: 1px solid var(--line); background: var(--panel); color: var(--text);
-    cursor: pointer; border-radius: var(--radius-pill); padding: 6px 15px; font: inherit;
-    font-size: var(--fs-sm); font-weight: 600;
+  #memory {
+    display: none;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 22px 18px 40px;
   }
-  #memBack:hover { border-color: var(--accent); color: var(--accent); }
-  .mem-lead { color: var(--muted); font-size: var(--fs-sm); margin: 0 0 18px; line-height: 1.6; }
+  body.mode-memory #memory {
+    display: block;
+  }
+  body.mode-memory #chat,
+  body.mode-memory footer,
+  body.mode-memory #wizard {
+    display: none;
+  }
+  .mem {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .mem-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .mem-top h1 {
+    font-size: 20px;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+  #memBack {
+    margin-left: auto;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    border-radius: var(--radius-pill);
+    padding: 6px 15px;
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+  #memBack:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .mem-lead {
+    color: var(--muted);
+    font-size: var(--fs-sm);
+    margin: 0 0 18px;
+    line-height: 1.6;
+  }
+  .mem-cloud-note {
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    line-height: 1.6;
+    margin: -8px 0 18px;
+  }
 
   /* tab 切换（理解 / 记忆线索） */
-  .mem-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
-  .mem-tab {
-    border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer;
-    border-radius: 10px; padding: 7px 16px; font: inherit; font-size: var(--fs-sm); font-weight: 600;
+  .mem-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
   }
-  .mem-tab.on { background: var(--accent); color: #fff; border-color: var(--accent); }
-  /* 插件列表（步7·只读展示） */
-  .plugin-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
-  .plugin-name { font-weight: 600; }
-  .plugin-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .mem-tab {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 7px 16px;
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+  }
+  .mem-tab.on {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  /* 插件列表（只读展示） */
+  .plugin-row {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .plugin-name {
+    font-weight: 600;
+  }
+  .plugin-meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
 
-  /* ══════════ 记忆图谱（步5-G2·手搓力导向图） ══════════ */
+  /* ══════════ 记忆图谱（内置力导向图） ══════════ */
   /* 节点/边基色（也在 JS 侧 GRAPH_COLORS 里同步用值渲染 canvas） */
   #memGraph {
-    --gc-subject: #7c4dff; --gc-evidence: #2f9e6e; --gc-event: #e08a2b; --gc-cognition: #2f6fed;
-    --ge-belongs: #b39ddb; --ge-distilled: #f0b26b; --ge-supports: #57b894; --ge-contradicts: #d9534f;
+    --gc-subject: #7c4dff;
+    --gc-evidence: #2f9e6e;
+    --gc-event: #e08a2b;
+    --gc-cognition: #2f6fed;
+    --ge-belongs: #b39ddb;
+    --ge-distilled: #f0b26b;
+    --ge-supports: #57b894;
+    --ge-contradicts: #d9534f;
   }
-  .gr-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-  .gr-node-filters, .gr-controls-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-  .gr-ctl-label { color: var(--muted); font-size: var(--fs-xs); font-weight: 600; }
-  .gr-chk { display: inline-flex; align-items: center; gap: 6px; color: var(--text); font-size: var(--fs-sm); cursor: pointer; }
-  .gr-chk input { margin: 0; }
-  .gr-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
-  .gr-dot[data-ndot="subject"] { background: var(--gc-subject); }
-  .gr-dot[data-ndot="evidence"] { background: var(--gc-evidence); }
-  .gr-dot[data-ndot="event"] { background: var(--gc-event); }
-  .gr-dot[data-ndot="cognition"] { background: var(--gc-cognition); }
+  .gr-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .gr-node-filters,
+  .gr-controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  .gr-ctl-label {
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+  }
+  .gr-chk {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+  }
+  .gr-chk input {
+    margin: 0;
+  }
+  .gr-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .gr-dot[data-ndot='subject'] {
+    background: var(--gc-subject);
+  }
+  .gr-dot[data-ndot='evidence'] {
+    background: var(--gc-evidence);
+  }
+  .gr-dot[data-ndot='event'] {
+    background: var(--gc-event);
+  }
+  .gr-dot[data-ndot='cognition'] {
+    background: var(--gc-cognition);
+  }
   .gr-search {
-    border: 1px solid var(--line); background: var(--panel); color: var(--text);
-    border-radius: 10px; padding: 6px 12px; font: inherit; font-size: var(--fs-sm); min-width: 180px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: var(--fs-sm);
+    min-width: 180px;
   }
-  .gr-btn, .gr-leg {
-    border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer;
-    border-radius: 10px; padding: 6px 13px; font: inherit; font-size: var(--fs-sm);
+  .gr-btn,
+  .gr-leg {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 6px 13px;
+    font: inherit;
+    font-size: var(--fs-sm);
   }
-  .gr-btn:hover, .gr-leg:hover { border-color: var(--accent); }
-  .gr-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-  .gr-leg { display: inline-flex; align-items: center; gap: 7px; opacity: .45; }
-  .gr-leg.on { opacity: 1; }
-  .gr-line { width: 20px; height: 0; border-top-width: 3px; border-top-style: solid; display: inline-block; }
-  .gr-line[data-eline="belongs_to_subject"] { border-top-color: var(--ge-belongs); }
-  .gr-line[data-eline="distilled_into"] { border-top-color: var(--ge-distilled); border-top-style: dashed; }
-  .gr-line[data-eline="supports"] { border-top-color: var(--ge-supports); }
-  .gr-line[data-eline="contradicts"] { border-top-color: var(--ge-contradicts); border-top-style: dashed; }
-  .gr-stats { color: var(--muted); font-size: var(--fs-xs); margin-bottom: 10px; min-height: 18px; }
-  .gr-stats b { color: var(--text); font-weight: 700; }
+  .gr-btn:hover,
+  .gr-leg:hover {
+    border-color: var(--accent);
+  }
+  .gr-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .gr-leg {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    opacity: 0.45;
+  }
+  .gr-leg.on {
+    opacity: 1;
+  }
+  .gr-line {
+    width: 20px;
+    height: 0;
+    border-top-width: 3px;
+    border-top-style: solid;
+    display: inline-block;
+  }
+  .gr-line[data-eline='belongs_to_subject'] {
+    border-top-color: var(--ge-belongs);
+  }
+  .gr-line[data-eline='distilled_into'] {
+    border-top-color: var(--ge-distilled);
+    border-top-style: dashed;
+  }
+  .gr-line[data-eline='supports'] {
+    border-top-color: var(--ge-supports);
+  }
+  .gr-line[data-eline='contradicts'] {
+    border-top-color: var(--ge-contradicts);
+    border-top-style: dashed;
+  }
+  .gr-stats {
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    margin-bottom: 10px;
+    min-height: 18px;
+  }
+  .gr-stats b {
+    color: var(--text);
+    font-weight: 700;
+  }
   .gr-stage {
-    position: relative; width: 100%; height: 62vh; min-height: 360px;
-    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: #fbfcfe;
+    position: relative;
+    width: 100%;
+    height: 62vh;
+    min-height: 360px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #fbfcfe;
   }
-  #graphCanvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
-  #graphCanvas.dragging { cursor: grabbing; }
+  #graphCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+  #graphCanvas.dragging {
+    cursor: grabbing;
+  }
   .gr-empty {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    color: var(--muted); font-size: var(--fs-sm); text-align: center; padding: 24px; pointer-events: none;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: var(--fs-sm);
+    text-align: center;
+    padding: 24px;
+    pointer-events: none;
   }
   .gr-detail {
-    position: absolute; top: 12px; right: 12px; width: 260px; max-width: calc(100% - 24px);
-    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-    padding: 13px 15px; box-shadow: 0 6px 24px rgba(20,30,50,.14); font-size: var(--fs-sm);
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 260px;
+    max-width: calc(100% - 24px);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 13px 15px;
+    box-shadow: 0 6px 24px rgba(20, 30, 50, 0.14);
+    font-size: var(--fs-sm);
   }
-  .gr-detail .grd-title { font-size: var(--fs); font-weight: 700; margin-bottom: 4px; word-break: break-word; }
-  .gr-detail .grd-kind { color: var(--muted); font-size: var(--fs-xs); margin-bottom: 9px; }
-  .gr-detail .grd-summary { color: var(--text); margin-bottom: 10px; word-break: break-word; white-space: pre-wrap; }
-  .gr-detail .grd-row { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; color: var(--muted); font-size: var(--fs-xs); }
-  .gr-detail .grd-row span:last-child { color: var(--text); text-align: right; word-break: break-word; }
+  .gr-detail .grd-title {
+    font-size: var(--fs);
+    font-weight: 700;
+    margin-bottom: 4px;
+    word-break: break-word;
+  }
+  .gr-detail .grd-kind {
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    margin-bottom: 9px;
+  }
+  .gr-detail .grd-summary {
+    color: var(--text);
+    margin-bottom: 10px;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .gr-detail .grd-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+  }
+  .gr-detail .grd-row span:last-child {
+    color: var(--text);
+    text-align: right;
+    word-break: break-word;
+  }
   .gr-detail .grd-close {
-    position: absolute; top: 8px; right: 10px; border: none; background: none; cursor: pointer;
-    color: var(--muted); font-size: 18px; line-height: 1; padding: 0;
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
   }
 
   /* 只显示活跃 / 含已失效 切换 */
-  .mem-filter { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; color: var(--muted); font-size: var(--fs-xs); }
-  .mem-filter input { margin: 0; }
+  .mem-filter {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 14px;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+  }
+  .mem-filter input {
+    margin: 0;
+  }
 
-  .mem-empty { color: var(--muted); text-align: center; font-size: var(--fs-sm); padding: 36px 0; }
+  .mem-empty {
+    color: var(--muted);
+    text-align: center;
+    font-size: var(--fs-sm);
+    padding: 36px 0;
+  }
 
   /* 记忆卡片（认知 / 证据通用） */
   .mem-card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 13px 15px; margin-bottom: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 13px 15px;
+    margin-bottom: 10px;
   }
-  .mem-card.dead { opacity: .6; }
-  .mem-card .mc-text { font-size: var(--fs); line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
-  .mem-card .mc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 9px; }
+  .mem-card.dead {
+    opacity: 0.6;
+  }
+  .mem-card .mc-text {
+    font-size: var(--fs);
+    line-height: 1.55;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .mem-card .mc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin-top: 9px;
+  }
   .mc-pill {
-    display: inline-flex; align-items: center; font-size: var(--fs-xs); padding: 2px 9px;
-    border-radius: var(--radius-pill); background: var(--bg); border: 1px solid var(--line); color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--fs-xs);
+    padding: 2px 9px;
+    border-radius: var(--radius-pill);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--muted);
   }
-  .mc-pill.ok { background: #e7f6ee; color: var(--ok); border-color: transparent; }
-  .mc-pill.warn { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
-  .mem-card .mc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 11px; }
+  .mc-pill.ok {
+    background: #e7f6ee;
+    color: var(--ok);
+    border-color: transparent;
+  }
+  .mc-pill.warn {
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    border-color: transparent;
+  }
+  .mem-card .mc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 11px;
+  }
   .mc-btn {
-    border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer;
-    border-radius: 9px; padding: 5px 12px; font: inherit; font-size: var(--fs-xs); font-weight: 600;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 9px;
+    padding: 5px 12px;
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: 600;
   }
-  .mc-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .mc-btn.danger:hover { border-color: #b4232a; color: #b4232a; }
+  .mc-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .mc-btn.danger:hover {
+    border-color: #b4232a;
+    color: #b4232a;
+  }
 
   /* 溯源折叠 */
-  .mc-sources { margin-top: 10px; }
-  .mc-sources > summary { cursor: pointer; color: var(--muted); font-size: var(--fs-xs); list-style: none; }
-  .mc-sources > summary::-webkit-details-marker { display: none; }
-  .mc-sources > summary::before { content: "▸ "; }
-  .mc-sources[open] > summary::before { content: "▾ "; }
+  .mc-sources {
+    margin-top: 10px;
+  }
+  .mc-sources > summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    list-style: none;
+  }
+  .mc-sources > summary::-webkit-details-marker {
+    display: none;
+  }
+  .mc-sources > summary::before {
+    content: '▸ ';
+  }
+  .mc-sources[open] > summary::before {
+    content: '▾ ';
+  }
   .mc-source-item {
-    font-size: var(--fs-xs); color: var(--muted); padding: 6px 0 6px 12px;
-    border-left: 2px solid var(--line); margin-top: 6px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    padding: 6px 0 6px 12px;
+    border-left: 2px solid var(--line);
+    margin-top: 6px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   /* 授权开关行（证据卡） */
-  .mc-auth { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--muted); cursor: pointer; }
-  .mc-auth input { margin: 0; }
+  .mc-auth {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .mc-auth input {
+    margin: 0;
+  }
 
   /* 二次确认弹窗 */
   #memConfirm {
-    display: none; position: fixed; inset: 0; z-index: 50;
-    background: rgba(15,23,34,.42); align-items: center; justify-content: center; padding: 20px;
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(15, 23, 34, 0.42);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
   }
-  #memConfirm.show { display: flex; }
+  #memConfirm.show {
+    display: flex;
+  }
   .mc-dialog {
-    background: var(--panel); border-radius: var(--radius); max-width: 440px; width: 100%;
-    padding: 20px 22px; box-shadow: 0 12px 40px rgba(0,0,0,.18);
+    background: var(--panel);
+    border-radius: var(--radius);
+    max-width: 440px;
+    width: 100%;
+    padding: 20px 22px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
   }
-  .mc-dialog h3 { margin: 0 0 10px; font-size: 16px; }
-  .mc-dialog .mc-body { font-size: var(--fs-sm); color: var(--text); line-height: 1.6; word-break: break-word; }
-  .mc-dialog .mc-body b { color: #b4232a; }
-  .mc-dialog .mc-warn { margin-top: 10px; color: #b4232a; font-size: var(--fs-xs); }
-  .mc-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
-  .mc-dialog-actions button { border-radius: 10px; padding: 8px 18px; font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
-  #memConfirmCancel { border: 1px solid var(--line); background: var(--panel); color: var(--text); }
-  #memConfirmOk { border: none; background: #b4232a; color: #fff; }
+  .mc-dialog h3 {
+    margin: 0 0 10px;
+    font-size: 16px;
+  }
+  .mc-dialog .mc-body {
+    font-size: var(--fs-sm);
+    color: var(--text);
+    line-height: 1.6;
+    word-break: break-word;
+  }
+  .mc-dialog .mc-body b {
+    color: #b4232a;
+  }
+  .mc-dialog .mc-warn {
+    margin-top: 10px;
+    color: #b4232a;
+    font-size: var(--fs-xs);
+  }
+  .mc-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .mc-dialog-actions button {
+    border-radius: 10px;
+    padding: 8px 18px;
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #memConfirmCancel {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+  }
+  #memConfirmOk {
+    border: none;
+    background: #b4232a;
+    color: #fff;
+  }
 
   /* 轻提示 toast */
   #memToast {
-    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(12px);
-    background: #1d2733; color: #fff; padding: 9px 18px; border-radius: var(--radius-pill);
-    font-size: var(--fs-sm); opacity: 0; pointer-events: none; transition: all .22s ease; z-index: 60; max-width: 90vw;
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%) translateY(12px);
+    background: #1d2733;
+    color: #fff;
+    padding: 9px 18px;
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-sm);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.22s ease;
+    z-index: 60;
+    max-width: 90vw;
   }
-  #memToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  #memToast.warn { background: #8a6d00; }
-  #memToast.danger { background: #b4232a; }
+  #memToast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #memToast.warn {
+    background: #8a6d00;
+  }
+  #memToast.danger {
+    background: #b4232a;
+  }
 
-  /* ── 数据 / 备份区（步5）── */
+  /* ── 数据 / 备份区 ── */
   .data-block {
-    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 15px 16px; margin-bottom: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 15px 16px;
+    margin-bottom: 12px;
   }
-  .data-block h2 { font-size: 15px; margin: 0 0 4px; }
-  .data-block .db-desc { color: var(--muted); font-size: var(--fs-xs); margin: 0 0 12px; line-height: 1.55; }
+  .data-block h2 {
+    font-size: 15px;
+    margin: 0 0 4px;
+  }
+  .data-block .db-desc {
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    margin: 0 0 12px;
+    line-height: 1.55;
+  }
   .data-btn {
-    border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer;
-    border-radius: 10px; padding: 8px 16px; font: inherit; font-size: var(--fs-sm); font-weight: 600;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 600;
   }
-  .data-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .data-btn:disabled { opacity: .5; cursor: default; }
-  .data-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .data-btn.primary:hover { opacity: .9; color: #fff; }
-  .data-hint { display: block; margin-top: 9px; color: var(--muted); font-size: var(--fs-xs); line-height: 1.5; }
+  .data-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .data-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .data-btn.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .data-btn.primary:hover {
+    opacity: 0.9;
+    color: #fff;
+  }
+  .data-hint {
+    display: block;
+    margin-top: 9px;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    line-height: 1.5;
+  }
   /* 导入试算结果框 */
   #importPlan {
-    display: none; margin-top: 12px; padding: 11px 13px; border-radius: 10px;
-    background: var(--bg); border: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.6;
+    display: none;
+    margin-top: 12px;
+    padding: 11px 13px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    font-size: var(--fs-sm);
+    line-height: 1.6;
   }
-  #importPlan.show { display: block; }
-  #importPlan .ip-warn { color: var(--warn-text); font-size: var(--fs-xs); margin-top: 6px; }
-  #importPlan .ip-actions { display: flex; gap: 10px; margin-top: 12px; }
-  #importFile { display: none; } /* 用按钮代触发原生 file 选择 */
+  #importPlan.show {
+    display: block;
+  }
+  #importPlan .ip-warn {
+    color: var(--warn-text);
+    font-size: var(--fs-xs);
+    margin-top: 6px;
+  }
+  #importPlan .ip-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  #importFile {
+    display: none;
+  } /* 用按钮代触发原生 file 选择 */
   /* 危险区（恢复出厂）：红框强调 */
-  .data-block.danger { border-color: #f0b6b9; background: #fdf5f5; }
-  .data-block.danger h2 { color: #b4232a; }
-  #factoryReset { border-color: #d9666c; color: #b4232a; }
-  #factoryReset:hover { background: #b4232a; color: #fff; border-color: #b4232a; }
-  /* 恢复出厂强确认弹窗内的输入框 */
-  .mc-typeconfirm { margin-top: 14px; }
-  .mc-typeconfirm label { display: block; font-size: var(--fs-xs); color: var(--muted); margin-bottom: 5px; }
-  .mc-typeconfirm input {
-    width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 8px 11px;
-    font: inherit; font-size: var(--fs-sm); color: var(--text); background: var(--bg);
+  .data-block.danger {
+    border-color: #f0b6b9;
+    background: #fdf5f5;
   }
-  .mc-typeconfirm input:focus { outline: none; border-color: #b4232a; }
+  .data-block.danger h2 {
+    color: #b4232a;
+  }
+  #factoryReset {
+    border-color: #d9666c;
+    color: #b4232a;
+  }
+  #factoryReset:hover {
+    background: #b4232a;
+    color: #fff;
+    border-color: #b4232a;
+  }
+  /* 恢复出厂强确认弹窗内的输入框 */
+  .mc-typeconfirm {
+    margin-top: 14px;
+  }
+  .mc-typeconfirm label {
+    display: block;
+    font-size: var(--fs-xs);
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .mc-typeconfirm input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 11px;
+    font: inherit;
+    font-size: var(--fs-sm);
+    color: var(--text);
+    background: var(--bg);
+  }
+  .mc-typeconfirm input:focus {
+    outline: none;
+    border-color: #b4232a;
+  }
 </style>
 
-<!-- 左侧对话列表侧栏（步4）：新建 / 切换 / 归档。当前对话高亮；hover 出归档钮。向导/记忆态自动隐藏。 -->
+<!-- 左侧对话列表侧栏：新建 / 切换 / 归档。当前对话高亮；hover 出归档钮。向导/记忆态自动隐藏。 -->
 <aside id="sidebar">
   <div class="sb-head">
     <span class="sb-title">对话</span>
@@ -469,21 +1439,36 @@
 </aside>
 
 <header>
-  <div class="brand">MemoWeft <small>会记住你说过的话</small></div>
+  <div class="brand">MemoWeft <small>Reference host · 简体中文界面</small></div>
   <!-- 体验选择器：切它用哪种"人设/语气"跟你聊（普通助手 / 星瑶）。记忆是同一份，只换回话的方式。
        切换后当前这段对话下一句起生效（后端会重建对话窗口、换上新语气）。 -->
   <label id="expPick" title="换一种跟你聊天的方式（记住你的还是同一份，只是语气不同）">
     <span class="exp-label">聊天方式</span>
-    <select id="expSelect"><option>加载中…</option></select>
+    <select id="expSelect">
+      <option>加载中…</option>
+    </select>
   </label>
-  <!-- S0 记忆胶囊：显示「它记住我 N 件事」，N=当前活跃理解数（轮询 /api/cognition/count）。点开进记忆抽屉（现有记忆管理页）。 -->
-  <button id="memPill" title="看看它记住了你哪些事——可以随时改或删"><span id="memPillN">它记住我的事</span><span class="pill-chev">›</span></button>
-  <!-- 立即整理记忆（S1）：不等后台攒批，用户主动让它现在整理一次。 -->
-  <button id="btnRefresh" title="让它现在就把你刚说的整理进记忆（平时它会在后台自动整理，这里是手动催一下）">立即整理记忆</button>
-  <span id="bgstatus" title="它对你的了解会在后台慢慢整理：聊完停一会儿就开始，要想一想、可能需要一点时间，但不挡你聊。">还没开始整理</span>
+  <!-- 记忆胶囊：显示「它记住我 N 件事」，N=当前活跃理解数（轮询 /api/cognition/count）。点开进记忆抽屉（现有记忆管理页）。 -->
+  <button id="memPill" title="看看它记住了你哪些事——可以随时改或删">
+    <span id="memPillN">它记住我的事</span><span class="pill-chev">›</span>
+  </button>
+  <!-- 立即整理记忆：不等后台攒批，用户主动让它现在整理一次。 -->
+  <button
+    id="btnRefresh"
+    title="让它现在就把你刚说的整理进记忆（平时它会在后台自动整理，这里是手动催一下）"
+  >
+    立即整理记忆
+  </button>
+  <span
+    id="bgstatus"
+    title="它对你的了解会在后台慢慢整理：聊完停一会儿就开始，要想一想、可能需要一点时间，但不挡你聊。"
+    >还没开始整理</span
+  >
 </header>
 
-<div id="warnbar">还没配好模型，暂时聊不了。<button class="gobtn" id="btnGoWizard">去配置</button></div>
+<div id="warnbar">
+  还没配好模型，暂时聊不了。<button class="gobtn" id="btnGoWizard">去配置</button>
+</div>
 
 <div id="chat">
   <div class="chat-inner" id="chatInner">
@@ -495,7 +1480,12 @@
 <div id="wizard">
   <div class="wiz">
     <h1>先配一个模型，就能开始聊了</h1>
-    <p class="lead">MemoWeft 靠一个大模型来回话、并把你说的话记下来。填好下面第一组（必填），点「保存配置并启用」，配置会写到本机项目下的 <code>.env</code> 文件（已被 git 忽略、不会上传），重启一次就能用了、以后不用再配。密钥只保存在你自己电脑上、仅本地使用。</p>
+    <p class="lead">
+      这是本地单用户参考宿主（界面目前为简体中文）。MemoWeft
+      靠一个大模型来回话、并把你说的话记下来。填好下面第一组（必填），点「保存配置并启用」，配置会写到本机项目下的
+      <code>.env</code> 文件（已被 git
+      忽略、不会上传），重启一次就能用了、以后不用再配。密钥只保存在你自己电脑上、仅本地使用；此示例不包含认证、多租户隔离或生产部署配置。
+    </p>
 
     <!-- 第 1 组：对话模型（必填） -->
     <div class="wiz-group">
@@ -503,7 +1493,13 @@
       <p class="desc">用来跟你对话、也用来把你说的话整理成记忆。填一个 OpenAI 兼容的接口就行。</p>
       <div class="wiz-field">
         <label for="llmBase">接口地址（Base URL）</label>
-        <input id="llmBase" type="text" autocomplete="off" spellcheck="false" placeholder="https://…/v1" />
+        <input
+          id="llmBase"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="https://…/v1"
+        />
       </div>
       <div class="wiz-field">
         <label for="llmKey">密钥（API Key）</label>
@@ -511,7 +1507,13 @@
       </div>
       <div class="wiz-field">
         <label for="llmModel">模型名</label>
-        <input id="llmModel" type="text" autocomplete="off" spellcheck="false" placeholder="例如 gpt-4o-mini" />
+        <input
+          id="llmModel"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="例如 gpt-4o-mini"
+        />
       </div>
     </div>
 
@@ -521,7 +1523,13 @@
       <p class="desc">在后台把你说的话整理成记忆时用它，通常更快更省。不填就用上面那个对话模型。</p>
       <div class="wiz-field">
         <label for="writeBase">接口地址（Base URL）</label>
-        <input id="writeBase" type="text" autocomplete="off" spellcheck="false" placeholder="不填则复用对话模型" />
+        <input
+          id="writeBase"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="不填则复用对话模型"
+        />
       </div>
       <div class="wiz-field">
         <label for="writeKey">密钥（API Key）</label>
@@ -529,7 +1537,13 @@
       </div>
       <div class="wiz-field">
         <label for="writeModel">模型名</label>
-        <input id="writeModel" type="text" autocomplete="off" spellcheck="false" placeholder="不填则复用对话模型" />
+        <input
+          id="writeModel"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="不填则复用对话模型"
+        />
       </div>
       <div class="wiz-field">
         <label for="writeTier">这个模型在哪运行</label>
@@ -537,17 +1551,28 @@
           <option value="cloud">云端（默认）</option>
           <option value="local">本地（如 ollama / llama.cpp）</option>
         </select>
-        <p class="desc">选「本地」，你的「行为观察」（默认不上云的那些记录）才会被本地私密消化成记忆；选「云端」，这些观察会挂着不被消化——除非你之后在记忆管理里对具体记录单独「授权上云」（会离开本机）。</p>
+        <p class="desc">
+          选「本地」，默认不用于 MemoWeft
+          内建云写模型的「行为观察」才会被本地模型消化成记忆；选「云端」，这些观察会挂着不被内建云写模型消化——除非你之后在记忆管理里逐条允许其进入内建云写模型提示词。
+        </p>
       </div>
     </div>
 
     <!-- 第 3 组：嵌入模型（可选） -->
     <div class="wiz-group">
       <h2>语义联想模型 <span class="tag opt">可选</span></h2>
-      <p class="desc">配上它，对话里会更容易想起相关的旧事。不填也没关系——聊天和整理记忆都照常，只是暂时不启用语义联想。</p>
+      <p class="desc">
+        配上它，对话里会更容易想起相关的旧事。不填也没关系——聊天和整理记忆都照常，只是暂时不启用语义联想。
+      </p>
       <div class="wiz-field">
         <label for="embedBase">接口地址（Base URL）</label>
-        <input id="embedBase" type="text" autocomplete="off" spellcheck="false" placeholder="不填则暂不启用" />
+        <input
+          id="embedBase"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="不填则暂不启用"
+        />
       </div>
       <div class="wiz-field">
         <label for="embedKey">密钥（API Key）</label>
@@ -555,7 +1580,13 @@
       </div>
       <div class="wiz-field">
         <label for="embedModel">模型名</label>
-        <input id="embedModel" type="text" autocomplete="off" spellcheck="false" placeholder="不填则暂不启用" />
+        <input
+          id="embedModel"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="不填则暂不启用"
+        />
       </div>
     </div>
 
@@ -563,8 +1594,12 @@
     <div class="wiz-group">
       <label class="wiz-check">
         <input id="expUI" type="checkbox" checked />
-        <span class="ck-text">带网页界面使用
-          <small>勾选＝像现在这样用网页聊天；取消＝只把 MemoWeft 当作程序库、不起网页（给开发者接进自己的应用用）。</small>
+        <span class="ck-text"
+          >带网页界面使用
+          <small
+            >勾选＝像现在这样用网页聊天；取消＝只把 MemoWeft
+            当作程序库、不起网页（给开发者接进自己的应用用）。</small
+          >
         </span>
       </label>
     </div>
@@ -574,16 +1609,13 @@
       <span id="wizErr"></span>
     </div>
 
-    <!-- 保存结果：已写盘提示 + 只读回显写入内容 + 复制（备用） -->
+    <!-- 保存结果：仅确认已写盘；密钥与完整 .env 不再回显到页面。 -->
     <div id="wizResult">
       <h2>✓ 已保存，重启一次就能聊</h2>
       <div class="wiz-save-hint">
-        配置已写入本机 <code>apps/memoweft-host/.env</code>（已被 git 忽略、不会上传）。<b>回到终端把 host 停掉（Ctrl+C），再 <code>npm start -w @memoweft/host</code> 启动一次</b>，就能开始聊了；以后不用再配。
-      </div>
-      <textarea id="wizEnv" readonly spellcheck="false"></textarea>
-      <div class="wiz-result-actions">
-        <button id="wizCopy">复制内容</button>
-        <span id="wizCopied">已复制 ✓</span>
+        配置已写入本机 <code>apps/memoweft-host/.env</code>（已被 git 忽略、不会上传）。<b
+          >回到终端把 host 停掉（Ctrl+C），再 <code>npm start -w @memoweft/host</code> 启动一次</b
+        >，就能开始聊了；以后不用再配。
       </div>
     </div>
   </div>
@@ -596,7 +1628,14 @@
       <h1>它记住我的事</h1>
       <button id="memBack">← 返回聊天</button>
     </div>
-    <p class="mem-lead">下面是它对你的理解，以及记下的原话线索。你可以把不对的标为"不再有效"、决定哪些能用于云端、或删掉不想留的。</p>
+    <p class="mem-lead">
+      下面是它对你的理解，以及记下的原话线索。你可以把不对的标为"不再有效"、决定哪些可进入 MemoWeft
+      内建云写模型提示词、或删掉不想留的。
+    </p>
+    <p class="mem-cloud-note">
+      “不用于内建云写模型”只控制 MemoWeft 内建云写模型提示词的选材；不会限制回忆、读取
+      API、MCP、自定义宿主或派生理解（cognition）。它不是端到端访问控制。
+    </p>
 
     <div class="mem-tabs">
       <button class="mem-tab on" id="tabCog" data-tab="cog">对你的理解</button>
@@ -613,15 +1652,17 @@
 
     <div id="memList"><div class="mem-empty">加载中…</div></div>
 
-    <!-- 插件区（步7 v2）：插件 tab 时显示。列已注册插件 + 类型 + 声明权限（只读展示；换人设仍用顶栏选择器）。 -->
-    <div id="memPlugins" style="display:none;"></div>
+    <!-- 插件区：插件 tab 时显示。列已注册插件、类型和声明权限（只读展示；换人设仍用顶栏选择器）。 -->
+    <div id="memPlugins" style="display: none"></div>
 
-    <!-- 数据 / 备份区（步5）：数据 tab 时显示。导出/导入/恢复出厂。 -->
-    <div id="memData" style="display:none;">
+    <!-- 数据 / 备份区：数据 tab 时显示。导出/导入/恢复出厂。 -->
+    <div id="memData" style="display: none">
       <!-- 导出 -->
       <div class="data-block">
         <h2>导出我的记忆包</h2>
-        <p class="db-desc">把它记住你的全部内容（记忆线索、经历片段、对你的理解，以及它们之间的关联）打包成一个文件存到本地。可以拿去备份，或换个地方接着用。你的密钥、聊天记录不在里面。</p>
+        <p class="db-desc">
+          把它记住你的全部内容（记忆线索、经历片段、对你的理解，以及它们之间的关联）打包成一个文件存到本地。可以拿去备份，或换个地方接着用。你的密钥、聊天记录不在里面。
+        </p>
         <button class="data-btn primary" id="exportBundle">导出我的记忆包</button>
         <span class="data-hint">会下载一个 <code>.bundle.json</code> 文件到你的电脑。</span>
       </div>
@@ -629,7 +1670,11 @@
       <!-- 导入 -->
       <div class="data-block">
         <h2>从记忆包恢复</h2>
-        <p class="db-desc">选一个之前导出的 <code>.bundle.json</code> 文件，把里面的记忆合并进来。已经有的不会重复导入。导入前会先给你看一遍将要导入多少、跳过多少，确认后才真正写入。</p>
+        <p class="db-desc">
+          选一个之前导出的
+          <code>.bundle.json</code>
+          文件，把里面的记忆合并进来。已经有的不会重复导入。导入前会先给你看一遍将要导入多少、跳过多少，确认后才真正写入。
+        </p>
         <input type="file" id="importFile" accept=".json,.bundle.json,application/json" />
         <button class="data-btn" id="importPick">选择记忆包文件…</button>
         <span class="data-hint" id="importFileName"></span>
@@ -647,21 +1692,38 @@
       <!-- 危险区：恢复出厂 -->
       <div class="data-block danger">
         <h2>清空全部记忆 · 重新开始</h2>
-        <p class="db-desc">把它记住你的一切都清空——所有记忆线索、经历片段、对你的理解，以及这些操作的记录，全部抹掉，回到刚认识你时的空白。当前的对话会被收起（不删）、并开一段新的空对话。<b style="color:#b4232a;">此操作不可恢复。</b>建议先"导出我的记忆包"留个备份。</p>
+        <p class="db-desc">
+          把它记住你的一切都清空——所有记忆线索、经历片段、对你的理解，以及这些操作的记录，全部抹掉，回到刚认识你时的空白。当前的对话会被收起（不删）、并开一段新的空对话。<b
+            style="color: #b4232a"
+            >此操作不可恢复。</b
+          >建议先"导出我的记忆包"留个备份。
+        </p>
         <button class="data-btn" id="factoryReset">清空全部记忆 · 重新开始</button>
       </div>
     </div>
 
-    <!-- 记忆图谱区（步5-G2）：图谱 tab 时显示。手搓 canvas 力导向图，零外部依赖。 -->
-    <div id="memGraph" style="display:none;">
+    <!-- 记忆图谱区：图谱 tab 时显示。内置 canvas 力导向图，零外部依赖。 -->
+    <div id="memGraph" style="display: none">
       <!-- 顶部控件条：节点类型过滤 / 含失效归档 / 搜索 / 重置 -->
       <div class="gr-controls">
         <div class="gr-node-filters">
           <span class="gr-ctl-label">节点类型</span>
-          <label class="gr-chk"><input type="checkbox" data-nkind="subject" checked /> <i class="gr-dot" data-ndot="subject"></i>主题</label>
-          <label class="gr-chk"><input type="checkbox" data-nkind="evidence" checked /> <i class="gr-dot" data-ndot="evidence"></i>记忆线索</label>
-          <label class="gr-chk"><input type="checkbox" data-nkind="event" checked /> <i class="gr-dot" data-ndot="event"></i>经历</label>
-          <label class="gr-chk"><input type="checkbox" data-nkind="cognition" checked /> <i class="gr-dot" data-ndot="cognition"></i>对你的理解</label>
+          <label class="gr-chk"
+            ><input type="checkbox" data-nkind="subject" checked />
+            <i class="gr-dot" data-ndot="subject"></i>主题</label
+          >
+          <label class="gr-chk"
+            ><input type="checkbox" data-nkind="evidence" checked />
+            <i class="gr-dot" data-ndot="evidence"></i>记忆线索</label
+          >
+          <label class="gr-chk"
+            ><input type="checkbox" data-nkind="event" checked />
+            <i class="gr-dot" data-ndot="event"></i>经历</label
+          >
+          <label class="gr-chk"
+            ><input type="checkbox" data-nkind="cognition" checked />
+            <i class="gr-dot" data-ndot="cognition"></i>对你的理解</label
+          >
         </div>
         <div class="gr-controls-row">
           <label class="gr-chk"><input type="checkbox" id="grShowInvalid" /> 也显示已失效</label>
@@ -673,10 +1735,18 @@
 
       <!-- 边类型图例（可点击 toggle 显隐） -->
       <div class="gr-legend">
-        <button class="gr-leg on" data-ekind="belongs_to_subject"><i class="gr-line" data-eline="belongs_to_subject"></i>归属主题</button>
-        <button class="gr-leg on" data-ekind="distilled_into"><i class="gr-line" data-eline="distilled_into"></i>提炼成经历</button>
-        <button class="gr-leg on" data-ekind="supports"><i class="gr-line" data-eline="supports"></i>支持</button>
-        <button class="gr-leg on" data-ekind="contradicts"><i class="gr-line" data-eline="contradicts"></i>抵触</button>
+        <button class="gr-leg on" data-ekind="belongs_to_subject">
+          <i class="gr-line" data-eline="belongs_to_subject"></i>归属主题
+        </button>
+        <button class="gr-leg on" data-ekind="distilled_into">
+          <i class="gr-line" data-eline="distilled_into"></i>提炼成经历
+        </button>
+        <button class="gr-leg on" data-ekind="supports">
+          <i class="gr-line" data-eline="supports"></i>支持
+        </button>
+        <button class="gr-leg on" data-ekind="contradicts">
+          <i class="gr-line" data-eline="contradicts"></i>抵触
+        </button>
       </div>
 
       <!-- stats 一行 -->
@@ -685,8 +1755,10 @@
       <!-- 画布 + 详情面板 -->
       <div class="gr-stage">
         <canvas id="graphCanvas"></canvas>
-        <div class="gr-empty" id="grEmpty" style="display:none;">还没有可画的记忆——多聊几句、等它整理一下。</div>
-        <div class="gr-detail" id="grDetail" style="display:none;"></div>
+        <div class="gr-empty" id="grEmpty" style="display: none">
+          还没有可画的记忆——多聊几句、等它整理一下。
+        </div>
+        <div class="gr-detail" id="grDetail" style="display: none"></div>
       </div>
     </div>
   </div>
@@ -716,6 +1788,23 @@
 </footer>
 
 <script>
+  // 服务端在每次启动时随机生成，并只注入同源 HTML。所有状态更改请求由此统一带 token。
+  // POST 还强制 application/json，和服务端的 CSRF / DNS-rebinding 防护保持同一契约。
+  const CSRF_TOKEN = '__MEMOWEFT_CSRF_TOKEN__';
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const request = input instanceof Request ? input : null;
+    const method = (init.method || request?.method || 'GET').toUpperCase();
+    if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+      return nativeFetch(input, init);
+    }
+    const headers = new Headers(request?.headers);
+    new Headers(init.headers).forEach((value, name) => headers.set(name, value));
+    headers.set('Content-Type', 'application/json');
+    headers.set('X-MemoWeft-CSRF-Token', CSRF_TOKEN);
+    return nativeFetch(input, { ...init, headers });
+  };
+
   const $ = (id) => document.getElementById(id);
   const chatInner = $('chatInner');
   let sending = false;
@@ -733,25 +1822,39 @@
     scrollDown();
     return msg;
   }
-  function hideEmpty() { const e = $('emptyHint'); if (e) e.remove(); }
-  function scrollDown() { const c = $('chat'); c.scrollTop = c.scrollHeight; }
+  function hideEmpty() {
+    const e = $('emptyHint');
+    if (e) e.remove();
+  }
+  function scrollDown() {
+    const c = $('chat');
+    c.scrollTop = c.scrollHeight;
+  }
 
   // ── 发送一轮 ──
   async function send() {
     const el = $('text');
     const message = el.value.trim();
     if (!message || sending) return;
-    el.value = ''; el.style.height = 'auto'; el.disabled = true;
-    $('send').disabled = true; sending = true;
+    el.value = '';
+    el.style.height = 'auto';
+    el.disabled = true;
+    $('send').disabled = true;
+    sending = true;
     addMsg('user', message);
 
     // 思考中：冒一个助手侧三点起伏气泡占位，回复到了原位替换。
     const thinking = document.createElement('div');
     thinking.className = 'msg assistant';
-    thinking.innerHTML = '<div class="bubble"><span class="thinking-dots"><span></span><span></span><span></span></span></div>';
-    chatInner.appendChild(thinking); scrollDown();
+    thinking.innerHTML =
+      '<div class="bubble"><span class="thinking-dots"><span></span><span></span><span></span></span></div>';
+    chatInner.appendChild(thinking);
+    scrollDown();
 
-    const settle = (text) => { thinking.querySelector('.bubble').textContent = text; scrollDown(); };
+    const settle = (text) => {
+      thinking.querySelector('.bubble').textContent = text;
+      scrollDown();
+    };
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -765,14 +1868,20 @@
       // fetch 没连上 = 请求没到服务端，这句话还没入库也没落历史——别假承诺"已存下"（诚实口径）。
       settle('没连上，这句话还没发出去，稍后再重发一次。');
     } finally {
-      el.disabled = false; $('send').disabled = false; sending = false; el.focus();
+      el.disabled = false;
+      $('send').disabled = false;
+      sending = false;
+      el.focus();
       loadSessions(); // 聊完刷侧栏：新对话首条后要出现在列表、预览/最后活跃时间随之更新
     }
   }
 
   // Enter 发送，Shift+Enter 换行；输入框随内容长高。
   $('text').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
   });
   $('text').addEventListener('input', function () {
     this.style.height = 'auto';
@@ -786,7 +1895,8 @@
     // 清空聊天区，恢复空提示占位。
     chatInner.textContent = '';
     const empty = document.createElement('div');
-    empty.className = 'empty'; empty.id = 'emptyHint';
+    empty.className = 'empty';
+    empty.id = 'emptyHint';
     empty.textContent = '跟它说点什么吧，它会记住你说过的话。';
     chatInner.appendChild(empty);
     if (turns && turns.length) {
@@ -798,12 +1908,14 @@
     try {
       const d = await fetch('/api/chat-history').then((x) => x.json());
       renderChat(d.turns || []);
-    } catch (e) { /* 历史读不到不影响新聊 */ }
+    } catch (e) {
+      /* 历史读不到不影响新聊 */
+    }
   }
 
   // ── 首启门：模型没配好 → 进配置向导；配好了 → 正常聊天 ──
   //   llmReady=false：显示顶部黄条（带"去配置"）并直接进向导态（body.mode-wizard，藏聊天区、显向导面板）。
-  //   llmReady=true：不进向导，正常聊天（步1 行为不变）。
+  //   llmReady=true：不进向导，正常聊天。
   async function checkHealth() {
     try {
       const h = await fetch('/api/health').then((x) => x.json());
@@ -811,41 +1923,58 @@
         $('warnbar').classList.add('show');
         enterWizard();
       }
-    } catch (e) { /* 拿不到就先不提示、不强进向导 */ }
+    } catch (e) {
+      /* 拿不到就先不提示、不强进向导 */
+    }
   }
 
   // ── 配置向导 ──
-  function enterWizard() { document.body.classList.add('mode-wizard'); }
+  function enterWizard() {
+    document.body.classList.add('mode-wizard');
+  }
 
-  // 保存配置并启用：收三组 9 字段 + 是否带界面 → POST /api/save-env → 服务端写 .env、回显写入内容。
+  // 保存配置并启用：收三组 9 字段 + 是否带界面 → POST /api/save-env → 服务端写 .env。
   //   apiKey 随请求发出、写进本机项目下的 .env（已 gitignore）；页面不持久保存，重启后由 Core 读取生效。
   async function wizGenEnv() {
     const errBox = $('wizErr');
-    errBox.style.display = 'none'; errBox.textContent = '';
+    errBox.style.display = 'none';
+    errBox.textContent = '';
     // 前端先兜一层必填校验（服务端还会再兜底，返回 400 也照样处理）。
-    const llmBase = $('llmBase').value.trim(), llmKey = $('llmKey').value.trim(), llmModel = $('llmModel').value.trim();
+    const llmBase = $('llmBase').value.trim(),
+      llmKey = $('llmKey').value.trim(),
+      llmModel = $('llmModel').value.trim();
     if (!llmBase || !llmKey || !llmModel) {
       errBox.textContent = '「对话模型」三项都要填：接口地址、密钥、模型名。';
       errBox.style.display = 'inline';
       return;
     }
     const payload = {
-      llmBaseUrl: llmBase, llmApiKey: llmKey, llmModel: llmModel,
-      writeBaseUrl: $('writeBase').value.trim(), writeApiKey: $('writeKey').value.trim(), writeModel: $('writeModel').value.trim(),
+      llmBaseUrl: llmBase,
+      llmApiKey: llmKey,
+      llmModel: llmModel,
+      writeBaseUrl: $('writeBase').value.trim(),
+      writeApiKey: $('writeKey').value.trim(),
+      writeModel: $('writeModel').value.trim(),
       writeTier: $('writeTier').value,
-      embedBaseUrl: $('embedBase').value.trim(), embedApiKey: $('embedKey').value.trim(), embedModel: $('embedModel').value.trim(),
+      embedBaseUrl: $('embedBase').value.trim(),
+      embedApiKey: $('embedKey').value.trim(),
+      embedModel: $('embedModel').value.trim(),
       withExperienceUI: $('expUI').checked,
     };
     $('wizGen').disabled = true;
     try {
       const res = await fetch('/api/save-env', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
       const d = await res.json();
-      if (d.error) { errBox.textContent = d.error; errBox.style.display = 'inline'; return; }
-      $('wizEnv').value = d.env || '';
+      if (d.error) {
+        errBox.textContent = d.error;
+        errBox.style.display = 'inline';
+        return;
+      }
       $('wizResult').style.display = 'block';
-      $('wizCopied').style.display = 'none';
       $('wizResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (e) {
       errBox.textContent = '生成失败：' + (e && e.message ? e.message : String(e));
@@ -855,26 +1984,8 @@
     }
   }
 
-  // 复制生成的 .env 文本（clipboard API 优先，失败降级 execCommand）。
-  async function wizCopyEnv() {
-    const text = $('wizEnv').value || '';
-    let ok = false;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); ok = true; }
-    } catch (e) { /* 落降级 */ }
-    if (!ok) {
-      try { $('wizEnv').select(); ok = document.execCommand('copy'); } catch (e) { ok = false; }
-    }
-    const tag = $('wizCopied');
-    tag.textContent = ok ? '已复制 ✓' : '复制失败，请手动全选复制';
-    tag.style.color = ok ? 'var(--ok)' : '#b4232a';
-    tag.style.display = 'inline';
-    setTimeout(() => { tag.style.display = 'none'; }, 2500);
-  }
-
   $('btnGoWizard').addEventListener('click', enterWizard);
   $('wizGen').addEventListener('click', wizGenEnv);
-  $('wizCopy').addEventListener('click', wizCopyEnv);
 
   // ── 后台整理状态轮询（用户词，不显示 updateProfile 等术语） ──
   let lastAt = null;
@@ -894,35 +2005,40 @@
         el.classList.add('st-done');
         const t = String(s.lastUpdate.at).slice(11, 16);
         const created = s.lastUpdate.created;
-        el.textContent = created > 0 ? ('已整理 · 新记住 ' + created + ' 件（' + t + '）') : ('已整理（' + t + '）');
+        el.textContent =
+          created > 0 ? '已整理 · 新记住 ' + created + ' 件（' + t + '）' : '已整理（' + t + '）';
       } else {
         el.textContent = '还没开始整理';
       }
-      // 后台跑完一轮（时间戳变了）→ ① 织 S1 记忆气泡（本轮新增理解就地进聊天流）② 刷胶囊计数。
+      // 后台跑完一轮（时间戳变了）→ ① 织记忆气泡（本轮新增理解就地进聊天流）② 刷胶囊计数。
       //   首次拿到（lastAt===null）不追溯织历史气泡——只从"本次会话看到的新一轮"起织，避免刷页面把旧的全补一遍。
       if (s.lastUpdate && s.lastUpdate.at !== lastAt) {
         const first = !_seenFirstBg; // 首次响应不追溯织历史（独立 flag，不受 doRefresh 改 lastAt 影响）
         lastAt = s.lastUpdate.at;
         if (!first) {
           const news = Array.isArray(s.lastUpdate.newCognitions) ? s.lastUpdate.newCognitions : [];
-          for (const c of news) weaveMemNote(c); // S1：逐条织进聊天流（内部按 id 去重）
+          for (const c of news) weaveMemNote(c); // 逐条织进聊天流（内部按 id 去重）
           updateMemPill(); // 新理解出现 → 刷胶囊数
         }
       }
       _seenFirstBg = true; // 首个 bg-status 响应处理完 → 此后 lastUpdate 变化才织
-    } catch (e) { /* 轮询失败静默，下次再试 */ }
+    } catch (e) {
+      /* 轮询失败静默，下次再试 */
+    }
   }
 
-  // ── S0 记忆胶囊计数：「它记住我 N 件事」，N=当前活跃理解数（GET /api/cognition/count，轻量）──
+  // ── 记忆胶囊计数：「它记住我 N 件事」，N=当前活跃理解数（GET /api/cognition/count，轻量）──
   async function updateMemPill() {
     try {
       const d = await fetch('/api/cognition/count').then((x) => x.json());
       const n = typeof d.count === 'number' ? d.count : 0;
-      $('memPillN').textContent = n > 0 ? ('它记住我 ' + n + ' 件事') : '它还没记住什么';
-    } catch (e) { /* 拿不到就保持原文案，不吓用户 */ }
+      $('memPillN').textContent = n > 0 ? '它记住我 ' + n + ' 件事' : '它还没记住什么';
+    } catch (e) {
+      /* 拿不到就保持原文案，不吓用户 */
+    }
   }
 
-  // ── S1 记忆气泡：后台/立即整理出新理解时，就地织进聊天流「记住了：X · 把握度档 · 改/删」──
+  // ── 记忆气泡：后台/立即整理出新理解时，就地织进聊天流「记住了：X · 把握度档 · 改/删」──
   //   textContent 免 XSS；_weavedNoteIds 按 id 去重（同一条只织一次，跨轮询不重复）。
   //   改/删复用受控端点（/api/cognition/{invalidate,delete}），与记忆管理页同一套后端。
   const _weavedNoteIds = new Set();
@@ -932,26 +2048,36 @@
     // 气泡织进聊天流 chatInner：向导/记忆管理态下聊天流是隐藏的（气泡照织、藏着），切回聊天即可见、不丢新理解。
     const note = document.createElement('div');
     note.className = 'mem-note';
-    const inner = document.createElement('div'); inner.className = 'mn-inner';
-    const ic = document.createElement('span'); ic.className = 'mn-ic'; ic.textContent = '●';
-    const body = document.createElement('div'); body.className = 'mn-body';
-    const lead = document.createElement('span'); lead.className = 'mn-lead'; lead.textContent = '记住了：';
-    const txt = document.createElement('span'); txt.className = 'mn-txt'; txt.textContent = c.content; // 用户内容 → textContent
+    const inner = document.createElement('div');
+    inner.className = 'mn-inner';
+    const ic = document.createElement('span');
+    ic.className = 'mn-ic';
+    ic.textContent = '●';
+    const body = document.createElement('div');
+    body.className = 'mn-body';
+    const lead = document.createElement('span');
+    lead.className = 'mn-lead';
+    lead.textContent = '记住了：';
+    const txt = document.createElement('span');
+    txt.className = 'mn-txt';
+    txt.textContent = c.content; // 用户内容 → textContent
     body.append(lead, txt);
     // 把握度档：刚生成的认知无衰减，credStatus 即当档 → 映射到用户词（CRED_CN，与记忆管理页同款）。
     const band = c.credStatus || 'candidate';
     const bandText = CRED_CN[band] || '还没确认';
     const tag = document.createElement('span');
-    tag.className = 'mn-band' + (band === 'stable' ? ' ok' : (band === 'conflicted' ? ' warn' : ''));
+    tag.className = 'mn-band' + (band === 'stable' ? ' ok' : band === 'conflicted' ? ' warn' : '');
     tag.textContent = bandText;
     body.append(tag);
     // 改 / 删：改 = 标"不再有效"（受控端点，不做内容编辑，与记忆管理页口径一致）；删 = 删这条理解。
-    const acts = document.createElement('div'); acts.className = 'mn-acts';
+    const acts = document.createElement('div');
+    acts.className = 'mn-acts';
     const bEdit = document.createElement('button');
     bEdit.textContent = '这条不对';
     bEdit.title = '把这条标为"不再有效"，往后不再用它';
     bEdit.onclick = () => noteInvalidate(c.id, note);
-    const bDel = document.createElement('button'); bDel.className = 'del';
+    const bDel = document.createElement('button');
+    bDel.className = 'del';
     bDel.textContent = '删';
     bDel.title = '删掉这条理解';
     bDel.onclick = () => noteDelete(c, note);
@@ -967,29 +2093,46 @@
   async function noteInvalidate(id, noteEl) {
     try {
       const r = await fetch('/api/cognition/invalidate', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
       }).then((x) => x.json());
-      if (r.error || !r.invalidated) { noteFlash(noteEl, '这条已经不在了'); }
-      else { noteFlash(noteEl, '好的，往后不用这条了'); updateMemPill(); }
-    } catch (e) { noteFlash(noteEl, '操作没成功，稍后再试'); }
+      if (r.error || !r.invalidated) {
+        noteFlash(noteEl, '这条已经不在了');
+      } else {
+        noteFlash(noteEl, '好的，往后不用这条了');
+        updateMemPill();
+      }
+    } catch (e) {
+      noteFlash(noteEl, '操作没成功，稍后再试');
+    }
   }
   // 气泡上"删"：删这条理解（受控端点·硬删连溯源链、不可逆）。破坏性操作先二次确认——
-  //   与记忆管理页删除同一护栏（团队有误删事故教训）；且"删"紧挨"这条不对"，别让手滑一点就永久删。
+  //   与记忆管理页删除同一护栏；且"删"紧挨"这条不对"，避免误操作。
   async function noteDelete(c, noteEl) {
     const ok = await memConfirm({
       title: '删掉这条理解？',
       bodyQuote: c.content,
       warn: '删除后无法恢复。想让它别再生效，用「这条不对」更稳——还能追溯。',
-      okText: '永久删除', okKind: 'danger',
+      okText: '永久删除',
+      okKind: 'danger',
     });
     if (!ok) return;
     try {
       const r = await fetch('/api/cognition/delete', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: c.id }),
       }).then((x) => x.json());
-      if (r.error || !r.removed) { noteFlash(noteEl, '这条已经不在了'); }
-      else { noteFlash(noteEl, '已删掉这条'); updateMemPill(); }
-    } catch (e) { noteFlash(noteEl, '删除没成功，稍后再试'); }
+      if (r.error || !r.removed) {
+        noteFlash(noteEl, '这条已经不在了');
+      } else {
+        noteFlash(noteEl, '已删掉这条');
+        updateMemPill();
+      }
+    } catch (e) {
+      noteFlash(noteEl, '删除没成功，稍后再试');
+    }
   }
   // 气泡操作后把整条气泡换成一行淡提示（就地反馈，不弹 toast、不跳走）。
   function noteFlash(noteEl, msg) {
@@ -1002,7 +2145,7 @@
     inner.appendChild(s);
   }
 
-  // ── 立即整理记忆（S1 · 用户主动）：POST /api/refresh → 整理中禁按钮、完成提示新增数、刷胶囊 ──
+  // ── 立即整理记忆（用户主动）：POST /api/refresh → 整理中禁按钮、完成提示新增数、刷胶囊 ──
   async function doRefresh() {
     const btn = $('btnRefresh');
     if (btn.disabled) return;
@@ -1011,7 +2154,10 @@
     btn.textContent = '正在整理…';
     try {
       const d = await fetch('/api/refresh', { method: 'POST' }).then((x) => x.json());
-      if (d.error) { memToast('整理没成功：' + d.error, 'danger'); return; }
+      if (d.error) {
+        memToast('整理没成功：' + d.error, 'danger');
+        return;
+      }
       if (d.ran === false) {
         // 后台正好在整理 → 没重复跑。提示稍等，bg-status 那趟跑完会自然刷。
         memToast('它正在整理了，稍等一下～', '');
@@ -1025,7 +2171,7 @@
       // 让 pollBg 别把这一轮再当"新"的重复处理：把 lastAt 对齐到本次的时间戳。
       if (sum.at) lastAt = sum.at;
       updateMemPill();
-      memToast(created > 0 ? ('整理好了，新记住 ' + created + ' 件') : '整理好了，这次没有新的', '');
+      memToast(created > 0 ? '整理好了，新记住 ' + created + ' 件' : '整理好了，这次没有新的', '');
     } catch (e) {
       memToast('整理没成功：' + String(e), 'danger');
     } finally {
@@ -1035,26 +2181,35 @@
   }
   $('btnRefresh').addEventListener('click', doRefresh);
 
-  // ══════════════════ 记忆管理页（步3） ══════════════════
+  // ══════════════════ 记忆管理页 ══════════════════
   // 全走 /api/cognition|evidence 及其受控管理端点（后端只经 core.memory.*）。
   // 列表渲染用户输入内容一律 textContent（免 XSS）；把握度/状态用 docs/glossary.md 的用户词，不露工程词。
 
   // 可信状态 → 用户词档（docs/glossary.md 把握度定性档）。不显示 0~1000 原始分数。
   const CRED_CN = {
-    candidate: '还没确认', low: '低把握', limited: '有一定把握',
-    stable: '比较确定', conflicted: '有冲突，需确认',
+    candidate: '还没确认',
+    low: '低把握',
+    limited: '有一定把握',
+    stable: '比较确定',
+    conflicted: '有冲突，需确认',
   };
   // 内容类型 → 用户词（docs/glossary.md 术语表）。
   const CTYPE_CN = {
-    fact: '事实', preference: '偏好', goal: '目标', project: '进行中的事',
-    state: '近来状态', trait: '特点', hypothesis: '暂时的猜测', trend: '近来的趋势',
+    fact: '事实',
+    preference: '偏好',
+    goal: '目标',
+    project: '进行中的事',
+    state: '近来状态',
+    trait: '特点',
+    hypothesis: '暂时的猜测',
+    trend: '近来的趋势',
   };
 
   const MEM = {
-    tab: 'cog',        // 'cog' | 'ev' | 'graph' | 'data'
-    showDead: false,   // 理解 tab 是否显示已失效
-    cog: [],           // 认知列表缓存
-    ev: [],            // 证据列表缓存
+    tab: 'cog', // 'cog' | 'ev' | 'graph' | 'data'
+    showDead: false, // 理解 tab 是否显示已失效
+    cog: [], // 认知列表缓存
+    ev: [], // 证据列表缓存
     loaded: false,
   };
 
@@ -1092,7 +2247,8 @@
       box.classList.add('show');
       const done = (v) => {
         box.classList.remove('show');
-        okBtn.onclick = null; $('memConfirmCancel').onclick = null;
+        okBtn.onclick = null;
+        $('memConfirmCancel').onclick = null;
         resolve(v);
       };
       okBtn.onclick = () => done(true);
@@ -1105,7 +2261,9 @@
     document.body.classList.add('mode-memory');
     memLoad(); // 每次进都重拉，保证是最新的
   }
-  function exitMemory() { document.body.classList.remove('mode-memory'); }
+  function exitMemory() {
+    document.body.classList.remove('mode-memory');
+  }
 
   // 拉两份数据（认知 + 证据），再按当前 tab 渲染。
   async function memLoad() {
@@ -1119,10 +2277,10 @@
       MEM.cog = Array.isArray(cd.cognitions) ? cd.cognitions : [];
       MEM.ev = Array.isArray(ed.evidences) ? ed.evidences : [];
       MEM.loaded = true;
-      // 顺手刷 S0 胶囊：用刚拉到的这份算活跃数（零额外请求，口径同 /api/cognition/count：!invalidAt && !archivedAt）。
+      // 使用当前结果同步更新记忆胶囊，无需额外请求；统计口径与 /api/cognition/count 一致：!invalidAt && !archivedAt。
       //   记忆管理页里删/标失效后都会 memLoad，胶囊随之同步、不必等 count 轮询。
       const activeN = MEM.cog.filter((c) => !c.invalidAt && !c.archivedAt).length;
-      $('memPillN').textContent = activeN > 0 ? ('它记住我 ' + activeN + ' 件事') : '它还没记住什么';
+      $('memPillN').textContent = activeN > 0 ? '它记住我 ' + activeN + ' 件事' : '它还没记住什么';
       memRender();
     } catch (e) {
       list.innerHTML = '';
@@ -1134,7 +2292,9 @@
   }
 
   // 按证据 id 找证据（溯源展示用）。
-  function memEvById(id) { return MEM.ev.find((e) => e.id === id); }
+  function memEvById(id) {
+    return MEM.ev.find((e) => e.id === id);
+  }
 
   function memRender() {
     // tab 高亮
@@ -1171,19 +2331,30 @@
     else memRenderEvidences();
   }
 
-  // ── 插件列表（步7 v2·只读展示；全 textContent 防 XSS）──
+  // ── 插件列表（只读展示；全 textContent 防 XSS）──
   async function loadPluginsPanel() {
     const box = $('memPlugins');
     box.textContent = '';
     let data;
-    try { data = await fetch('/api/plugins').then((x) => x.json()); }
-    catch { box.textContent = '插件列表加载失败。'; return; }
+    try {
+      data = await fetch('/api/plugins').then((x) => x.json());
+    } catch {
+      box.textContent = '插件列表加载失败。';
+      return;
+    }
     const plugins = Array.isArray(data.plugins) ? data.plugins : [];
     const intro = document.createElement('p');
     intro.className = 'desc';
-    intro.textContent = '已装插件（在代码里注册）。体验类换的是回话人设（用顶栏「聊天方式」切）；工具/采集类经受限接口观察，只请求、不改记忆规则。';
+    intro.textContent =
+      '已装插件（在代码里注册）。体验类换的是回话人设（用顶栏「聊天方式」切）；工具/采集类经受限接口观察，只请求、不改记忆规则。';
     box.appendChild(intro);
-    if (!plugins.length) { const e = document.createElement('div'); e.className = 'mem-empty'; e.textContent = '没有已注册的插件。'; box.appendChild(e); return; }
+    if (!plugins.length) {
+      const e = document.createElement('div');
+      e.className = 'mem-empty';
+      e.textContent = '没有已注册的插件。';
+      box.appendChild(e);
+      return;
+    }
     const typeLabel = { experience: '体验（人设）', tool: '工具', collector: '采集' };
     for (const p of plugins) {
       const row = document.createElement('div');
@@ -1193,9 +2364,13 @@
       name.textContent = p.name + (p.active ? ' · 使用中' : '');
       const meta = document.createElement('div');
       meta.className = 'plugin-meta';
-      const perms = (Array.isArray(p.permissions) && p.permissions.length) ? '权限：' + p.permissions.join('、') : '无特殊权限';
+      const perms =
+        Array.isArray(p.permissions) && p.permissions.length
+          ? '权限：' + p.permissions.join('、')
+          : '无特殊权限';
       meta.textContent = `类型：${typeLabel[p.type] || p.type} · ${perms}`;
-      row.appendChild(name); row.appendChild(meta);
+      row.appendChild(name);
+      row.appendChild(meta);
       box.appendChild(row);
     }
   }
@@ -1234,7 +2409,12 @@
     // 把握度：用 confBand 定性档（后端按【有效把握度】effectiveConfidence 衰减后定，反映"会变淡"；不露 0~1000 数字）。
     const band = c.confBand || c.credStatus || 'candidate';
     const credText = CRED_CN[band] || '还没确认';
-    meta.appendChild(memPill('把握度：' + credText, band === 'stable' ? 'ok' : (band === 'conflicted' ? 'warn' : '')));
+    meta.appendChild(
+      memPill(
+        '把握度：' + credText,
+        band === 'stable' ? 'ok' : band === 'conflicted' ? 'warn' : '',
+      ),
+    );
     // 状态：活跃 / 已标失效 / 已收起（归档）——用用户词；冲突已并入把握度档。
     if (c.invalidAt) meta.appendChild(memPill('已标为不再有效', 'warn'));
     else if (c.archivedAt) meta.appendChild(memPill('已收起', ''));
@@ -1255,7 +2435,7 @@
         const e = memEvById(s.evidenceId);
         const rel = s.relation === 'contradict' ? '（反着说的）' : '';
         // 证据本身可能已被删（列表里找不到）→ 诚实提示，不假装有内容
-        item.textContent = (e ? (e.summary || e.rawContent) : '（这条线索已不在了）') + rel;
+        item.textContent = (e ? e.summary || e.rawContent : '（这条线索已不在了）') + rel;
         det.appendChild(item);
       }
     } else {
@@ -1314,10 +2494,15 @@
     meta.className = 'mc-meta';
     const SRC_CN = { spoken: '你亲口说的', observed: '从行为观察到的', inferred: '它推测的' };
     meta.appendChild(memPill(SRC_CN[e.sourceKind] || '记录'));
-    meta.appendChild(memPill(e.allowCloudRead ? '可用于云端' : '不上云', e.allowCloudRead ? '' : 'warn'));
+    meta.appendChild(
+      memPill(
+        e.allowCloudRead ? '可用于内建云写模型' : '不用于内建云写模型',
+        e.allowCloudRead ? '' : 'warn',
+      ),
+    );
     card.appendChild(meta);
 
-    // "能否用于云端"开关：即时保存
+    // 是否进入 MemoWeft 内建云写模型提示词：即时保存（不是通用读取权限）。
     const authWrap = document.createElement('div');
     authWrap.style.marginTop = '10px';
     const label = document.createElement('label');
@@ -1327,7 +2512,7 @@
     ck.checked = !!e.allowCloudRead;
     ck.onchange = () => memToggleCloud(e, ck);
     const span = document.createElement('span');
-    span.textContent = '允许这条用于云端模型';
+    span.textContent = '允许这条进入内建云写模型提示词';
     label.appendChild(ck);
     label.appendChild(span);
     authWrap.appendChild(label);
@@ -1358,17 +2543,23 @@
     const ok = await memConfirm({
       title: '把这条理解标为"不再有效"？',
       bodyQuote: c.content,
-      bodyText: '标为不再有效后，它在往后对话里就不会再用这条，但条目和来龙去脉都保留、随时能查——这不是删除。',
+      bodyText:
+        '标为不再有效后，它在往后对话里就不会再用这条，但条目和来龙去脉都保留、随时能查——这不是删除。',
       okText: '标为不再有效',
     });
     if (!ok) return;
     try {
       const r = await fetch('/api/cognition/invalidate', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: c.id }),
       }).then((x) => x.json());
-      if (r.error || !r.invalidated) { memToast('操作失败：' + (r.error || '这条已经不在了'), 'danger'); }
-      else memToast('已标为不再有效', '');
-    } catch (e) { memToast('操作失败：' + String(e), 'danger'); }
+      if (r.error || !r.invalidated) {
+        memToast('操作失败：' + (r.error || '这条已经不在了'), 'danger');
+      } else memToast('已标为不再有效', '');
+    } catch (e) {
+      memToast('操作失败：' + String(e), 'danger');
+    }
     await memLoad();
   }
 
@@ -1377,27 +2568,36 @@
     const ok = await memConfirm({
       title: '删除这条理解？',
       bodyQuote: c.content,
-      bodyText: '会连同它的来龙去脉一起删掉（挂着的原话线索本身不动）。只是想让它别再生效的话，用"标记不再有效"更稳——那样还能追溯。',
+      bodyText:
+        '会连同它的来龙去脉一起删掉（挂着的原话线索本身不动）。只是想让它别再生效的话，用"标记不再有效"更稳——那样还能追溯。',
       warn: '删除后无法恢复。',
-      okText: '永久删除', okKind: 'danger',
+      okText: '永久删除',
+      okKind: 'danger',
     });
     if (!ok) return;
     try {
       const r = await fetch('/api/cognition/delete', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: c.id }),
       }).then((x) => x.json());
-      if (r.error || !r.removed) { memToast('删除失败：' + (r.error || '这条已不存在，已刷新'), 'danger'); }
-      else memToast('已删除这条理解', '');
-    } catch (e) { memToast('删除失败：' + String(e), 'danger'); }
+      if (r.error || !r.removed) {
+        memToast('删除失败：' + (r.error || '这条已不存在，已刷新'), 'danger');
+      } else memToast('已删除这条理解', '');
+    } catch (e) {
+      memToast('删除失败：' + String(e), 'danger');
+    }
     await memLoad();
   }
 
-  // ── 操作：授权开关（能否用于云端），即时保存 ──
+  // ── 操作：授权开关（是否用于内建云写模型），即时保存 ──
   async function memToggleCloud(e, ck) {
     const val = ck.checked;
     try {
       const r = await fetch('/api/evidence/authorization', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: e.id, allowCloudRead: val }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: e.id, allowCloudRead: val }),
       }).then((x) => x.json());
       if (r.error || !r.updated) {
         memToast('保存失败：' + (r.error || '这条已不存在'), 'danger');
@@ -1406,7 +2606,7 @@
         return;
       }
       e.allowCloudRead = val; // 本地同步，重渲元信息
-      memToast(val ? '已允许用于云端' : '已改为不上云', '');
+      memToast(val ? '已允许进入内建云写模型提示词' : '已不用于内建云写模型', '');
       memRender();
     } catch (err) {
       memToast('保存失败：' + String(err), 'danger');
@@ -1421,51 +2621,91 @@
       bodyQuote: e.summary || e.rawContent,
       bodyText: '这是你主动删除（非系统自动）。',
       warn: '删除后无法恢复。',
-      okText: '删除', okKind: 'danger',
+      okText: '删除',
+      okKind: 'danger',
     });
     if (!ok) return;
     try {
       // 第一步：不 force 探路
       const r = await fetch('/api/evidence/delete', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: e.id }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: e.id }),
       }).then((x) => x.json());
-      if (r.error) { memToast('删除失败：' + r.error, 'danger'); return; }
-      if (r.removed) { memToast('已删除这条记忆线索', ''); await memLoad(); return; }
+      if (r.error) {
+        memToast('删除失败：' + r.error, 'danger');
+        return;
+      }
+      if (r.removed) {
+        memToast('已删除这条记忆线索', '');
+        await memLoad();
+        return;
+      }
 
       // removed=false + blockers 非空 = 被引用，拦下了 → 提示影响面，确认后 force 重试
       const blockers = Array.isArray(r.blockers) ? r.blockers : [];
-      if (!blockers.length) { memToast('这条线索已不存在，已刷新', 'danger'); await memLoad(); return; }
+      if (!blockers.length) {
+        memToast('这条线索已不存在，已刷新', 'danger');
+        await memLoad();
+        return;
+      }
       const n = blockers.length;
       const ok2 = await memConfirm({
         title: '这条线索还被用到',
         bodyQuote: e.summary || e.rawContent,
-        bodyText: '它被 ' + n + ' 处用到（相关的经历片段或对你的理解）。删了会一并断开这些关联，那些理解会少一条支撑。仍然要删吗？',
+        bodyText:
+          '它被 ' +
+          n +
+          ' 处用到（相关的经历片段或对你的理解）。删了会一并断开这些关联，那些理解会少一条支撑。仍然要删吗？',
         warn: '删除后无法恢复。',
-        okText: '仍然删除', okKind: 'danger',
+        okText: '仍然删除',
+        okKind: 'danger',
       });
       if (!ok2) return;
       const r2 = await fetch('/api/evidence/delete', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: e.id, force: true }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: e.id, force: true }),
       }).then((x) => x.json());
-      if (r2.error || !r2.removed) { memToast('删除失败：' + (r2.error || '这条已不存在，已刷新'), 'danger'); }
-      else memToast('已删除这条线索、并断开 ' + n + ' 处关联', '');
+      if (r2.error || !r2.removed) {
+        memToast('删除失败：' + (r2.error || '这条已不存在，已刷新'), 'danger');
+      } else memToast('已删除这条线索、并断开 ' + n + ' 处关联', '');
     } catch (err) {
       memToast('删除失败：' + String(err), 'danger');
     }
     await memLoad();
   }
 
-  // 记忆管理页事件绑定（S0 胶囊点开 = 进记忆抽屉/管理页）
+  // 记忆管理页事件绑定（记忆胶囊点开 = 进记忆抽屉/管理页）
   $('memPill').addEventListener('click', enterMemory);
   $('memBack').addEventListener('click', exitMemory);
-  $('tabCog').addEventListener('click', () => { MEM.tab = 'cog'; memRender(); });
-  $('tabEv').addEventListener('click', () => { MEM.tab = 'ev'; memRender(); });
-  $('tabGraph').addEventListener('click', () => { MEM.tab = 'graph'; memRender(); });
-  $('tabPlugins').addEventListener('click', () => { MEM.tab = 'plugins'; memRender(); });
-  $('tabData').addEventListener('click', () => { MEM.tab = 'data'; importReset(); memRender(); });
-  $('showDead').addEventListener('change', function () { MEM.showDead = this.checked; memRender(); });
+  $('tabCog').addEventListener('click', () => {
+    MEM.tab = 'cog';
+    memRender();
+  });
+  $('tabEv').addEventListener('click', () => {
+    MEM.tab = 'ev';
+    memRender();
+  });
+  $('tabGraph').addEventListener('click', () => {
+    MEM.tab = 'graph';
+    memRender();
+  });
+  $('tabPlugins').addEventListener('click', () => {
+    MEM.tab = 'plugins';
+    memRender();
+  });
+  $('tabData').addEventListener('click', () => {
+    MEM.tab = 'data';
+    importReset();
+    memRender();
+  });
+  $('showDead').addEventListener('change', function () {
+    MEM.showDead = this.checked;
+    memRender();
+  });
 
-  // ══════════════════ 记忆图谱（步5-G2·手搓 canvas 力导向图，零依赖） ══════════════════
+  // ══════════════════ 记忆图谱（内置 canvas 力导向图，零依赖） ══════════════════
   // 数据来源：GET /api/memory-graph（走 core.graph.buildMemoryGraph 产 { nodes, edges, stats }）。
   // 力模拟：spring-charge——节点间库仑斥力 + 边上弹簧引力 + 向中心弱聚拢；alpha 随时间衰减冷却，
   //   稳定后停 rAF（不空转烧 CPU），拖拽/改过滤/重置时回暖重启。
@@ -1475,28 +2715,43 @@
   const GRAPH_COLORS = {
     node: { subject: '#7c4dff', evidence: '#2f9e6e', event: '#e08a2b', cognition: '#2f6fed' },
     edge: {
-      belongs_to_subject: '#b39ddb', distilled_into: '#f0b26b', supports: '#57b894', contradicts: '#d9534f',
+      belongs_to_subject: '#b39ddb',
+      distilled_into: '#f0b26b',
+      supports: '#57b894',
+      contradicts: '#d9534f',
     },
   };
   const GRAPH_EDGE_KINDS = ['belongs_to_subject', 'distilled_into', 'supports', 'contradicts'];
   const GRAPH_NODE_KINDS = ['subject', 'evidence', 'event', 'cognition'];
 
   const GRAPH = {
-    payload: null,          // 最近一次 fetch 的原始 payload
-    nodes: [],              // 带 x/y/vx/vy/fx/fy 的可变副本
-    edges: [],              // 引用 nodes（source/target 换成对象引用）
+    payload: null, // 最近一次 fetch 的原始 payload
+    nodes: [], // 带 x/y/vx/vy/fx/fy 的可变副本
+    edges: [], // 引用 nodes（source/target 换成对象引用）
     view: { scale: 1, ox: 0, oy: 0 }, // 世界→屏幕：screen = world*scale + o
     nodeKinds: { subject: true, evidence: true, event: true, cognition: true }, // 类型显隐
-    edgeKinds: { belongs_to_subject: true, distilled_into: true, supports: true, contradicts: true },
-    query: '',              // 搜索关键词（小写）
-    lastFetchKey: '',       // 上次 fetch 的 include 组合，用于避免切回来白重拉
+    edgeKinds: {
+      belongs_to_subject: true,
+      distilled_into: true,
+      supports: true,
+      contradicts: true,
+    },
+    query: '', // 搜索关键词（小写）
+    lastFetchKey: '', // 上次 fetch 的 include 组合，用于避免切回来白重拉
     fetching: false,
     // 力模拟
-    alpha: 0, raf: 0, running: false,
+    alpha: 0,
+    raf: 0,
+    running: false,
     // 交互
-    ctx: null, canvas: null, dpr: 1,
-    hoverNode: null, dragNode: null, panning: false,
-    dragMoved: false, lastPtr: { x: 0, y: 0 },
+    ctx: null,
+    canvas: null,
+    dpr: 1,
+    hoverNode: null,
+    dragNode: null,
+    panning: false,
+    dragMoved: false,
+    lastPtr: { x: 0, y: 0 },
     selected: null,
   };
 
@@ -1510,7 +2765,11 @@
     const wantArchived = $('grShowArchived').checked;
     const key = (wantInvalid ? 'I' : '') + (wantArchived ? 'A' : '');
     // 已经拉过同款组合 → 只需确保在跑（切回 tab 时回暖一下让布局稳定），不重拉、不重撒点。
-    if (GRAPH.payload && GRAPH.lastFetchKey === key) { graphResize(); graphReheat(0.25); return; }
+    if (GRAPH.payload && GRAPH.lastFetchKey === key) {
+      graphResize();
+      graphReheat(0.25);
+      return;
+    }
     if (GRAPH.fetching) return;
     GRAPH.fetching = true;
 
@@ -1540,10 +2799,19 @@
     GRAPH.nodes = nodes.map((n) => {
       const ang = Math.random() * Math.PI * 2;
       const rad = Math.sqrt(Math.random()) * R; // 面积均匀
-      return { data: n, x: Math.cos(ang) * rad, y: Math.sin(ang) * rad, vx: 0, vy: 0, fx: null, fy: null };
+      return {
+        data: n,
+        x: Math.cos(ang) * rad,
+        y: Math.sin(ang) * rad,
+        vx: 0,
+        vy: 0,
+        fx: null,
+        fy: null,
+      };
     });
     const byId = new Map(GRAPH.nodes.map((sn) => [sn.data.id, sn]));
-    GRAPH.edges = edges.map((e) => ({ data: e, s: byId.get(e.source), t: byId.get(e.target) }))
+    GRAPH.edges = edges
+      .map((e) => ({ data: e, s: byId.get(e.source), t: byId.get(e.target) }))
       .filter((e) => e.s && e.t); // 丢掉指向被过滤掉的节点的边（后端已保证，双保险）
     GRAPH.selected = null;
     graphHideDetail();
@@ -1554,8 +2822,11 @@
     el.textContent = ''; // 清空后用 DOM 片段拼（stats 全是数字，安全；仍不用 innerHTML 保持纪律）
     if (!stats) return;
     const parts = [
-      ['节点', stats.nodeCount], ['边', stats.edgeCount], ['冲突', stats.conflictedCount],
-      ['假设', stats.hypothesisCount], ['观察证据', stats.observedEvidenceCount],
+      ['节点', stats.nodeCount],
+      ['边', stats.edgeCount],
+      ['冲突', stats.conflictedCount],
+      ['假设', stats.hypothesisCount],
+      ['观察证据', stats.observedEvidenceCount],
     ];
     parts.forEach(([label, n], i) => {
       if (i) el.appendChild(document.createTextNode('　·　'));
@@ -1566,8 +2837,10 @@
     });
     if (stats.hiddenCount) {
       el.appendChild(document.createTextNode('　（另有 '));
-      const b = document.createElement('b'); b.textContent = String(stats.hiddenCount);
-      el.appendChild(b); el.appendChild(document.createTextNode(' 项按默认规则未显示）'));
+      const b = document.createElement('b');
+      b.textContent = String(stats.hiddenCount);
+      el.appendChild(b);
+      el.appendChild(document.createTextNode(' 项按默认规则未显示）'));
     }
   }
 
@@ -1578,37 +2851,55 @@
     GRAPH.ctx = canvas.getContext('2d');
     graphBindInteractions(canvas);
     // 窗口 resize 时重算 canvas 像素尺寸（配 dpr）并重绘一帧
-    window.addEventListener('resize', () => { if (MEM.tab === 'graph') { graphResize(); if (!GRAPH.running) graphDraw(); } });
+    window.addEventListener('resize', () => {
+      if (MEM.tab === 'graph') {
+        graphResize();
+        if (!GRAPH.running) graphDraw();
+      }
+    });
     // 控件绑定（一次）
     graphBindControls();
   }
 
   // 按 stage 的 CSS 尺寸 × dpr 设 canvas 像素分辨率（清晰不糊）。世界坐标不变，仅像素画布随之。
   function graphResize() {
-    const canvas = GRAPH.canvas; if (!canvas) return;
+    const canvas = GRAPH.canvas;
+    if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     GRAPH.dpr = dpr;
     const w = Math.max(1, Math.round(rect.width * dpr));
     const h = Math.max(1, Math.round(rect.height * dpr));
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
     // 首次或未定位过 → 把世界原点摆到画布中心
     if (!GRAPH.view._inited) {
-      GRAPH.view.ox = rect.width / 2; GRAPH.view.oy = rect.height / 2; GRAPH.view.scale = 1;
+      GRAPH.view.ox = rect.width / 2;
+      GRAPH.view.oy = rect.height / 2;
+      GRAPH.view.scale = 1;
       GRAPH.view._inited = true;
     }
   }
 
   // 世界↔屏幕（CSS px；绘制时再乘 dpr）。
-  function worldToScreen(x, y) { const v = GRAPH.view; return { x: x * v.scale + v.ox, y: y * v.scale + v.oy }; }
-  function screenToWorld(sx, sy) { const v = GRAPH.view; return { x: (sx - v.ox) / v.scale, y: (sy - v.oy) / v.scale }; }
+  function worldToScreen(x, y) {
+    const v = GRAPH.view;
+    return { x: x * v.scale + v.ox, y: y * v.scale + v.oy };
+  }
+  function screenToWorld(sx, sy) {
+    const v = GRAPH.view;
+    return { x: (sx - v.ox) / v.scale, y: (sy - v.oy) / v.scale };
+  }
 
   // 节点半径（世界单位）：按 val 或 confidence，主题/证据给基准。
   function graphNodeRadius(sn) {
     const d = sn.data;
     let base = 10;
     if (d.kind === 'subject') base = 16;
-    else if (d.kind === 'cognition') base = 9 + (typeof d.confidence === 'number' ? (d.confidence / 1000) * 8 : 3);
+    else if (d.kind === 'cognition')
+      base = 9 + (typeof d.confidence === 'number' ? (d.confidence / 1000) * 8 : 3);
     else if (typeof d.val === 'number') base = 8 + Math.min(10, d.val);
     return base;
   }
@@ -1617,62 +2908,94 @@
   function graphTick() {
     const nodes = GRAPH.nodes;
     const a = GRAPH.alpha;
-    const CENTER_K = 0.015;   // 向中心聚拢
-    const REPULSE = 5200;     // 库仑斥力强度
-    const SPRING_K = 0.02;    // 弹簧劲度
-    const SPRING_LEN = 90;    // 弹簧自然长
-    const DAMP = 0.85;        // 阻尼
+    const CENTER_K = 0.015; // 向中心聚拢
+    const REPULSE = 5200; // 库仑斥力强度
+    const SPRING_K = 0.02; // 弹簧劲度
+    const SPRING_LEN = 90; // 弹簧自然长
+    const DAMP = 0.85; // 阻尼
 
     // 斥力（O(n^2)，节点量不大够用）
     for (let i = 0; i < nodes.length; i++) {
       const ni = nodes[i];
       for (let j = i + 1; j < nodes.length; j++) {
         const nj = nodes[j];
-        let dx = ni.x - nj.x, dy = ni.y - nj.y;
+        let dx = ni.x - nj.x,
+          dy = ni.y - nj.y;
         let d2 = dx * dx + dy * dy;
-        if (d2 < 0.01) { dx = (Math.random() - 0.5); dy = (Math.random() - 0.5); d2 = dx * dx + dy * dy + 0.01; }
+        if (d2 < 0.01) {
+          dx = Math.random() - 0.5;
+          dy = Math.random() - 0.5;
+          d2 = dx * dx + dy * dy + 0.01;
+        }
         const f = (REPULSE * a) / d2;
         const d = Math.sqrt(d2);
-        const fx = (dx / d) * f, fy = (dy / d) * f;
-        ni.vx += fx; ni.vy += fy; nj.vx -= fx; nj.vy -= fy;
+        const fx = (dx / d) * f,
+          fy = (dy / d) * f;
+        ni.vx += fx;
+        ni.vy += fy;
+        nj.vx -= fx;
+        nj.vy -= fy;
       }
     }
     // 弹簧引力（沿边）
     for (const e of GRAPH.edges) {
-      const dx = e.t.x - e.s.x, dy = e.t.y - e.s.y;
+      const dx = e.t.x - e.s.x,
+        dy = e.t.y - e.s.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
       const f = SPRING_K * (d - SPRING_LEN) * a;
-      const fx = (dx / d) * f, fy = (dy / d) * f;
-      e.s.vx += fx; e.s.vy += fy; e.t.vx -= fx; e.t.vy -= fy;
+      const fx = (dx / d) * f,
+        fy = (dy / d) * f;
+      e.s.vx += fx;
+      e.s.vy += fy;
+      e.t.vx -= fx;
+      e.t.vy -= fy;
     }
     // 向中心 + 积分 + 阻尼
     for (const n of nodes) {
-      if (n.fx != null) { n.x = n.fx; n.y = n.fy; n.vx = 0; n.vy = 0; continue; } // 被钉住（拖拽中）
-      n.vx += -n.x * CENTER_K * a; n.vy += -n.y * CENTER_K * a;
-      n.vx *= DAMP; n.vy *= DAMP;
-      n.x += n.vx; n.y += n.vy;
+      if (n.fx != null) {
+        n.x = n.fx;
+        n.y = n.fy;
+        n.vx = 0;
+        n.vy = 0;
+        continue;
+      } // 被钉住（拖拽中）
+      n.vx += -n.x * CENTER_K * a;
+      n.vy += -n.y * CENTER_K * a;
+      n.vx *= DAMP;
+      n.vy *= DAMP;
+      n.x += n.vx;
+      n.y += n.vy;
     }
     GRAPH.alpha *= 0.985; // 冷却
   }
 
   function graphReheat(to) {
     GRAPH.alpha = Math.max(GRAPH.alpha, to == null ? 1 : to);
-    if (!GRAPH.running) { GRAPH.running = true; graphLoop(); }
+    if (!GRAPH.running) {
+      GRAPH.running = true;
+      graphLoop();
+    }
   }
 
   function graphLoop() {
-    if (MEM.tab !== 'graph') { GRAPH.running = false; return; } // 离开 tab 停跑
+    if (MEM.tab !== 'graph') {
+      GRAPH.running = false;
+      return;
+    } // 离开 tab 停跑
     graphTick();
     graphDraw();
     if (GRAPH.alpha > 0.008 || GRAPH.dragNode) {
       GRAPH.raf = requestAnimationFrame(graphLoop);
     } else {
-      GRAPH.running = false; graphDraw(); // 稳定后停，最后定格一帧
+      GRAPH.running = false;
+      graphDraw(); // 稳定后停，最后定格一帧
     }
   }
 
   // 某类型节点是否可见（客户端过滤）
-  function graphNodeVisible(sn) { return GRAPH.nodeKinds[sn.data.kind] !== false; }
+  function graphNodeVisible(sn) {
+    return GRAPH.nodeKinds[sn.data.kind] !== false;
+  }
   // 某条边是否可见：边类型开着 + 两端节点都可见
   function graphEdgeVisible(e) {
     return GRAPH.edgeKinds[e.data.kind] !== false && graphNodeVisible(e.s) && graphNodeVisible(e.t);
@@ -1681,15 +3004,20 @@
   function graphNodeMatched(sn) {
     if (!GRAPH.query) return true;
     const d = sn.data;
-    return (d.label || '').toLowerCase().includes(GRAPH.query)
-      || (d.summary || '').toLowerCase().includes(GRAPH.query);
+    return (
+      (d.label || '').toLowerCase().includes(GRAPH.query) ||
+      (d.summary || '').toLowerCase().includes(GRAPH.query)
+    );
   }
 
   // ── 渲染一帧 ──
   function graphDraw() {
-    const ctx = GRAPH.ctx; if (!ctx) return;
-    const dpr = GRAPH.dpr, v = GRAPH.view;
-    const W = GRAPH.canvas.width, H = GRAPH.canvas.height;
+    const ctx = GRAPH.ctx;
+    if (!ctx) return;
+    const dpr = GRAPH.dpr,
+      v = GRAPH.view;
+    const W = GRAPH.canvas.width,
+      H = GRAPH.canvas.height;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // 之后都用 CSS px 坐标绘制，dpr 交给变换
@@ -1699,17 +3027,21 @@
     // 先画边
     for (const e of GRAPH.edges) {
       if (!graphEdgeVisible(e)) continue;
-      const p1 = worldToScreen(e.s.x, e.s.y), p2 = worldToScreen(e.t.x, e.t.y);
+      const p1 = worldToScreen(e.s.x, e.s.y),
+        p2 = worldToScreen(e.t.x, e.t.y);
       const dim = searching && !(graphNodeMatched(e.s) || graphNodeMatched(e.t));
       ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
       ctx.strokeStyle = GRAPH_COLORS.edge[e.data.kind] || '#b8c0cc';
       ctx.globalAlpha = dim ? 0.08 : 0.55;
       ctx.lineWidth = 1.4;
-      if (e.data.dashed) ctx.setLineDash([5, 4]); else ctx.setLineDash([]);
+      if (e.data.dashed) ctx.setLineDash([5, 4]);
+      else ctx.setLineDash([]);
       ctx.stroke();
     }
-    ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
 
     // 再画节点
     for (const sn of GRAPH.nodes) {
@@ -1731,11 +3063,17 @@
       ctx.fill();
       // cognition 冲突 → 红环强调
       if (d.kind === 'cognition' && d.credStatus === 'conflicted') {
-        ctx.lineWidth = 2.5; ctx.strokeStyle = '#d9534f'; ctx.stroke();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#d9534f';
+        ctx.stroke();
       } else if (sn === GRAPH.selected) {
-        ctx.lineWidth = 2.5; ctx.strokeStyle = '#1d2733'; ctx.stroke();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#1d2733';
+        ctx.stroke();
       } else {
-        ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,.85)';
+        ctx.stroke();
       }
       // label（缩得太小时略）
       if (v.scale > 0.55 && (!searching || matched)) {
@@ -1744,7 +3082,8 @@
           ctx.globalAlpha = alpha;
           ctx.fillStyle = '#33404f';
           ctx.font = '11px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
           ctx.fillText(label, p.x, p.y + r + 2);
         }
       }
@@ -1753,7 +3092,7 @@
 
     // 空/稀疏优雅处理
     const anyVisible = GRAPH.nodes.some(graphNodeVisible);
-    $('grEmpty').style.display = (GRAPH.nodes.length === 0) ? 'flex' : 'none';
+    $('grEmpty').style.display = GRAPH.nodes.length === 0 ? 'flex' : 'none';
     if (GRAPH.nodes.length === 0) {
       $('grEmpty').textContent = '还没有可画的记忆——多聊几句、等它整理一下。';
     } else if (!anyVisible) {
@@ -1764,12 +3103,14 @@
 
   // ── 命中检测：屏幕坐标 → 最近节点（考虑半径） ──
   function graphNodeAt(sx, sy) {
-    for (let i = GRAPH.nodes.length - 1; i >= 0; i--) { // 后画的在上，倒序命中
+    for (let i = GRAPH.nodes.length - 1; i >= 0; i--) {
+      // 后画的在上，倒序命中
       const sn = GRAPH.nodes[i];
       if (!graphNodeVisible(sn)) continue;
       const p = worldToScreen(sn.x, sn.y);
       const r = Math.max(6, graphNodeRadius(sn) * GRAPH.view.scale);
-      const dx = sx - p.x, dy = sy - p.y;
+      const dx = sx - p.x,
+        dy = sy - p.y;
       if (dx * dx + dy * dy <= (r + 3) * (r + 3)) return sn;
     }
     return null;
@@ -1784,12 +3125,14 @@
   function graphBindInteractions(canvas) {
     canvas.addEventListener('mousedown', (ev) => {
       const p = graphPointer(ev);
-      GRAPH.lastPtr = p; GRAPH.dragMoved = false;
+      GRAPH.lastPtr = p;
+      GRAPH.dragMoved = false;
       const hit = graphNodeAt(p.x, p.y);
       if (hit) {
         GRAPH.dragNode = hit;
         const w = screenToWorld(p.x, p.y);
-        hit.fx = w.x; hit.fy = w.y; // 拖时钉住
+        hit.fx = w.x;
+        hit.fy = w.y; // 拖时钉住
         graphReheat(0.5);
       } else {
         GRAPH.panning = true;
@@ -1799,48 +3142,71 @@
     window.addEventListener('mousemove', (ev) => {
       if (!GRAPH.dragNode && !GRAPH.panning) return;
       const p = graphPointer(ev);
-      const dx = p.x - GRAPH.lastPtr.x, dy = p.y - GRAPH.lastPtr.y;
+      const dx = p.x - GRAPH.lastPtr.x,
+        dy = p.y - GRAPH.lastPtr.y;
       if (Math.abs(dx) > 2 || Math.abs(dy) > 2) GRAPH.dragMoved = true;
       if (GRAPH.dragNode) {
         const w = screenToWorld(p.x, p.y);
-        GRAPH.dragNode.fx = w.x; GRAPH.dragNode.fy = w.y;
+        GRAPH.dragNode.fx = w.x;
+        GRAPH.dragNode.fy = w.y;
         graphReheat(0.35);
       } else if (GRAPH.panning) {
-        GRAPH.view.ox += dx; GRAPH.view.oy += dy;
+        GRAPH.view.ox += dx;
+        GRAPH.view.oy += dy;
         if (!GRAPH.running) graphDraw();
       }
       GRAPH.lastPtr = p;
     });
     window.addEventListener('mouseup', (ev) => {
-      const wasDrag = GRAPH.dragNode, moved = GRAPH.dragMoved;
-      if (GRAPH.dragNode) { GRAPH.dragNode.fx = null; GRAPH.dragNode.fy = null; } // 松开释放
-      GRAPH.dragNode = null; GRAPH.panning = false;
+      const wasDrag = GRAPH.dragNode,
+        moved = GRAPH.dragMoved;
+      if (GRAPH.dragNode) {
+        GRAPH.dragNode.fx = null;
+        GRAPH.dragNode.fy = null;
+      } // 松开释放
+      GRAPH.dragNode = null;
+      GRAPH.panning = false;
       GRAPH.canvas && GRAPH.canvas.classList.remove('dragging');
       // 没怎么动 = 视作点击
       if (!moved) {
         const p = graphPointer(ev);
         // mouseup 可能在 window 上，只处理落在 canvas 里的
         const rect = GRAPH.canvas.getBoundingClientRect();
-        if (ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom) {
+        if (
+          ev.clientX >= rect.left &&
+          ev.clientX <= rect.right &&
+          ev.clientY >= rect.top &&
+          ev.clientY <= rect.bottom
+        ) {
           const hit = graphNodeAt(p.x, p.y);
-          if (hit) { GRAPH.selected = hit; graphShowDetail(hit); }
-          else { GRAPH.selected = null; graphHideDetail(); }
+          if (hit) {
+            GRAPH.selected = hit;
+            graphShowDetail(hit);
+          } else {
+            GRAPH.selected = null;
+            graphHideDetail();
+          }
           if (!GRAPH.running) graphDraw();
         }
       }
     });
     // 滚轮缩放（以鼠标为中心）
-    canvas.addEventListener('wheel', (ev) => {
-      ev.preventDefault();
-      const p = graphPointer(ev);
-      const before = screenToWorld(p.x, p.y);
-      const factor = ev.deltaY < 0 ? 1.1 : 1 / 1.1;
-      GRAPH.view.scale = Math.min(4, Math.max(0.2, GRAPH.view.scale * factor));
-      const after = worldToScreen(before.x, before.y);
-      // 让鼠标下的世界点缩放后仍在鼠标处
-      GRAPH.view.ox += p.x - after.x; GRAPH.view.oy += p.y - after.y;
-      if (!GRAPH.running) graphDraw();
-    }, { passive: false });
+    canvas.addEventListener(
+      'wheel',
+      (ev) => {
+        ev.preventDefault();
+        const p = graphPointer(ev);
+        const before = screenToWorld(p.x, p.y);
+        const factor = ev.deltaY < 0 ? 1.1 : 1 / 1.1;
+        GRAPH.view.scale = Math.min(4, Math.max(0.2, GRAPH.view.scale * factor));
+        const after = worldToScreen(before.x, before.y);
+        // 让鼠标下的世界点缩放后仍在鼠标处
+        GRAPH.view.ox += p.x - after.x;
+        GRAPH.view.oy += p.y - after.y;
+        if (!GRAPH.running) graphDraw();
+      },
+      { passive: false },
+    );
   }
 
   // ── 详情面板 ──
@@ -1849,44 +3215,69 @@
     const box = $('grDetail');
     box.textContent = '';
     const close = document.createElement('button');
-    close.className = 'grd-close'; close.textContent = '×'; close.title = '关闭';
-    close.onclick = () => { GRAPH.selected = null; graphHideDetail(); if (!GRAPH.running) graphDraw(); };
+    close.className = 'grd-close';
+    close.textContent = '×';
+    close.title = '关闭';
+    close.onclick = () => {
+      GRAPH.selected = null;
+      graphHideDetail();
+      if (!GRAPH.running) graphDraw();
+    };
     box.appendChild(close);
 
     const title = document.createElement('div');
-    title.className = 'grd-title'; title.textContent = d.label || '(无标题)'; // 用户内容 → textContent
+    title.className = 'grd-title';
+    title.textContent = d.label || '(无标题)'; // 用户内容 → textContent
     box.appendChild(title);
 
-    const kindLabel = { subject: '主题', evidence: '记忆线索', event: '经历', cognition: '对你的理解' };
+    const kindLabel = {
+      subject: '主题',
+      evidence: '记忆线索',
+      event: '经历',
+      cognition: '对你的理解',
+    };
     const kind = document.createElement('div');
-    kind.className = 'grd-kind'; kind.textContent = kindLabel[d.kind] || d.kind;
+    kind.className = 'grd-kind';
+    kind.textContent = kindLabel[d.kind] || d.kind;
     box.appendChild(kind);
 
     if (d.summary && d.summary !== d.label) {
       const sum = document.createElement('div');
-      sum.className = 'grd-summary'; sum.textContent = d.summary;
+      sum.className = 'grd-summary';
+      sum.textContent = d.summary;
       box.appendChild(sum);
     }
 
     const rows = [];
-    if (typeof d.confidence === 'number') rows.push(['把握度', Math.round(d.confidence / 10) + '%']);
+    if (typeof d.confidence === 'number')
+      rows.push(['把握度', Math.round(d.confidence / 10) + '%']);
     if (d.contentType) rows.push(['类型', String(d.contentType)]);
-    if (d.credStatus) rows.push(['状态', d.credStatus === 'conflicted' ? '冲突中' : String(d.credStatus)]);
+    if (d.credStatus)
+      rows.push(['状态', d.credStatus === 'conflicted' ? '冲突中' : String(d.credStatus)]);
     if (d.sourceKind) rows.push(['来源', String(d.sourceKind)]);
-    if (typeof d.allowCloudRead === 'boolean') rows.push(['可用于云端', d.allowCloudRead ? '是' : '否']);
+    if (typeof d.allowCloudRead === 'boolean')
+      rows.push(['用于内建云写模型', d.allowCloudRead ? '是' : '否']);
     if (d.invalidAt) rows.push(['已失效', String(d.invalidAt).slice(0, 10)]);
     if (d.archivedAt) rows.push(['已归档', String(d.archivedAt).slice(0, 10)]);
     if (d.occurredAt) rows.push(['发生于', String(d.occurredAt).slice(0, 10)]);
     else if (d.createdAt) rows.push(['记于', String(d.createdAt).slice(0, 10)]);
     for (const [k, val] of rows) {
-      const row = document.createElement('div'); row.className = 'grd-row';
-      const a = document.createElement('span'); a.textContent = k;
-      const b = document.createElement('span'); b.textContent = val;
-      row.appendChild(a); row.appendChild(b); box.appendChild(row);
+      const row = document.createElement('div');
+      row.className = 'grd-row';
+      const a = document.createElement('span');
+      a.textContent = k;
+      const b = document.createElement('span');
+      b.textContent = val;
+      row.appendChild(a);
+      row.appendChild(b);
+      box.appendChild(row);
     }
     box.style.display = 'block';
   }
-  function graphHideDetail() { const b = $('grDetail'); if (b) b.style.display = 'none'; }
+  function graphHideDetail() {
+    const b = $('grDetail');
+    if (b) b.style.display = 'none';
+  }
 
   // ── 控件绑定（一次） ──
   function graphBindControls() {
@@ -1894,7 +3285,8 @@
     document.querySelectorAll('#memGraph input[data-nkind]').forEach((cb) => {
       cb.addEventListener('change', function () {
         GRAPH.nodeKinds[this.getAttribute('data-nkind')] = this.checked;
-        graphReheat(0.15); if (!GRAPH.running) graphDraw();
+        graphReheat(0.15);
+        if (!GRAPH.running) graphDraw();
       });
     });
     // 含失效 / 归档（重 fetch）
@@ -1917,13 +3309,14 @@
     // 重置视图：复位 pan/zoom + 回暖
     $('grReset').addEventListener('click', () => {
       GRAPH.view._inited = false; // 让 graphResize 重新居中
-      GRAPH.query = ''; $('grSearch').value = '';
+      GRAPH.query = '';
+      $('grSearch').value = '';
       graphResize();
       graphReheat(1);
     });
   }
 
-  // ══════════════════ 数据 / 备份区（步5） ══════════════════
+  // ══════════════════ 数据 / 备份区 ══════════════════
   // 导出：GET /api/export-bundle 拿 { bundle } → 前端 Blob + a[download] 存盘（零外部依赖）。
   // 导入：选 .bundle.json → FileReader 读 → 先 dryRun 试算 → 用户确认 → merge 真导。
   // 恢复出厂：强二次确认（要求输入「清空」二字）→ POST /api/factory-reset。
@@ -1935,7 +3328,10 @@
     try {
       const res = await fetch('/api/export-bundle');
       const d = await res.json();
-      if (!res.ok || d.error || !d.bundle) { memToast('导出失败：' + (d.error || '拿不到记忆包'), 'danger'); return; }
+      if (!res.ok || d.error || !d.bundle) {
+        memToast('导出失败：' + (d.error || '拿不到记忆包'), 'danger');
+        return;
+      }
       // 组文件：<日期>-memoweft.bundle.json。用 Blob + 临时 a[download] 触发浏览器下载，零外部依赖。
       const text = JSON.stringify(d.bundle, null, 2);
       const blob = new Blob([text], { type: 'application/json' });
@@ -1949,7 +3345,14 @@
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(urlObj), 1000);
       const cnt = (d.bundle.metadata && d.bundle.metadata.counts) || {};
-      memToast('已导出记忆包（记忆线索 ' + (cnt.evidence || 0) + ' 条、理解 ' + (cnt.cognitions || 0) + ' 条）', '');
+      memToast(
+        '已导出记忆包（记忆线索 ' +
+          (cnt.evidence || 0) +
+          ' 条、理解 ' +
+          (cnt.cognitions || 0) +
+          ' 条）',
+        '',
+      );
     } catch (e) {
       memToast('导出失败：' + String(e), 'danger');
     } finally {
@@ -1962,7 +3365,8 @@
   const IMPORT = { bundle: null, fileName: '' };
 
   function importReset() {
-    IMPORT.bundle = null; IMPORT.fileName = '';
+    IMPORT.bundle = null;
+    IMPORT.fileName = '';
     $('importFileName').textContent = '';
     $('importPlan').classList.remove('show');
     $('importPlanText').textContent = '';
@@ -1988,7 +3392,8 @@
     // 先 dryRun 试算：不写库，只算将导入多少、跳过多少。
     try {
       const res = await fetch('/api/import-bundle', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bundle, mode: 'dryRun' }),
       });
       const d = await res.json();
@@ -2018,14 +3423,22 @@
     if (willImport === 0 && willSkip > 0) {
       line1.textContent = '这些记忆你已经都有了，无需重复导入（' + willSkip + ' 条跳过）。';
     } else {
-      line1.textContent = '将导入 ' + (c.evidence || 0) + ' 条记忆线索、'
-        + (c.cognitions || 0) + ' 条理解、' + (c.events || 0) + ' 段经历'
-        + (willSkip > 0 ? ('；跳过 ' + willSkip + ' 条已有的重复。') : '。');
+      line1.textContent =
+        '将导入 ' +
+        (c.evidence || 0) +
+        ' 条记忆线索、' +
+        (c.cognitions || 0) +
+        ' 条理解、' +
+        (c.events || 0) +
+        ' 段经历' +
+        (willSkip > 0 ? '；跳过 ' + willSkip + ' 条已有的重复。' : '。');
     }
     box.appendChild(line1);
     // 软告警（如 subject 混入、correctsEvidenceId 指向包外）：如实提示但不拦。
     const warns = Array.isArray(plan.warnings) ? plan.warnings : [];
-    $('importPlanWarn').textContent = warns.length ? ('提示：' + warns.length + ' 条小告警（导入不受影响）') : '';
+    $('importPlanWarn').textContent = warns.length
+      ? '提示：' + warns.length + ' 条小告警（导入不受影响）'
+      : '';
     // 没有可导入的就把"确认导入"禁掉（全是重复，导也白导）。
     $('importConfirm').disabled = willImport === 0;
     $('importPlan').classList.add('show');
@@ -2038,7 +3451,8 @@
     btn.disabled = true;
     try {
       const res = await fetch('/api/import-bundle', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bundle: IMPORT.bundle, mode: 'merge' }),
       });
       const d = await res.json();
@@ -2049,11 +3463,18 @@
       }
       const c = (d.plan && d.plan.counts) || {};
       const done = (c.evidence || 0) + (c.cognitions || 0) + (c.events || 0);
-      memToast('已导入 ' + done + ' 条记忆' + (d.needsReindex ? '（多聊几句它会重新整理、更容易想起）' : ''), '');
+      memToast(
+        '已导入 ' +
+          done +
+          ' 条记忆' +
+          (d.needsReindex ? '（多聊几句它会重新整理、更容易想起）' : ''),
+        '',
+      );
       importReset();
       MEM.loaded = false; // 强制重拉
       await memLoad();
-      MEM.tab = 'data'; memRender(); // 导完仍留在数据 tab
+      MEM.tab = 'data';
+      memRender(); // 导完仍留在数据 tab
     } catch (e) {
       memToast('导入失败：' + String(e), 'danger');
     } finally {
@@ -2065,26 +3486,33 @@
   async function doFactoryReset() {
     const ok = await memConfirmType({
       title: '清空全部记忆 · 重新开始？',
-      bodyText: '这会把它记住你的一切都抹掉：所有记忆线索、经历片段、对你的理解，以及这些操作的记录。当前对话会被收起、并开一段新的空对话。',
+      bodyText:
+        '这会把它记住你的一切都抹掉：所有记忆线索、经历片段、对你的理解，以及这些操作的记录。当前对话会被收起、并开一段新的空对话。',
       warn: '此操作不可恢复。建议先导出记忆包留个备份。',
       needWord: '清空',
-      okText: '我确认，清空全部记忆', okKind: 'danger',
+      okText: '我确认，清空全部记忆',
+      okKind: 'danger',
     });
     if (!ok) return;
     try {
       const res = await fetch('/api/factory-reset', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirm: '清空' }), // 服务端确认兜底（防 CSRF/误触发直连）
       });
       const d = await res.json();
-      if (!res.ok || d.error || !d.ok) { memToast('清空失败：' + (d.error || '未知错误'), 'danger'); return; }
+      if (!res.ok || d.error || !d.ok) {
+        memToast('清空失败：' + (d.error || '未知错误'), 'danger');
+        return;
+      }
       const total = (d.evidenceRemoved || 0) + (d.cognitionRemoved || 0) + (d.eventRemoved || 0);
       memToast('已清空全部记忆，回到空白（清掉 ' + total + ' 条）', '');
       // 回到干净空白：刷新记忆列表（应空）、刷侧栏（旧对话已归档）、清聊天区。
       importReset();
       MEM.loaded = false;
       await memLoad();
-      MEM.tab = 'cog'; memRender(); // 切回"理解" tab，让用户看到已空
+      MEM.tab = 'cog';
+      memRender(); // 切回"理解" tab，让用户看到已空
       renderChat([]); // 聊天区清空（后端已 newSession）
       loadSessions(); // 侧栏刷新（旧对话已归档、当前是新空对话）
       loadHistory(); // 当前对话历史（新空对话 → 空）
@@ -2110,9 +3538,12 @@
       const lab = document.createElement('label');
       lab.textContent = '请输入「' + needWord + '」以确认：'; // needWord 是固定文案，非用户内容
       const inp = document.createElement('input');
-      inp.type = 'text'; inp.autocomplete = 'off'; inp.spellcheck = false;
+      inp.type = 'text';
+      inp.autocomplete = 'off';
+      inp.spellcheck = false;
       inp.placeholder = needWord;
-      wrap.appendChild(lab); wrap.appendChild(inp);
+      wrap.appendChild(lab);
+      wrap.appendChild(inp);
       body.appendChild(wrap);
 
       $('memConfirmWarn').textContent = warn || '';
@@ -2120,7 +3551,9 @@
       okBtn.textContent = okText || '确认';
       okBtn.style.background = okKind === 'danger' ? '#b4232a' : 'var(--accent)';
       okBtn.disabled = true; // 未输入正确词前禁用
-      const sync = () => { okBtn.disabled = inp.value.trim() !== needWord; };
+      const sync = () => {
+        okBtn.disabled = inp.value.trim() !== needWord;
+      };
       inp.addEventListener('input', sync);
 
       const box = $('memConfirm');
@@ -2129,10 +3562,13 @@
       const done = (v) => {
         box.classList.remove('show');
         okBtn.disabled = false; // 复位，别影响下次普通确认
-        okBtn.onclick = null; $('memConfirmCancel').onclick = null;
+        okBtn.onclick = null;
+        $('memConfirmCancel').onclick = null;
         resolve(v);
       };
-      okBtn.onclick = () => { if (inp.value.trim() === needWord) done(true); };
+      okBtn.onclick = () => {
+        if (inp.value.trim() === needWord) done(true);
+      };
       $('memConfirmCancel').onclick = () => done(false);
     });
   }
@@ -2140,12 +3576,14 @@
   // 数据区事件绑定
   $('exportBundle').addEventListener('click', doExport);
   $('importPick').addEventListener('click', () => $('importFile').click());
-  $('importFile').addEventListener('change', function () { onImportFile(this.files && this.files[0]); });
+  $('importFile').addEventListener('change', function () {
+    onImportFile(this.files && this.files[0]);
+  });
   $('importConfirm').addEventListener('click', doImportConfirm);
   $('importCancel').addEventListener('click', importReset);
   $('factoryReset').addEventListener('click', doFactoryReset);
 
-  // ══════════════════ 对话列表侧栏（步4） ══════════════════
+  // ══════════════════ 对话列表侧栏 ══════════════════
   // 会话册由后端持久（扫 sessions 目录）；前端只渲染 + 切换/新建/归档。用户内容一律 textContent（免 XSS）。
   let currentConvId = null;
 
@@ -2158,7 +3596,7 @@
     if (diff < 86_400_000) return Math.floor(diff / 3_600_000) + ' 小时前';
     if (diff < 172_800_000) return '昨天';
     const d = new Date(ms);
-    return (d.getMonth() + 1) + '-' + d.getDate();
+    return d.getMonth() + 1 + '-' + d.getDate();
   }
 
   async function loadSessions() {
@@ -2166,7 +3604,9 @@
       const d = await fetch('/api/sessions').then((x) => x.json());
       currentConvId = d.currentId || currentConvId;
       renderSessions(Array.isArray(d.sessions) ? d.sessions : []);
-    } catch (e) { memToast('对话列表没拉到，稍后重试', 'danger'); } // 侧栏拉不到不影响聊天，只是提示一下
+    } catch (e) {
+      memToast('对话列表没拉到，稍后重试', 'danger');
+    } // 侧栏拉不到不影响聊天，只是提示一下
   }
 
   function renderSessions(sessions) {
@@ -2202,7 +3642,10 @@
     arch.className = 'sb-arch';
     arch.title = '归档这段对话（不删数据，之后可恢复）';
     arch.textContent = '✕';
-    arch.onclick = (e) => { e.stopPropagation(); archiveSession(s); };
+    arch.onclick = (e) => {
+      e.stopPropagation();
+      archiveSession(s);
+    };
     item.appendChild(arch);
 
     return item;
@@ -2213,13 +3656,20 @@
     if (id === currentConvId) return; // 点的是当前那条 → 不折腾
     try {
       const d = await fetch('/api/session/open', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
       }).then((x) => x.json());
-      if (d.error) { memToast('这段对话没打开，稍后重试', 'danger'); return; }
+      if (d.error) {
+        memToast('这段对话没打开，稍后重试', 'danger');
+        return;
+      }
       currentConvId = d.conversationId || id;
       renderChat(d.turns || []); // 用返回的历史重铺聊天区
-      loadSessions();            // 刷高亮
-    } catch (e) { memToast('这段对话没打开，稍后重试', 'danger'); } // 切换失败保持原状
+      loadSessions(); // 刷高亮
+    } catch (e) {
+      memToast('这段对话没打开，稍后重试', 'danger');
+    } // 切换失败保持原状
   }
 
   // 新建对话：/api/reset → 换当前对话 id → 清空聊天区。
@@ -2227,31 +3677,40 @@
     try {
       const d = await fetch('/api/reset', { method: 'POST' }).then((x) => x.json());
       currentConvId = d.conversationId || currentConvId;
-      renderChat([]);   // 清空聊天区
-      loadSessions();   // 新对话此刻还没落盘（首条 chat 才落），列表里可能还没它——聊一句后 send() 再刷
+      renderChat([]); // 清空聊天区
+      loadSessions(); // 新对话此刻还没落盘（首条 chat 才落），列表里可能还没它——聊一句后 send() 再刷
       $('text').focus();
-    } catch (e) { memToast('新对话没建成，稍后重试', 'danger'); }
+    } catch (e) {
+      memToast('新对话没建成，稍后重试', 'danger');
+    }
   }
 
   // 归档对话：/api/session/archive → 从列表消失（数据留盘）。若归档的是当前对话，后端已自动切走 → 重载聊天区。
   async function archiveSession(s) {
     try {
       const d = await fetch('/api/session/archive', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: s.id }),
       }).then((x) => x.json());
-      if (d.error) { memToast('没归档成，稍后重试', 'danger'); return; }
+      if (d.error) {
+        memToast('没归档成，稍后重试', 'danger');
+        return;
+      }
       if (d.archivedCurrent) {
         // 归档掉的是当前对话，后端切到了另一条 → 重载那条历史。
         currentConvId = d.currentId || currentConvId;
         await loadHistory();
       }
       loadSessions();
-    } catch (e) { memToast('没归档成，稍后重试', 'danger'); }
+    } catch (e) {
+      memToast('没归档成，稍后重试', 'danger');
+    }
   }
 
   $('sbNew').addEventListener('click', newSession);
 
-  // ══════════════════ 体验选择器（换"聊天方式/人设"，批次5 做插件 v1） ══════════════════
+  // ══════════════════ 体验选择器（切换聊天方式与人设） ══════════════════
   // 列 /api/experiences 填下拉、标当前；切换 POST /api/experience。记忆是同一份，只换回话的语气。
   // 名字来自后端（用户词，如"普通助手"/"星瑶"），用 textContent 放，免 XSS。
   let expOptions = []; // [{id,name}]，缓存用于切换后按 id 找名字做提示
@@ -2265,7 +3724,7 @@
       for (const e of expOptions) {
         const opt = document.createElement('option');
         opt.value = e.id;
-        opt.textContent = e.name;     // 用户词 → textContent，免注入
+        opt.textContent = e.name; // 用户词 → textContent，免注入
         if (e.current) opt.selected = true;
         sel.appendChild(opt);
       }
@@ -2290,7 +3749,9 @@
     sel.disabled = true;
     try {
       const d = await fetch('/api/experience', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
       }).then((x) => x.json());
       if (d.error || !d.ok) {
         memToast('没切成功：' + (d.error || '请稍后再试'), 'danger');
@@ -2312,7 +3773,7 @@
   loadHistory();
   loadSessions();
   loadExperiences(); // 填体验选择器、标当前
-  updateMemPill(); // 首次刷 S0 记忆胶囊计数
+  updateMemPill(); // 首次刷记忆胶囊计数
   pollBg();
   setInterval(pollBg, 3000);
   $('text').focus();

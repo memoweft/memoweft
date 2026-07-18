@@ -1,7 +1,8 @@
-"""MemoWeft — 可移植 AI 长期记忆(Python 移植 · 1.3 · D-0042)。
+"""Experimental Python parity implementation for MemoWeft.
 
-Phase 1 = **parity 内核**:纯逻辑不变量层(置信度/可信状态/载体维/衰减/id 回显/哈希嵌入),
-与 TS 源逐位对拍(读 ../shared/parity/*.json 验证)。存储 / 便携包 / LLM 写路径为后续阶段。
+The stable top-level exports are currently limited to the rule kernel. Additional
+storage, portable-bundle, and write-path modules are verified inside the monorepo
+but do not yet form a feature-complete public Python SDK.
 """
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-// MemoWeft 提示词哈希快照 —— 机读闸门（PROJECT_PLAN.md §15.3 / D-0009）。
+// MemoWeft governed prompt hash snapshot.
 // 禁止手改；改提示词内容必须 bump 其 version 再 `npm run prompts:update` 重生成。
 
 attribute@v2  zh=sha256:55b58a0014709b62a97b839f94dcbfb9dbf8f25435cc97d2bf9aa78f8ac5c780  en=sha256:0b6d3bb92a93550d2f70fb0579e11680b28970d1069bc4481711a24276cbcd26

@@ -16,7 +16,7 @@ export {
 
 export { buildKnowledgeBlock, type RecalledLike } from './knowledgeBlock.ts';
 
-// 降级语义（§16.2）公开件：供宿主为注入的 logger 标类型。
+// 降级语义公开类型：供宿主为注入的 logger 标注类型。
 export {
   DEFAULT_RECALL_TIMEOUT_MS,
   type MemoWeftLogger,

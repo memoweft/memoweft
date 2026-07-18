@@ -1,6 +1,6 @@
 """evidence.put 授权分流 parity:Python 与 TS(shared/parity/evidence-auth.json)逐例一致。
 
-钉死「按 source_kind 补保守默认 + 显式优先 + cloud_read_default 跟随 privacy_mode」的跨语言一致(P2-1a)。
+验证「按 source_kind 补保守默认 + 显式优先 + cloud_read_default 跟随 privacy_mode」的跨语言一致性。
 """
 from __future__ import annotations
 

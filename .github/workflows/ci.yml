@@ -1,65 +1,50 @@
-# MemoWeft CI · 三绿护栏（typecheck + test + build）+ 多版本触达矩阵
-#
-# 触发：push 到默认分支 / 任何 PR。
-# 作用：把 AGENTS.md 里的「三绿才算完成」变成合并门——任何改动跑不过就挡在 PR 外。
-#
-# 两块：
-#   1) guardrails（Node 24）：主护栏。Core 三绿 + Host/插件 workspace 测试。
-#      —— 顺带验「零依赖路径」：删掉 better-sqlite3 后跑全测试，确认默认走的是内置 node:sqlite。
-#   2) 触达矩阵（Node 22 / Node 20）：T6 步2 加了 better-sqlite3 可选驱动，让 Node 20/22 也能跑。
-#      这两个 job 证明第二驱动在旧 Node 上真能把 memoweft 跑通。
-#
-# 驱动与依赖：
-#   - Node ≥24 默认走内置 `node:sqlite`（该模块到 24 转正），**零 runtime 依赖**。
-#   - Node 20/22 走可选的 `better-sqlite3`（peerDependencies + optional）。它在 devDependencies 里，
-#     所以 `npm ci` 会装上——Node 24 job 要验「不装它也能跑」，就得先 rm 掉再测。
-#   - runtime dependencies 仍为空（见 package.json / 地图 cell 11）：可选 peer 不算破戒。
+# Required checks for the zero-dependency Node 24 path, supported SQLite fallbacks,
+# integration compatibility, documentation, and Python parity.
 
 name: CI
 
 on:
   push:
     branches: [main]
-    # 版本 tag（如 v0.3.0）也触发——但只让下面的 publish job 认它（job 级 if 卡 refs/tags）。
-    # 与 branches: [main] 并存，不覆盖 main / PR 触发。
+    # Version tags enter this workflow; publish is gated separately below.
     tags: ['v*']
   pull_request:
 
-# 同一分支上新推送自动取消旧的在跑任务，省 CI 额度。
+# Cancel superseded runs on the same ref.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# CI 主干走确定性:不注入 LLM secrets,live e2e 靠 HAS_LLM(检测 MEMOWEFT_LLM_BASE_URL 是否存在)自动跳过;
-# 真实覆盖由 nightly 的 test:live 承担。
+permissions:
+  contents: read
+
+# Keep pull-request checks deterministic; live-model coverage runs nightly.
 
 jobs:
   guardrails:
-    name: 三绿护栏 (Node 24 · 零依赖路径)
+    name: Guardrails (Node 24 · zero-dependency path)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
-      # lockfile 护栏：package-lock.json 必须指向官方 registry。镜像源 URL（npmmirror）会让海外用户
-      #   `npm ci` 按锁定 URL 撞镜像源失败 / 被企业安全策略拒——这是国际用户的第一道墙。任何把 lockfile
-      #   写回镜像源的改动，都在这里被挡在 PR 外。放在 Checkout 之后、装依赖之前，第一时间拦下。
+      # Keep the lockfile on the public npm registry for reproducible installs.
       - name: lockfile registry guard
         run: |
           if grep -q "npmmirror" package-lock.json; then
-            echo "::error::package-lock.json 含镜像源 URL，请用官方 registry 重新生成（npm_config_registry=https://registry.npmjs.org npm install）"
+            echo "::error::package-lock.json references a mirror; regenerate it with the public npm registry"
             exit 1
           fi
 
       - name: Setup Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          # Node 24：node:sqlite 转正 + 原生跑 .ts 稳定。这是「开箱即用、零依赖」的主目标平台。
+          # Node 24 is the zero-dependency reference path.
           node-version: '24'
           cache: 'npm'
 
-      # 有 lockfile 用 npm ci（可复现）；没有就退回 npm install。
+      # Prefer reproducible installs when a lockfile is present.
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -68,38 +53,29 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
-      # 验零依赖路径：better-sqlite3 在 devDependencies 里、npm ci 会装上；删掉它，
-      # 确认 Node 24 上不靠任何可选原生模块、只用内置 node:sqlite 也能全绿。
+      # Verify the built-in SQLite path without optional native modules.
       - name: Remove optional better-sqlite3 (assert zero-dep path)
         run: rm -rf node_modules/better-sqlite3
 
-      # 三绿，逐步跑：任一步非零退出，job 即红，PR 被挡。
-      # 顺序（架构归位·批次5 步0 · docs/host-migration.md §1.5）：
-      #   Core typecheck → Core test → Core build（前置）→ Host typecheck → Host test。
-      # 为什么 Core build 必须在 Host 之前：Host 经 `import 'memoweft'` 解析到 dist（路线甲），
-      #   其 typecheck 靠 dist/*.d.ts、其 test 靠 dist/*.js —— dist 不先 build 出来，Host 步骤必红。
-      # 用 `-w @memoweft/host` 显式点名（本步只有一个 Host 包）；未来插件包多了可换 `--workspaces --if-present`
-      #   免维护清单，但 Core build 仍须在 Host 步骤之前。
-      # Lint 松档关卡（Q1）：只在本主 job 跑一次，node22 / node20 触达 job 不重复。
+      # Build Core before workspace checks because they import its dist output.
+      - name: Format
+        run: npm run format
+
       - name: Lint
         run: npm run lint
 
-      # docs 内链死链检查(不需 build):任何指向不存在文件的相对链接挡在 PR 外(§18.4)。
+      # Check documentation links without a build.
       - name: Docs — dead links
         run: npm run docs:links
 
       - name: Core Typecheck
         run: npm run typecheck
 
-      # API 冻结(铁律 2 机器强制):公共导出面与 tests/api/api-surface.snapshot 逐字比对。
-      #   api-freeze 也在下面 Core Test 里作为一条测试跑;本步给更快、更清晰的失败信号。
+      # Compare the public export surface with the API snapshot.
       - name: API Freeze Check
         run: npm run api:check
 
-      # Core Test 换成带原生覆盖率的版本（--experimental-test-coverage）：
-      #   是【替换】不是追加——追加会让同一批 .ts 被跑两遍（普通一遍 + coverage 一遍），白翻倍 CI 时长。
-      #   覆盖率只报数字、不设硬门（作者拍板）。此步仍排在 Remove optional better-sqlite3 之后，
-      #   覆盖的是 Node24 默认内置 node:sqlite 零依赖路径，语义不变。
+      # Report coverage for the zero-dependency path without enforcing a threshold.
       - name: Core Test (with coverage)
         run: npm run test:coverage
 
@@ -118,9 +94,7 @@ jobs:
       - name: Collector Plugin Test
         run: npm test -w @memoweft/collector-active-window
 
-      # 生态集成包（0.5.0·可发布外部集成物）：MCP server / Vercel AI SDK 适配器。
-      #   都靠 import 'memoweft' 的 dist 做 typecheck/test（故排在 Core Build 之后），
-      #   各自带 build 出可发布 dist。第三方 SDK 只在各包 dependencies，Core 主包仍零依赖。
+      # Integration packages import Core dist, so they run after Core Build.
       - name: MCP Server Typecheck
         run: npm run typecheck -w @memoweft/mcp-server
 
@@ -139,9 +113,7 @@ jobs:
       - name: AI SDK Adapter Build
         run: npm run build -w @memoweft/adapter-ai-sdk
 
-      # Claude Agent SDK 适配器（0.1.0·hooks 型进程内适配器，D-0025）：同上靠 Core dist 做 typecheck/test、
-      #   自带 build 出可发布 dist。SDK @anthropic-ai/claude-agent-sdk 是 peer + dev；它经 optionalDependencies
-      #   附带平台 native 二进制（下载而非编译），npm ci 会拉取——比其它包稍重但不阻塞（Core 主包仍零依赖）。
+      # Claude Agent SDK uses optional platform binaries during install.
       - name: Claude Agent SDK Adapter Typecheck
         run: npm run typecheck -w @memoweft/adapter-claude-agent-sdk
 
@@ -151,10 +123,7 @@ jobs:
       - name: Claude Agent SDK Adapter Build
         run: npm run build -w @memoweft/adapter-claude-agent-sdk
 
-      # OpenAI Agents 适配器（0.1.0·run-wrapper 型进程内适配器，D-0027 / D-0040）：同上靠 Core dist、自带 build。
-      #   SDK @openai/agents 是 peer + dev（宿主自带 SDK 建/跑 agent，适配器是 wrapper）；run 包装器对它有
-      #   运行时依赖（动态 import），但 typecheck/test 只需类型 + 不启真实 SDK，npm ci 常规拉取即可。
-      #   D-0040 薄补 0.6 recordAssistantReply（能力探测·无新依赖），recordReply.test 离线跑、不加载 SDK。
+      # OpenAI Agents tests run offline; the SDK is loaded only when available.
       - name: OpenAI Agents Adapter Typecheck
         run: npm run typecheck -w @memoweft/adapter-openai-agents
 
@@ -164,10 +133,7 @@ jobs:
       - name: OpenAI Agents Adapter Build
         run: npm run build -w @memoweft/adapter-openai-agents
 
-      # LangChain 适配器（0.1.0·retriever + callback 型 + v1 middleware 入口，D-0028 / D-0039）：同上靠 Core dist、自带 build。
-      #   SDK @langchain/core 是 peer + dev（extends BaseRetriever / new Document 需运行时值）；`langchain` 伞包（v1
-      #   agent middleware `createMiddleware` 所在）是【可选 peer】+ dev——middleware 入口的 typecheck/test 需它，
-      #   retriever/callback 老路只需 @langchain/core。typecheck/test 只需类型 + 不跑真实 agent，npm ci 常规拉取即可。
+      # LangChain covers retriever, callback, and middleware integration paths.
       - name: LangChain Adapter Typecheck
         run: npm run typecheck -w @memoweft/adapter-langchain
 
@@ -177,10 +143,7 @@ jobs:
       - name: LangChain Adapter Build
         run: npm run build -w @memoweft/adapter-langchain
 
-      # LlamaIndex 适配器（0.1.0·memory-block + stream-tap 型进程内适配器，D-0029 / **D-0041 已冻结**）：靠 Core dist、自带 build。
-      #   ⚠ 上游 LlamaIndex.TS 2026-04-30 归档、官方弃维护 → 本适配器冻结在当前功能面（README 标 legacy），
-      #   不随 0.6 新面继续投入（未加 recordAssistantReply）；CI 仍跑 typecheck/test/build 守存量用户不回归。
-      #   SDK 是 peer + dev：llamaindex（伞包）+ @llamaindex/workflow（事件驱动 agent API）；不跑真实 agent。
+      # LlamaIndex is a frozen legacy integration; CI protects existing users.
       - name: LlamaIndex Adapter Typecheck
         run: npm run typecheck -w @memoweft/adapter-llamaindex
 
@@ -190,10 +153,7 @@ jobs:
       - name: LlamaIndex Adapter Build
         run: npm run build -w @memoweft/adapter-llamaindex
 
-      # Mastra 适配器（0.1.0·processor 型进程内适配器，D-0038）：同上靠 Core dist、自带 build。
-      #   SDK @mastra/core 是 peer + dev（宿主自带 Mastra；implements Processor 只需类型，processInput/
-      #   processOutputResult 直接调、不启真实 Agent）；typecheck/test 只需类型 + 不打模型，npm ci 常规拉取即可。
-      #   peer memoweft ^0.5 || ^0.6：recordAssistantReply（0.6 面）运行时能力探测，dev 软链 0.6 dist 编译。
+      # Mastra covers the processor-based integration path without live models.
       - name: Mastra Adapter Typecheck
         run: npm run typecheck -w @memoweft/adapter-mastra
 
@@ -203,28 +163,27 @@ jobs:
       - name: Mastra Adapter Build
         run: npm run build -w @memoweft/adapter-mastra
 
-      # docs 里【未标 snippet:skip】的 ts 围栏逐个冒烟跑(无 key、内存库)。放在所有 workspace build
-      #   之后:vercel recipe 的验证片段 import '@memoweft/adapter-ai-sdk',需 adapter 的 dist 也 build 好(§18.3)。
+      # Smoke-test runnable TypeScript snippets after all workspace builds.
       - name: Docs — runnable snippets
         run: npm run docs:snippets
 
-  # ── 触达矩阵：Node 22 走 better-sqlite3 驱动跑全套 .ts 测试 ──────────────────
+  # Node 22 compatibility using better-sqlite3.
   better-sqlite3-node22:
-    name: 触达 (Node 22.18+ · better-sqlite3 驱动)
+    name: Compatibility (Node 22.18+ · better-sqlite3)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Setup Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          # 22.18+：原生剥 .ts 类型默认开（低于此版本 `node --test tests/**/*.ts` 起不来）。
+          # Node 22.18+ supports the repository's native TypeScript test entrypoints.
           node-version: '22.18'
           cache: 'npm'
 
-      - name: Install dependencies (含可选 better-sqlite3)
+      - name: Install dependencies (including optional better-sqlite3)
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -232,30 +191,29 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
-      # 强制走 better-sqlite3 驱动：Node 22 上 node:sqlite 仅实验可用，这里用环境变量把驱动钉死到
-      # better-sqlite3，验第二驱动在全套 Core 测试下与 node:sqlite 逐字等价。
-      - name: Core Test (强制 better-sqlite3)
+      # Exercise the supported fallback driver explicitly.
+      - name: Core Test (force better-sqlite3)
         run: npm test
         env:
           MEMOWEFT_TEST_DRIVER: better-sqlite3
 
-  # ── 触达矩阵：Node 20 没有原生剥 .ts 能力，用 dist 冒烟脚本验 ─────────────────
+  # Node 20 compatibility using the built distribution.
   better-sqlite3-node20:
-    name: 触达 (Node 20 · dist 冒烟 · better-sqlite3)
+    name: Compatibility (Node 20 · dist smoke · better-sqlite3)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Setup Node 20
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          # Node 20 无原生剥类型：全套 .ts 测试物理上跑不了，改走 build 后的纯 JS 冒烟。
+          # Node 20 runs the built JavaScript smoke path.
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies (含可选 better-sqlite3)
+      - name: Install dependencies (including optional better-sqlite3)
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -263,80 +221,71 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
-      # Node 20 上 build 需要 typescript 能跑（tsc 本身跑在 Node 20 上没问题）。
       - name: Core Build
         run: npm run build
 
-      # dist 冒烟：开库→存证据+认知→读回→查迁移版本→关库，全走 better-sqlite3。
+      # Exercise database creation, writes, reads, migrations, and shutdown.
       - name: Dist Smoke (better-sqlite3)
         run: npm run smoke:dist
         env:
           MEMOWEFT_TEST_DRIVER: better-sqlite3
 
-  # ── SDK 版本矩阵（§16.3 · D-0014）：验两适配器在各自声明的 SDK 版本范围【两端】真能跑 ──────────
-  #
-  # 为什么独立于 guardrails：探针用 `npm install <sdk>@<版本> --no-save` 覆盖装指定版本、【不写回 lockfile】，
-  #   与主 job 的 `npm ci`（锁定版本）物理隔离；缓存也用【每组合独立 key】的 actions/cache（见下），
-  #   不交叉污染 guardrails 的 npm cache（呼应 §16.3「锁定文件分开缓存」）。
-  # 版本口径（D-0014）：测【声明范围两端】——最低支持版（peer/dep range 下界）+ 范围内最新（`ai@7`/`sdk@1` 由 npm 解析）。
-  #   不追【绝对 latest】：上游发布超出声明范围的大版本时，那是「是否扩大支持范围」的主动决策（届时改 package.json + 记 DECISIONS），
-  #   不该让本矩阵无意义地红。矩阵红 = 声明范围内出现兼容性破裂 → 处理结论记 DECISIONS（§16.3）。
-  # mcp-server 的 SDK 是 dependency 非 peer（D-0014 拍板：不改 peer——它是自带 SDK 的可执行服务器 bin，SDK 属实现依赖）；
-  #   ai-sdk 的 ai 本就是 peer。两者统一用同一套 --no-save 探针，只是版本来源不同（dep range vs peer range）。
+  # SDK compatibility matrix. Probes install one SDK version without modifying the lockfile.
+  # Test the lower bound and newest compatible release within each declared range.
+  # mcp-server owns its SDK as an implementation dependency, while the AI SDK adapter uses a peer dependency.
   sdk-version-matrix:
-    name: SDK 版本矩阵 (${{ matrix.label }})
+    name: SDK version matrix (${{ matrix.label }})
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # 一个版本破裂不掩盖其它组合
+      fail-fast: false # Keep failures visible across all combinations.
       matrix:
         include:
-          - label: 'adapter-ai-sdk · ai@7.0.0 (peer 下界)'
+          - label: 'adapter-ai-sdk · ai@7.0.0 (peer lower bound)'
             pkg: '@memoweft/adapter-ai-sdk'
             dep: 'ai'
             version: '7.0.0'
-          - label: 'adapter-ai-sdk · ai@7 (peer 范围内最新)'
+          - label: 'adapter-ai-sdk · ai@7 (latest in peer range)'
             pkg: '@memoweft/adapter-ai-sdk'
             dep: 'ai'
             version: '7'
-          - label: 'mcp-server · sdk@1.29.0 (dep 下界)'
+          - label: 'mcp-server · sdk@1.29.0 (dependency lower bound)'
             pkg: '@memoweft/mcp-server'
             dep: '@modelcontextprotocol/sdk'
             version: '1.29.0'
-          - label: 'mcp-server · sdk@1 (dep 范围内最新)'
+          - label: 'mcp-server · sdk@1 (latest in dependency range)'
             pkg: '@memoweft/mcp-server'
             dep: '@modelcontextprotocol/sdk'
             version: '1'
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
-      # 不用 setup-node 内建 cache：探针会 --no-save 覆盖装非 lockfile 版本，与 guardrails 共享 npm cache
-      #   有交叉污染风险；下面用【每组合独立 key】的 actions/cache 隔离。
+      # Use an isolated cache because probes install versions outside the lockfile.
       - name: Setup Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
 
-      - name: Cache npm (独立 key，与 guardrails 隔离)
-        uses: actions/cache@v4
+      - name: Cache npm (isolated key)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.npm
           key: npm-sdkmatrix-${{ matrix.dep }}-${{ matrix.version }}-${{ hashFiles('package-lock.json') }}
 
-      # 先按 lockfile 装 workspace（可复现基线），再在下一步覆盖单个 SDK 版本。
-      - name: Install dependencies (lockfile 基线)
+      # Install the lockfile baseline before overriding one SDK version.
+      - name: Install dependencies (lockfile baseline)
         run: npm ci
 
-      # 适配器包的 typecheck/test 靠 `import 'memoweft'` 解析到 dist（路线甲），故先 build 出 Core dist。
+      # Build Core dist before checking packages that import it.
       - name: Core Build
         run: npm run build
 
-      # 探针核心：--no-save 覆盖装指定 SDK 版本，【不写回 package.json / lockfile】。官方 registry（不撞镜像源护栏）。
-      - name: Override ${{ matrix.dep }} to ${{ matrix.version }} (探针，不写 lockfile)
+      # Override one SDK without writing package.json or the lockfile.
+      - name: Override ${{ matrix.dep }} to ${{ matrix.version }} (probe, no lockfile write)
         run: |
           npm install "${{ matrix.dep }}@${{ matrix.version }}" -w ${{ matrix.pkg }} --no-save --no-audit --no-fund
-          echo "解析到的实际版本："
+          echo "Resolved version:"
           npm ls "${{ matrix.dep }}" -w ${{ matrix.pkg }} || true
         env:
           npm_config_registry: https://registry.npmjs.org
@@ -347,17 +296,14 @@ jobs:
       - name: Test (${{ matrix.pkg }})
         run: npm test -w ${{ matrix.pkg }}
 
-  # ── Python parity 内核（1.3 · D-0042 · Phase 1）────────────────────────────
-  # py/ 是 TS 库的 Python 移植线;Phase 1 = parity 内核(纯逻辑不变量层)。本 job 用 uv 建环境,
-  #   跑 pytest(读 shared/parity/*.json 逐位对拍 TS 源)+ mypy --strict。与 TS 护栏独立、不互相阻塞。
-  #   前提:shared/ 资产由 TS 侧生成并守门(shared:check 在 guardrails 里由 npm test 覆盖)。
+  # Python parity kernel compares shared fixtures with pytest and mypy.
   python-parity:
-    name: Python parity 内核 (uv · pytest 逐位对拍 + mypy)
+    name: Python parity (uv · pytest + mypy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           python-version: '3.11'
       - name: Sync (dev)
@@ -369,44 +315,57 @@ jobs:
       - name: Types (mypy --strict)
         working-directory: py
         run: uv run mypy --strict src tests
+      - name: Wheel and sdist smoke
+        working-directory: py
+        run: uv run python scripts/smoke_distribution.py
 
-  # ── on-tag 发布：根包 npm publish + provenance（供应链背书）───────────────
-  #
-  # 【执行前提·作者手动】发布前，作者需先往本 repo 的 GitHub secrets 托管一个
-  #   npm automation token（Publish 权限），存为 NPM_TOKEN。这步是供应链决策、归作者手动，
-  #   CI 只引用 secret 名、绝不写死 token 值。token 未托管前，本 job 会在 publish step 失败。
-  #
-  # 只在打版本 tag（v*）时跑：job 级 if 卡住 refs/tags/，push main / PR 都不触发本 job
-  #   （on.push.tags 负责让 tag 推送进入本 workflow，if 负责让只有本 job 认 tag）。
-  # 发布必须等待全部合并门绿，避免 tag 一推就与测试并行、形成未验先发。
-  # provenance 靠 GitHub OIDC 身份签发来源证明，不靠长期密钥——所以要 id-token: write。
-  # 发布走 `npm publish --provenance`，会自动先跑 package.json 的 prepublishOnly
-  #   （typecheck && test && build）——发布前再过一遍三绿 + build 保险丝，不绕过、不 --ignore-scripts。
-  publish:
-    name: 发布根包 (on tag · npm publish --provenance)
+  ci-gate:
+    name: CI Gate
     runs-on: ubuntu-latest
+    if: ${{ always() }}
     needs:
       - guardrails
       - better-sqlite3-node22
       - better-sqlite3-node20
       - sdk-version-matrix
-    if: startsWith(github.ref, 'refs/tags/')
+      - python-parity
+    steps:
+      - name: Verify required jobs
+        shell: bash
+        run: |
+          test "${{ needs.guardrails.result }}" = "success"
+          test "${{ needs['better-sqlite3-node22'].result }}" = "success"
+          test "${{ needs['better-sqlite3-node20'].result }}" = "success"
+          test "${{ needs['sdk-version-matrix'].result }}" = "success"
+          test "${{ needs['python-parity'].result }}" = "success"
+
+  # Publish the root package on a matching version tag.
+  # Before publishing, maintainers configure an npm automation token in the NPM_TOKEN secret.
+  # The token is supplied through NPM_TOKEN; provenance uses GitHub OIDC.
+  # The publish job waits for CI Gate and runs only for version tags.
+  publish:
+    name: Publish package (tag · npm publish --provenance)
+    runs-on: ubuntu-latest
+    needs: ci-gate
+    if: startsWith(github.ref, 'refs/tags/') && needs.ci-gate.result == 'success'
 
     permissions:
-      # provenance 必需：GitHub 用 OIDC 短期身份签发来源证明。
+      # Required for npm provenance attestation.
       id-token: write
-      # 拉取仓库内容读权限。
+      # Read repository contents.
       contents: read
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
-          # provenance 要求较新的 npm；显式指向公共 registry 供发布用。
+          # Publish to the public npm registry.
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
@@ -419,6 +378,14 @@ jobs:
             exit 1
           fi
 
+      - name: Verify tagged commit belongs to main
+        shell: bash
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/${{ github.event.repository.default_branch }}"; then
+            echo "::error::tag $GITHUB_REF_NAME does not point to a commit on the default branch"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -427,9 +394,7 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
-      # 版本 tag v0.x.y 只对应根包 memoweft@0.x.y。各公开 adapter/MCP 包有自己的 0.1.x
-      # 版本线，不能在根包 tag 下用 --workspaces 重发：已存在的版本会 E403，并可能形成半发布状态。
-      # 它们应在各自版本提升、各自 release scope 验收后单独发布。
+      # Publish only the root package; integrations have independent release versions.
       - name: Publish memoweft to npm (with provenance)
         run: npm publish --provenance --access public
         env:

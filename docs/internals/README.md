@@ -1,12 +1,9 @@
 # How MemoWeft is built
 
-> **`internals/` vs `internal/`** (one letter apart, easy to confuse): **this** directory (`internals/`) is the public **"how it's built"** mechanism — architecture, boundaries, performance, the numbering map. The maintainer-only ledgers (calibration facts, runbooks, feasibility, positioning discipline) live under [`docs/internal/`](../internal/).
+Engineer-facing documentation for the mechanisms behind MemoWeft's public concepts.
 
-Engineer-facing notes on how MemoWeft is built — the mechanism behind the [concepts](../concepts/). English single source.
+- [Architecture](./architecture.md) ([中文](./architecture.zh-CN.md)) — evidence → event → cognition, write and recall paths, provenance, confidence, and conflict handling.
+- [Boundaries](./boundaries.md) — responsibility boundaries for Core, host applications, and plugins. [简体中文](./boundaries.zh-CN.md)
+- [Performance](./perf.md) — measured results, methodology, and limits.
 
-- [`architecture.md`](./architecture.md) — evidence → event → cognition, the read/write paths, and how the cognitive disciplines land in code.
-- [`boundaries.md`](./boundaries.md) — the long-term Core / Host / Plugin responsibility boundary (kept in Chinese).
-- [`perf.md`](./perf.md) — measured performance numbers, reproducible.
-- [`numbering-map.md`](./numbering-map.md) — newcomer navigation index mapping every Phase / D-xxxx / AD-x / Step(S) number to a one-line summary (written in Chinese).
-
-For the public API surface see [reference/memory-surface-contract.md](../reference/memory-surface-contract.md). Maintainer-only ledgers (calibration, runbooks, feasibility) live under [`docs/internal/`](../internal/).
+For the public API, see the [Memory Surface Contract](../reference/memory-surface-contract.md). For task-oriented guidance, return to the [documentation index](../README.md).

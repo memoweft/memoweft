@@ -1,4 +1,4 @@
-"""LLM 层(v0.6 Phase 2)—— OpenAI 兼容客户端 + JSON 解析加固 + 受治理提示词载入。移植自 src/llm/。"""
+"""LLM 层：OpenAI 兼容客户端、JSON 解析加固与受治理提示词加载。"""
 from __future__ import annotations
 
 from .client import (

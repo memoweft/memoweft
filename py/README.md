@@ -1,31 +1,36 @@
-# MemoWeft — Python port (parity kernel)
+# MemoWeft Python parity implementation
 
-The Python line of [MemoWeft](https://github.com/memoweft/memoweft) — portable AI long-term memory that keeps **facts and guesses apart** (confidence is rule-derived, conflicts are surfaced not adjudicated). See `DECISIONS.md` **D-0042**.
+This directory contains the experimental Python counterpart to MemoWeft's TypeScript implementation. It exists to verify cross-language behavior and portable data contracts; it is not yet presented as a feature-complete, stable Python SDK.
 
-**Phase 1 = the parity kernel.** This package ports the **pure-logic invariant layer** — the命脉 of the "portable memory" claim — and verifies it **bit-exact** against the TypeScript source:
+## Current scope
 
-| module | ports | TS source |
-|---|---|---|
-| `confidence` | `compute_confidence`, `derive_cred_status`, `is_transient` | `src/consolidation/confidence.ts` |
-| `formed_by` | `derive_formed_by` (carrier dimension, weakest-of-set) | `src/consolidation/deriveFormedBy.ts` |
-| `decay` | `decay_factor`, `half_life_of`, `effective_confidence` | `src/background/decay.ts` |
-| `echoed_id` | `resolve_echoed_id` (3-tier id resolution) | `src/llm/echoedId.ts` |
-| `hash_embedder` | `fnv1a32`, `tokenize`, `HashEmbedder` | `tests/retrieval/hashEmbedder.ts` |
-| `config` | numeric constants (loaded from `../shared`) | `src/config.ts` |
+The repository tests these Python layers against fixtures generated from the TypeScript source:
 
-Storage (SQLite stores), the portable bundle, and the LLM write path are later slices (Phase 1b/1c/2, D-0042).
+| Layer            | Covered behavior                                                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule kernel      | confidence, formation mode, typed decay, identifier resolution, hashing, and shared configuration                                       |
+| SQLite           | schema, migrations, transactions, evidence/event/cognition stores, interaction context, semantic resolutions, and FTS5 keyword behavior |
+| Portable bundles | schema validation, import behavior, and TypeScript-to-Python interoperability                                                           |
+| Write pipeline   | distillation, consolidation, profile updates, asking, attribution, trends, expiration, and privacy filtering                            |
+| Model boundary   | OpenAI-compatible HTTP client, prompt loading, response extraction, and JSON repair                                                     |
 
-## Single source of truth
+The top-level `memoweft` exports remain intentionally limited to the parity kernel. Storage, portable, and write-path modules are exercised by the test suite but do not yet have a stable facade equivalent to TypeScript's `createMemoWeftCore`.
 
-The constants and the `{input, expected}` parity fixtures come from `../shared/` — generated from the TypeScript by `npm run shared:update` and guarded against drift on the TS side. The Python side never hand-copies them; it loads the same files and asserts its reimplementation reproduces every `expected` bit-exact.
+## Shared contract
 
-**Three parity killers reproduced** (D-0042): JS `Math.round` half-up (→ `floor(x+0.5)`, `_math.round_half_up`); `Math.imul` 32-bit + `charCodeAt` UTF-16 code units (`_math`); constants loaded from `shared/`, never hand-copied.
+Configuration and `{input, expected}` fixtures live in [`../shared`](../shared). They are generated from TypeScript with `npm run shared:update`; that command also synchronizes the generated package resource `src/memoweft/_shared_data/`. The installed package reads this resource through `importlib.resources`, while `npm run shared:check` verifies neither copy has drifted from the TypeScript source.
 
-## Develop
+Parity helpers also reproduce JavaScript-specific behavior where it affects the contract, including `Math.round`, 32-bit `Math.imul`, and UTF-16 `charCodeAt` semantics.
+
+## Development
+
+From this directory:
 
 ```bash
-uv sync --extra dev   # create env + install deps (regex, pytest)
-uv run pytest         # run the bit-exact parity suite against ../shared/parity/*.json
+uv sync --extra dev
+uv run pytest -q
+uv run mypy --strict src tests
+uv run python scripts/smoke_distribution.py
 ```
 
-Requires the sibling `../shared/` assets (this package lives at `py/` inside the memoweft repo).
+Python 3.11 or newer is required. Development verifies the sibling `../shared` contract; wheel and sdist installs carry the generated runtime JSON and do not require a monorepo checkout.

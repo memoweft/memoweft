@@ -18,6 +18,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  process.stderr.write(`[memoweft-mcp-server] fatal: ${err instanceof Error ? err.message : String(err)}\n`);
+  process.stderr.write(
+    `[memoweft-mcp-server] fatal: ${err instanceof Error ? err.message : String(err)}\n`,
+  );
   process.exit(1);
 });

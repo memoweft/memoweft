@@ -1,7 +1,7 @@
-"""受治理提示词载入 —— 从 shared/prompts.json(TS 生成的单一源)载入 8 条,禁手抄。
+"""受治理提示词载入 —— 从 shared/prompts.json（TS 生成的单一源）载入 8 条。
 
-TS shared:check 保证 prompts.json == registry;shared-assets.test 保证其 sha256 == prompt-hashes.snapshot。
-Python 载入同一 JSON 即得【同字节】提示词(跨语言一致由 TS 侧守门保证)。对齐 src/prompts/{types,registry}.ts。
+TS shared:check 验证 prompts.json 与 registry 一致，shared-assets.test 验证其 sha256 快照。
+Python 直接加载同一 JSON，以共享资产契约保证跨语言文本一致性。
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from ..types import Lang
 
 @dataclass(frozen=True, slots=True)
 class VersionedPrompt:
-    """受治理提示词的形状(prompts/types.ts:11-19):id / version / text{zh,en}。"""
+    """受治理提示词的 id、version 与双语 text 结构。"""
 
     id: str
     version: str
@@ -42,7 +42,7 @@ def prompt_text(prompt_id: str, lang: Lang) -> str:
 
 
 def prompt_versions() -> dict[str, str]:
-    """id → version 映射(对齐 registry.ts:34-38 promptVersions())。"""
+    """返回 id → version 映射。"""
     return {pid: p.version for pid, p in _registry().items()}
 
 

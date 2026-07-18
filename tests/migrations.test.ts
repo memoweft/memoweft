@@ -1,5 +1,5 @@
 /**
- * Schema 版本化 + 迁移器护栏（0.2.0 硬债收口）。
+ * Schema 版本化 + 迁移器护栏（0.2.0 兼容性清理）。
  * 核心验收：真·0.1.0 fixture 库（tests/fixtures/memoweft-0.1.0.db，user_version=0）经 openStores 打开
  *   → 无损升到最新版、数据一条不少。
  * 另验：降级防护（未来版本建的库拒绝打开）/ fresh vs 迁移库 schema 签名一致 / 新库直接盖版 /
@@ -30,14 +30,25 @@ const uv = (db: DatabaseSync): number => getSchemaVersion(db);
 
 /** 一个库的 schema 签名：每张表的列（名:类型:notnull:pk）排序拼串，用来比"两条建库路径是否收敛到同一 schema"。 */
 function schemaSignature(db: DatabaseSync): string {
-  const tables = (db
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-    .all() as Array<{ name: string }>).map((t) => t.name);
+  const tables = (
+    db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+      )
+      .all() as Array<{ name: string }>
+  ).map((t) => t.name);
   return tables
     .map((t) => {
-      const cols = (db.prepare(`SELECT name, type, "notnull", pk FROM pragma_table_info('${t}')`).all() as Array<{
-        name: string; type: string; notnull: number; pk: number;
-      }>)
+      const cols = (
+        db
+          .prepare(`SELECT name, type, "notnull", pk FROM pragma_table_info('${t}')`)
+          .all() as Array<{
+          name: string;
+          type: string;
+          notnull: number;
+          pk: number;
+        }>
+      )
         .map((c) => `${c.name}:${c.type}:${c.notnull}:${c.pk}`)
         .sort()
         .join(',');
@@ -58,7 +69,10 @@ test('★ 真·0.1.0 fixture 无损升级：user_version=0 的库经 openStores 
       assert.equal(stores.evidenceStore.all().length, 2, '2 条证据没丢');
       const cogs = stores.cognitionStore.all('demo');
       assert.equal(cogs.length, 2, '2 条认知没丢');
-      assert.ok(cogs.some((c) => c.content === '偏好夜间工作'), '认知内容原样');
+      assert.ok(
+        cogs.some((c) => c.content === '偏好夜间工作'),
+        '认知内容原样',
+      );
     } finally {
       stores.close();
     }
@@ -78,7 +92,7 @@ test('降级防护：库版本高于本代码支持的最新版 → 拒绝打开
       db.exec(`PRAGMA user_version = ${LATEST_SCHEMA_VERSION + 6}`);
       db.close();
     }
-    assert.throws(() => openStores(path), /高于本版|newer/i, '旧代码打开未来库应抛错');
+    assert.throws(() => openStores(path), /高于当前 MemoWeft|newer/i, '旧代码打开未来库应抛错');
   } finally {
     cleanup();
   }
@@ -139,14 +153,23 @@ test('迁移器：假 v2 迁移会 ALTER + 迁移前备份 + 升版号（不碰�
     };
     const db = new DatabaseSync(path);
     try {
-      const r = runMigrations(db, { dbPath: path, fresh: false, migrations: [...MIGRATIONS, fakeV2] });
+      const r = runMigrations(db, {
+        dbPath: path,
+        fresh: false,
+        migrations: [...MIGRATIONS, fakeV2],
+      });
       assert.equal(r.from, 1);
       assert.equal(r.to, 2);
       assert.deepEqual(r.applied, [2]);
       assert.ok(r.backupPath && existsSync(r.backupPath), '迁移前备份文件在');
       assert.equal(uv(db), 2);
-      const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{ name: string }>;
-      assert.ok(cols.some((c) => c.name === 'test_col'), '新列 test_col 真加上了');
+      const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{
+        name: string;
+      }>;
+      assert.ok(
+        cols.some((c) => c.name === 'test_col'),
+        '新列 test_col 真加上了',
+      );
     } finally {
       db.close();
     }
@@ -160,14 +183,25 @@ test('dry-run：只报计划、不改库', () => {
   try {
     const path = join(dir, 'v1.db');
     openStores(path).close();
-    const fakeV2: Migration = { version: 2, name: 'test', up: (db) => db.exec('ALTER TABLE cognition ADD COLUMN x TEXT') };
+    const fakeV2: Migration = {
+      version: 2,
+      name: 'test',
+      up: (db) => db.exec('ALTER TABLE cognition ADD COLUMN x TEXT'),
+    };
     const db = new DatabaseSync(path);
     try {
-      const r = runMigrations(db, { dbPath: path, fresh: false, migrations: [...MIGRATIONS, fakeV2], dryRun: true });
+      const r = runMigrations(db, {
+        dbPath: path,
+        fresh: false,
+        migrations: [...MIGRATIONS, fakeV2],
+        dryRun: true,
+      });
       assert.equal(r.dryRun, true);
       assert.deepEqual(r.applied, [2]);
       assert.equal(uv(db), 1, '库版本号没被动');
-      const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{ name: string }>;
+      const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{
+        name: string;
+      }>;
       assert.ok(!cols.some((c) => c.name === 'x'), 'dry-run 没真加列');
     } finally {
       db.close();
@@ -192,9 +226,14 @@ test('迁移抛错 → 整段回滚，版本号不变、库不留半迁移', () 
     };
     const db = new DatabaseSync(path);
     try {
-      assert.throws(() => runMigrations(db, { dbPath: path, fresh: false, migrations: [...MIGRATIONS, badV2] }), /boom/);
+      assert.throws(
+        () => runMigrations(db, { dbPath: path, fresh: false, migrations: [...MIGRATIONS, badV2] }),
+        /boom/,
+      );
       assert.equal(uv(db), 1, '版本号仍是 1（未升）');
-      const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{ name: string }>;
+      const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{
+        name: string;
+      }>;
       assert.ok(!cols.some((c) => c.name === 'half'), '半截 ALTER 被回滚');
     } finally {
       db.close();

@@ -1,6 +1,6 @@
 """asking parity:proposeAsk / revisitConflicts × 模板路径 / LLM 措辞路径 → 与 TS(shared/parity/asking.json)一致。
 
-钉候选筛选 + observed 优先(稳定分区)+ 模板文案逐字 + LLM messages 字节/trim/空回落 + 两面证据 + askedAt 去重写(P2-8)。
+钉候选筛选 + observed 优先(稳定分区)+ 模板文案逐字 + LLM messages 字节/trim/空回落 + 两面证据 + askedAt 去重写()。
 """
 from __future__ import annotations
 

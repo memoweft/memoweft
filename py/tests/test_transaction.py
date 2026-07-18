@@ -1,4 +1,4 @@
-"""transaction 可重入 + 原子回滚(P2-6);consolidate 包进事务的原子性。"""
+"""transaction 可重入 + 原子回滚();consolidate 包进事务的原子性。"""
 from __future__ import annotations
 
 import json

@@ -30,7 +30,7 @@
     <line x1="120" y1="340" x2="1245" y2="340"/>
   </g>
 
-  <!-- warp (vertical, warm gold — the "fact" threads), density/opacity grows to the right -->
+  <!-- warp (vertical, warm gold — source threads), density/opacity grows to the right -->
   <g stroke="#E2A75E" stroke-width="1">
     <line x1="545"  y1="60" x2="545"  y2="346" opacity="0.10"/>
     <line x1="595"  y1="60" x2="595"  y2="346" opacity="0.13"/>
@@ -87,7 +87,7 @@
   <text x="76" y="118" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="600" letter-spacing="5" fill="#E2A75E" opacity="0.85">MEMORY, WOVEN</text>
   <text x="72" y="202" font-family="Georgia, 'Times New Roman', serif" font-size="84" font-weight="600" letter-spacing="-1" fill="#F6F1E7">MemoWeft</text>
   <line x1="80" y1="222" x2="300" y2="222" stroke="#E2A75E" stroke-width="2.5" opacity="0.9"/>
-  <text x="78" y="260" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" fill="#C4BAA9">Long-term memory for AI — it remembers who the user is,</text>
-  <text x="78" y="288" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" fill="#C4BAA9">keeps facts and guesses apart, and carries it across models.</text>
-  <text x="78" y="332" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15" fill="#8C8474">You import it — zero runtime dependencies, every judgment traceable.</text>
+  <text x="78" y="260" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" fill="#C4BAA9">Long-term memory for AI apps — evidence stays distinct</text>
+  <text x="78" y="288" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="20" fill="#C4BAA9">from inference, and contradictions remain visible.</text>
+  <text x="78" y="332" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15" fill="#8C8474">Embedded SQLite · versioned bundles · traceable cognitions.</text>
 </svg>

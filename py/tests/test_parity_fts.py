@@ -1,6 +1,6 @@
 """FTS5 trigram parity:同数据同 MATCH 查询,CPython 的 bm25 排序与 TS(shared/parity/fts.json)一致。
 
-只锁 id 排序(bm25 分数随 SQLite 小版本微动、排序稳定;已实测两引擎逐位一致,见记忆 fts5-trigram-cross-lang-parity)。
+只校验 id 排序；bm25 分数可能随 SQLite 小版本变化，但两种实现的排序应保持一致。
 """
 from __future__ import annotations
 

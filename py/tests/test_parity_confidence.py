@@ -1,4 +1,4 @@
-"""逐位对拍 computeConfidence / deriveCredStatus 全组合(shared/parity/confidence.json + cred-status.json)。"""
+"""验证 computeConfidence / deriveCredStatus 全组合的跨语言一致性。"""
 from __future__ import annotations
 
 from conftest import parity

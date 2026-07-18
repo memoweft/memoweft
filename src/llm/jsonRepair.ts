@@ -3,7 +3,7 @@
  *
  * 背景：写路径（consolidate 等）要模型吐一个 JSON 对象。真实模型常出岔子——
  *   裹 ```json 代码块、前后带解释、半截 JSON、字段名乱写。原来的 `indexOf('{')..lastIndexOf('}')`
- *   够 dogfood，但接不同模型后不稳：失败就静默返回空、没日志、不重试。
+ *   够 integration testing，但接不同模型后不稳：失败就静默返回空、没日志、不重试。
  *
  * 本模块给三件套（越往下越"重"）：
  *   - extractJsonObject：从一段可能带围栏/解释的文本里，抠出最外层 `{...}` 文本。
@@ -93,7 +93,10 @@ export async function parseJsonObjectWithRepair<T = Record<string, unknown>>(
       ? `首次输出非合法 JSON，重试一次。解析失败：长度=${first.length}、含代码围栏=${/```/.test(first)}、含花括号=${first.includes('{')}`
       : `First output was not valid JSON, retrying once. Parse failed: length=${first.length}, hasCodeFence=${/```/.test(first)}, hasBrace=${first.includes('{')}`,
   );
-  const retryMessages: ChatMessage[] = [...deps.messages, { role: 'user', content: JSON_REPAIR_NUDGE_PROMPT.text[lang] }];
+  const retryMessages: ChatMessage[] = [
+    ...deps.messages,
+    { role: 'user', content: JSON_REPAIR_NUDGE_PROMPT.text[lang] },
+  ];
   const second = await deps.llm.chat(retryMessages);
   const reparsed = parseJsonObject<T>(second);
   if (reparsed !== null) return reparsed;

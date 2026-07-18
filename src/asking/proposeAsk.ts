@@ -1,14 +1,14 @@
 /**
- * M5 带证据主动询问（地图 cell 5 阶段 3 · cell 8 规则 6/7 · cell 9 · cell 12 开放问题）。
+ * 带证据的主动询问（public contract；是否开口与最终措辞归宿主）。
  *
  * MemoWeft 对低置信【假设】拿不准 → 产出"该不该问 / 问什么 / 附什么证据"的结构化建议（AskProposal）。
- * 它【不】替宿主开口：是否开口、最终措辞归宿主（cell 9）；测试台替宿主做最朴素的提问。
+ * 它【不】替宿主开口：是否开口、最终措辞归宿主（public contract）；测试台替宿主做最朴素的提问。
  *
  * 纪律：
- *   - 只问【低置信假设】（规则 6）：credStatus 在白名单、把握度落在"将信将疑"带（cell 12 时机）。
- *   - 把握度透明给宿主（规则 7）：AskProposal 带 confidence / credStatus。
+ *   - 只问【低置信假设】：credStatus 在白名单、把握度落在"将信将疑"带（questioning policy）。
+ *   - 把握度透明给宿主：AskProposal 带 confidence / credStatus。
  *   - 带证据问（可证伪）：附上支撑该假设的证据，让用户能据此否定。
- *   - 禁止系统自证（规则 4）：提问本身不入证据库；只有用户的【回答】才是证据（走阶段 2 闭环）。
+ *   - 禁止系统自证：提问本身不进入证据库；只有用户的【回答】才是证据。
  *   - 不烦用户：问过的（askedAt 已写）不再问；一轮最多 maxAsks 个。
  */
 import { config, resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
@@ -33,7 +33,7 @@ export interface AskProposal {
   evidence: { id: string; summary: string }[];
   /** 反对侧证据（仅冲突复看：跟支撑侧并排亮出来，让用户判到底哪样）。 */
   contradictEvidence?: { id: string; summary: string }[];
-  /** 把握度（透明给宿主，规则 7）。 */
+  /** 向宿主公开的把握度。 */
   confidence: number;
   credStatus: CredStatus;
 }
@@ -43,9 +43,9 @@ export interface ProposeAskDeps {
   evidenceStore: EvidenceStore;
   /** 可选：用于润色问法；不给则用模板拼。 */
   llm?: LLMClient;
-  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例（作为 opts.policy 缺项的兜底）。 */
+  /** 可注入配置（config 去单例）：不传 = 用全局单例（作为 opts.policy 缺项的兜底）。 */
   config?: MemoWeftConfig;
-  /** 可注入时钟（D-0020：补全 D-0015 时钟不变式）：askedAt 时间戳走它；缺省 systemClock（真实系统时间）。 */
+  /** 可注入时钟：askedAt 时间戳走它；缺省 systemClock（真实系统时间）。 */
   clock?: Clock;
 }
 
@@ -86,7 +86,9 @@ async function phraseQuestion(
 ): Promise<string> {
   const shown = evidence.map((e) => `- ${e.summary}`).join('\n');
   const user =
-    lang === 'zh' ? `【假设】${hypothesis}\n【证据】\n${shown}` : `[Hypothesis] ${hypothesis}\n[Evidence]\n${shown}`;
+    lang === 'zh'
+      ? `【假设】${hypothesis}\n【证据】\n${shown}`
+      : `[Hypothesis] ${hypothesis}\n[Evidence]\n${shown}`;
   const messages: ChatMessage[] = [
     { role: 'system', content: PROPOSE_ASK_PROMPT.text[lang] },
     { role: 'user', content: user },
@@ -110,13 +112,15 @@ export async function proposeAsk(
   const markAsked = opts.markAsked ?? true;
 
   // 候选 = active 假设里：没问过、状态可问、把握度在"将信将疑"带内。
-  // active()（未失效且未归档）：归档全面雪藏（批次3 用户拍板）——已归档的假设不被主动问起。
+  // active() 仅返回未失效且未归档项，因此归档的假设不会触发主动询问。
   const candidates = deps.cognitionStore
     .active(subjectId)
     .filter((c) => c.contentType === 'hypothesis')
     .filter((c) => c.askedAt == null)
     .filter((c) => policy.askableStatuses.includes(c.credStatus))
-    .filter((c) => c.confidence >= policy.confidenceBand.min && c.confidence <= policy.confidenceBand.max)
+    .filter(
+      (c) => c.confidence >= policy.confidenceBand.min && c.confidence <= policy.confidenceBand.max,
+    )
     // 把握度高的优先问（最"将信将疑"、最值得求证的）。
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, policy.maxAsks);
@@ -133,10 +137,15 @@ export async function proposeAsk(
     const supportEvidence = supportIds
       .map((id) => deps.evidenceStore.get(id))
       .filter((e): e is NonNullable<typeof e> => e !== null)
-      .sort((a, b) => (a.sourceKind === 'observed' ? -1 : 0) - (b.sourceKind === 'observed' ? -1 : 0));
+      .sort(
+        (a, b) => (a.sourceKind === 'observed' ? -1 : 0) - (b.sourceKind === 'observed' ? -1 : 0),
+      );
     const evidence = supportEvidence.map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
-    // 隐私护栏（按当前措辞模型 tier）：只把该 tier 可读的证据喂给措辞模型；返回给宿主展示的 evidence 保持完整（展示归宿主）。
-    const readable = filterReadableByTier(supportEvidence, deps.llm?.tier ?? 'cloud').map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
+    // 隐私护栏（按当前措辞模型 tier）：只将该 tier 可读的证据提供给措辞模型；返回宿主展示的 evidence 保持完整。
+    const readable = filterReadableByTier(supportEvidence, deps.llm?.tier ?? 'cloud').map((e) => ({
+      id: e.id,
+      summary: e.summary || e.rawContent,
+    }));
 
     const question = deps.llm
       ? await phraseQuestion(cog.content, readable, deps.llm, lang)
@@ -152,7 +161,8 @@ export async function proposeAsk(
       credStatus: cog.credStatus,
     });
 
-    if (markAsked) deps.cognitionStore.update(cog.id, { askedAt: (deps.clock ?? systemClock)().toISOString() });
+    if (markAsked)
+      deps.cognitionStore.update(cog.id, { askedAt: (deps.clock ?? systemClock)().toISOString() });
   }
 
   return { proposals, llmCalls: (deps.llm?.callCount ?? 0) - before };

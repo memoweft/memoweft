@@ -1,0 +1,630 @@
+{
+  "cases": [
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 0,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 0,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 0,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 0,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 0,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 0,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 50,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 50,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 50,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 50,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 50,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 50,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 100,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 100,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 100,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 100,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 100,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 100,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 299,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 299,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "candidate",
+      "input": {
+        "confidence": 299,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 299,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 299,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 299,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 300,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 300,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 300,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 300,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 300,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 300,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 301,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 301,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 301,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 301,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 301,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 301,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 499,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 499,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 499,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 499,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 499,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 499,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "limited",
+      "input": {
+        "confidence": 500,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 500,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "limited",
+      "input": {
+        "confidence": 500,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 500,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 500,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 500,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "limited",
+      "input": {
+        "confidence": 501,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 501,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "limited",
+      "input": {
+        "confidence": 501,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 501,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 501,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 501,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "limited",
+      "input": {
+        "confidence": 749,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 749,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "limited",
+      "input": {
+        "confidence": 749,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 749,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 749,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 749,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "stable",
+      "input": {
+        "confidence": 750,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 750,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "stable",
+      "input": {
+        "confidence": 750,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 750,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 750,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 750,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "stable",
+      "input": {
+        "confidence": 751,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 751,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "stable",
+      "input": {
+        "confidence": 751,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 751,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 751,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 751,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "stable",
+      "input": {
+        "confidence": 1000,
+        "contentType": "fact",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "low",
+      "input": {
+        "confidence": 1000,
+        "contentType": "state",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "stable",
+      "input": {
+        "confidence": 1000,
+        "contentType": "preference",
+        "contradictCount": 0
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 1000,
+        "contentType": "fact",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 1000,
+        "contentType": "state",
+        "contradictCount": 1
+      }
+    },
+    {
+      "expected": "conflicted",
+      "input": {
+        "confidence": 1000,
+        "contentType": "preference",
+        "contradictCount": 1
+      }
+    }
+  ],
+  "fn": "deriveCredStatus",
+  "note": "阈值边界 ±1 × contradict(0,1) × {fact,state(transient),preference}"
+}

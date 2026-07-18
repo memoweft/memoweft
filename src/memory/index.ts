@@ -1,5 +1,5 @@
 /**
- * 受控记忆管理（架构归位·批次2）对外汇出。
+ * 受控记忆管理 API 对外汇出。
  * 管理操作走 core.memory.*（每个操作带 reason、落审计行），Host 不再直接摸 Sqlite*Store。
  */
 export {
@@ -24,4 +24,8 @@ export {
   type ResetSubjectInput,
   type ResetSubjectResult,
 } from './managementApi.ts';
-export { SqliteManagementLog, type ManagementLog, type ManagementLogEntry } from './managementLog.ts';
+export {
+  SqliteManagementLog,
+  type ManagementLog,
+  type ManagementLogEntry,
+} from './managementLog.ts';

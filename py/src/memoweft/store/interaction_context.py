@@ -1,6 +1,6 @@
-"""交互上下文存储(v0.6·D-0034)—— 移植自 src/interaction/interactionContextStore.ts。
+"""交互上下文存储（v0.6），与 TypeScript 存储实现保持契约一致。
 
-只存用户可见上下文快照,不产 Cognition、永不成证据(3a)。record 按 context_hash 查重幂等。
+只存用户可见的非证据上下文快照，不产 Cognition、永不成为 Evidence。record 按 context_hash 查重幂等。
 hash_context 用 json.dumps(ensure_ascii=False, separators) 复刻 JS JSON.stringify 字节。
 """
 from __future__ import annotations
@@ -22,7 +22,7 @@ def _turns_to_payload(context: list[VisibleTurn]) -> list[dict[str, str]]:
 
 
 def hash_context(context: list[VisibleTurn]) -> str:
-    """内容指纹 sha256(JSON.stringify(context));separators/ensure_ascii 对齐 JS 字节。对齐 interactionContextStore.ts:53。"""
+    """计算 sha256(JSON.stringify(context)) 内容指纹，并保持与 JS 相同的序列化字节。"""
     j = json.dumps(_turns_to_payload(context), ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(j.encode("utf-8")).hexdigest()
 
@@ -48,7 +48,7 @@ def _from_row(r: sqlite3.Row) -> InteractionContext:
 
 
 class SqliteInteractionContextStore:
-    """交互上下文存储(interactionContextStore.ts:70-158)。db = open_db 返回的共享连接。"""
+    """使用 open_db 共享连接的交互上下文存储。"""
 
     def __init__(self, db: sqlite3.Connection, clock: Clock = system_clock) -> None:
         self._db = db

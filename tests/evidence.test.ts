@@ -1,5 +1,5 @@
 /**
- * 证据存储层测试（地图 cell 15：离线护栏，不调模型）。
+ * 证据存储层测试：离线护栏，不调模型。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -63,7 +63,7 @@ test('byTimeRange 按 occurredAt 区间过滤', () => {
   }
 });
 
-test('来源强度：sourceKind 原样存取', () => {
+test('形成方式：sourceKind 原样存取', () => {
   const s = fresh();
   try {
     const spoken = s.put({ ...base, sourceKind: 'spoken' });
@@ -89,7 +89,7 @@ test('all 按 recordedAt 升序', () => {
   }
 });
 
-test('update 改授权位：allowCloudRead / allowInference 持久化，未提供的位不动（6-A）', () => {
+test('update 改授权位：allowCloudRead / allowInference 持久化，未提供的位不动', () => {
   const s = fresh();
   try {
     const e = s.put({ ...base, allowCloudRead: true, allowInference: true });

@@ -1,0 +1,571 @@
+{
+  "cases": [
+    {
+      "expected": "observed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "affirm"
+          },
+          "sourceKind": "observed"
+        }
+      ]
+    },
+    {
+      "expected": "observed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "affirm"
+          },
+          "sourceKind": "tool"
+        }
+      ]
+    },
+    {
+      "expected": "observed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "affirm"
+          },
+          "sourceKind": "inferred"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": null,
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "affirm"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "negate"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "select"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "elaborate"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "ask"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "none"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "other"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": null
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "affirm"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "negate"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "select"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "elaborate"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "ask"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "none"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "other"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": null
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": null,
+            "responseAct": "affirm"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": null,
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "affirm"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "negate"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "select"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "elaborate"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "ask"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "none"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "other"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": null
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "affirm"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "negate"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "select"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "elaborate"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "ask"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "none"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "other"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": null
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": null,
+            "responseAct": "affirm"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "confirmed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "none"
+          },
+          "sourceKind": "spoken"
+        },
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "affirm"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "observed",
+      "input": [
+        {
+          "precedingAiContext": null,
+          "resolution": null,
+          "sourceKind": "observed"
+        },
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "none"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": "stated",
+      "input": [
+        {
+          "precedingAiContext": "AI: do you like hiking?",
+          "resolution": {
+            "propositionOrigin": "assistant_proposed",
+            "responseAct": "negate"
+          },
+          "sourceKind": "spoken"
+        },
+        {
+          "precedingAiContext": null,
+          "resolution": {
+            "propositionOrigin": "user_stated",
+            "responseAct": "none"
+          },
+          "sourceKind": "spoken"
+        }
+      ]
+    },
+    {
+      "expected": null,
+      "input": []
+    }
+  ],
+  "fn": "deriveFormedBy",
+  "note": "deriveOne 单证据全分支 + 取最弱多证据(空集→null)"
+}

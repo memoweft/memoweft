@@ -4,11 +4,12 @@
  * 一个工厂造三件套（`{ run, callModelInputFilter, persistToolOutputs }`），覆盖读写三条路径：
  *   ① 召回注入（读）= `callModelInputFilter`（模型调用前把召回块追加进 instructions，末条 user 时注一次）；
  *   ② 用户原话（写）= `run` 包装器闭包捕获【未注入的原始 input】→ 存 spoken；
- *   ③ 工具结果（写）= run 结束后扫 `RunResult.newItems`，只摄 `tool_call_output_item`（绝不碰调用意图/入参——铁律 3a）。
+ *   ③ 工具结果（写）= run 结束后扫 `RunResult.newItems`，只摄 `tool_call_output_item`（绝不碰调用意图/入参——tool-result-only ingestion boundary）。
  *
- * 跑法（示意——`run` 会拉起真实 OpenAI Agents SDK 运行时，需你已装好 SDK 并配好鉴权，如 OPENAI_API_KEY）：
- *   npm i @openai/agents memoweft @memoweft/adapter-openai-agents
- *   node --experimental-strip-types examples/basic.ts   # Node 22（Node 23+ 原生剥类型，直接 node examples/basic.ts）
+ * 从源码检出运行（`run` 会调用 OpenAI Agents SDK，需配置 OPENAI_API_KEY）：
+ *   git clone https://github.com/memoweft/memoweft.git && cd memoweft
+ *   npm ci && npm run build && npm run build --workspace @memoweft/adapter-openai-agents
+ *   node --experimental-strip-types packages/adapter-openai-agents/examples/basic.ts
  * 只想看接线、不连模型：把下面 chatTurn 里的 `await mw.run(...)` 段注释掉即可——
  *   createMemoWeftRunner 的返回值是纯离线数据，callModelInputFilter / persistToolOutputs 都能直接单独调。
  */
@@ -19,8 +20,8 @@ import { createMemoWeftRunner } from '@memoweft/adapter-openai-agents';
 // 1) 起一个 Core（这里用一次性内存库；真实宿主传自己的 dbPath）。
 const core = createMemoWeftCore({ dbPath: ':memory:' });
 
-// 2) 造 MemoWeft 读写三件套。lang 只影响注入块的说明文字（照 Core 中性措辞），不改 Core 行为。
-//    可选：onRecall 拿到完整召回面（带 id/contentType/score，explain 时还带 provenance 授权位）供宿主观测/自筛。
+// 2) 造 MemoWeft 读写三件套。lang 只影响注入块的说明文字（沿用 Core 中性措辞），不改 Core 行为。
+//    可选：onRecall 获取完整召回面（带 id/contentType/score，explain 时还带 provenance 授权位）供宿主观测/自筛。
 const mw = createMemoWeftRunner(core, {
   lang: 'en',
   onRecall: (items) => console.log(`[memoweft] recalled ${items.length} cognition(s)`),
@@ -54,5 +55,5 @@ core.close();
  *   await mw.persistToolOutputs(result.newItems);     // ③ 扫 newItems 写工具结果（只摄 tool_call_output_item）
  *   // ② 用户原话此路径需宿主自行沉淀（mw.run 包装器才自动捕获 run 的 input 原文）。
  *
- * 降级（§16.2）：召回超时/抛错 → 本轮不注入、对话不中断；写失败重试一次仍失败静默吞——绝不向 SDK 抛。
+ * 降级：召回超时/抛错 → 本轮不注入、对话不中断；写失败重试一次仍失败静默吞——绝不向 SDK 抛。
  */

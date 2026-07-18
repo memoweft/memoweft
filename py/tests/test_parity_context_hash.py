@@ -1,6 +1,6 @@
 """hashContext parity:Python json.dumps 字节 + sha256 与 TS(shared/parity/context-hash.json)逐例一致。
 
-钉 JSON.stringify 字节等价(ensure_ascii=False + separators=(",",":"))+ role,content 字段序(P2-1b)。
+验证 JSON.stringify 字节等价（ensure_ascii=False + separators=(",",":"））+ role、content 字段序。
 """
 from __future__ import annotations
 

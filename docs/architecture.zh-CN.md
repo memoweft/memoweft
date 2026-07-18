@@ -1,5 +1,3 @@
-# 已迁移 · Moved
+# 文档已移动
 
-架构文档已改为英文单源，并入 [internals/architecture.md](./internals/architecture.md)。
-
-This document is now an English single source at [internals/architecture.md](./internals/architecture.md).
+本文档现位于 [`internals/architecture.zh-CN.md`](./internals/architecture.zh-CN.md)。

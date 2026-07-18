@@ -1,6 +1,6 @@
 """expire 纯规则 parity:Python 建同一认知集 → 过期结果与 TS(shared/parity/expire.json)一致。
 
-钉 ageDays 严格 > 阈值 + 名单外永不过期 + 归档 active 排除不碰(P2-2,写路径第一个逐位对拍绿灯)。
+验证 ageDays 严格大于阈值、名单外类型永不过期，并从 active 集合排除归档项。
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ NOW = "2026-02-01T00:00:00.000Z"
 
 
 def _days_ago(d: int) -> str:
-    # 复刻 TS daysAgo:new Date(now - d*DAY).toISOString();整天差 → 整秒,与 TS 逐位一致。
+    # 复刻 TypeScript 的 daysAgo 计算；整数天差值应产生相同的整秒时间戳。
     now_ms = parse_iso_ms(NOW)
     dt = datetime.fromtimestamp((now_ms - d * 86_400_000) / 1000.0, tz=timezone.utc)
     return to_iso_z(dt)

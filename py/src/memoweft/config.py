@@ -1,7 +1,7 @@
-"""纯逻辑读的数值常量 + 存储层授权默认 —— 从 ../shared/config-constants.json 载入(单一真相源,D-0042)。
+"""从 ../shared/config-constants.json 加载纯逻辑常量与存储层授权默认值。
 
-**不手抄**:所有数值 / 授权默认来自 TS 生成的 shared/config-constants.json;TS 一改、shared 守门测试即红。
-对齐:src/config.ts:99-154 + CARRIER_RANK(deriveFormedBy.ts:62)+ MIN_ID_PREFIX(echoedId.ts:17)。
+所有数值与授权默认值都来自 TS 生成的 shared/config-constants.json，避免维护重复配置。
+共享资产契约涵盖 src/config.ts、CARRIER_RANK 与 MIN_ID_PREFIX。
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class ConfidenceBand:
 
 @dataclass(frozen=True, slots=True)
 class Asking:
-    """M5 主动询问策略(config.ts:126-130);全字段 P2-8 纳入 shared(原缺 max_asks)。"""
+    """主动询问策略的完整共享字段。"""
 
     max_asks: int
     confidence_band: ConfidenceBand
@@ -50,7 +50,7 @@ class Asking:
 
 @dataclass(frozen=True, slots=True)
 class Attribution:
-    """M4 归因规则门(config.ts:119-125);全字段 P2-7 纳入 shared(原只有 hypothesis_cap)。"""
+    """归因规则的完整共享字段。"""
 
     window_hours: int
     hypothesis_cap: int
@@ -61,7 +61,7 @@ class Attribution:
 
 @dataclass(frozen=True, slots=True)
 class Identity:
-    """身份默认(config.ts:100):v1 单人单宿主,perceive/ingest 缺省用;多用户由调用方覆盖。"""
+    """单主体、单宿主的身份默认值；多用户场景由调用方覆盖。"""
 
     subject_id: str
     host_id: str
@@ -69,7 +69,7 @@ class Identity:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceDefaults:
-    """spoken/inferred 证据的通用授权默认(config.ts:104);无 allow_cloud_read → 走 cloud_read_default。"""
+    """spoken/inferred 证据的通用授权默认；allow_cloud_read 由 cloud_read_default 决定。"""
 
     allow_local_read: bool
     allow_inference: bool
@@ -77,7 +77,7 @@ class EvidenceDefaults:
 
 @dataclass(frozen=True, slots=True)
 class SourceDefaults:
-    """observed/tool 证据的保守授权默认(config.ts:105-106):local✓/cloud✗/infer✓。"""
+    """observed/tool 证据的保守授权默认：local✓、cloud✗、infer✓。"""
 
     allow_local_read: bool
     allow_cloud_read: bool
@@ -89,7 +89,7 @@ class Config:
     consolidation: Consolidation
     half_life_days: Mapping[ContentType, float]
     expire_after_days: Mapping[ContentType, int]
-    #: 跨会话趋势(config.ts:140-141):看近多少天 + 窗口内至少几次才算趋势。
+    #: 跨会话趋势的时间窗口与最低出现次数。
     trend_window_days: int
     trend_min_count: int
     attribution: Attribution
@@ -98,9 +98,9 @@ class Config:
     carrier_rank: Mapping[str, int]
     min_id_prefix: int
     day_ms: int
-    #: 身份默认(perceive/ingest 缺省 subject_id/host_id;P2-1b 纳入 shared)。
+    #: 身份默认(perceive/ingest 缺省 subject_id/host_id; 纳入 shared)。
     identity: Identity
-    #: 存储层授权默认(evidence.put 补;跨语言授权红线,P2-1a 纳入 shared)。
+    #: 存储层授权默认（evidence.put 补；跨语言授权约束，纳入 shared）。
     privacy_mode: bool
     evidence_defaults: EvidenceDefaults
     observed_defaults: SourceDefaults
@@ -166,14 +166,13 @@ CONFIG: Config = _load()
 
 
 def cloud_read_default(c: Config = CONFIG) -> bool:
-    """allow_cloud_read 的默认:跟随配置——隐私模式下默认不上云。对齐 config.ts:146。"""
+    """根据隐私模式返回 allow_cloud_read 默认值；隐私模式下默认禁止云读取。"""
     return not c.privacy_mode
 
 
 def resolve_lang() -> Lang:
-    """取库语言:env MEMOWEFT_LANG=zh → zh,否则 en(含未设/其它值)。对齐 config.ts:102,152。
+    """根据 MEMOWEFT_LANG 返回库语言；仅 zh 映射为中文，其余值使用英文。
 
-    只影响文本产出(提示词/兜底文案),绝不流入置信度自算。
+    只影响提示词与后备文案，不参与置信度计算。
     """
     return "zh" if os.environ.get("MEMOWEFT_LANG") == "zh" else "en"
-

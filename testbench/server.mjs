@@ -1,8 +1,8 @@
 /**
- * MemoWeft 测试台 · 本地服务端（阶段 0：接入真实证据层 + 回话）。地图 cell 14/15。
+ * MemoWeft 测试台 · 本地服务端：接入真实证据层与会话。
  *
  * 一轮：感知用户消息 → 存为证据（SQLite）→ 空召回 → 带窗口回话 → 落盘内幕。
- * 后端已是真逻辑（非占位）；召回 / 画像 / 假设 / 冲突 等后续阶段填。
+ * 后端已是真逻辑（非占位）；召回、画像、假设与冲突等功能由各自模块提供。
  *
  * 零外部依赖：node:http + node:fs + node:sqlite。
  * 启动：npm run testbench → http://localhost:7888
@@ -19,7 +19,7 @@ import { consolidate } from '../src/consolidation/consolidate.ts';
 import { updateProfile } from '../src/consolidation/updateProfile.ts';
 import { perceive } from '../src/pipeline/perceive.ts';
 import { ingestObservations } from '../src/perception/ingest.ts';
-// 活动窗口映射已迁出 Core 到采集插件（架构归位，boundaries.md §4.1）；testbench 手动 observe 调试表单从插件路径引。
+// 活动窗口映射已迁出 Core 到采集插件；testbench 手动 observe 调试表单从插件路径引。
 import { activeWindowToObservation } from '../plugins/collector-active-window/src/activeWindow.ts';
 import { attribute } from '../src/attribution/attribute.ts';
 import { proposeAsk } from '../src/asking/proposeAsk.ts';
@@ -45,35 +45,38 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOG_DIR = join(__dirname, '..', 'logs');
 const DB_PATH = join(__dirname, 'testbench-evidence.db'); // 独立库，不污染正式 ./dla.db
 
-// 共享：证据库、空召回、LLM（懒、健壮：缺 .env 也不崩，回话时报错并落进 error）。
+// 共享依赖：证据库、空召回和 LLM。缺少 .env 时仍可启动，模型调用错误通过 error 字段返回。
 // 三个 store 共用【一条】连接 + 一个事务器——让 consolidate 的多步、多表写能原子化（跨连接事务是硬约束，见 store/openStores.ts）。
 const stores = openStores(DB_PATH);
 const store = stores.evidenceStore;
 const eventStore = stores.eventStore;
 const cogStore = stores.cognitionStore;
 const transaction = stores.transaction; // 传给 updateProfile / consolidate 即让其写入原子化
-// 受控记忆管理 API（架构归位·批次3，boundaries.md §4.3）：删除 / 标失效 / 授权变更等【关键管理行为】
+// 受控记忆管理 API：删除、标失效、授权变更等关键管理行为。
 // 一律走它——带 reason 落审计（management_log），Host 不再直接摸 Sqlite*Store 完成这些操作。
 const memoryApi = createMemoryManagementAPI(stores);
-// 治慢③：模型池（可切换模型第一块）——写路径(distill/consolidate/attribute/trends)用小快模型，对话用大模型。
+// 模型池：写路径（distill/consolidate/attribute/trends）使用写模型，对话使用聊天模型。
 const llmPool = loadLLMPool();
 const llm = llmPool.for('write'); // 写路径统一用它（updateProfile / 手动 distill/consolidate/attribute/ask / trends）
-const chatLLM = llmPool.for('chat'); // 对话保持大模型（质量优先，别被小模型拖低对话体验）
+const chatLLM = llmPool.for('chat'); // 对话使用聊天模型，写路径可独立选择更轻量的模型
 
-// 兜底：一次 LLM 网络抖动（socket closed / fetch failed 等）不该让整个测试台进程崩掉（dogfood 暴露）。
-process.on('unhandledRejection', (e) => console.error('[兜底] 未处理的 rejection（服务继续）：', e instanceof Error ? e.message : e));
+// LLM 网络错误（socket closed / fetch failed 等）不应终止诊断台进程。
+process.on('unhandledRejection', (e) =>
+  console.error('[兜底] 未处理的 rejection（服务继续）：', e instanceof Error ? e.message : e),
+);
 
 // 召回：配了 MEMOWEFT_EMBED_*（或兼容 DLA_EMBED_*）用向量召回；否则降级为空召回（回话不注入画像，不报错）。
 const embedConfig = loadEmbedConfig();
 const retriever = embedConfig
   ? new VectorRetriever(DB_PATH, new OpenAICompatEmbedder(embedConfig))
   : new NullRetriever();
-if (!embedConfig) console.log('  ⚠️ 未配 MEMOWEFT_EMBED_*（或兼容 DLA_EMBED_*），召回降级为空（回话不注入画像）');
+if (!embedConfig)
+  console.log('  ⚠️ 未配 MEMOWEFT_EMBED_*（或兼容 DLA_EMBED_*），召回降级为空（回话不注入画像）');
 
-// （旧 makeLLM 已并入 loadLLMPool：缺 .env 不崩、缺写路径小模型回退对话模型——见 src/llm/pool.ts。）
+// loadLLMPool 允许无 .env 启动；未配置写模型时回退到聊天模型，详见 src/llm/pool.ts。
 
-// 测试台作为「宿主」，给回话注入 MemoWeft-aware 人设（cell 9：语气/角色归宿主，库内默认最朴素）。
-// 修一个 dogfood 暴露的坑：素提示下大模型会露出出厂反射「我不保留记忆、聊完就忘」，正好否定 MemoWeft 的价值。
+// 诊断台作为宿主注入 MemoWeft-aware 设定；语气归宿主，Core 默认保持中性。
+// 修一个 integration testing 暴露的坑：素提示下大模型会露出出厂反射「我不保留记忆、聊完就忘」，正好否定 MemoWeft 的价值。
 const REPLY_PERSONA =
   '你是一个长期陪着这个用户、会持续记住 ta 的助手。' +
   '下面若给出「你已了解关于这个用户的情况」，就自然地把它用上，像一个真的记得 ta 的人那样回应。' +
@@ -81,9 +84,9 @@ const REPLY_PERSONA =
   '你背后有一个跨对话持续记住 ta 的记忆层，ta 说的会被记下来、以后还认得。' +
   '语气自然、简洁、真诚，别生硬地复述你了解到的东西。';
 
-// ── 多会话（S4b）：内存里的活跃会话 + 磁盘上的历史日志两处；current 指向"当前会话"。──
+// ── 多会话：内存里的活跃会话 + 磁盘上的历史日志两处；current 指向"当前会话"。──
 // 一个会话 = 一个 Conversation（回话窗口）+ 一个 logger（run-<id>.jsonl）。/api/reset 新建并【保留】旧的
-// （"记住你"的产品，切个会话就把上一段销毁是自我否定）。旧会话进列表、可回访续聊。
+// 旧会话保留在列表中，可回访并继续对话。
 const sessions = new Map(); // id → { id, convo, logger, createdAt }
 let seq = 0;
 function makeSession(seedTurns = []) {
@@ -91,7 +94,14 @@ function makeSession(seedTurns = []) {
   const s = {
     id,
     createdAt: new Date().toISOString(),
-    convo: new Conversation({ store, retriever, cognitionStore: cogStore, llm: chatLLM, systemPrompt: REPLY_PERSONA, seedTurns }),
+    convo: new Conversation({
+      store,
+      retriever,
+      cognitionStore: cogStore,
+      llm: chatLLM,
+      systemPrompt: REPLY_PERSONA,
+      seedTurns,
+    }),
     logger: createRunLogger({ dir: LOG_DIR, sessionId: id }),
   };
   sessions.set(id, s);
@@ -110,7 +120,9 @@ function openSession(id) {
   let s = sessions.get(id);
   if (!s) {
     const lg = createRunLogger({ dir: LOG_DIR, sessionId: id });
-    const past = lg.readRecent(200).filter((t) => t.kind !== 'profile_update' && t.userInput != null);
+    const past = lg
+      .readRecent(200)
+      .filter((t) => t.kind !== 'profile_update' && t.userInput != null);
     const seed = past.slice(-config.workingMemory.maxTurns).flatMap((t) => [
       { role: 'user', content: t.userInput },
       { role: 'assistant', content: t.reply },
@@ -118,7 +130,14 @@ function openSession(id) {
     s = {
       id,
       createdAt: new Date().toISOString(),
-      convo: new Conversation({ store, retriever, cognitionStore: cogStore, llm: chatLLM, systemPrompt: REPLY_PERSONA, seedTurns: seed }),
+      convo: new Conversation({
+        store,
+        retriever,
+        cognitionStore: cogStore,
+        llm: chatLLM,
+        systemPrompt: REPLY_PERSONA,
+        seedTurns: seed,
+      }),
       logger: lg,
     };
     sessions.set(id, s);
@@ -128,82 +147,118 @@ function openSession(id) {
 }
 
 // ── 后台自动更新画像（空闲防抖触发）──
-// 写路径（提炼画像）是重活、要调几次大模型，故意不挡聊天：聊天即记证据，停下来后台慢慢消化。
+// 写路径需要多次模型调用，因此不阻塞聊天：对话立即记录证据，画像在后台更新。
 // 共用一把锁：同一用户的画像更新【不能并发】（否则重复消化同一批事件、markConsolidated 竞争）。
-// 核心①攒批（2026-07-01）：旧"停手7秒就更新"太勤又费，改为攒够 config.profileUpdate.batchSize 条 / 空闲 idleMinutes 才更新。
+// 批量更新：累计达到 config.profileUpdate.batchSize 条，或空闲达到 idleMinutes 后更新画像。
 let profileUpdating = false;
 let bgTimer = null;
 let bgLast = null; // 上次更新结果摘要，供前端轮询显示
-let seedProgress = { running: false, step: 0, total: 6, label: '空闲' }; // dogfood 灌数据进度（脚本上报、前端轮询画进度条）
+let seedProgress = { running: false, step: 0, total: 6, label: '空闲' }; // integration testing 灌数据进度（脚本上报、前端轮询画进度条）
 
 async function runProfileUpdate(trigger = 'background') {
   if (profileUpdating) return null; // 正忙 → 调用方决定重排/提示
   profileUpdating = true;
   try {
     const r = await updateProfile(config.identity.subjectId, {
-      evidenceStore: store, eventStore, cognitionStore: cogStore, retriever, llm, transaction,
+      evidenceStore: store,
+      eventStore,
+      cognitionStore: cogStore,
+      retriever,
+      llm,
+      transaction,
     });
     // 周期后台：跨会话趋势聚合（规则筛够频才调模型）+ 自然过期（临时类老了标失效）。
-    const trd = await aggregateTrends(config.identity.subjectId, { evidenceStore: store, cognitionStore: cogStore, llm });
+    const trd = await aggregateTrends(config.identity.subjectId, {
+      evidenceStore: store,
+      cognitionStore: cogStore,
+      llm,
+    });
     const exp = expire(config.identity.subjectId, { cognitionStore: cogStore });
     const c = r.consolidated;
     bgLast = {
       at: new Date().toISOString(),
-      created: c.created.length, reinforced: c.reinforced, corrected: c.corrected,
-      conflicted: c.conflicted, hypotheses: r.attributed.hypotheses.length,
-      trends: trd.trends.length, expired: exp.expired, indexError: r.indexError,
-      // S1 记忆气泡：带上这批新生成认知的精简内容（只 id/content/credStatus），供前端织进聊天流。
-      newCognitions: c.created.map((x) => ({ id: x.id, content: x.content, credStatus: x.credStatus })),
+      created: c.created.length,
+      reinforced: c.reinforced,
+      corrected: c.corrected,
+      conflicted: c.conflicted,
+      hypotheses: r.attributed.hypotheses.length,
+      trends: trd.trends.length,
+      expired: exp.expired,
+      indexError: r.indexError,
+      // 记忆气泡：带上这批新生成认知的精简内容（只 id/content/credStatus），供前端织进聊天流。
+      newCognitions: c.created.map((x) => ({
+        id: x.id,
+        content: x.content,
+        credStatus: x.credStatus,
+      })),
     };
-    // ②治慢落盘：各步耗时 + 摘要（AGENTS.md"内幕必落盘"；最慢的写路径以前没诊断日志）。
+    // Persist per-stage timing and a content-free summary for diagnostics.
     current.logger.appendProfileUpdate({
       trigger,
       timings: r.timings,
       summary: {
         pendingCount: r.distilled.pendingCount,
-        created: c.created.length, reinforced: c.reinforced, corrected: c.corrected,
-        conflicted: c.conflicted, hypotheses: r.attributed.hypotheses.length,
-        trends: trd.trends.length, expired: exp.expired,
-        // 写路径仪表（D4 只观测）：画像多大 / prompt 多大，落盘给 11-A 膨胀债画 dogfood 曲线。
-        profileSize: r.metrics.profileSize, promptChars: r.metrics.promptChars,
+        created: c.created.length,
+        reinforced: c.reinforced,
+        corrected: c.corrected,
+        conflicted: c.conflicted,
+        hypotheses: r.attributed.hypotheses.length,
+        trends: trd.trends.length,
+        expired: exp.expired,
+        // 写路径仪表（只观测）：记录画像和 prompt 大小，便于诊断写入开销。
+        profileSize: r.metrics.profileSize,
+        promptChars: r.metrics.promptChars,
       },
       llmCalls: r.distilled.llmCalls + c.llmCalls + r.attributed.llmCalls,
       indexError: r.indexError,
     });
     return r;
   } catch (e) {
-    current.logger.appendProfileUpdate({ trigger, error: e instanceof Error ? e.message : String(e) });
+    current.logger.appendProfileUpdate({
+      trigger,
+      error: e instanceof Error ? e.message : String(e),
+    });
     throw e;
   } finally {
     profileUpdating = false;
   }
 }
 
-// 核心①攒批触发（治"勤"，落实原则一/二）：每次聊完调这里累加计数——
-// 攒够 batchSize 条新对话【立即】排更新；否则重置空闲计时、歇够 idleMinutes 没动静再更新一次。先到先触发。
+// 批量更新触发器：每次对话完成后累加计数。
+// 达到 batchSize 时立即安排更新；否则重置空闲计时，在 idleMinutes 内无新对话时更新。先满足的条件触发。
 let pendingSinceUpdate = 0;
 function scheduleBackgroundUpdate() {
   pendingSinceUpdate++;
   const { batchSize, idleMinutes } = config.profileUpdate;
   if (pendingSinceUpdate >= batchSize) {
-    if (bgTimer) { clearTimeout(bgTimer); bgTimer = null; } // 攒够一批 → 立刻排，清掉空闲计时
+    if (bgTimer) {
+      clearTimeout(bgTimer);
+      bgTimer = null;
+    } // 攒够一批 → 立刻排，清掉空闲计时
     void triggerProfileUpdate();
   } else {
     if (bgTimer) clearTimeout(bgTimer); // 又聊了 → 重置空闲计时
-    bgTimer = setTimeout(() => { bgTimer = null; void triggerProfileUpdate(); }, idleMinutes * 60000);
+    bgTimer = setTimeout(() => {
+      bgTimer = null;
+      void triggerProfileUpdate();
+    }, idleMinutes * 60000);
   }
 }
 async function triggerProfileUpdate() {
   try {
     const r = await runProfileUpdate('background');
-    if (r === null) { // 手动更新正占着锁 → 过 10s 再排（保留计数，别丢这批）
+    if (r === null) {
+      // 手动更新占用锁时，保留待处理计数并在 10 秒后重试。
       if (bgTimer) clearTimeout(bgTimer);
-      bgTimer = setTimeout(() => { bgTimer = null; void triggerProfileUpdate(); }, 10000);
+      bgTimer = setTimeout(() => {
+        bgTimer = null;
+        void triggerProfileUpdate();
+      }, 10000);
       return;
     }
     pendingSinceUpdate = 0; // 更新成功 → 计数清零，重新攒下一批
   } catch (e) {
-    // 一次 LLM 网络抖动不该崩服务（错误已在 runProfileUpdate 里落盘）。
+    // LLM 网络错误不会终止服务；runProfileUpdate 已记录错误。
     console.error('后台更新画像失败（已兜底，不崩服务）：', e instanceof Error ? e.message : e);
   }
 }
@@ -216,10 +271,14 @@ function readJson(req) {
       try {
         const body = Buffer.concat(chunks).toString('utf8');
         // 字符集护栏：非法 UTF-8 字节解码后必出现 U+FFFD(�) → 拒收，防乱码入库。
-        // （事故：Windows cmd 的 curl 发中文默认 GBK，被按 UTF-8 解 → 乱码写进证据库。
+        // 请求体显式按 UTF-8 解码，避免不同命令行环境造成乱码写入证据库。
         //   浏览器 fetch 恒为 UTF-8 不受影响；命令行注入请用 UTF-8 编码的请求体。）
         if (body.includes('�')) {
-          reject(new Error('请求体不是合法 UTF-8（Windows cmd 的 curl 会按 GBK 发中文；请改用测试台界面，或以 UTF-8 编码发送）'));
+          reject(
+            new Error(
+              '请求体不是合法 UTF-8（Windows cmd 的 curl 会按 GBK 发中文；请改用测试台界面，或以 UTF-8 编码发送）',
+            ),
+          );
           return;
         }
         resolve(body ? JSON.parse(body) : {});
@@ -246,7 +305,8 @@ function setByPath(obj, path, value) {
   // 走到倒数第二层：中间每一段都必须是已存在的对象，否则报错不建键。
   for (let i = 0; i < segs.length - 1; i++) {
     const k = segs[i];
-    if (cur == null || typeof cur !== 'object' || !(k in cur)) return `路径不存在：${segs.slice(0, i + 1).join('.')}`;
+    if (cur == null || typeof cur !== 'object' || !(k in cur))
+      return `路径不存在：${segs.slice(0, i + 1).join('.')}`;
     cur = cur[k];
   }
   const last = segs[segs.length - 1];
@@ -274,21 +334,26 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 一轮对话：真实存证据 + 回话 → 落盘内幕 → 返回完整记录给透视区
+    // 一轮对话：记录证据并生成回复，写入诊断记录后返回完整结果。
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       const { text, originId, sessionId: reqSid } = await readJson(req);
       if (reqSid && sessions.has(reqSid)) current = sessions.get(reqSid); // 指定了活跃会话 → 切过去
-      const outcome = await current.convo.handle(String(text ?? ''), { originId: originId ?? null });
+      const outcome = await current.convo.handle(String(text ?? ''), {
+        originId: originId ?? null,
+      });
       const record = current.logger.appendTurn({
         userInput: String(text ?? ''),
         reply: outcome.reply,
         evidence: [{ id: outcome.storedEvidence.id, summary: outcome.storedEvidence.summary }],
-        recall: outcome.recall.map((r) => ({ summary: r.content, score: Math.round(r.score * 1000) })),
+        recall: outcome.recall.map((r) => ({
+          summary: r.content,
+          score: Math.round(r.score * 1000),
+        })),
         llmCalls: outcome.llmCalls,
         error: outcome.error,
       });
       sendJson(res, 200, { record, sessionId: current.id, logFile: current.logger.file });
-      scheduleBackgroundUpdate(); // 聊完一轮排上后台消化（防抖：停手 7 秒才真跑，不挡这次回话）
+      scheduleBackgroundUpdate(); // 对话完成后安排后台更新，不阻塞本轮回复
       return;
     }
 
@@ -298,60 +363,81 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 首启门（S3）：模型 / 嵌入器配没配 —— 前端据此决定先进配置向导还是直接进聊天。不需要 .env 也不能崩。
+    // 首次启动：前端根据模型和嵌入器配置决定显示配置向导或聊天界面；无 .env 时仍可返回状态。
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      let llmReady = false, embedReady = false;
-      try { llmReady = !!loadLLMConfig(); } catch { /* 未配 → false */ }
-      try { embedReady = !!loadEmbedConfig(); } catch { /* 未配 → false */ }
+      let llmReady = false,
+        embedReady = false;
+      try {
+        llmReady = !!loadLLMConfig();
+      } catch {
+        /* 未配 → false */
+      }
+      try {
+        embedReady = !!loadEmbedConfig();
+      } catch {
+        /* 未配 → false */
+      }
       sendJson(res, 200, { llmReady, embedReady });
       return;
     }
 
-    // 读回本会话最近内幕（执行 Agent 也读同一个 jsonl 文件）
+    // 读取本会话最近的诊断记录；其他诊断工具使用同一个 jsonl 文件。
     if (req.method === 'GET' && url.pathname === '/api/logs') {
-      sendJson(res, 200, { sessionId: current.id, logFile: current.logger.file, records: current.logger.readRecent(100) });
+      sendJson(res, 200, {
+        sessionId: current.id,
+        logFile: current.logger.file,
+        records: current.logger.readRecent(100),
+      });
       return;
     }
 
-    // 看证据库（dogfood：看证据在不在涨）
+    // 看证据库（integration testing：看证据在不在涨）
     if (req.method === 'GET' && url.pathname === '/api/evidence') {
       sendJson(res, 200, { evidence: store.all() });
       return;
     }
 
-    // 用户主动改一条证据的 summary / raw_content / 授权位（cell 8 规则 10 + 6-A 记忆管理页）。
-    // 授权位只认布尔（防脏值混进 0/1 落库）；不传 = 不动。
-    // 批次3 分流（boundaries.md §4.3）：授权位是隐私敏感的【关键管理行为】→ 走受控 API
+    // 用户主动改一条证据的 summary / raw_content / 授权位（记忆管理页）。
+    // 授权位仅接受布尔值，避免非布尔值落库；未传时保持原值。
+    // 授权位是隐私敏感的【关键管理行为】→ 走受控 API
     //   （带 reason 落审计；零变更时受控 API 原样返回、不落审计，前端行为不受影响）；
     //   rawContent/summary 是开发调试的内容编辑、非关键管理行为 → 保留 store 直调。
     if (req.method === 'POST' && url.pathname === '/api/evidence/update') {
-      const { id, rawContent, summary, allowCloudRead, allowInference, reason } = await readJson(req);
+      const { id, rawContent, summary, allowCloudRead, allowInference, reason } =
+        await readJson(req);
       const evidenceId = String(id ?? '');
       const hasContentEdit = rawContent !== undefined || summary !== undefined;
-      const hasAuthChange = typeof allowCloudRead === 'boolean' || typeof allowInference === 'boolean';
+      const hasAuthChange =
+        typeof allowCloudRead === 'boolean' || typeof allowInference === 'boolean';
       if (hasContentEdit) store.update(evidenceId, { rawContent, summary }); // 内容编辑=调试，直调保留
       if (hasAuthChange) {
         memoryApi.updateEvidenceAuthorization({
           evidenceId,
           allowCloudRead: typeof allowCloudRead === 'boolean' ? allowCloudRead : undefined,
           allowInference: typeof allowInference === 'boolean' ? allowInference : undefined,
-          reason: typeof reason === 'string' && reason ? reason : 'testbench:用户在记忆管理页修改授权', // UI 不传就用缺省
+          reason:
+            typeof reason === 'string' && reason ? reason : 'testbench:用户在记忆管理页修改授权', // UI 不传就用缺省
         });
       }
       // 响应统一取最新全量：内容与授权若一次同发（未来调用方，如 apps/memoweft-host），
       //   两次写库都已生效，这里 get 一遍才能反映两者（避免只回后一次的快照）。
       //   什么都没传：行为同旧（空 patch → 存在原样返回、不存在返回 null），响应形状 { updated } 不变。
-      const updated = (hasContentEdit || hasAuthChange) ? store.get(evidenceId) : store.update(evidenceId, {});
+      const updated =
+        hasContentEdit || hasAuthChange ? store.get(evidenceId) : store.update(evidenceId, {});
       sendJson(res, 200, { updated });
       return;
     }
 
-    // 用户主动删一条证据（真删，非系统自动删；cell 6 条件性真删）。
-    // 批次3（boundaries.md §4.3）：走受控 API。UI 已做二次确认 → 语义=用户执意删，故 force:true
+    // 用户主动删除一条证据；这是显式管理操作，不是系统自动清理。
+    // 走受控 API。UI 已做二次确认 → 语义=用户执意删，故 force:true
     // （有事件/认知引用也删、连关联链一起清，blockers 快照进审计 detail）。响应仍是 { removed }，前端不感知。
     if (req.method === 'POST' && url.pathname === '/api/evidence/delete') {
       const { id } = await readJson(req);
-      const r = memoryApi.removeEvidenceSafely({ evidenceId: String(id ?? ''), force: true, reason: 'testbench:用户在记忆管理页删除' });
+      const r = memoryApi.removeEvidenceSafely({
+        evidenceId: String(id ?? ''),
+        force: true,
+        reason: 'testbench:用户在记忆管理页删除',
+      });
       sendJson(res, 200, { removed: r.removed });
       return;
     }
@@ -365,24 +451,39 @@ const server = createServer(async (req, res) => {
 
     // 看事件（事件 + 覆盖的原话证据 id）
     if (req.method === 'GET' && url.pathname === '/api/event') {
-      const list = eventStore.all().map((e) => ({ ...e, evidenceIds: eventStore.evidenceOf(e.id) }));
+      const list = eventStore
+        .all()
+        .map((e) => ({ ...e, evidenceIds: eventStore.evidenceOf(e.id) }));
       sendJson(res, 200, { event: list });
       return;
     }
 
-    // 增量消化（阶段 2）：未消化事件 + 现有画像 → 新增/强化/纠正/冲突
+    // 增量消化：未消化事件 + 现有画像 → 新增/强化/纠正/冲突
     if (req.method === 'POST' && url.pathname === '/api/consolidate') {
-      const r = await consolidate(config.identity.subjectId, { eventStore, evidenceStore: store, cognitionStore: cogStore, llm, transaction });
+      const r = await consolidate(config.identity.subjectId, {
+        eventStore,
+        evidenceStore: store,
+        cognitionStore: cogStore,
+        llm,
+        transaction,
+      });
       sendJson(res, 200, {
-        created: r.created, reinforced: r.reinforced, corrected: r.corrected,
-        conflicted: r.conflicted, processedEvents: r.processedEvents, llmCalls: r.llmCalls,
+        created: r.created,
+        reinforced: r.reinforced,
+        corrected: r.corrected,
+        conflicted: r.conflicted,
+        processedEvents: r.processedEvents,
+        llmCalls: r.llmCalls,
       });
       return;
     }
 
-    // ①治等（2026-07-01）：手动"更新画像"不再阻塞——触发后台跑、立即返回，前端靠 /api/bg-status 状态条看进度、跑完自动刷新画像。
+    // 手动更新在后台执行并立即返回；前端通过 /api/bg-status 展示进度，完成后刷新画像。
     if (req.method === 'POST' && url.pathname === '/api/refresh') {
-      if (profileUpdating) { sendJson(res, 200, { busy: true }); return; } // 后台正忙 → 稍候
+      if (profileUpdating) {
+        sendJson(res, 200, { busy: true });
+        return;
+      } // 后台正忙 → 稍候
       // fire-and-forget：不 await 完成，让用户不干等（写路径要几十秒）。落盘 + bgLast 由 runProfileUpdate 内部管。
       runProfileUpdate('manual').catch((e) => console.error('手动更新画像失败：', e));
       sendJson(res, 200, { started: true });
@@ -397,7 +498,7 @@ const server = createServer(async (req, res) => {
         perceive(raw, {
           sourceKind: 'observed',
           occurredAt: occurredAt || undefined,
-          // 幂等：同内容+同时间只落一条（防 dogfood 重复注入出两条一样的观察）。
+          // 幂等：同内容+同时间只落一条（防 integration testing 重复注入出两条一样的观察）。
           originId: `observed:${raw}:${occurredAt || ''}`,
         }),
       );
@@ -405,10 +506,10 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 注入活动窗口观察（4-A 档1）：结构化字段 → observed 证据。默认不上云；勾"允许上云"才 cloud=true（路线 A 验证）。
+    // 注入活动窗口观察（4-A observation mode）：结构化字段 → observed 证据。默认不上云；勾"允许上云"才 cloud=true（explicit authorization path 验证）。
     if (req.method === 'POST' && url.pathname === '/api/observe-window') {
       const { app, title, durationSec, occurredAt, allowCloud } = await readJson(req);
-      // 规范化时间：把 datetime-local 之类（缺秒/时区 Z）补成完整 ISO，避免时间窗字符串比较错位（dogfood 诊断修）。
+      // 规范化时间：把 datetime-local 之类（缺秒/时区 Z）补成完整 ISO，避免时间窗字符串比较错位（integration testing 诊断修）。
       const parsed = occurredAt ? new Date(occurredAt) : new Date();
       const occ = isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
       const observation = activeWindowToObservation({
@@ -417,16 +518,23 @@ const server = createServer(async (req, res) => {
         durationSec: Number(durationSec) || 0,
         occurredAt: occ,
       });
-      if (allowCloud) observation.allowCloudRead = true; // 显式授权上云（仅测试数据，路线 A）
-      const r = ingestObservations(config.identity.subjectId, [observation], { evidenceStore: store });
+      if (allowCloud) observation.allowCloudRead = true; // 显式授权上云（仅测试数据，explicit authorization path）
+      const r = ingestObservations(config.identity.subjectId, [observation], {
+        evidenceStore: store,
+      });
       sendJson(res, 200, { stored: r.stored, skipped: r.skipped });
       return;
     }
 
-    // dogfood 灌数据进度（脚本 POST 上报 + 前端 GET 轮询画进度条）。
+    // integration testing 灌数据进度（脚本 POST 上报 + 前端 GET 轮询画进度条）。
     if (req.method === 'POST' && url.pathname === '/api/seed-progress') {
       const p = await readJson(req);
-      seedProgress = { running: !!p.running, step: Number(p.step) || 0, total: Number(p.total) || 0, label: String(p.label ?? '') };
+      seedProgress = {
+        running: !!p.running,
+        step: Number(p.step) || 0,
+        total: Number(p.total) || 0,
+        label: String(p.label ?? ''),
+      };
       sendJson(res, 200, { ok: true });
       return;
     }
@@ -437,13 +545,20 @@ const server = createServer(async (req, res) => {
     // 最近对话（前端聊天区轮询：脚本灌的对话也实时显示，不只手动发的）。
     if (req.method === 'GET' && url.pathname === '/api/chat-history') {
       const sid = url.searchParams.get('sessionId');
-      const lg = sid ? (sessions.get(sid)?.logger ?? createRunLogger({ dir: LOG_DIR, sessionId: sid })) : current.logger;
-      const turns = lg.readRecent(50).filter((t) => t.kind !== 'profile_update' && t.userInput != null);
-      sendJson(res, 200, { sessionId: sid || current.id, turns: turns.map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply })) });
+      const lg = sid
+        ? (sessions.get(sid)?.logger ?? createRunLogger({ dir: LOG_DIR, sessionId: sid }))
+        : current.logger;
+      const turns = lg
+        .readRecent(50)
+        .filter((t) => t.kind !== 'profile_update' && t.userInput != null);
+      sendJson(res, 200, {
+        sessionId: sid || current.id,
+        turns: turns.map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply })),
+      });
       return;
     }
 
-    // M4 归因：现象（state 认知）+ 时间窗证据 → 可解释假设（低置信、挂证据、可推翻）。
+    // 归因：现象（state 认知）+ 时间窗证据 → 可解释假设（低置信、挂证据、可推翻）。
     if (req.method === 'POST' && url.pathname === '/api/attribute') {
       const r = await attribute(config.identity.subjectId, {
         evidenceStore: store,
@@ -458,11 +573,22 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // M5 带证据主动询问：挑低置信假设 + 复看冲突认知 → 提问建议（含证据、把握度透明）。测试台替宿主朴素发问。
+    // 带证据主动询问：挑低置信假设 + 复看冲突认知 → 提问建议（含证据、把握度透明）。诊断台替宿主生成中性问题。
     if (req.method === 'POST' && url.pathname === '/api/ask') {
-      const a = await proposeAsk(config.identity.subjectId, { cognitionStore: cogStore, evidenceStore: store, llm });
-      const c = await revisitConflicts(config.identity.subjectId, { cognitionStore: cogStore, evidenceStore: store, llm });
-      sendJson(res, 200, { proposals: [...a.proposals, ...c.proposals], llmCalls: a.llmCalls + c.llmCalls });
+      const a = await proposeAsk(config.identity.subjectId, {
+        cognitionStore: cogStore,
+        evidenceStore: store,
+        llm,
+      });
+      const c = await revisitConflicts(config.identity.subjectId, {
+        cognitionStore: cogStore,
+        evidenceStore: store,
+        llm,
+      });
+      sendJson(res, 200, {
+        proposals: [...a.proposals, ...c.proposals],
+        llmCalls: a.llmCalls + c.llmCalls,
+      });
       return;
     }
 
@@ -477,31 +603,41 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 用户主动改一条认知（cell 8 规则 10）。
-    // 批次3 分流（boundaries.md §4.3）：请求只带 invalidAt 且非 null =「标失效」这一关键管理行为 →
+    // 用户通过受控管理 API 主动修改一条认知。
+    // 请求只带 invalidAt 且非 null =「标失效」这一关键管理行为 →
     //   走受控 API（reason 落审计；invalidAt 由 API 统一取"现在"，与前端本就传 now 等价）。
     //   其余字段（content/confidence/credStatus/scope 的开发调试编辑、invalidAt:null 恢复有效）保留 store 直调。
     if (req.method === 'POST' && url.pathname === '/api/cognition/update') {
       const { id, content, confidence, credStatus, scope, invalidAt } = await readJson(req);
-      const onlyInvalidate = invalidAt != null
-        && content === undefined && confidence === undefined && credStatus === undefined && scope === undefined;
+      const onlyInvalidate =
+        invalidAt != null &&
+        content === undefined &&
+        confidence === undefined &&
+        credStatus === undefined &&
+        scope === undefined;
       const updated = onlyInvalidate
-        ? memoryApi.invalidateCognition({ cognitionId: String(id ?? ''), reason: 'testbench:用户标失效' })
+        ? memoryApi.invalidateCognition({
+            cognitionId: String(id ?? ''),
+            reason: 'testbench:用户标失效',
+          })
         : cogStore.update(String(id ?? ''), { content, confidence, credStatus, scope, invalidAt });
       sendJson(res, 200, { updated });
       return;
     }
 
-    // 用户主动删一条认知。批次3（boundaries.md §4.3）：走受控 API——连溯源链删 + reason 落审计
-    // （审计 detail 只存元数据不存内容原文，用户拍板）。响应仍是 { removed }，前端不感知。
+    // 用户主动删一条认知：走受控 API——连溯源链删 + reason 落审计
+    // （审计 detail 只存元数据不存内容原文）。响应仍是 { removed }，前端不感知。
     if (req.method === 'POST' && url.pathname === '/api/cognition/delete') {
       const { id } = await readJson(req);
-      const r = memoryApi.removeCognitionSafely({ cognitionId: String(id ?? ''), reason: 'testbench:用户删除' });
+      const r = memoryApi.removeCognitionSafely({
+        cognitionId: String(id ?? ''),
+        reason: 'testbench:用户删除',
+      });
       sendJson(res, 200, { removed: r.removed });
       return;
     }
 
-    // ── 开发者模式·config 实时热调（cell 14/15）──
+    // ── 诊断模式：运行时调整配置 ──
     // 读当前全量 config，前端据此渲染旋钮当前值。
     if (req.method === 'GET' && url.pathname === '/api/config') {
       sendJson(res, 200, { config });
@@ -512,7 +648,10 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/config') {
       const { path, value } = await readJson(req);
       const err = setByPath(config, String(path), value);
-      if (err) { sendJson(res, 200, { error: err }); return; }
+      if (err) {
+        sendJson(res, 200, { error: err });
+        return;
+      }
       sendJson(res, 200, { ok: true, path, value });
       return;
     }
@@ -525,8 +664,8 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // ── 配置向导·生成 .env 文本（体验层阶段二）──
-    // 铁律（决策3）：后端只【拼文本、当场返回】——绝不 writeFile、绝不把 apiKey 存进任何变量/缓存/日志。
+    // ── 配置向导·生成 .env 文本 ──
+    // 隐私保证：后端仅组装文本并立即返回；不调用 writeFile，也不将 apiKey 写入持久变量、缓存或日志。
     // 收 9 个 env 值 + withExperienceUI 布尔 → 拼成 .env 文本字符串 → 返回 { envText }。文本一走出这个函数就没了。
     if (req.method === 'POST' && url.pathname === '/api/gen-env') {
       const b = await readJson(req);
@@ -536,14 +675,20 @@ const server = createServer(async (req, res) => {
       //   用户对着"看着完整"的 .env 难自查）。对齐 Host 已修好的 q()（apps/memoweft-host/src/server.ts:191）。
       const q = (v) => (/[#\s"]/.test(v) ? '"' + v.replace(/"/g, '\\"') + '"' : v);
       // 对话大模型（必填三项）
-      const llmBase = s(b.llmBaseUrl), llmKey = s(b.llmApiKey), llmModel = s(b.llmModel);
+      const llmBase = s(b.llmBaseUrl),
+        llmKey = s(b.llmApiKey),
+        llmModel = s(b.llmModel);
       // 写路径小模型（可选三项，整组空则整组省略）
-      const wBase = s(b.writeBaseUrl), wKey = s(b.writeApiKey), wModel = s(b.writeModel);
+      const wBase = s(b.writeBaseUrl),
+        wKey = s(b.writeApiKey),
+        wModel = s(b.writeModel);
       // 向量嵌入（可选三项，整组空则整组省略）
-      const eBase = s(b.embedBaseUrl), eKey = s(b.embedApiKey), eModel = s(b.embedModel);
+      const eBase = s(b.embedBaseUrl),
+        eKey = s(b.embedApiKey),
+        eModel = s(b.embedModel);
       const withUI = b.withExperienceUI === true;
 
-      // 必填校验：对话三项缺任一 → 报错（前端已拦，这里兜底，绝不生成半截配置）
+      // 服务端校验必填项；任一对话配置缺失时返回错误，不生成不完整配置。
       const missing = [];
       if (!llmBase) missing.push('MEMOWEFT_LLM_BASE_URL');
       if (!llmKey) missing.push('MEMOWEFT_LLM_API_KEY');
@@ -562,12 +707,16 @@ const server = createServer(async (req, res) => {
 
       // 写路径小模型：整组任一非空才写；整组空 → 省略 + 注释说明回退（回退对话大模型，行为同旧）
       if (wBase || wKey || wModel) {
-        lines.push('# ── 写路径小快模型（write · 可选）：整理事件/画像/归因走它，不拖慢更新画像 ──');
+        lines.push(
+          '# ── 写路径小快模型（write · 可选）：整理事件/画像/归因走它，不拖慢更新画像 ──',
+        );
         lines.push(`MEMOWEFT_WRITE_LLM_BASE_URL=${q(wBase)}`);
         lines.push(`MEMOWEFT_WRITE_LLM_API_KEY=${q(wKey)}`);
         lines.push(`MEMOWEFT_WRITE_LLM_MODEL=${q(wModel)}`);
       } else {
-        lines.push('# ── 写路径小快模型（write · 可选）：未配 → 写路径自动回退对话大模型（行为同旧，不崩）──');
+        lines.push(
+          '# ── 写路径小快模型（write · 可选）：未配 → 写路径自动回退对话大模型（行为同旧，不崩）──',
+        );
       }
       lines.push('');
 
@@ -578,11 +727,13 @@ const server = createServer(async (req, res) => {
         lines.push(`MEMOWEFT_EMBED_API_KEY=${q(eKey)}`);
         lines.push(`MEMOWEFT_EMBED_MODEL=${q(eModel)}`);
       } else {
-        lines.push('# ── 嵌入器（embed · 可选）：未配 → 语义召回降级为空（画像照写，只是回话不注入偏好）──');
+        lines.push(
+          '# ── 嵌入器（embed · 可选）：未配 → 语义召回降级为空（画像照写，只是回话不注入偏好）──',
+        );
       }
       lines.push('');
 
-      // 部署选项（决策5）：是否带体验界面 → 生成 MEMOWEFT_EXPERIENCE_UI=on/off（给未来带界面的宿主读）
+      // 部署选项（部署契约）：是否带体验界面 → 生成 MEMOWEFT_EXPERIENCE_UI=on/off（给未来带界面的宿主读）
       lines.push('# ── 部署选项：是否带体验界面（on=带界面 / off=纯库）──');
       lines.push(`MEMOWEFT_EXPERIENCE_UI=${withUI ? 'on' : 'off'}`);
       lines.push('');
@@ -591,91 +742,129 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 新开会话（S4b：新建并设为当前，旧会话保留、进列表可回访；已落库证据不动）。
+    // 新开会话：新建并设为当前，旧会话保留、进列表可回访；已落库证据不动。
     if (req.method === 'POST' && url.pathname === '/api/reset') {
       newSession();
       sendJson(res, 200, { ok: true, sessionId: current.id });
       return;
     }
 
-    // 会话列表（S4b）：磁盘上所有 run-s-*.jsonl → { sessionId, mtime, turnCount, preview, live, current }。
+    // 会话列表：磁盘上所有 run-s-*.jsonl → { sessionId, mtime, turnCount, preview, live, current }。
     // 空会话（只有 profile_update、没真对话）不列。开发者/当前会话由前端按 id 自己标注。
     if (req.method === 'GET' && url.pathname === '/api/sessions') {
       let files = [];
-      try { files = (await readdir(LOG_DIR)).filter((f) => /^run-s-.*\.jsonl$/.test(f)); } catch { files = []; }
+      try {
+        files = (await readdir(LOG_DIR)).filter((f) => /^run-s-.*\.jsonl$/.test(f));
+      } catch {
+        files = [];
+      }
       const list = [];
       for (const f of files) {
         const id = f.replace(/^run-/, '').replace(/\.jsonl$/, '');
         try {
           const st = await stat(join(LOG_DIR, f));
           const lg = sessions.get(id)?.logger ?? createRunLogger({ dir: LOG_DIR, sessionId: id });
-          const turns = lg.readRecent(500).filter((t) => t.kind !== 'profile_update' && t.userInput != null);
+          const turns = lg
+            .readRecent(500)
+            .filter((t) => t.kind !== 'profile_update' && t.userInput != null);
           if (turns.length === 0) continue;
-          list.push({ sessionId: id, mtime: st.mtimeMs, turnCount: turns.length, preview: String(turns[0].userInput || '').slice(0, 30), live: sessions.has(id), current: id === current.id });
-        } catch { /* 坏文件跳过 */ }
+          list.push({
+            sessionId: id,
+            mtime: st.mtimeMs,
+            turnCount: turns.length,
+            preview: String(turns[0].userInput || '').slice(0, 30),
+            live: sessions.has(id),
+            current: id === current.id,
+          });
+        } catch {
+          /* 坏文件跳过 */
+        }
       }
       list.sort((a, b) => b.mtime - a.mtime);
       sendJson(res, 200, { sessions: list, currentId: current.id });
       return;
     }
 
-    // 打开一条会话（S4b）：切当前 + 续聊种子（盘上的会重建带上下文）+ 返回历史轮供前端渲染。
+    // 打开一条会话：切当前 + 续聊种子（盘上的会重建带上下文）+ 返回历史轮供前端渲染。
     if (req.method === 'POST' && url.pathname === '/api/session/open') {
       const { id } = await readJson(req);
-      if (!id || typeof id !== 'string') { sendJson(res, 400, { error: '缺 id' }); return; }
+      if (!id || typeof id !== 'string') {
+        sendJson(res, 400, { error: '缺 id' });
+        return;
+      }
       const s = openSession(String(id));
-      const turns = s.logger.readRecent(200).filter((t) => t.kind !== 'profile_update' && t.userInput != null)
+      const turns = s.logger
+        .readRecent(200)
+        .filter((t) => t.kind !== 'profile_update' && t.userInput != null)
         .map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply }));
       sendJson(res, 200, { ok: true, sessionId: s.id, turns });
       return;
     }
 
-    // 归档一条会话（S4b）：日志文件加 .archived 后缀 → 从列表消失，但【数据不删、可恢复】（合 MemoWeft 不毁历史的调性）。
-    // 归档的若是当前会话，后端顺手新开一段（避免 current 指向已改名的文件）。
+    // 归档一条会话：日志文件加 .archived 后缀 → 从列表消失，但【数据不删、可恢复】。
+    // 如果归档当前会话，立即创建新会话，避免 current 指向已改名的文件。
     if (req.method === 'POST' && url.pathname === '/api/session/archive') {
       const { id } = await readJson(req);
-      if (!id || typeof id !== 'string') { sendJson(res, 400, { error: '缺 id' }); return; }
+      if (!id || typeof id !== 'string') {
+        sendJson(res, 400, { error: '缺 id' });
+        return;
+      }
       sessions.delete(id); // 从活跃集移除（若在）
-      try { await rename(join(LOG_DIR, `run-${id}.jsonl`), join(LOG_DIR, `run-${id}.jsonl.archived`)); } catch { /* 文件不在就算了 */ }
+      try {
+        await rename(join(LOG_DIR, `run-${id}.jsonl`), join(LOG_DIR, `run-${id}.jsonl.archived`));
+      } catch {
+        /* 文件不在就算了 */
+      }
       let archivedCurrent = false;
-      if (id === current.id) { newSession(); archivedCurrent = true; }
+      if (id === current.id) {
+        newSession();
+        archivedCurrent = true;
+      }
       sendJson(res, 200, { ok: true, currentId: current.id, archivedCurrent });
       return;
     }
 
-    // ── 便携记忆包 · 导出（Phase 5-B · 备份/迁移）──
+    // ── 导出便携记忆包（备份/迁移）──
     // 只读三层数据组包（portable/exportBundle 已做好，这里纯接线）；向量索引不入包（派生物，导入后重建）。
     // 不需要 LLM / .env。前端拿 { bundle } 后用 Blob 下载成文件。
     if (req.method === 'GET' && url.pathname === '/api/export-bundle') {
       const subjectId = url.searchParams.get('subjectId') || config.identity.subjectId;
-      const bundle = exportBundle(subjectId, { evidenceStore: store, eventStore, cognitionStore: cogStore });
+      const bundle = exportBundle(subjectId, {
+        evidenceStore: store,
+        eventStore,
+        cognitionStore: cogStore,
+      });
       sendJson(res, 200, { bundle });
       return;
     }
 
-    // ── 便携记忆包 · 导入（Phase 5-B）──
+    // ── 便携记忆包 · 导入 ──
     // mode=dryRun（安全默认）：只校验、算将写入/重复条数，不落库；mode=merge：实际写入（走 transaction 原子化）。
     // 非法包（valid=false）由 importBundle 内部拦下、绝不写库。merge 成功时提示 needsReindex：向量索引不入包，需点「更新画像」重建召回。
     if (req.method === 'POST' && url.pathname === '/api/import-bundle') {
       const mode = url.searchParams.get('mode') === 'merge' ? 'merge' : 'dryRun';
       const bundle = await readJson(req);
-      const plan = importBundle(bundle, { evidenceStore: store, eventStore, cognitionStore: cogStore, transaction }, { mode });
+      const plan = importBundle(
+        bundle,
+        { evidenceStore: store, eventStore, cognitionStore: cogStore, transaction },
+        { mode },
+      );
       const body = { plan };
       if (mode === 'merge' && plan.valid) body.needsReindex = true; // 向量索引不入包 → 建议重建召回
       sendJson(res, 200, body);
       return;
     }
 
-    // ── 恢复出厂 · 清空全部数据（体验层阶段二 · 不可逆）──
-    // 批次3 注（boundaries.md §4.3 登记的直调例外）：批量清空【保留 store 直调】——恢复出厂是整库擦除、
+    // ── 恢复出厂 · 清空全部数据（不可逆）──
+    // 批量清空【保留 store 直调】——恢复出厂是整库擦除、
     //   不是逐条管理行为；逐条走受控 API 反而会往正要清掉的审计表里再写一堆行。只用公开方法清数据 + 索引：
     //   证据 evidence：EvidenceStore 无 removeBySubject，用 all() 逐条 remove(id)（测试台单 subject，全清）。
     //   事件 event   ：eventStore.removeBySubject(subjectId) → 连带清 event_evidence 关联表。
     //   画像 cognition：cogStore.removeBySubject(subjectId) → 连带清 cognition_evidence 溯源链。
     //   检索索引     ：retriever.indexAll([]) → VectorRetriever 会 DELETE FROM vectors（空数组即清空）；
     //                  NullRetriever 为 no-op（本就无索引）。两种都安全。
-    //   审计 management_log：批次3 用户拍板「出厂=无历史」→ 连审计表一起清（managementLog.clear()）。
-    // 清完顺手 newSession()：把当前会话窗口也清掉，避免旧上下文残留（跟"＋新会话"同一动作）。
+    //   审计 management_log：出厂=无历史 → 连审计表一起清（managementLog.clear()）。
+    // 清理完成后调用 newSession()，同步清空当前会话窗口，避免旧上下文残留。
     if (req.method === 'POST' && url.pathname === '/api/factory-reset') {
       const subjectId = config.identity.subjectId;
       let evidenceRemoved = 0;
@@ -684,10 +873,16 @@ const server = createServer(async (req, res) => {
       }
       const eventRemoved = eventStore.removeBySubject(subjectId);
       const cognitionRemoved = cogStore.removeBySubject(subjectId);
-      const auditRemoved = stores.managementLog.clear(); // 出厂=无历史（批次3 用户拍板）
+      const auditRemoved = stores.managementLog.clear(); // 出厂=无历史
       await retriever.indexAll([]); // 清空向量索引（空召回时无副作用）
-      newSession(); // 顺手清当前会话窗口（不留旧上下文）
-      sendJson(res, 200, { ok: true, evidenceRemoved, eventRemoved, cognitionRemoved, auditRemoved });
+      newSession(); // 同步清空当前会话窗口，不保留旧上下文
+      sendJson(res, 200, {
+        ok: true,
+        evidenceRemoved,
+        eventRemoved,
+        cognitionRemoved,
+        auditRemoved,
+      });
       return;
     }
 
@@ -697,21 +892,27 @@ const server = createServer(async (req, res) => {
   }
 });
 
-// 部署选项（决策5·做法B）：.env 里 MEMOWEFT_EXPERIENCE_UI=off → 不起网页（只把 MemoWeft 当库用）。
+// 部署选项（部署契约·做法B）：.env 里 MEMOWEFT_EXPERIENCE_UI=off → 不起网页（只把 MemoWeft 当库用）。
 // 只改展示层：显式等于 'off' 才拦；其它值（含未设）照常 listen。env 早已由上面 loadLLMPool() 触发的
-// process.loadEnvFile() 读入；此处再兜底读一次（loadEnvFile 幂等，无 .env 时抛错被忽略），确保 listen 前可读。
-try { process.loadEnvFile(); } catch { /* 没有 .env 或已加载，忽略 */ }
+// 再次调用幂等的 process.loadEnvFile()，确保 listen 前环境变量可用；无 .env 时忽略错误。
+try {
+  process.loadEnvFile();
+} catch {
+  /* 没有 .env 或已加载，忽略 */
+}
 if (process.env.MEMOWEFT_EXPERIENCE_UI === 'off') {
   console.log('\n  体验界面已在 .env 关闭（MEMOWEFT_EXPERIENCE_UI=off），未启动网页。');
-  console.log('  （把它当库 import 即可；想起网页请改回 on 或删掉该行，再跑 npm run experience）\n');
+  console.log(
+    '  （把它当库 import 即可；想起网页请改回 on 或删掉该行，再跑 npm run experience）\n',
+  );
 } else {
-// 只绑 127.0.0.1（本机回环）：本服务无鉴权、直接读写个人画像/对话等隐私数据，
-// 且配置向导会经 HTTP 明文传 API key。若不指定 host，Node 默认绑 ::/0.0.0.0，
-// 同网段任何人都能读全部画像、发起对话、截明文 key。只开本机，杜绝这条外网面。
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`\n  MemoWeft 测试台（阶段 1：画像 + 召回）→ http://localhost:${PORT}`);
-  console.log(`  证据库 → ${DB_PATH}`);
-  console.log(`  运行日志 → ${LOG_DIR}\\run-${current.id}.jsonl`);
-  console.log('  (Ctrl+C 停止)\n');
-});
+  // 只绑 127.0.0.1（本机回环）：本服务无鉴权、直接读写个人画像/对话等隐私数据，
+  // 且配置向导会经 HTTP 明文传 API key。若不指定 host，Node 默认绑 ::/0.0.0.0，
+  // 同网段任何人都能读全部画像、发起对话、截明文 key。只开本机，杜绝这条外网面。
+  server.listen(PORT, '127.0.0.1', () => {
+    console.log(`\n  MemoWeft 测试台：画像 + 召回 → http://localhost:${PORT}`);
+    console.log(`  证据库 → ${DB_PATH}`);
+    console.log(`  运行日志 → ${LOG_DIR}\\run-${current.id}.jsonl`);
+    console.log('  (Ctrl+C 停止)\n');
+  });
 }

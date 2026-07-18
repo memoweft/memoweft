@@ -2,22 +2,45 @@
   "name": "@memoweft/adapter-openai-agents",
   "version": "0.1.0",
   "description": "OpenAI Agents SDK adapter for MemoWeft — inject long-term memory via RunConfig.callModelInputFilter (recall) and persist the user's turn + tool results by wrapping run() (write).",
-  "keywords": ["openai-agents", "openai", "agents", "memoweft", "memory", "llm", "run-config"],
+  "keywords": [
+    "openai-agents",
+    "openai",
+    "agents",
+    "memoweft",
+    "memory",
+    "llm",
+    "run-config"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
-  "files": ["dist/**/*.js", "dist/**/*.d.ts", "README.md", "README.zh-CN.md"],
-  "engines": { "node": ">=20" },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.map",
+    "examples/**/*.ts",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/memoweft/memoweft.git",
     "directory": "packages/adapter-openai-agents"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"tests/**/*.test.ts\"",
@@ -26,7 +49,7 @@
   },
   "peerDependencies": {
     "@openai/agents": "^0.13",
-    "memoweft": "^0.5.0 || ^0.6.0"
+    "memoweft": "^0.6.0"
   },
   "devDependencies": {
     "@openai/agents": "^0.13",

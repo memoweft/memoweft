@@ -1,4 +1,4 @@
-"""逐位对拍 deriveFormedBy(shared/parity/formed-by.json):deriveOne 全分支 + 取最弱 + 空集→None。"""
+"""验证 deriveFormedBy 全部分支、最低可信载体选择及空集语义的跨语言一致性。"""
 from __future__ import annotations
 
 from typing import Any

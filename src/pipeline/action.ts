@@ -1,9 +1,9 @@
 /**
- * 回话（地图 cell 4 ⑦）：带最近几轮上下文 + 注入召回到的相关认知，调一次模型。
+ * 回话：带最近几轮上下文 + 注入召回到的相关认知，调一次模型。
  *
- * 阶段 1b：把召回的画像条目（带把握度 / 可信状态）放进 system，让模型"懂这个用户"。
- * 纪律：把握度透明给模型（cell 8 规则 7）——低置信的明确标出，别当定论。
- * 边界（cell 9）：MemoWeft 只给理解；语气 / 角色由宿主定，这里用最朴素的 prompt。
+ * b：把召回的画像条目（带把握度 / 可信状态）放进 system，让模型"懂这个用户"。
+ * 纪律：把握度透明给模型（public contract）——低置信的明确标出，别当定论。
+ * 边界（public contract）：MemoWeft 只给理解；语气 / 角色由宿主定，这里用最朴素的 prompt。
  */
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import type { Turn } from './workingMemory.ts';
@@ -43,7 +43,7 @@ export async function reply(
   recent: Turn[],
   relevant: RelevantCognition[],
   llm: LLMClient,
-  systemPrompt?: string, // 宿主可注入人设/框定（cell 9：语气·角色归宿主）；缺省=库内最朴素提示（按语言取）
+  systemPrompt?: string, // 宿主可注入人设/框定（public contract：语气·角色归宿主）；缺省=库内最朴素提示（按语言取）
 ): Promise<ReplyResult> {
   const lang = resolveLang();
   const sys = systemPrompt ?? REPLY_PROMPT.text[lang];

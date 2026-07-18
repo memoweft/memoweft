@@ -1,7 +1,7 @@
 {
   "name": "memoweft",
   "version": "0.6.0",
-  "description": "换个模型，AI 就把用户忘光了。MemoWeft 给 AI 助手一块带得走的长期记忆——而且不把猜的当真的。Long-term memory for AI assistants: portable across models, and it keeps facts and guesses apart.",
+  "description": "Portable, traceable long-term memory for AI applications that keeps evidence, inference, and conflicts distinct.",
   "keywords": [
     "llm",
     "agent",
@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/memoweft/memoweft#readme",
   "type": "module",
+  "packageManager": "npm@11.12.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -39,6 +40,7 @@
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
+    "dist/**/*.map",
     "README.md",
     "README.zh-CN.md",
     "CHANGELOG.md",
@@ -77,7 +79,6 @@
     "dev:core": "tsc -p tsconfig.build.json --watch",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
-  "dependencies": {},
   "peerDependencies": {
     "better-sqlite3": ">=9"
   },
@@ -95,5 +96,9 @@
     "typescript-eslint": "^8.0.0",
     "prettier": "^3.0.0"
   },
-  "_comment": "依赖最小化：runtime dependencies 必须为空——'零运行时依赖'指这个。better-sqlite3 是【可选 peer 依赖】（Node 20/22 才需要，装不装用户自己定），可选 peer 不算破戒。devDependencies 里的 better-sqlite3 仅供多版本测试矩阵用（Node 24 默认走内置 node:sqlite，测零依赖路径时会 rm 掉它）。存储 / HTTP / 日志优先 Node 内置（node:sqlite、node:http、node:fs）；新增 runtime 依赖须有明确理由，默认拒绝。"
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "tests"
+  }
 }

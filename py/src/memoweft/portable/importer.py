@@ -1,4 +1,4 @@
-"""导入便携记忆包 —— 移植自 src/portable/importBundle.ts(P2-旁 完整 ImportPlan 语义)。
+"""导入便携记忆包，并保持 TypeScript importBundle 的完整 ImportPlan 语义。
 
 保真 + 幂等 + 不污染:
   - 保真:按【原 id 与时间戳】落库(store.insert),溯源链不丢。
@@ -83,7 +83,7 @@ def import_bundle(
     transaction: Optional[Transaction] = None,
     mode: ImportMode = "merge",
 ) -> ImportPlan:
-    """对齐 importBundle.ts:45-193。"""
+    """按共享便携包契约生成并执行导入计划。"""
     lang = resolve_lang()
     validation = validate_bundle(bundle)
     plan = ImportPlan(
@@ -204,7 +204,7 @@ def import_bundle(
             transaction(write)
         else:
             write()
-    except Exception as e:  # 无事务无法回滚 → 收进 errors + 提示,不把裸异常抛给调用方
+    except Exception as e:  # 将写入错误归入 ImportPlan；无事务时同时报告可能存在的部分写入。
         plan.valid = False
         plan.errors.append(f"导入写入失败：{e}" if lang == "zh" else f"Import write failed: {e}")
         if transaction is None:

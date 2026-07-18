@@ -1,32 +1,28 @@
-# MemoWeft Nightly · 真实模型质量线(Phase 2 test:live + 检索真实臂)
-#
-# 分工(PROJECT_PLAN §15.4):CI 主干 = 确定性(不注入 secrets);nightly + 本地 = 真实模型 = 真实性。
-# 本文件触发:schedule 每日 + 手动 workflow_dispatch。
-#   `npm run test:live` 编排三条腿:live e2e + 固化真实臂(全量 42 场景) + 检索真实臂。
-#   固化跑【全量 42 场景】(实测 82–141s/场景,约 77 分钟);故 job 设 timeout-minutes: 150(含 e2e)。
-#   embed secrets 可选:不配则检索真实臂【大声跳过】(本地 Ollama 端点在 CI 不可达),不算失败。
-#   缺 LLM secrets → test:live 前置检查 exit 1(不再 --if-present 空跑保绿)。
-# 真实 key 由 GitHub secrets 注入(MEMOWEFT_LLM_* 必需 / MEMOWEFT_EMBED_* 可选),CI 只引用 secret 名、绝不写死。
+# Scheduled live-model verification. Deterministic checks remain in ci.yml;
+# this workflow exercises the configured model and optional embedding endpoints.
 
 name: Nightly Live
 
 on:
   schedule:
-    - cron: '0 18 * * *' # 每日 UTC 18:00
+    - cron: '0 18 * * *' # Daily at 18:00 UTC.
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   live:
-    name: 真实模型端到端 (test:live)
+    name: Live model verification
     runs-on: ubuntu-latest
-    # 全量固化约 77 分钟 + live e2e + 检索真实臂;给足余量。
+    # Full live-model evaluation plus retrieval checks.
     timeout-minutes: 150
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Setup Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '24'
           cache: 'npm'
@@ -34,7 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # test:live 编排三腿:缺 LLM secrets → 前置检查 exit 1;固化全量 42;embed 未配 → 检索真实臂大声跳过。
       - name: Live tests (test:live)
         run: npm run test:live
         env:
@@ -45,10 +40,9 @@ jobs:
           MEMOWEFT_EMBED_API_KEY: ${{ secrets.MEMOWEFT_EMBED_API_KEY }}
           MEMOWEFT_EMBED_MODEL: ${{ secrets.MEMOWEFT_EMBED_MODEL }}
 
-      # 产物可查(失败也要能看):上传 bench/runs/ 下的 *-live.* 报告与机读 JSON。
       - name: Upload live run artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-live-runs
           path: bench/runs/

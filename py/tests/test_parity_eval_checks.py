@@ -1,6 +1,6 @@
-"""§15.3 eval 判定纯函数 parity:check_structural / parse_yes_no 与 TS(shared/parity/eval-checks.json)一致。
+""" eval 判定纯函数 parity:check_structural / parse_yes_no 与 TS(shared/parity/eval-checks.json)一致。
 
-外加 harness 冒烟:run_scenario 用 stub llm 真跑写路径 + score_gists 的 conflict 确定性硬判(不调 judge)(P2-10)。
+外加 harness 冒烟：run_scenario 用 stub llm 实际执行写路径 + score_gists 的 conflict 确定性硬判（不调 judge）。
 """
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ def test_parse_yes_no_matches_ts() -> None:
 
 
 def test_run_scenario_smoke_and_structural_green() -> None:
-    """harness 能真跑写路径:stub llm(① distill 摘要 ② consolidate JSON)→ 结构判定全绿。"""
+    """harness 能实际执行写路径：stub llm（① distill 摘要 ② consolidate JSON）→ 结构判定全绿。"""
     scenario: dict[str, Any] = {
         "id": "SMOKE-01", "lang": "zh", "discipline": "fact-vs-belief",
         "messages": [{"sourceKind": "spoken", "rawContent": "我每天喝咖啡"}],

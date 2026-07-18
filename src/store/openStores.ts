@@ -1,11 +1,11 @@
 /**
- * 一条连接、三个 store、一个事务器——让写路径的多步、多表写能原子化（地图 cell 4 写路径一致性）。
+ * 一条连接、三个 store、一个事务器，使写路径的多步、多表写保持原子性。
  *
  * 为什么要它：三个 store 若各开各的 DatabaseSync 连接，SQLite 事务是【按连接】的，
  *   一条 BEGIN/COMMIT 跨不了两条连接——consolidate 既写 cognition 又写 event（markConsolidated），
  *   分在两条连接上就没法一起原子化。本函数让三个 store【共用一条连接】，于是 transaction() 能把它们的写一起提交/回滚。
  *
- * ⚠️ transaction 只包【同步】写：LLM 调用是异步网络请求，别把 await 塞进 transaction(fn)——
+ * ⚠️ transaction 只包【同步】写：LLM 调用是异步网络请求，不得在 transaction(fn) 中 await——
  *   既不该攥着写锁等网络，交错的 await 还会踩坏事务边界。写路径的正确用法是：先 await 拿到模型输出，
  *   再把随后的【同步写一段】交给 transaction（见 consolidation/consolidate.ts）。
  */
@@ -15,8 +15,14 @@ import { SqliteEvidenceStore, type EvidenceStore } from '../evidence/store.ts';
 import { SqliteEventStore, type EventStore } from '../event/store.ts';
 import { SqliteCognitionStore, type CognitionStore } from '../cognition/store.ts';
 import { SqliteManagementLog, type ManagementLog } from '../memory/managementLog.ts';
-import { SqliteInteractionContextStore, type InteractionContextStore } from '../interaction/interactionContextStore.ts';
-import { SqliteSemanticResolutionStore, type SemanticResolutionStore } from '../interaction/semanticResolutionStore.ts';
+import {
+  SqliteInteractionContextStore,
+  type InteractionContextStore,
+} from '../interaction/interactionContextStore.ts';
+import {
+  SqliteSemanticResolutionStore,
+  type SemanticResolutionStore,
+} from '../interaction/semanticResolutionStore.ts';
 import { runMigrations } from './migrations.ts';
 import { BUSY_TIMEOUT_MS } from './busyTimeout.ts';
 import type { Transaction } from './transaction.ts';
@@ -29,11 +35,11 @@ export interface StoreBundle {
   evidenceStore: EvidenceStore;
   eventStore: EventStore;
   cognitionStore: CognitionStore;
-  /** 受控管理审计日志（批次2）：core.memory.* 的每个操作在此留痕（op/target/reason/detail）。 */
+  /** 受控管理审计日志：core.memory.* 的每个操作在此留痕（op/target/reason/detail）。 */
   managementLog: ManagementLog;
-  /** 交互上下文（v0.6·D-0034）：一段用户可见上下文的快照，供理解短回答；不产 Cognition、永不成证据。 */
+  /** 交互上下文（v0.6）：一段用户可见上下文的快照，供理解短回答；不产 Cognition、永不成证据。 */
   interactionContextStore: InteractionContextStore;
-  /** 语义解析（v0.6·D-0034）：一条证据的语义解析；Phase 1 只建表，写路径 Phase 2 resolver 接。 */
+  /** 语义解析（v0.6）：一条证据的语义解析；只建表，写路径由 resolver 接入。 */
   semanticResolutionStore: SemanticResolutionStore;
   /** 把一段【同步】写包进一个事务（可重入）。传给 consolidate / updateProfile 即让其写入原子化。 */
   transaction: Transaction;
@@ -43,30 +49,38 @@ export interface StoreBundle {
 
 /**
  * 开一条连接，装好三个 store 与事务器。dbPath 传文件路径或 ':memory:'。
- * @param cfg 可注入配置（P2-5 config 去单例）：不传 = 用全局单例；透给 evidence store 作 put 补授权默认。
- * @param clock 可注入时钟（Phase 4）：透给三个 store 作落库/更新时间源；缺省真实系统时间。
+ * @param cfg 可注入配置（config 去单例）：不传 = 用全局单例；透给 evidence store 作 put 补授权默认。
+ * @param clock 可注入时钟：透给三个 store 作落库/更新时间源；缺省真实系统时间。
  */
-export function openStores(dbPath: string, cfg?: MemoWeftConfig, clock: Clock = systemClock): StoreBundle {
+export function openStores(
+  dbPath: string,
+  cfg?: MemoWeftConfig,
+  clock: Clock = systemClock,
+): StoreBundle {
   // schema 版本化：开库【前】判 fresh——新库（文件不存在 / :memory:）store 会建最新 schema、直接盖最新版；
   //   已存在的老库（如 npm 上的 0.1.0 库）走 runMigrations 从 user_version 升上来（见 migrations.ts）。
   const fresh = dbPath === ':memory:' || !existsSync(dbPath);
   const db = new DatabaseSync(dbPath);
-  // 并发保底：写锁被别的进程占着时最多等 BUSY_TIMEOUT_MS 再报 SQLITE_BUSY，而不是立刻裸抛。
+  // 并发保护：写锁被其他进程占用时最多等待 BUSY_TIMEOUT_MS，再报告 SQLITE_BUSY，而不是立即抛出。
   //   三个 store 共用这条连接，故只在此设一次；共享连接分支的 store 不重复设。
   db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
   // 建库/迁移期间任何一步抛错（如降级防护拒绝打开未来版本的库），都要【关掉这条连接】再抛，
   //   否则连接泄漏——文件被锁、下次打不开也删不掉（Windows EPERM）。
-  let evidenceStore: EvidenceStore, eventStore: EventStore, cognitionStore: CognitionStore, managementLog: ManagementLog;
-  let interactionContextStore: InteractionContextStore, semanticResolutionStore: SemanticResolutionStore;
+  let evidenceStore: EvidenceStore,
+    eventStore: EventStore,
+    cognitionStore: CognitionStore,
+    managementLog: ManagementLog;
+  let interactionContextStore: InteractionContextStore,
+    semanticResolutionStore: SemanticResolutionStore;
   try {
     // 三个 store 都接同一条连接（构造里会各自 CREATE TABLE IF NOT EXISTS + 迁移，幂等）。
     // 只有 evidence store 的 put 会读 config 补授权默认，故只把 cfg 透给它（event/cognition 不读 config）。
     evidenceStore = new SqliteEvidenceStore(db, cfg, clock);
     eventStore = new SqliteEventStore(db, clock);
     cognitionStore = new SqliteCognitionStore(db, clock);
-    // 审计表也挂共享连接（批次2）：管理操作的"改数据 + 落审计"能包进同一个事务、全成或全滚。
+    // 审计表也挂共享连接：管理操作的"改数据 + 落审计"能包进同一个事务、全成或全滚。
     managementLog = new SqliteManagementLog(db, clock);
-    // 交互层两表也挂共享连接（v0.6·D-0034）：构造里 CREATE TABLE IF NOT EXISTS，fresh 与老库两条路径都建、
+    // 交互层两表也挂共享连接（v0.6）：构造里 CREATE TABLE IF NOT EXISTS，fresh 与老库两条路径都建、
     //   被 migrations.test 的 schema 签名收敛测试兜住（同 management_log，不进 formal migrations）。
     interactionContextStore = new SqliteInteractionContextStore(db, clock);
     semanticResolutionStore = new SqliteSemanticResolutionStore(db, clock);

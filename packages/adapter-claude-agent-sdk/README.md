@@ -2,17 +2,24 @@
 
 > 中文版 · [README.zh-CN.md](./README.zh-CN.md)
 
+> [!IMPORTANT]
+> **Unreleased source preview.** This adapter is not published on npm. Its package name resolves inside this repository's npm workspace only.
+
 **Claude Agent SDK adapter for [MemoWeft](https://github.com/memoweft/memoweft).** Give your Claude Agent SDK app long-term memory through **hooks**: **read** = recall relevant memory and inject it into the turn; **write** = persist the user's own words and each tool result.
 
 This is an **external integration package**. It wraps MemoWeft's public Core facade (`createMemoWeftCore`) — it does not touch Core internals. `@anthropic-ai/claude-agent-sdk` is a peer dependency (bring your own).
 
-## Install
+## Try from a source checkout
 
 ```bash
-npm i @anthropic-ai/claude-agent-sdk memoweft @memoweft/adapter-claude-agent-sdk
+git clone https://github.com/memoweft/memoweft.git
+cd memoweft
+npm ci
+npm run build
+npm run build --workspace @memoweft/adapter-claude-agent-sdk
 ```
 
-`@anthropic-ai/claude-agent-sdk` `^0.3.207` and `memoweft` `^0.5.0` are peer dependencies.
+`@anthropic-ai/claude-agent-sdk` `^0.3.207` and `memoweft` `^0.5.1 || ^0.6.0` are peer dependencies.
 
 ## One factory, two hooks, three paths
 
@@ -34,16 +41,16 @@ for await (const msg of query({
 }
 ```
 
-- **`UserPromptSubmit`** does two things per turn. First it **stores the user's original words** (`core.ingestUserMessage`, a `spoken` evidence). Then it **recalls** relevant memory and injects it via the hook's return value (`hookSpecificOutput.additionalContext`). Because injection travels through the return value and never mutates `input.prompt`, the stored words never contain the injected memory — clean *by construction*.
-- **`PostToolUse`** stores each **tool result** (`core.ingestToolResult`, a `tool` evidence). It reads **only** `tool_response` and `tool_use_id` — it never reads or references `tool_input` (the model's call intent is not evidence; AD-3 / iron rule 3a, enforced in code).
+- **`UserPromptSubmit`** does two things per turn. First it **stores the user's original words** (`core.ingestUserMessage`, a `spoken` evidence). Then it **recalls** relevant memory and injects it via the hook's return value (`hookSpecificOutput.additionalContext`). Because injection travels through the return value and never mutates `input.prompt`, the stored words never contain the injected memory — clean _by construction_.
+- **`PostToolUse`** stores each **tool result** (`core.ingestToolResult`, a `tool` evidence). It reads **only** `tool_response` and `tool_use_id` — it never reads or references `tool_input`, so the model's call intent cannot become evidence.
 
-The injected block uses MemoWeft's own neutral wording (ported verbatim from Core's `knowledgeBlock`). Low-confidence items are explicitly marked *"only guesses — do not treat as established facts."* The adapter **adds no persona / character prompt** of its own.
+The injected block uses MemoWeft's own neutral wording (ported verbatim from Core's `knowledgeBlock`). Low-confidence items are explicitly marked _"only guesses — do not treat as established facts."_ The adapter **adds no persona / character prompt** of its own.
 
-## Privacy hard constraint (D-0024)
+## Privacy hard constraint
 
 `provenance` (evidence text + authorization bits), `contentType`, `score`, and `id` **never** enter the injected `additionalContext`. `buildKnowledgeBlock` uses only `content` / `confidence` / `credStatus`. The richer recall surface is handed to the host **only** through the `onRecall` callback, so the host can filter before forwarding anything to a cloud model.
 
-## Degradation (§16.2)
+## Degradation
 
 - Recall is bounded by `recallTimeoutMs` (default 200ms). On timeout or error the turn proceeds **without injection** — recall failure never blocks the reply. The read path does not retry.
 - Writes (`ingest`) retry once on failure; a still-failing write is logged (if a `logger` is provided) and swallowed. Nothing is ever thrown to the SDK.

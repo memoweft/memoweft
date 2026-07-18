@@ -1,6 +1,6 @@
-"""逐位对拍 hashEmbedder(shared/parity/hash-embedder.json):fnv1a32 / tokenize / embed。
+"""验证 hashEmbedder 与 shared/parity/hash-embedder.json 的跨语言一致性。
 
-fnv1a32(parity 杀手②:Math.imul 32位)与 tokenize 逐位精确;embed 向量因 L2 归一化的浮点除法用极紧 tol。
+fnv1a32 与 tokenize 必须逐值一致；embed 向量仅为 L2 归一化的浮点差异保留严格容差。
 """
 from __future__ import annotations
 

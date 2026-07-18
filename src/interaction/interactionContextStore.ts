@@ -1,8 +1,8 @@
 /**
- * 交互上下文存储层(v0.6 · D-0034)。
+ * 交互上下文存储层。
  *
  * 挂 openStores 的共享连接(与三层 store 同连接,才能同事务);单测可传路径 / ':memory:' 自开连接。
- * 只存「某段用户可见上下文」,**不产 Cognition、永不成为证据**(铁律 3a);内容永不进 consolidate 的 support 白名单。
+ * 只存「某段用户可见上下文」；不生成 Cognition，也不作为证据摄入；内容永不进 consolidate 的 support 白名单。
  *
  * 幂等:record 按 context_hash 写入前查重(非 DB 唯一约束——避免便携包跨库导入时同内容不同 id 撞约束)。
  */
@@ -126,19 +126,23 @@ export class SqliteInteractionContextStore implements InteractionContextStore {
   }
 
   all(subjectId?: string): InteractionContext[] {
-    const rows = (
-      subjectId
-        ? this.db
-            .prepare('SELECT * FROM interaction_context WHERE subject_id = ? ORDER BY created_at ASC, rowid ASC')
-            .all(subjectId)
-        : this.db.prepare('SELECT * FROM interaction_context ORDER BY created_at ASC, rowid ASC').all()
-    ) as unknown as Row[];
+    const rows = (subjectId
+      ? this.db
+          .prepare(
+            'SELECT * FROM interaction_context WHERE subject_id = ? ORDER BY created_at ASC, rowid ASC',
+          )
+          .all(subjectId)
+      : this.db
+          .prepare('SELECT * FROM interaction_context ORDER BY created_at ASC, rowid ASC')
+          .all()) as unknown as Row[];
     return rows.map(fromRow);
   }
 
   byConversation(conversationId: string): InteractionContext[] {
     const rows = this.db
-      .prepare('SELECT * FROM interaction_context WHERE conversation_id = ? ORDER BY created_at ASC, rowid ASC')
+      .prepare(
+        'SELECT * FROM interaction_context WHERE conversation_id = ? ORDER BY created_at ASC, rowid ASC',
+      )
       .all(conversationId) as unknown as Row[];
     return rows.map(fromRow);
   }
@@ -148,7 +152,9 @@ export class SqliteInteractionContextStore implements InteractionContextStore {
   }
 
   removeBySubject(subjectId: string): number {
-    const r = this.db.prepare('DELETE FROM interaction_context WHERE subject_id = ?').run(subjectId);
+    const r = this.db
+      .prepare('DELETE FROM interaction_context WHERE subject_id = ?')
+      .run(subjectId);
     return Number(r.changes);
   }
 

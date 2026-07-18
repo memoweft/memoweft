@@ -1,5 +1,5 @@
 /**
- * 公共 API 快照生成器(PROJECT_PLAN.md 第 13 章 · 铁律 2 的机器强制)。
+ * Public API snapshot generator.
  *
  * 为什么不直接读 dist/index.d.ts:src/index.ts 全是 re-export,index.d.ts 只剩
  * `export { X } from "./..."`,抓不到类型【形状】(字段改名/增删看不出)。
@@ -33,7 +33,13 @@ let _source = null;
 function build() {
   const cfg = ts.readConfigFile(join(ROOT, 'tsconfig.json'), ts.sys.readFile);
   const parsed = ts.parseJsonConfigFileContent(cfg.config, ts.sys, ROOT);
-  const options = { ...parsed.options, noEmit: true, declaration: false, declarationMap: false, sourceMap: false };
+  const options = {
+    ...parsed.options,
+    noEmit: true,
+    declaration: false,
+    declarationMap: false,
+    sourceMap: false,
+  };
   const program = ts.createProgram([ENTRY], options);
   _checker = program.getTypeChecker();
   _source = program.getSourceFile(ENTRY);
@@ -44,7 +50,9 @@ function build() {
 function isPublicProp(p) {
   const decls = p.getDeclarations() ?? [];
   if (decls.length === 0) return true;
-  return !decls.some((d) => ts.getCombinedModifierFlags(d) & (ts.ModifierFlags.Private | ts.ModifierFlags.Protected));
+  return !decls.some(
+    (d) => ts.getCombinedModifierFlags(d) & (ts.ModifierFlags.Private | ts.ModifierFlags.Protected),
+  );
 }
 
 /** 渲染一个类型:对象类型一层展开(调用/构造签名 + 公共属性),其余(联合/基元/字面量)用 typeToString。 */
@@ -54,8 +62,10 @@ function renderType(type) {
     return checker.typeToString(type, _source, FLAGS);
   }
   const parts = [];
-  for (const sig of type.getCallSignatures()) parts.push(checker.signatureToString(sig, _source, FLAGS) + ';');
-  for (const sig of type.getConstructSignatures()) parts.push('new ' + checker.signatureToString(sig, _source, FLAGS) + ';');
+  for (const sig of type.getCallSignatures())
+    parts.push(checker.signatureToString(sig, _source, FLAGS) + ';');
+  for (const sig of type.getConstructSignatures())
+    parts.push('new ' + checker.signatureToString(sig, _source, FLAGS) + ';');
   const propLines = checker
     .getPropertiesOfType(type)
     .filter(isPublicProp)
@@ -78,7 +88,8 @@ function renderSymbol(sym) {
   if (s.flags & ts.SymbolFlags.Alias) s = checker.getAliasedSymbol(s);
   const f = s.flags;
   if (f & (ts.SymbolFlags.Interface | ts.SymbolFlags.Class | ts.SymbolFlags.Enum)) {
-    const kind = f & ts.SymbolFlags.Class ? 'class' : f & ts.SymbolFlags.Enum ? 'enum' : 'interface';
+    const kind =
+      f & ts.SymbolFlags.Class ? 'class' : f & ts.SymbolFlags.Enum ? 'enum' : 'interface';
     return `${kind} ${name} ${renderType(checker.getDeclaredTypeOfSymbol(s))}`;
   }
   if (f & ts.SymbolFlags.TypeAlias) {
@@ -118,15 +129,15 @@ export function generateSnapshot() {
     })
     .sort();
   const header =
-    '// MemoWeft 公共 API 快照 —— 机读冻结基准(PROJECT_PLAN.md 第 13 章)。\n' +
-    '// 禁止手改;合法变更走 `npm run api:update`(需影响面说明 + 人类批准 + D-xxxx)。\n\n';
+    '// MemoWeft public API snapshot — generated compatibility baseline.\n' +
+    '// Do not edit by hand; update intentional API changes with `npm run api:update`.\n\n';
   return normalize(header + lines.join('\n'));
 }
 
 const WARN =
-  '\n⚠️  公共 API 快照已刷新。铁律 2:公共 API 变更需要\n' +
-  '    影响面说明(动机/破坏性/调用方与两个适配器的迁移路径) + 人类批准 + D-xxxx,三者缺一不可。\n' +
-  '    同一 commit 内应含:代码 + 刷新的快照 + 更新的 docs/memory-surface-contract.md + CHANGELOG 条目。\n';
+  '\n⚠️  Public API snapshot refreshed.\n' +
+  '    Review compatibility, callers, adapters, documentation, and migration impact before committing.\n' +
+  '    Keep the implementation, snapshot, API contract, and changelog in the same change.\n';
 
 // CLI 入口
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

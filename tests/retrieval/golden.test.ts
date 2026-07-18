@@ -1,13 +1,12 @@
 /**
- * 黄金检索集结构校验（Phase 1 · §14.2「黄金检索集与基线」）。
+ * 黄金检索集结构校验。
  *
- * 这份测试**不测召回质量**（那是 bench/eval-retrieval 的活），只锁死 golden.json 的
+ * 这份测试**不测召回质量**（由独立评估工具负责），只锁死 golden.json 的
  * 结构不变量——让它作为一份可复现、可信赖的评测基准，任何后续手改都不会悄悄破坏它。
  *
- * golden.json 由**人工从真实语料底稿派生**（scout 核实的身份/偏好/项目/状态素材），
- * 严禁用任何现有向量检索输出反向生成（自我偏置，见 §14.2「构建方法」）。
+ * golden.json 是完全合成的虚构人物数据；期望 id 独立于被测检索器输出生成。
  *
- * 逐条断言对应任务书验收点（编号见每个 test 名）：
+ * 逐条断言对应检验点：
  *   ① 所有 case.expect 的 id 都存在于 cognitions
  *   ② cognitions id 唯一、case id 唯一
  *   ③ 每条 cognition 至少被一条 case 覆盖
@@ -16,7 +15,7 @@
  *   ⑤ 中文 case（query 含 CJK/汉字）≥10
  *   ⑥ case 数 ∈[50,100]、cognition 数 ∈[30,45]
  *   ⑦ contentType 覆盖 ≥6 种
- * 附加结构守卫（与 §14.2 JSON schema 一致）：id 命名规范、kind/contentType 取值合法。
+ * 附加结构守卫（与公开 JSON schema 一致）：id 命名规范、kind/contentType 取值合法。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,14 +23,7 @@ import { readFileSync } from 'node:fs';
 
 // ---- 类型形状（仅用于本测试的可读性，运行时被 Node 类型擦除）----
 type ContentType =
-  | 'fact'
-  | 'preference'
-  | 'goal'
-  | 'project'
-  | 'state'
-  | 'trait'
-  | 'hypothesis'
-  | 'trend';
+  'fact' | 'preference' | 'goal' | 'project' | 'state' | 'trait' | 'hypothesis' | 'trend';
 type Kind = 'direct' | 'paraphrase' | 'multihop';
 
 interface Cognition {
@@ -191,5 +183,8 @@ test('⑤ 中文 case（query 含汉字）≥10', () => {
 
 test('⑦ contentType 覆盖 ≥6 种', () => {
   const types = new Set(cognitions.map((c) => c.contentType));
-  assert.ok(types.size >= 6, `contentType 覆盖应 ≥6 种，实为 ${types.size}：${[...types].join(',')}`);
+  assert.ok(
+    types.size >= 6,
+    `contentType 覆盖应 ≥6 种，实为 ${types.size}：${[...types].join(',')}`,
+  );
 });

@@ -1,5 +1,5 @@
 /**
- * SQLite 驱动选择（T6 步1 收敛 + 步2 加 better-sqlite3 兜底）。
+ * SQLite 驱动选择：优先 node:sqlite，并为旧版 Node 提供 better-sqlite3 回退。
  *
  * 全库【只此一处】接触底层 SQLite 实现（node:sqlite 与 better-sqlite3）。收敛的意义：
  *   - 其余消费文件改成从 `./driver.ts` 引接口类型 + 从这里引 `DatabaseSync` 构造器，
@@ -7,16 +7,16 @@
  *   - 加载走 `createRequire(import.meta.url)` 的【同步 require】：node:sqlite 是内置模块、
  *     better-sqlite3 是 CJS 原生模块，两者都能同步 require、失败能 catch——保持全链同步
  *     （不引入 await，不破坏 openStores/createMemoWeftCore 的同步 API），
- *     同时把"当前 Node 两个驱动都没有"变成一句人话错误，而不是链接阶段的裸崩。
+ *     同时在两个驱动都不可用时提供可执行的配置错误，而不是暴露底层模块加载异常。
  *
  * ⚠ 顶层【急切】执行：解析驱动的选择链写在模块顶层（不是等 openStores 调用时才做）。
  *   这样 `import 'memoweft'`（其入口链会 new VectorRetriever / 走 openStores，间接 import 本模块）
- *   本身就触发人话错误——这是步2 验收"Node 20 未装 better-sqlite3 时 import 就报人话错误"所依赖的设计。
+ *   本身就会报告驱动缺失，使不兼容环境在导入阶段得到明确的修复建议。
  *
  * 选择顺序（零依赖优先）：
  *   1. node:sqlite 可用 → 用它（Node ≥24 默认，零 runtime 依赖）。
  *   2. 否则试 better-sqlite3（Node 20/22 需 `npm i better-sqlite3`；可选 peer 依赖）。
- *   3. 都不可用 → 抛人话错误，给两条出路（升 Node ≥24 / 装 better-sqlite3）。
+ *   3. 都不可用 → 抛出可执行的配置错误（升级 Node ≥24 或安装 better-sqlite3）。
  *
  * 测试钩子：环境变量 `MEMOWEFT_TEST_DRIVER=better-sqlite3` 可强制走 better-sqlite3 分支
  *   （多版本测试矩阵的 Node 22 job 用它验第二驱动）。仅测试用，生产别设。
@@ -72,7 +72,7 @@ interface DriverPick {
 }
 
 /**
- * 选择链（顶层急切执行）：node:sqlite 优先（零依赖），不可用再试 better-sqlite3，都不行抛人话错误。
+ * 选择链（顶层执行）：node:sqlite 优先（零依赖），不可用再试 better-sqlite3；均不可用时报告配置错误。
  * `MEMOWEFT_TEST_DRIVER=better-sqlite3` 时跳过 node:sqlite、直接要 better-sqlite3（测试矩阵用）。
  */
 function pickDriver(): DriverPick {

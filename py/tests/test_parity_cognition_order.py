@@ -1,6 +1,6 @@
 """cognition all/active 排序 parity:Python insert 同一认知集 → id 序与 TS golden 一致。
 
-钉 ORDER BY confidence DESC, created_at ASC + active 排除 invalid/archived(侦察点名 Phase 1b 未覆盖此序)。
+验证 ORDER BY confidence DESC, created_at ASC，并确保 active 排除 invalid/archived。
 """
 from __future__ import annotations
 

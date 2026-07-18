@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage questions and ideas
+    url: https://github.com/memoweft/memoweft/discussions
+    about: Ask for help, share an integration, or discuss an idea before opening an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/memoweft/memoweft/security/advisories/new
+    about: Send sensitive security reports privately. Do not open a public issue.

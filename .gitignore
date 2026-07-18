@@ -1,16 +1,15 @@
-# ── Secrets — NEVER commit ──
+# Secrets
 .env
 .env.local
 .env.*.local
 *.pem
 *.key
 
-# ── Local user data (evidence / profiles / conversations) ──
+# Local user data
 *.db
 *.db-journal
 *.sqlite
 dla.db
-# 例外：冻结的迁移测试 fixture（真 0.1.0 schema，供"无损升级"测试，别忽略）
 !tests/fixtures/*.db
 testbench/*.db
 testbench/seed-*.ps1
@@ -19,24 +18,27 @@ logs/
 *.db-shm
 *.db-wal
 
-# ── Build output ──
+# Build output and dependencies
 dist/
 coverage/
 *.tsbuildinfo
-
-# ── Dependencies ──
 node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# ── OS / editor cruft ──
+# Editors and operating systems
 .DS_Store
 Thumbs.db
 *.log
 .idea/
 .vscode/
 
-# ── Local tooling / scratch (never commit) ──
+# Local tooling and scratch space
 mcp-publisher*
-dogfood*.mjs
 tmp/
 temp/
 scratch/
@@ -45,37 +47,10 @@ scratch/
 task-logs/
 worklogs/
 debug-output/
-
-# ── AI/tool operation history ──
-.agent_logs/
-.agents/logs/
-.agents/history/
-.claude/logs/
-.claude/history/
-.claude/transcripts/
-.claude/sessions/
-.cursor/logs/
-
-# ── Unrelated local artifacts / generated output (never commit) ──
 artifacts/
 site/
 *.mp4
 
-# ── bench 部分跑产物（PARTIAL RUN，不入库；全量基线 consolidation-baseline.* 仍提交） ──
-# 只忽略 <date>-<sha>-consolidation-<...>.{md,json}；既有 bench/runs/2026-07-10-retrieval-ablation.md 不受影响。
-bench/runs/*-consolidation-*.json
-bench/runs/*-consolidation-*.md
-
-# ── test:live 产物（Phase 2 §15.4：nightly 编排 test:live 时落 bench/runs/*-live.*，可查但不入库） ──
-# 覆盖 <date>-<sha>-consolidation-live.* 与 <date>-<sha>-retrieval-live.*；既有 *-retrieval-ablation.md 不受影响。
-bench/runs/*-live.md
-bench/runs/*-live.json
-
-# ── 公开基准数据 + 冒烟产物（Phase 6 §19）──
-# LoCoMo 是 CC BY-NC 4.0：数据【绝不入库、绝不打进包】,只发聚合分数;经 LOCOMO_PATH 指向本地副本。
+# Benchmark datasets and generated run artifacts
 bench/data/
-bench/runs/*-locomo-*.md
-bench/runs/*-locomo-*.json
-# LongMemEval_S:数据自查许可,同样【绝不入库】,经 LONGMEMEVAL_PATH 指向本地副本;runs 只发聚合分、留本地。
-bench/runs/*-longmemeval*.md
-bench/runs/*-longmemeval*.json
+bench/runs/

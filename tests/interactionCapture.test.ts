@@ -1,9 +1,9 @@
 /**
- * 交互上下文捕获（v0.6 · D-0034）：裸 ingestUserMessage 路的会话上下文 + episode + 结构墙。
+ * 交互上下文捕获（v0.6）：裸 ingestUserMessage 路的会话上下文 + episode + 结构墙。
  *
  * 重点验证【头号问题修复】：weftmate 全走裸 ingestUserMessage、从不经 Conversation 路 —— 让 core 承担上下文管理后，
  *   上一轮 AI（经 recordAssistantReply 报告）能被下一轮 ingest 捕获进 preceding_ai_context → distill 注入生效。
- * 并守结构墙（3a）：AI 文本永不经 listEvidence / exportBundle 的证据泄漏。全离线（distill 用 stub LLM）。
+ * 并验证助手输出排除：AI 文本永不经 listEvidence / exportBundle 作为证据泄漏。全离线（distill 用 stub LLM）。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -48,23 +48,34 @@ test('裸 ingest 路端到端：上一轮 AI（recordAssistantReply）→ 下一
   };
   const core = createMemoWeftCore({ dbPath: ':memory:', llm: stub });
   try {
-    await core.ingestUserMessage({ content: '你好', conversationId: 'c1', occurredAt: '2026-07-16T08:00:00.000Z' });
+    await core.ingestUserMessage({
+      content: '你好',
+      conversationId: 'c1',
+      occurredAt: '2026-07-16T08:00:00.000Z',
+    });
     core.recordAssistantReply({ conversationId: 'c1', content: '你喜欢爬山吧?' });
-    await core.ingestUserMessage({ content: '是的', conversationId: 'c1', occurredAt: '2026-07-16T08:01:00.000Z' });
+    await core.ingestUserMessage({
+      content: '是的',
+      conversationId: 'c1',
+      occurredAt: '2026-07-16T08:01:00.000Z',
+    });
     try {
       await core.updateProfile(); // distill 时已捕获输入；consolidate/attribute 的 stub 非 JSON 无产出（不影响本断言）
     } catch {
       /* 忽略下游步骤错误，distill 输入已在 captured */
     }
     const all = captured.join('\n');
-    assert.ok(all.includes('你喜欢爬山吧?'), 'distill 输入带上一轮 AI 上文（裸 ingest 路捕获生效 = 头号问题修复）');
+    assert.ok(
+      all.includes('你喜欢爬山吧?'),
+      'distill 输入带上一轮 AI 上文（裸 ingest 路捕获生效 = 头号问题修复）',
+    );
     assert.ok(all.includes('是的'), 'distill 输入带用户原话');
   } finally {
     core.close();
   }
 });
 
-test('结构墙（3a）：上一轮 AI 文本不经 exportBundle 证据泄漏；却作为 interaction_context 合法保存', async () => {
+test('助手输出排除：上一轮 AI 文本不经 exportBundle 作为证据泄漏，但可保存为 interaction_context', async () => {
   const core = createMemoWeftCore({ dbPath: ':memory:' });
   try {
     await core.ingestUserMessage({ content: '你好', conversationId: 'c1' });
@@ -74,9 +85,15 @@ test('结构墙（3a）：上一轮 AI 文本不经 exportBundle 证据泄漏；
     const bundle = core.portable.exportBundle();
     // 只有两条用户证据；AI 回复没变成证据
     assert.equal(bundle.data.evidence.length, 2, 'recordAssistantReply 的 AI 回复不落证据');
-    assert.ok(!JSON.stringify(bundle.data.evidence).includes('你喜欢爬山吧?'), 'AI 文本不在任何证据（结构墙）');
+    assert.ok(
+      !JSON.stringify(bundle.data.evidence).includes('你喜欢爬山吧?'),
+      'AI 文本不在任何证据（结构墙）',
+    );
     // interaction_context 落了库，且含 AI 文本（合法——它是上下文、不是证据）
-    assert.ok(bundle.data.interactionContexts && bundle.data.interactionContexts.length >= 1, 'interaction_context 落库');
+    assert.ok(
+      bundle.data.interactionContexts && bundle.data.interactionContexts.length >= 1,
+      'interaction_context 落库',
+    );
     const ctxText = JSON.stringify(bundle.data.interactionContexts);
     assert.ok(ctxText.includes('你喜欢爬山吧?'), 'AI 文本在 interaction_context（合法上下文）');
     assert.ok(ctxText.includes('是的'), '本轮用户话也在上下文快照');
@@ -91,7 +108,11 @@ test('不带 conversationId：行为同旧（不落 interaction_context、preced
     await core.ingestUserMessage({ content: '我喜欢喝茶' });
     const bundle = core.portable.exportBundle();
     assert.equal(bundle.data.evidence.length, 1);
-    assert.equal((bundle.data.interactionContexts ?? []).length, 0, '无 conversationId → 不落交互上下文');
+    assert.equal(
+      (bundle.data.interactionContexts ?? []).length,
+      0,
+      '无 conversationId → 不落交互上下文',
+    );
   } finally {
     core.close();
   }
@@ -100,7 +121,9 @@ test('不带 conversationId：行为同旧（不落 interaction_context、preced
 test('recordAssistantReply：未 ingest 过的会话 → 静默略过（不崩）', () => {
   const core = createMemoWeftCore({ dbPath: ':memory:' });
   try {
-    assert.doesNotThrow(() => core.recordAssistantReply({ conversationId: 'never', content: 'hi' }));
+    assert.doesNotThrow(() =>
+      core.recordAssistantReply({ conversationId: 'never', content: 'hi' }),
+    );
   } finally {
     core.close();
   }
@@ -123,7 +146,11 @@ test('便携包往返：interaction_context 导出→导入→再导出 一致',
   try {
     const plan = dst.portable.importBundle(bundle, { mode: 'merge' });
     assert.equal(plan.valid, true);
-    assert.equal(plan.counts.interactionContexts, bundle.data.interactionContexts.length, '导入交互上下文条数一致');
+    assert.equal(
+      plan.counts.interactionContexts,
+      bundle.data.interactionContexts.length,
+      '导入交互上下文条数一致',
+    );
     const round = dst.portable.exportBundle();
     assert.deepEqual(
       (round.data.interactionContexts ?? []).map((c) => c.id).sort(),

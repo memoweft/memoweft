@@ -1,5 +1,5 @@
 /**
- * 体验插件注册表 · v1（架构归位·批次5「做插件」）。
+ * 体验插件注册表。
  *
  * 把两个体验插件（普通助手 / 星瑶）登记在一处，给 server.ts 一个统一的取用口：
  *   - getExperience(id)：按 id 取插件，未知 id 回退普通助手（plain）——切换端点/env 都靠它兜底。
@@ -19,7 +19,7 @@ const REGISTRY: Record<string, MemoWeftPlugin> = {
   [xingyao.id]: xingyao,
 };
 
-/** 全部已注册插件（传给 createMemoWeftCore 让 Core 烧 hook；experience 类无 hook 是 no-op，供插件管理 UI 枚举）。 */
+/** 全部已注册插件。传给 createMemoWeftCore 以启用插件钩子；experience 类没有钩子，仅供插件管理界面枚举。 */
 export const ALL_PLUGINS: MemoWeftPlugin[] = Object.values(REGISTRY);
 
 /** 兜底体验：任何未知 id 都回退到它（普通助手最中性、最不会出错）。 */
@@ -48,11 +48,18 @@ export function listExperiences(): Array<{ id: string; name: string }> {
 }
 
 /** 列出全部已注册插件（供插件管理 UI）：id/name/type + 声明的权限名。不外泄 systemPrompt 原文。 */
-export function listPlugins(): Array<{ id: string; name: string; type: string; permissions: string[] }> {
+export function listPlugins(): Array<{
+  id: string;
+  name: string;
+  type: string;
+  permissions: string[];
+}> {
   return Object.values(REGISTRY).map((p) => ({
     id: p.id,
     name: p.name,
     type: p.type,
-    permissions: p.permissions ? Object.keys(p.permissions).filter((k) => (p.permissions as Record<string, boolean>)[k]) : [],
+    permissions: p.permissions
+      ? Object.keys(p.permissions).filter((k) => (p.permissions as Record<string, boolean>)[k])
+      : [],
   }));
 }

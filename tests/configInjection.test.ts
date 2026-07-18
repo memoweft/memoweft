@@ -1,5 +1,5 @@
 /**
- * config 注入（P2-5 config 去单例）：验证「同进程可跑两套配置、互不干扰」，且不传 config 时行为同旧、全局单例不被改动。
+ * config 注入：验证同一进程可运行两套互不干扰的配置，且省略 config 时不修改全局单例。
  * 纯离线，用假 LLM。
  */
 import { test } from 'node:test';
@@ -13,7 +13,12 @@ import { SqliteEvidenceStore } from '../src/evidence/store.ts';
 import type { ChatMessage, LLMClient } from '../src/llm/client.ts';
 
 test('config 注入 · 纯函数：同输入不同 cfg → 不同结果；不传=单例；单例不被改', () => {
-  const inputs = { contentType: 'preference', formedBy: 'stated', supportCount: 1, contradictCount: 0 } as const;
+  const inputs = {
+    contentType: 'preference',
+    formedBy: 'stated',
+    supportCount: 1,
+    contradictCount: 0,
+  } as const;
   const singletonResult = computeConfidence(inputs); // 缺省=单例
 
   const cfgLow = structuredClone(config);
@@ -21,16 +26,33 @@ test('config 注入 · 纯函数：同输入不同 cfg → 不同结果；不传
   const cfgHigh = structuredClone(config);
   cfgHigh.consolidation.baseByFormedBy.stated = 900;
 
-  assert.ok(computeConfidence(inputs, cfgLow) < computeConfidence(inputs, cfgHigh), '不同注入配置 → 不同把握度');
+  assert.ok(
+    computeConfidence(inputs, cfgLow) < computeConfidence(inputs, cfgHigh),
+    '不同注入配置 → 不同把握度',
+  );
   assert.equal(computeConfidence(inputs), singletonResult, '不传 cfg 仍走单例、结果不变');
-  assert.equal(config.consolidation.baseByFormedBy.stated, 600, '全局单例未被注入调用改动（仍为出厂 600）');
+  assert.equal(
+    config.consolidation.baseByFormedBy.stated,
+    600,
+    '全局单例未被注入调用改动（仍为出厂 600）',
+  );
 });
 
 test('config 注入 · 端到端：同进程两套配置跑 consolidate，把握度各按各的算、互不干扰', async () => {
   const mk = (subjectId: string, base: number) => {
     const s = openStores(':memory:');
-    const ev = s.evidenceStore.put({ subjectId, sourceKind: 'spoken', hostId: 't', rawContent: '我喜欢喝茶' });
-    s.eventStore.put({ subjectId, summary: '聊了茶', occurredAt: ev.occurredAt, evidenceIds: [ev.id] });
+    const ev = s.evidenceStore.put({
+      subjectId,
+      sourceKind: 'spoken',
+      hostId: 't',
+      rawContent: '我喜欢喝茶',
+    });
+    s.eventStore.put({
+      subjectId,
+      summary: '聊了茶',
+      occurredAt: ev.occurredAt,
+      evidenceIds: [ev.id],
+    });
     const llm: LLMClient = {
       callCount: 0,
       async chat(_msgs: ChatMessage[]): Promise<string> {
@@ -44,11 +66,28 @@ test('config 注入 · 端到端：同进程两套配置跑 consolidate，把握
   const A = mk('a', 900);
   const B = mk('b', 150);
   try {
-    const ra = await consolidate('a', { eventStore: A.s.eventStore, evidenceStore: A.s.evidenceStore, cognitionStore: A.s.cognitionStore, llm: A.llm, transaction: A.s.transaction, config: A.cfg });
-    const rb = await consolidate('b', { eventStore: B.s.eventStore, evidenceStore: B.s.evidenceStore, cognitionStore: B.s.cognitionStore, llm: B.llm, transaction: B.s.transaction, config: B.cfg });
+    const ra = await consolidate('a', {
+      eventStore: A.s.eventStore,
+      evidenceStore: A.s.evidenceStore,
+      cognitionStore: A.s.cognitionStore,
+      llm: A.llm,
+      transaction: A.s.transaction,
+      config: A.cfg,
+    });
+    const rb = await consolidate('b', {
+      eventStore: B.s.eventStore,
+      evidenceStore: B.s.evidenceStore,
+      cognitionStore: B.s.cognitionStore,
+      llm: B.llm,
+      transaction: B.s.transaction,
+      config: B.cfg,
+    });
     assert.equal(ra.created.length, 1);
     assert.equal(rb.created.length, 1);
-    assert.ok(ra.created[0]!.confidence > rb.created[0]!.confidence, '注入的高 base → 更高把握度；两套配置同进程互不干扰');
+    assert.ok(
+      ra.created[0]!.confidence > rb.created[0]!.confidence,
+      '注入的高 base → 更高把握度；两套配置同进程互不干扰',
+    );
     assert.equal(config.consolidation.baseByFormedBy.stated, 600, '全局单例不受影响');
   } finally {
     A.s.close();
@@ -75,8 +114,18 @@ test('config 注入 · evidence store 按注入配置补授权默认：同进程
   const openStore = new SqliteEvidenceStore(':memory:', openCfg);
   const privStore = new SqliteEvidenceStore(':memory:', privCfg);
   try {
-    const e1 = openStore.put({ subjectId: 'u', sourceKind: 'spoken', hostId: 't', rawContent: 'x' });
-    const e2 = privStore.put({ subjectId: 'u', sourceKind: 'spoken', hostId: 't', rawContent: 'x' });
+    const e1 = openStore.put({
+      subjectId: 'u',
+      sourceKind: 'spoken',
+      hostId: 't',
+      rawContent: 'x',
+    });
+    const e2 = privStore.put({
+      subjectId: 'u',
+      sourceKind: 'spoken',
+      hostId: 't',
+      rawContent: 'x',
+    });
     assert.equal(e1.allowCloudRead, true, '非隐私配置 → 默认可上云');
     assert.equal(e2.allowCloudRead, false, '隐私配置 → 默认不上云（同进程两套配置互不干扰）');
   } finally {

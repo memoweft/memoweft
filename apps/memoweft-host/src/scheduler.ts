@@ -1,11 +1,11 @@
 /**
- * 后台画像更新调度器（Host 自建模块，架构归位·批次5 步1）。
+ * 后台画像更新调度器（Host 自建模块）。
  *
- * 这是【Host 职责】，不塞进 Core（蓝图 §3.3）：`core.updateProfile()` 本体在 Core，
+ * 这是 Host 职责，不属于 Core：`core.updateProfile()` 的实现位于 Core，
  * 但"什么时候调、攒够几条调、空闲多久调"是宿主的调度策略。语义移植自
  * testbench 的 scheduleBackgroundUpdate（server.mjs），重写成 Host 干净版、去掉调试落盘。
  *
- * 治"勤"（核心①）：别一聊完就更新画像——写路径是重活、要调几次模型。
+ * 写路径需要多次模型调用，因此对话完成后先累计待处理数量，再按批量或空闲阈值更新画像。
  *   - 攒够 config.profileUpdate.batchSize 条新对话 → 立即排更新（清掉空闲计时）。
  *   - 否则重置空闲计时，歇够 config.profileUpdate.idleMinutes 没新消息 → 更新一次。
  *   - 两者先到先触发。
@@ -14,9 +14,9 @@
  */
 import { config } from 'memoweft';
 
-/** 一条【本轮新增理解】的精简信号（S1 记忆气泡就地织进聊天流用）。
+/** 一条【本轮新增理解】的精简信号（记忆气泡就地织进聊天流用）。
  *  只带够织气泡的最小三样：id（去重）/ content（气泡正文）/ credStatus（把握度档，前端映射到用户词）。
- *  不塞整段画像——只新增几条，气泡够用即可（蓝图 步6 · 分歧点1）。 */
+ *  不塞整段画像——只新增几条，气泡够用即可。 */
 export interface NewCognitionNote {
   id: string;
   content: string;
@@ -35,7 +35,7 @@ export interface LastUpdateSummary {
   reinforced: number;
   corrected: number;
   conflicted: number;
-  /** 本轮新增理解的精简列表（S1 记忆气泡用）：只 id/content/credStatus，不塞整段画像。
+  /** 本轮新增理解的精简列表（记忆气泡用）：只 id/content/credStatus，不塞整段画像。
    *  前端轮询 bg-status 发现新的（按 id 去重、记住已织过的）就织进聊天流。 */
   newCognitions: NewCognitionNote[];
 }
@@ -53,7 +53,7 @@ export interface BgStatus {
 /** 调度器依赖：只要 Core 的 updateProfile 一个能力（其余状态自持）。 */
 export interface SchedulerDeps {
   /** 触发一次画像整理（内部即 core.updateProfile()）。
-   *  created 是本轮新增认知（取 id/content/credStatus 供 S1 气泡；其余 UpdateProfileResult 字段这里用不到，宽松结构即可）。 */
+   *  created 是本轮新增认知（取 id/content/credStatus 供气泡；其余 UpdateProfileResult 字段这里用不到，宽松结构即可）。 */
   updateProfile: () => Promise<{
     consolidated: {
       created: Array<{ id: string; content: string; credStatus: string }>;
@@ -66,7 +66,7 @@ export interface SchedulerDeps {
 
 /** refreshNow() 的返回：用户"立即整理"完的即时结果（供 /api/refresh 透出，前端提示"新增几条"）。 */
 export interface RefreshOutcome {
-  /** 真跑成功；false = 后台正忙、这次没抢到单飞锁（前端提示"正在整理中，稍等"）。 */
+  /** 实际执行成功；false = 后台正忙、这次没抢到单飞锁（前端提示"正在整理中，稍等"）。 */
   ran: boolean;
   /** 成功时的本轮摘要（= 最新的 lastUpdate）；ran=false 时为 null。 */
   summary: LastUpdateSummary | null;
@@ -91,7 +91,7 @@ export function createProfileScheduler(deps: SchedulerDeps): ProfileScheduler {
   let bgTimer: ReturnType<typeof setTimeout> | null = null;
   let lastUpdate: LastUpdateSummary | null = null;
 
-  /** 真跑一次整理（持单飞锁）。正忙返回 false（调用方决定重排），成功返回 true。 */
+  /** 实际执行一次整理（持单飞锁）。正忙返回 false（调用方决定重排），成功返回 true。 */
   async function runUpdate(): Promise<boolean> {
     if (profileUpdating) return false; // 正忙 → 不并发
     profileUpdating = true;
@@ -104,9 +104,13 @@ export function createProfileScheduler(deps: SchedulerDeps): ProfileScheduler {
         reinforced: c.reinforced,
         corrected: c.corrected,
         conflicted: c.conflicted,
-        // S1 信号：本轮新增理解的精简列表（id 去重 / content 织气泡 / credStatus 定档）。
+        // 信号：本轮新增理解的精简列表（id 去重 / content 织气泡 / credStatus 定档）。
         //   只带这几条新增的，不塞整段画像；前端按 id 去重、记住已织过的，别重复织。
-        newCognitions: c.created.map((x) => ({ id: x.id, content: x.content, credStatus: x.credStatus })),
+        newCognitions: c.created.map((x) => ({
+          id: x.id,
+          content: x.content,
+          credStatus: x.credStatus,
+        })),
       };
       return true;
     } finally {
@@ -122,10 +126,13 @@ export function createProfileScheduler(deps: SchedulerDeps): ProfileScheduler {
       if (!ok) {
         // 单飞锁被占着 → 过 10s 再排（不清 pendingSinceUpdate，这批还没整理）。
         if (bgTimer) clearTimeout(bgTimer);
-        bgTimer = setTimeout(() => { bgTimer = null; void trigger(); }, 10_000);
+        bgTimer = setTimeout(() => {
+          bgTimer = null;
+          void trigger();
+        }, 10_000);
         return;
       }
-      // 成功 → 只扣掉本次消化的那批（before），保留 await 期间新到的 turn（别把最新一句抹掉、迟迟不进画像）。
+      // 成功后只扣除本次处理的数量（before），保留 await 期间新增的 turn，确保后续进入画像。
       pendingSinceUpdate = Math.max(0, pendingSinceUpdate - before);
     } catch (e) {
       // 一次 LLM 网络抖动不该崩服务；聊天不受影响，等下一批再试。
@@ -138,11 +145,17 @@ export function createProfileScheduler(deps: SchedulerDeps): ProfileScheduler {
       pendingSinceUpdate++;
       const { batchSize, idleMinutes } = config.profileUpdate;
       if (pendingSinceUpdate >= batchSize) {
-        if (bgTimer) { clearTimeout(bgTimer); bgTimer = null; } // 攒够一批 → 立刻排，清空闲计时
+        if (bgTimer) {
+          clearTimeout(bgTimer);
+          bgTimer = null;
+        } // 攒够一批 → 立刻排，清空闲计时
         void trigger();
       } else {
         if (bgTimer) clearTimeout(bgTimer); // 又聊了 → 重置空闲计时
-        bgTimer = setTimeout(() => { bgTimer = null; void trigger(); }, idleMinutes * 60_000);
+        bgTimer = setTimeout(() => {
+          bgTimer = null;
+          void trigger();
+        }, idleMinutes * 60_000);
       }
     },
     async refreshNow() {
@@ -152,10 +165,13 @@ export function createProfileScheduler(deps: SchedulerDeps): ProfileScheduler {
       const before = pendingSinceUpdate; // 快照：updateProfile 的 await 期间可能有新 turn 累加计数
       const ok = await runUpdate();
       if (!ok) return { ran: false, summary: null };
-      // 成功：只扣掉本次消化的那批（before），保留 await 期间新到的 turn 计数（别把最新一句抹掉、迟迟不进画像）。
+      // 成功后只扣除本次处理的数量（before），保留 await 期间新增的 turn 计数，确保后续进入画像。
       pendingSinceUpdate = Math.max(0, pendingSinceUpdate - before);
       // 只有真攒空了才清空闲计时；若 await 期间有新 turn（计数仍 >0），保留它的 idle 兜底、别断了。
-      if (pendingSinceUpdate === 0 && bgTimer) { clearTimeout(bgTimer); bgTimer = null; }
+      if (pendingSinceUpdate === 0 && bgTimer) {
+        clearTimeout(bgTimer);
+        bgTimer = null;
+      }
       return { ran: true, summary: lastUpdate };
     },
 
@@ -163,7 +179,10 @@ export function createProfileScheduler(deps: SchedulerDeps): ProfileScheduler {
       return { profileUpdating, pendingSinceUpdate, lastUpdate };
     },
     dispose() {
-      if (bgTimer) { clearTimeout(bgTimer); bgTimer = null; }
+      if (bgTimer) {
+        clearTimeout(bgTimer);
+        bgTimer = null;
+      }
     },
   };
 }

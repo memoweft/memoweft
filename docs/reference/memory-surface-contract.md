@@ -1,341 +1,185 @@
-# MemoWeft Memory Surface Contract v1
-
-**English** | [简体中文](./memory-surface-contract.zh-CN.md)
-
-> For hosts (the side that does `import 'memoweft'`). This is a **promise document** to the host: what you can rely on, what not to touch, and what happens when a promise is broken.
-> Single source of truth. Peer to `INSTALL` / `integration.md`; hosts read it directly.
-> Belongs to: overall plan Step 2; the shared foundation for Step 7's plugin contract and Step 10's 1.0 API lock-down.
-
-## Table of Contents
-
-- [How to read this contract (three tiers + break policy)](#how-to-read-this-contract-three-tiers--break-policy)
-- [I. Facade methods chapter (26 host-facing methods)](#i-facade-methods-chapter-26-host-facing-methods)
-  - [1.0 Factory](#10-factory)
-  - [1.1 Facade top-level 9 methods (`MemoWeftCore.*`)](#11-facade-top-level-9-methods-memoweftcore)
-  - [1.2 `core.memory` (controlled memory management API, 11 methods)](#12-corememory-controlled-memory-management-api-11-methods)
-  - [1.3 `core.portable` (portable memory bundle, 3 methods)](#13-coreportable-portable-memory-bundle-3-methods)
-  - [1.4 `core.graph` (graph view, 1 method)](#14-coregraph-graph-view-1-method)
-- [II. Key data shapes chapter (≥30 items)](#ii-key-data-shapes-chapter-30-items)
-  - [2.1 Three-layer persistence shapes (stable)](#21-three-layer-persistence-shapes-stable)
-  - [2.2 Input shapes of the facade methods](#22-input-shapes-of-the-facade-methods)
-  - [2.3 Return shapes of the facade methods](#23-return-shapes-of-the-facade-methods)
-  - [2.4 Management API input/output shapes](#24-management-api-inputoutput-shapes)
-  - [2.5 Bundle shapes](#25-bundle-shapes)
-  - [2.6 Graph payload shapes](#26-graph-payload-shapes)
-  - [2.7 Perception input shapes](#27-perception-input-shapes)
-  - [2.8 Version / config](#28-version--config)
-- [III. Implicit contract chapter (the pitfalls hosts most easily step on)](#iii-implicit-contract-chapter-the-pitfalls-hosts-most-easily-step-on)
-- [IV. experimental list chapter (a consolidated list of "will change later")](#iv-experimental-list-chapter-a-consolidated-list-of-will-change-later)
-- [V. Breaking-change policy (pre-1.0, moderately loose)](#v-breaking-change-policy-pre-10-moderately-loose)
-  - [5.1 What counts as "breaking stable"](#51-what-counts-as-breaking-stable)
-  - [5.2 The three requirements for breaking stable](#52-the-three-requirements-for-breaking-stable)
-  - [5.3 Enum value-adding rule](#53-enum-value-adding-rule)
-  - [5.4 experimental surface (loose rule)](#54-experimental-surface-loose-rule)
-  - [5.5 internal surface](#55-internal-surface)
-- [VI. Questionable symbol tiering (conclusions confirmed back to source)](#vi-questionable-symbol-tiering-conclusions-confirmed-back-to-source)
-- [VII. Adapter degradation semantics (§16.2)](#vii-adapter-degradation-semantics-162)
-- [VIII. Recall v2 adapter surface and the MCP mute tool](#viii-recall-v2-adapter-surface-and-the-mcp-mute-tool)
+# MemoWeft public API contract
 
----
+Applies to `memoweft` 0.6.x. This document describes the application-facing surface returned by `createMemoWeftCore()` and the behavior callers can rely on.
 
-## How to read this contract (three tiers + break policy)
-
-**Three stability tiers**:
-
-- **stable**: the host relies on it day-to-day, it is already collected behind the facade, and its shape is settled. Promise: "won't be changed casually."
-- **experimental**: exported, the host may touch it, but **explicitly stated to change**; changing it is not a broken promise (a one-line CHANGELOG mention is enough).
-- **internal**: implementation pieces already collected behind the facade, that the host has no reason to touch. Still exported (deletion belongs to Step 10), but **don't depend on them**.
-
-**Policy for breaking stable (pre-1.0, moderately loose)**:
-
-- **What counts as a break**: renaming a field / deleting a field / changing nullability / changing semantics (e.g. `confidence` units).
-- **Cost**: allowed to break in a minor version, but you must ① mark it clearly in the CHANGELOG ② give a one-line migration note (old→new, how to change) ③ where the old name can be kept, provide an `@deprecated` alias (follow the `DLA_VERSION` / `DlaConfig` template). **Not required to "keep it for a whole version before deleting."**
-- **Adding enum values is not a break**: **adding new values** to `SourceKind` / `ContentType` / `CredStatus` etc. is not a break; **narrowing (deleting values) is a break**. Hosts **must keep a `default` fallback branch** for these enums (missing a branch is the host's responsibility, see implicit contract item 10).
-- **experimental surface**: change freely in a minor version, a one-line CHANGELOG mention is enough, no migration note owed.
-
----
-
-## I. Facade methods chapter (26 host-facing methods)
-
-The host's main entry point is `createMemoWeftCore(options)`; after getting the `MemoWeftCore` facade, it does its work through the facade's methods and three sub-namespaces (`memory` / `portable` / `graph`). **Do not bypass the facade and directly assemble the underlying `Sqlite*Store` / operators.**
-
-Count: `createMemoWeftCore`(1) + facade top-level 9 + `core.memory` 11 + `core.portable` 3 + `core.graph` 1 = **25**. All **stable**.
-
-### 1.0 Factory
-
-#### `createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore` — **stable**
-- **Input** `CreateCoreOptions`: `dbPath` (required), `llm?` (`LLMPool | LLMClient`), `embedder?`, `retriever?`, `config?`, `vectorDbPath?`.
-- **Returns**: the `MemoWeftCore` facade (the 9 top-level methods described below + `memory`/`portable`/`graph`/`health`/`close`).
-- **Implicit contract**: **a core can be built even without `.env`** — missing model config does not crash; only paths that actually call a model degrade/error (see implicit contract item 9). `vectorDbPath` defaults to the same store as `dbPath`; the existing contract of one vector instance per subject is unchanged.
-- Basis: `src/core/createCore.ts:39-52` (input), `:155-174` (assembly degradation).
-
-### 1.1 Facade top-level 10 methods (`MemoWeftCore.*`)
-
-| Method | Input | Returns | Tier | Implicit behavior contract |
-|---|---|---|---|---|
-| `ingestUserMessage(input)` | `UserMessageInput` | `Promise<Evidence>` | stable | Stores `spoken` evidence, only stores and does not reply (the "store" half of "store first, then reply"). |
-| `ingestObservation(input)` | `ObservationInput` | `Promise<Evidence[]>` | stable | Stores `observed` evidence, **does not upload to cloud by default**; idempotent via `originId`; returns what was **newly persisted** this time (idempotent hits are not included). |
-| `ingestToolResult(input)` | `ToolResultInput` | `Promise<Evidence>` | stable | Stores one tool-execution **result payload** as `tool` evidence (AD-3/D-0013), **does not upload to cloud by default** (`config.toolDefaults`); idempotent via `originId`. Only the tool's returned output is ingested — never the model's tool-call intent/arguments (iron rule 3a). To make a stored `tool` evidence cloud-readable, go through `memory.updateEvidenceAuthorization` (audited), not the ingest path. |
-| `recall(input)` | `RecallInput` | `Promise<RecalledCognition[]>` | stable | Shares recall semantics with the same segment as `Conversation` (invalid/archived/out-of-scope/decay gating all apply). |
-| `handleConversationTurn(input)` | `ConversationInput` | `Promise<TurnOutcome>` | stable | Store evidence → recall → reply; same `conversationId` reuses the instance, window is continuous; `systemPrompt`/`seedTurns` only take effect when the instance is first created (see implicit contract item 4). |
-| `dropConversation(conversationId)` | `string` | `void` | stable | Drops the active conversation instance in memory (does not touch the store); the next call with the same id rebuilds it (at which point new `systemPrompt`/`seedTurns` take effect); a nonexistent id is silently skipped. Also drops the conversation's `InteractionSession` context window (v0.6/D-0034). |
-| `recordAssistantReply(input)` | `RecordAssistantReplyInput` | `void` | stable | v0.6/D-0034: a host running its own agent loop reports the AI reply to core; it is pushed into the conversation's `InteractionSession` window as follow-on context so the next `ingestUserMessage` with the same `conversationId` captures it as the "previous AI turn" (into `preceding_ai_context`). **Into the window only — never persisted as evidence** (iron rule 3a). A `conversationId` not yet ingested is silently skipped. |
-| `updateProfile(input?)` | `UpdateProfileInput` | `Promise<UpdateProfileResult>` | stable | One-shot distill→consolidate→attribute→rebuild recall index. A failed index rebuild does not roll back the profile (`indexError` reports the cause). |
-| `health()` | — | `HealthReport` | stable | Judged from the **parts this core actually holds**, not re-checking env: `llmReady`=holds a real conversation client; `embedReady`=holds a vector recaller. An injected stub/empty recaller is judged false. |
-| `close()` | — | `void` | stable | Closes the shared connection + self-created vector store connection; **an injected retriever is the caller's to manage and is not touched**. |
-
-Basis: `src/core/createCore.ts:120-145` (interface), `:181-287` (implementation).
-
-### 1.2 `core.memory` (controlled memory management API, 11 methods)
-
-Write operations all carry `reason` (required, goes into the audit table); read-only listing does not write audit records. Default `subjectId` = `config.identity.subjectId` (v1 single-person single-host).
-
-| Method | Input | Returns | Tier | Implicit behavior contract |
-|---|---|---|---|---|
-| `invalidateCognition(input)` | `InvalidateCognitionInput` | `Cognition \| null` | stable | Marks invalid (`invalidAt=now`) + audit; returns `null` if nonexistent (no audit). |
-| `updateEvidenceAuthorization(input)` | `UpdateEvidenceAuthorizationInput` | `Evidence \| null` | stable | Changes authorization bits + audit (detail records before/after); returns `null` if nonexistent; **a zero-change returns as-is with no audit record**. |
-| `removeEvidenceSafely(input)` | `RemoveEvidenceSafelyInput` | `RemoveEvidenceResult` | stable | Has references and not `force` → refused, returns impact set; `force` → deletes evidence + clears links + audit within a transaction. `removed=false && blockers empty = nonexistent` (see implicit contract item 7). |
-| `removeCognitionSafely(input)` | `RemoveCognitionSafelyInput` | `RemoveCognitionResult` | stable | Deletes cognition together with its provenance chain + audit; audit detail **stores only metadata, not the original content**. |
-| `mergeCognition(input)` | `MergeCognitionInput` | `MergeCognitionResult` | stable | Same subject only; source chain moved to target (deduplicated), target confidence recomputed, source marked invalid rather than hard-deleted. Source/target nonexistent, cross-subject, target already invalid/already archived → **throws** (changes nothing). |
-| `archiveCognition(input)` | `ArchiveCognitionInput` | `Cognition \| null` | stable | Archives (`archivedAt=now`) + audit; recall skips archived; data retained and recoverable; returns `null` if nonexistent. |
-| `muteCognition(input)` | `MuteCognitionInput` | `Cognition \| null` | stable | D-0023 recall negative feedback: `muted:true`→`mutedAt=now` (**recall skips it, but it stays active and keeps evolving the profile** — unlike archive's full shelving); `muted:false`→`mutedAt=null` (un-mutes); orthogonal to confidence (iron rule 3b); returns `null` if nonexistent. |
-| `checkIntegrity()` | — | `IntegrityReport` | stable | Read-only, no change, no audit record, no `reason`; reports orphan join rows. |
-| `listEvidence(input?)` | `ListMemoryInput` | `Evidence[]` | stable | Lists all evidence of a subject; read-only, no audit record. |
-| `listCognitions(input?)` | `ListMemoryInput` | `CognitionWithMeta[]` | stable | Lists all cognitions of a subject, each with its provenance chain + **read-time computed** `effectiveConfidence` (not persisted, see implicit contract item 5). |
-| `listEvents(input?)` | `ListMemoryInput` | `EventWithEvidence[]` | stable | Lists all events of a subject, each with the list of evidence ids it covers. |
-| `resetSubject(input)` | `ResetSubjectInput` | `ResetSubjectResult` | stable | Destructive: clears the three layers + clears audit + clears the vector index. The four in-store tables are wrapped in one transaction; `indexAll([])` is outside the transaction and **clears the entire vectors table** (v1 single-person limitation, see implicit contract item 8). |
-
-Basis: `src/memory/managementApi.ts:143-177` (interface), `:214-441` (implementation), `src/core/createCore.ts:249` (facade mounting).
-
-> Stale-comment note: the docs at `createCore.ts:135` and `managementApi.ts:142` still say "7 operations", when it is actually **11** now (batch 5 step 0 added 4 read-only lists). This is a stale comment, to be corrected in S2-2 or separately; this contract uses 11 as authoritative.
-
-### 1.3 `core.portable` (portable memory bundle, 3 methods)
-
-| Method | Input | Returns | Tier | Implicit behavior contract |
-|---|---|---|---|---|
-| `exportBundle(opts?)` | `ExportOptions & { subjectId? }` | `MemoryBundle` | stable | Exports a subject's three layers + provenance chain as versionable JSON; does not include vector index/logs/.env/UI state. |
-| `importBundle(bundle, opts)` | `MemoryBundle, ImportOptions` | `ImportPlan` | stable | `dryRun` only computes, does not write; `merge` writes deduplicated by id/originId (`ImportMode.replace` reserved for V2, see experimental). |
-| `validateBundle(bundle)` | `unknown` | `ValidateResult` | stable | Only validates structure, does not write. |
-
-Basis: `src/core/createCore.ts:100-104` (`PortableAPI`), `:251-260` (implementation).
-
-### 1.4 `core.graph` (graph view, 1 method)
-
-| Method | Input | Returns | Tier | Implicit behavior contract |
-|---|---|---|---|---|
-| `buildMemoryGraph(opts?)` | `BuildGraphOptions & { subjectId? }` | `MemoryGraphPayload` | stable | Backend uniformly produces a force-directed graph `{nodes, edges}`; `conflicts_with`/`corrects` edges are not generated in v1 (data not stored, see experimental). |
-
-Basis: `src/core/createCore.ts:107-109` (`MemoryGraphAPI`), `:262-267` (implementation).
-
----
-
-## II. Key data shapes chapter (≥30 items)
-
-Each item is marked stable/experimental. "Complete post-persistence shape" and "facade input/return" are stable; `*Input` (inputs the host directly constructs) is stable as the facade is stable; intermediate inputs produced only by internal operators and not directly constructed by the host are marked experimental.
-
-### 2.1 Three-layer persistence shapes (stable)
-
-1. **`Evidence`** — stable. Complete post-persistence shape of evidence: `id / subjectId / sourceKind / hostId / originId / occurredAt / recordedAt / rawContent / summary / allowLocalRead / allowCloudRead / allowInference / correctsEvidenceId`. Basis `src/evidence/model.ts:14-40`.
-2. **`EvidenceInput`** — stable (the host produces it indirectly via `ingestUserMessage`; directly constructing `evidenceStore.put` is an internal path). `id/recordedAt` are generated by the storage layer, default authorization bits are routed by `sourceKind`. **`precedingAiContext?` (D-0033 Phase 1b) is a write-only field the host does not set** — the Conversation path captures the previous AI turn and persists it as read-only context (injected into distill/consolidate so an orphan affirmation like "AI: you like hiking? / user: yes" can form a `confirmed` cognition). It is **deliberately absent from the `Evidence` read shape and never mapped by `fromRow`**, so no read path (`listEvidence` / `exportBundle` / MCP / `TurnOutcome`) can surface it — the AI's words never leak out as evidence (structural, not strip-based). The only reader is the internal `EvidenceStore.precedingAiContextOf(id)` used for injection, gated by the same tier/inference privacy filter; it never mints an evidence id, so the consolidate support-id whitelist can never cite it (iron rule 3a/3d). Basis `src/evidence/model.ts:48-60`, `src/evidence/store.ts`.
-3. **`SourceKind`** — stable enum: `'spoken' | 'inferred' | 'observed' | 'tool'` (`'tool'` added in AD-3/D-0013 = a tool-execution result, an external data point). Adding values is not a break, must keep default. Basis `src/evidence/model.ts:11`.
-4. **`Event`** — stable. Event persistence shape: `id / subjectId / summary / occurredAt / createdAt`. Basis `src/event/model.ts:10-18`.
-5. **`EventInput`** — **experimental**. The host generally does not directly construct it (produced internally by `distill`); no direct construction point on the Host side (grep `apps/memoweft-host` has no hits). Basis `src/event/model.ts:20-26`.
-6. **`EventWithEvidence`** — stable (`core.memory.listEvents` return item): `Event + evidenceIds: string[]`. Basis `src/event/model.ts:28-30`.
-7. **`Cognition`** — stable. Cognition persistence shape: `id / subjectId / content / contentType / formedBy / confidence(0~1000) / credStatus / scope / validAt / invalidAt / askedAt / archivedAt? / mutedAt? / createdAt / updatedAt` (`mutedAt?` = D-0023 recall mute: non-null → recall skips it while it stays active; orthogonal to confidence). The `askedAt` field itself is stable, but its **write timing** (M5 proactive asking) belongs to the experimental surface. Basis `src/cognition/model.ts:40-60`.
-8. **`CognitionInput`** — **experimental**. The host does not directly construct it (`confidence`/`credStatus` are computed by `consolidate` and passed in; Host grep has no hits). Basis `src/cognition/model.ts:63-75`.
-9. **`ContentType`** — stable enum: `fact | preference | goal | project | state | trait | hypothesis | trend`. Adding values is not a break, must keep default. Basis `src/cognition/model.ts:15-23`.
-10. **`FormedBy`** — stable enum: `stated | observed | ruled | confirmed | inferred`. `confirmed` (D-0033) = the user affirming an AI-proposed guess; weaker than `stated`/`observed`, stronger than `inferred` (base 280, naturally capped at 480 < `limited`). Adding it is additive (see break policy §10 below). Basis `src/cognition/model.ts:26`.
-11. **`CredStatus`** — stable enum: `candidate | low | limited | stable | conflicted`. Basis `src/cognition/model.ts:29`.
-12. **`EvidenceRelation`** — stable enum: `support | contradict`. Basis `src/cognition/model.ts:32`.
-13. **`EvidenceLink`** — stable: `{ evidenceId, relation: EvidenceRelation }`. Basis `src/cognition/model.ts:34-37`.
-14. **`CognitionWithSources`** — stable: `Cognition + sources: EvidenceLink[]`. Basis `src/cognition/model.ts:78-80`.
-14a. **Interaction-semantics types (v0.6·D-0034)** — new domain shapes: `InteractionContext` (`id / subjectId / conversationId / episodeId / context: VisibleTurn[] / contextHash / createdAt` — a snapshot of user-visible context per conversation/episode) + `SemanticResolution` (`id / evidenceId / resolvedContent / responseAct / promptAct / propositionOrigin / assertionStrength / requiredContext / resolverVersion / createdAt` — a per-evidence semantic resolution) + `VisibleTurn` (`{ role: 'user' | 'assistant' | 'tool', content }`) + enums `ResponseAct` / `PromptAct` / `PropositionOrigin` / `AssertionStrength`. Both tables carry AI-visible text / interpretation but are **never evidence** and never enter the consolidate support whitelist (iron rule 3a/3d — orthogonal to whether they ride in a portable bundle). `semantic_resolution` is **structure-only in Phase 1** (the resolver populates it in Phase 2). Backed by the `interaction_context` / `semantic_resolution` tables (construct-time `CREATE TABLE IF NOT EXISTS`, not formal migrations — `LATEST_SCHEMA_VERSION` stays v1). Basis `src/interaction/model.ts`.
-
-### 2.2 Input shapes of the facade methods
-
-15. **`CreateCoreOptions`** — stable: `dbPath` required + `llm?/embedder?/retriever?/config?/vectorDbPath?` + **`clock?: Clock` (experimental, Phase 4)**. The `clock` injects the store time source (`recordedAt`/`created_at`/`updated_at`) for determinism / time-travel; defaults to real system time (additive, existing callers unaffected). It only produces timestamps and never enters confidence self-computation (iron rule 3b). **As of D-0015 the clock is wired through the entire facade path (stores + consolidate/attribute/management-audit + read-path decay `now`). The two remaining non-facade paths — proactive asking (`ProposeAskDeps`/`RevisitDeps`, `askedAt`) and the dev run-log (`RunLoggerOptions`, `ts`) — take their own optional `clock?` (D-0020), completing "every time source is injectable"; both are internal-tier and not reached by `CreateCoreOptions.clock`.** Basis `src/core/createCore.ts`.
-15b. **`Clock`** — experimental (Phase 4): `type Clock = () => Date`; `systemClock` is the default (real system time). Injected via `CreateCoreOptions.clock` / `openStores(dbPath, cfg, clock)`. Basis `src/clock.ts`.
-16. **`UserMessageInput`** — stable: `content` + `subjectId?/hostId?/sourceKind?/originId?/occurredAt?` + **`conversationId?/episodeId?` (v0.6·D-0034)**. Passing `conversationId` makes core maintain a per-conversation `InteractionSession`: it captures the previous AI turn (reported via `recordAssistantReply`) into the evidence's `preceding_ai_context` — so the existing distill/consolidate injection works on the **bare-ingest path** (fixes "the real product goes 100% through bare ingest, never `handleConversationTurn`") — and persists one `interaction_context`. `episodeId?` is optional (host may pass its own; otherwise core splits episodes by idle interval). Absent `conversationId` = no context capture, unchanged behavior. Basis `:56-66`.
-17. **`ObservationInput`** — stable: `observations: Observation[]` + `subjectId?/hostId?`. Basis `:68-73`.
-17a. **`ToolResultInput`** — stable (AD-3/D-0013): `content` (the tool's returned result payload) + `subjectId?/hostId?/originId?/occurredAt?`. Ingested as `tool` evidence, cloud-read defaults false (`config.toolDefaults`). Basis `src/core/createCore.ts`.
-18. **`RecallInput`** — stable: `query` + `subjectId?` + **`explain?: boolean`** (D-0021: `true` → each recalled cognition carries its supporting `provenance` evidence chain; additive, default off = unchanged) + **`contentTypes?: ContentType[]`** (D-0022: allow-list; empty/absent = all types; applied as a post-filter of the top-K so it may under-fill; additive). Basis `:75-78`.
-19. **`ConversationInput`** — stable: `message` + `conversationId?/episodeId?/subjectId?/hostId?/originId?/occurredAt?/systemPrompt?/seedTurns?`. `episodeId?` (v0.6·D-0034) is additive (host may pass an episode boundary; the `handleConversationTurn` path's `interaction_context` persistence is deferred to Phase 2). Basis `:80-93`.
-20. **`UpdateProfileInput`** — stable: `subjectId?`. Basis `:95-97`.
-21. **`ListMemoryInput`** — stable: `subjectId?`. Basis `src/memory/managementApi.ts:115-117`.
+MemoWeft is pre-1.0. Additive fields and enum values may appear in minor releases. Breaking changes are documented in the [changelog](../../CHANGELOG.md) with migration notes. Low-level symbols exported from the root package remain available for compatibility, but the Core facade below is the supported integration path.
 
-### 2.3 Return shapes of the facade methods
+## Stability labels
 
-22. **`TurnOutcome`** — stable: `reply / storedEvidence: Evidence / recall: RecalledCognition[] / llmCalls / error: string | null`. Non-empty `error` = reply degraded but evidence already persisted (see implicit contract item 6). Basis `src/pipeline/conversation.ts:44-50`.
-23. **`RecalledCognition`** — stable (`recall`/`TurnOutcome.recall` item): `RelevantCognition + score + id?` + **`contentType?: ContentType`** (D-0022; the low-level `RecalledCognitionItem` carries it required) + **`provenance?: RecalledEvidence[]`** (D-0021, only when recalled via `recall({ explain: true })`; `RecalledEvidence = { evidenceId; relation; summary; sourceKind; allowCloudRead; allowInference }` — the supporting/contradicting evidence brief **with authorization flags** (aligned with `buildMemoryGraph`) so the host can tier-filter `provenance` before forwarding it to a cloud model; host-facing, for traceability; additive). Basis `src/pipeline/conversation.ts:38-42`.
-24. **`UpdateProfileResult`** — stable: `distilled / consolidated / attributed / indexed / indexError: string | null / timings`. Basis `src/consolidation/updateProfile.ts:45-55`.
-25. **`UpdateProfileTimings`** — stable: `distillMs / consolidateMs / attributeMs / indexMs / totalMs`. Basis `:37-43`.
-26. **`HealthReport`** — stable: `llmReady / embedReady`. Basis `src/core/createCore.ts:112-117`.
-27. **`CognitionWithMeta`** — stable (`listCognitions` item): `Cognition + sources: EvidenceLink[] + effectiveConfidence` (read-time computed). Basis `src/memory/managementApi.ts:120-125`.
+- **Stable** — covered by compatibility snapshots and intended for application use throughout the 0.6 line.
+- **Experimental** — usable, but may change in a pre-1.0 minor release with changelog notice.
+- **Internal** — implementation detail; do not build application contracts around it.
 
-### 2.4 Management API input/output shapes
+Unless marked otherwise, the methods in this document are stable. `clock`, plugins, and low-level model/retrieval implementations are experimental extension points.
 
-28. **`InvalidateCognitionInput`** — stable: `cognitionId + reason`. Basis `src/memory/managementApi.ts:22-26`.
-29. **`UpdateEvidenceAuthorizationInput`** — stable: `evidenceId + allowCloudRead? + allowInference? + reason`. Basis `:28-34`.
-30. **`RemoveEvidenceSafelyInput`** — stable: `evidenceId + reason + force?`. Basis `:36-41`.
-31. **`RemovalBlocker`** — stable: `kind: 'event'|'cognition' + id + relation?`. Basis `:44-51`.
-32. **`RemoveEvidenceResult`** — stable: `removed + blockers: RemovalBlocker[]`. Basis `:53-58`.
-33. **`RemoveCognitionSafelyInput`** — stable: `cognitionId + reason`. Basis `:60-63`.
-34. **`RemoveCognitionResult`** — stable: `removed + removedLinks: EvidenceLink[]`. Basis `:65-69`.
-35. **`MergeCognitionInput`** — stable: `sourceId + targetId + reason`. Basis `:71-77`.
-36. **`MergeCognitionResult`** — stable: `merged + movedLinks + duplicateLinks + target: Cognition + source: Cognition`. Basis `:79-89`.
-37. **`ArchiveCognitionInput`** — stable: `cognitionId + reason`. Basis `:91-94`.
-38. **`IntegrityIssue`** — stable: `kind + eventId? + cognitionId? + evidenceId + missing`. Basis `:97-104`.
-39. **`IntegrityReport`** — stable: `ok + issues: IntegrityIssue[] + checkedAt`. Basis `:106-110`.
-40. **`ResetSubjectInput`** — stable: `subjectId? + reason?` (`reason` is only for semantics, not persisted). Basis `:129-133`.
-41. **`ResetSubjectResult`** — stable: `evidenceRemoved / eventRemoved / cognitionRemoved / auditRemoved`. Basis `:135-140`.
-42. **`ManagementLogEntry`** — **experimental** (weakly typed: `op`/`targetKind` are currently `string`; the facade **does not expose** a path to read audit — the Host writes via `core.memory.*` but does not read audit history through the facade, only the underlying `SqliteManagementLog.list` can read): `op / targetKind / targetId / reason / detail: Record<string,unknown>|null / createdAt`. Basis `src/memory/managementLog.ts:23-33`.
+## Minimal lifecycle
 
-### 2.5 Bundle shapes
+```ts
+import { createMemoWeftCore } from 'memoweft';
 
-43. **`MemoryBundle`** — stable: `format / schemaVersion / exportedAt / memoWeftVersion / subjectId / source{hostId,exportMode:'full'} / data{evidence,events,eventEvidence,cognitions,cognitionEvidence,unconsolidatedEventIds, interactionContexts?, semanticResolutions?} / metadata{counts,notes}`. The two `data` fields are v0.6/D-0034 (schemaVersion ≥ 2, optional — v1 bundles import as empty); `ImportPlan.counts` gains matching `interactionContexts` / `semanticResolutions` counts. Basis `src/portable/model.ts:33-60`.
-44. **`EventEvidenceLink`** — stable: `{eventId, evidenceId}`. Basis `:20-23`.
-45. **`CognitionEvidenceLink`** — stable: `{cognitionId, evidenceId, relation}`. Basis `:26-30`.
-46. **`ImportMode`** — stable type, but the `'replace'` value is **experimental** (reserved for V2; currently only `'dryRun' | 'merge'`). Basis `:63`.
-47. **`ValidateResult`** — stable: `valid + errors[] + warnings[]`. Basis `:66-70`.
-48. **`ImportPlan`** — stable: `mode + valid + errors[] + warnings[] + counts{...} + duplicates{...}`. Basis `:73-92`.
-49. **`BUNDLE_FORMAT` / `BUNDLE_SCHEMA_VERSION`** — stable constants: `'memoweft-bundle'` / `2` (v0.6/D-0034 bumped 1 → 2 for the `interactionContexts` / `semanticResolutions` data fields; importing a v1 bundle is backward-compatible — the missing sections import as empty). Basis `:15-17`.
+const core = createMemoWeftCore({ dbPath: ':memory:' });
 
-### 2.6 Graph payload shapes
+await core.ingestUserMessage({
+  subjectId: 'user-42',
+  content: 'I prefer aisle seats.',
+  originId: 'message-1001',
+});
 
-50. **`MemoryGraphPayload`** — stable: `subjectId / generatedAt / scope / depth / nodes / edges / stats`. Basis `src/graph/model.ts:71-79`.
-51. **`MemoryGraphNode`** — stable: `id / kind / label / summary? / (cognition:) contentType?/formedBy?/confidence?/credStatus? / (evidence:) sourceKind?/allowCloudRead?/allowInference? / time fields / archivedAt? / val?/colorKey?`. Basis `:26-50`.
-52. **`MemoryGraphEdge`** — stable: `id / source / target / kind / label? / dashed?`. Basis `:52-59`.
-53. **`MemoryGraphStats`** — stable: `nodeCount / edgeCount / hiddenCount / activeCognitionCount / conflictedCount / hypothesisCount / observedEvidenceCount / toolEvidenceCount` (`toolEvidenceCount` added in AD-3/D-0013, additive). Basis `:61-69`.
-54. **`MemoryGraphNodeKind`** — stable enum: `subject|evidence|event|cognition`. Basis `:16`.
-55. **`MemoryGraphEdgeKind`** — stable enum, but the two values `conflicts_with`/`corrects` are **experimental** (not generated in v1, data not stored). Basis `:18-24`.
+const evidence = core.memory.listEvidence({ subjectId: 'user-42' });
+console.log(evidence[0]?.sourceKind); // spoken
 
-### 2.7 Perception input shapes
+core.close();
+```
 
-56. **`Observation`** — stable (cross-layer contract "collector plugin→Host→Core"): `kind / occurredAt / content / originId? / meta? / allow*?`. **However**: the `meta` field is **experimental** (this version only carries it, does not persist), and `kind` is an **open set** experimental (currently fixed to `'active_window'`, more values added later). Basis `src/perception/ingest.ts:19-34`.
+Creating a Core does not require a model configuration. Evidence storage and memory-management calls work without one; model-dependent calls fail only when invoked.
 
-### 2.8 Version / config
+## Creating a Core
 
-57. **`MEMOWEFT_VERSION`** — stable constant. `DLA_VERSION` is an `@deprecated` alias (keep, do not delete). Basis `src/index.ts:208-211`.
-58. **`MemoWeftConfig` (what config items exist)** — stable: field structure of identity / privacyMode / observedDefaults / consolidation / retrieval / attribution / background etc. **0.4.0 adds an optional `language: 'zh' | 'en'` (additive, non-breaking — old hosts that don't pass it keep running; defaults to `'en'`, switch to Chinese via env `MEMOWEFT_LANG=zh` or by setting `config.language` at runtime) + exports `type Lang` (stable, for hosts to set values)**. **AD-3/D-0013 adds `toolDefaults: { allowLocalRead; allowCloudRead; allowInference }` (additive) — the conservative default authorization for `tool` evidence (local✓ / cloud✗ / infer✓), applied by `put()` per `sourceKind`, mirroring `observedDefaults`.** **However, "how you obtain config" (`config` singleton access) is marked experimental** and may be adjusted during the pre-1.0 period. `DlaConfig` is an `@deprecated` alias. `cloudReadDefault()` / `resolveLang()` are stable (the latter reads the current store language, which only decides text output and never enters the confidence self-computation). Basis `src/config.ts`.
+```text
+createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore
+```
 
----
+| Option         | Stability    | Meaning                                                                                                  |
+| -------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
+| `dbPath`       | stable       | Required SQLite path. Use `:memory:` for an ephemeral store.                                             |
+| `llm`          | experimental | An `LLMClient` or `LLMPool`. If omitted, MemoWeft reads its OpenAI-compatible environment configuration. |
+| `embedder`     | experimental | Creates a vector retriever unless `retriever` is also supplied.                                          |
+| `retriever`    | experimental | Highest-priority custom retrieval implementation. Caller-owned; `core.close()` does not close it.        |
+| `config`       | experimental | MemoWeft configuration object. Omitted values use the package defaults.                                  |
+| `vectorDbPath` | experimental | Vector-index database path; defaults to `dbPath`.                                                        |
+| `clock`        | experimental | Injectable `() => Date` used for persistence timestamps and time-dependent rules.                        |
+| `plugins`      | experimental | Plugin contracts and restricted hooks. See the [plugin contract](../plugin-contract.md).                 |
 
-## III. Implicit contract chapter (the pitfalls hosts most easily step on)
+Without a custom retriever, MemoWeft chooses vector retrieval when an embedder is configured, otherwise local FTS5 keyword retrieval. If FTS5 is unavailable, recall degrades to an empty retriever instead of preventing Core creation.
 
-1. **`confidence` is on a 0~1000 scale, computed by MemoWeft rather than self-reported by the LLM**. Don't treat it as a 0~1 probability, and don't trust the score the LLM reports back. Basis `src/cognition/model.ts:46-47`, `src/consolidation/confidence.ts:4` ("do not accept the LLM's self-report"), `:24-34`.
-2. **The required `reason` on management write operations is a privacy audit contract**, and must not be relaxed to optional — the audit table answers "what was done to my memory." Basis `src/memory/managementApi.ts:22-94` (each Input's `reason: string` is not optional), `managementLog.ts` schema `reason TEXT NOT NULL`.
-3. **`observed` AND `tool` evidence default to `allowCloudRead=false` (privacy red line B)**. Ingested observations and tool results default to not uploading to cloud (tool results often carry sensitive external data — web pages, files, API responses); only an explicit `allowCloudRead:true` on the input goes to cloud. Enforced as the last line of defense in `evidenceStore.put()` per `sourceKind` (`observed` → `observedDefaults`, `tool` → `toolDefaults`). Basis `src/evidence/store.ts` (conservative branch), `src/perception/ingest.ts:7-10`, `:79-82`.
-4. **`systemPrompt` / `seedTurns` only take effect when the conversation instance is first created** (to change the persona/re-seed the continuation window you must first `dropConversation(id)` then call again, otherwise the old instance is hit and the new values are silently ignored). Basis `src/core/createCore.ts:89-92` (input comment), `:207-234` (reuse/rebuild logic).
-5. **`effectiveConfidence` is a read-time computed derived value, not persisted**. What's stored is the raw `confidence`; the `effectiveConfidence` returned by `listCognitions` = `confidence × decay factor`, computed fresh on each read. Basis `src/memory/managementApi.ts:123-124`, `:397-405`.
-6. **Non-empty `TurnOutcome.error` = reply degraded but evidence already persisted (store first, then reply)**. When the host sees `error != null` it should understand "this turn did not reply normally, but the user's message has been stored into the evidence store," and should not retry ingestion (which would either duplicate the persistence or rely on originId idempotency). Basis `src/pipeline/conversation.ts:44-50`, `:63-78` (store-before, a failed recall is treated as no recall and proceeds as usual).
-7. **`RemoveEvidenceResult`: `removed=false && blockers empty = target nonexistent`** (disambiguation). Refusal only happens when there are references (`blockers` non-empty); `removed=false` with `blockers=[]` means "the evidence never existed," not "it was blocked." Basis `src/memory/managementApi.ts:55-57`, `:250`.
-8. **`resetSubject` v1 single-person limitation**: in-store cleanup is by subject, but clearing the vector index goes through `indexAll([])`, which **clears the entire vectors table (all subjects' vectors)**, not just this subject. Harmless under v1 single-person single-host; when moving to multi-subject it must be changed to subject granularity. Basis `src/memory/managementApi.ts:435-438`.
-9. **A core can be built even without `.env`**: when model config is missing, work that doesn't touch a model — such as "storing evidence / managing memory" — is still usable; only read/write paths that actually call a model (reply, semantic recall, profile generation) degrade/error. `health()` tells you which capabilities remain (`llmReady`/`embedReady`). This is the key promise for the host to judge "which capabilities remain when config is missing." Basis `src/core/createCore.ts:5-8` (factory header comment), `:147-174`, `:269-280` (health).
-10. **The fallback responsibility for enum value sets is the host's**: `SourceKind` / `ContentType` / `FormedBy` / `CredStatus` / `EvidenceRelation` — **narrowing (deleting values) is a break; adding values is not a break, but the host must keep a `default` fallback branch**. If the host `switch`es these enums without a `default`, it will miss a branch after values are added — the responsibility is the host's. Basis this contract's "break policy" section + `src/evidence/model.ts:11`, `src/cognition/model.ts:15-32`.
+Core owns and closes the SQLite stores and any vector or keyword retriever it created. Injected retrievers remain caller-owned.
 
----
+## Core facade
 
-## IV. experimental list chapter (a consolidated list of "will change later")
+### Ingestion
 
-Exported, the host may touch them, but **explicitly stated to change**, changeable freely in a minor version (a one-line CHANGELOG mention is enough, no migration note owed). Don't depend on these as a stable surface.
+| Method                     | Persistent effects                                                                  | Model or network use | Notes                                                                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ingestUserMessage(input)` | Writes one evidence row; with `conversationId`, also maintains interaction context. | None.                | `sourceKind` defaults to `spoken`. `originId` provides idempotent evidence ingestion.                                                           |
+| `ingestObservation(input)` | Writes zero or more `observed` evidence rows.                                       | None.                | Each observation may override authorization defaults. `kind` is an open string; `kind` and `meta` are accepted but are not currently persisted. |
+| `ingestToolResult(input)`  | Writes one `tool` evidence row.                                                     | None.                | Stores the returned tool payload, not tool-call intent or arguments. `originId` is recommended for idempotency.                                 |
 
-- **`Observation.meta`** — this version only carries it, does not persist (Evidence has no meta column); the persistence shape will change later. Basis `src/perception/ingest.ts:28-29`.
-- **`Observation.kind` (open set)** — currently fixed to `'active_window'`, later adding `'clipboard'`/`'device'` etc. Basis `src/perception/ingest.ts:23-24`.
-- **`ImportMode.replace`** — currently only supports `'dryRun'|'merge'`, `'replace'` reserved for V2. Basis `src/portable/model.ts:62-63`.
-- **Graph `conflicts_with` / `corrects` edges** — not generated in v1 (cognition↔cognition chain data not stored); the enum is reserved, to be produced once the data model is completed. Basis `src/graph/model.ts:7-12`, `:23-24`.
-- **`Cognition.askedAt` (write timing)** — the field itself is stable, but "when it's written" (written after M5 proactive asking `proposeAsk` asks) is an experimental-period capability. Basis `src/cognition/model.ts:53`, `src/asking/proposeAsk.ts`.
-- **`ManagementLogEntry` (reading audit history)** — weakly typed (`op`/`targetKind` are `string`), the facade does not expose a read path; the host writes via `core.memory.*` only and does not read audit history through the facade. Basis `src/memory/managementLog.ts:23-33`.
-- **Extension-point interfaces `Retriever` / `Embedder` / `LLMClient`** — replaceable injection points whose interface signatures may evolve later. Basis `src/index.ts:88-105`. **New (tier 2, non-breaking)**: `LLMClient.tier?` and `LLMConfig.tier?` (`ModelTier='cloud'|'local'`, already exported) are optional fields, defaulting to `cloud`; an `LLMClient` the host injects itself runs even without tier.
-- **Plugin contract `MemoWeftPlugin` / `PluginContext` / `PluginPermissions` / hook types** (Step 7 · v2 · **experimental**) — exported from `src/plugin/contract.ts`; `createMemoWeftCore` adds an optional `plugins?` (not passing it = same behavior as before). Pre-1.0 hook signatures may evolve (e.g. adding fields). **See [`plugin-contract.md`](../plugin-contract.md) for the authoritative definition and semantics**; not repeated here.
-- **config's "way of obtaining" (singleton access)** — "what config items exist" is stable, "how you obtain config (`config` singleton)" is experimental and may be adjusted during the pre-1.0 period. Basis `src/config.ts`.
-- **`EventInput` / `CognitionInput`** — see "questionable tier": internal inputs the host does not directly construct.
+`observed` and `tool` evidence default to eligible for built-in local write-model prompts, ineligible for built-in cloud write-model prompts, and eligible for inference. An observation may override those flags at ingestion. `ToolResultInput` does not expose authorization overrides; use `core.memory.updateEvidenceAuthorization()` afterward. These flags do not restrict recall, list/read APIs, MCP tools, adapter injection, derived records, exports, logs, or custom host code.
 
----
+### Recall and profile formation
 
-## V. Breaking-change policy (pre-1.0, moderately loose)
+| Method                                                   | Persistent effects                                                                                      | Model or network use                                                  | Failure behavior                                                                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `recall({ query, subjectId?, explain?, contentTypes? })` | None.                                                                                                   | A vector retriever may call its embedder; keyword recall stays local. | Returns an empty array when no eligible result exists. Retriever failures degrade according to the configured retriever.                |
+| `updateProfile({ subjectId? })`                          | Distills pending evidence, updates cognitions and semantic resolutions, then rebuilds the recall index. | Uses the write model and, when configured, the embedder.              | An index rebuild failure is returned in `indexError`; committed profile changes are not rolled back. Other failures reject the promise. |
 
-> The top of the contract, "How to read this contract," already gives a one-line summary; this chapter is the **full written policy text**, by which the host judges "will a given upgrade break my integration, do I need to change code."
+Recall excludes invalid, archived, muted, and below-threshold cognitions. `contentTypes` is a post-filter over the retrieved top-K, so a filtered response may contain fewer than top-K items. With `explain: true`, each result may include provenance with evidence prompt-eligibility flags. Recall does not automatically suppress a derived cognition because one of its sources is ineligible for a cloud write prompt; the host must apply its own disclosure policy before forwarding the result.
 
-### 5.1 What counts as "breaking stable"
+`UpdateProfileResult` contains:
 
-For the **stable** surface (the facade methods and data shapes listed in Chapters I/II), the following changes are breaks: **renaming a field / deleting a field / changing nullability (optional↔required, nullable↔non-nullable) / changing semantics** (e.g. `confidence` changed from a 0~1000 scale to a 0~1 probability).
+- `distilled`, `consolidated`, and `attributed` stage results;
+- `indexed` and `indexError`;
+- per-stage `timings` in milliseconds;
+- `metrics.profileSize` and `metrics.promptChars`.
 
-### 5.2 The three requirements for breaking stable
+### Conversation helpers
 
-Breaking stable is allowed in a **minor version**, but **all three** must be satisfied at once, none omitted:
+| Method                                              | Behavior                                                                                                                                                                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `handleConversationTurn(input)`                     | Stores the user message, recalls eligible memory, and calls the chat model. A `conversationId` reuses its active in-memory window. `systemPrompt` and `seedTurns` apply only when that conversation is first created. |
+| `recordAssistantReply({ conversationId, content })` | Adds an assistant reply to an existing interaction window so a later user reply can be interpreted in context. It never creates evidence. An unknown conversation id is ignored.                                      |
+| `dropConversation(conversationId)`                  | Drops the active in-memory conversation and interaction window. It does not delete stored memory. The next call may establish a new prompt and seed turns.                                                            |
 
-1. **① Clear CHANGELOG marking** — in the `Changed` (or `Removed`) section of `CHANGELOG.md`, name clearly which symbol / which field was broken.
-2. **② A one-line migration note** — old→new, how to change it (the host can finish the change in one step by following it), written in the same CHANGELOG entry.
-3. **③ Where the old name can be kept, provide an `@deprecated` alias** — for any "rename / swap constant" case where the old name can be kept, keep the old name with an `@deprecated` mark pointing to the new name (**follow the existing template**: `DLA_VERSION` (`src/index.ts:210` @deprecated alias pointing to `MEMOWEFT_VERSION`), `DlaConfig` (`src/config.ts:136` @deprecated alias pointing to `MemoWeftConfig`) — these two are the "already-deprecated template," don't delete them).
+Assistant text may be stored as interaction context, but it never receives an evidence id and cannot satisfy a cognition's provenance requirement.
 
-**Not required to "keep it for a whole version before deleting"**: there is no hard cool-down period on deletion timing; keep an alias where you can, and where you can't (e.g. deleting a field) follow the ①② marking + migration note.
+### Diagnostics and lifecycle
 
-### 5.3 Enum value-adding rule
+| Method     | Behavior                                                                                                                                                                                                                                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `health()` | Returns `{ llmReady, embedReady }` for MemoWeft's built-in OpenAI-compatible client and vector retriever. Custom injected implementations may work while these flags remain `false`; the report is not a generic capability probe.                                                                               |
+| `usage()`  | Returns cumulative `{ llm, embed, total }` token counters for the Core's owned clients. Each bucket has `promptTokens`, `completionTokens`, `totalTokens`, and `callsWithUsage`. Endpoints that omit usage produce no counted tokens; an injected retriever's embed usage is caller-owned and reports zero here. |
+| `close()`  | Closes stores and retrievers owned by Core. Do not use the Core after closing it. Calling code remains responsible for injected retrievers.                                                                                                                                                                      |
 
-For enums like `SourceKind` / `ContentType` / `FormedBy` / `CredStatus` / `EvidenceRelation`:
+## Controlled memory API
 
-- **Adding new values ≠ break** — a minor version may add values. **But the host must keep a `default` fallback branch for these enums** (a `switch` with no `default` will miss a branch after values are added — **the responsibility is the host's**, see implicit contract item 10).
-- **Narrowing (deleting values) = break** — follow the three requirements in 5.2.
+Use `core.memory`; applications should not write the SQLite tables directly.
 
-### 5.4 experimental surface (loose rule)
+### Read operations
 
-For the **experimental** surface (the Chapter IV list: `Observation.meta` / `Observation.kind` open set / `ImportMode.replace` / graph `conflicts_with`·`corrects` edges / `Cognition.askedAt` write timing / `Retriever`·`Embedder`·`LLMClient` extension points / config's way of obtaining / `ManagementLogEntry` / `EventInput`·`CognitionInput` etc.):
+| Method                           | Result                                                                    |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| `listEvidence({ subjectId? })`   | All evidence for the subject.                                             |
+| `listEvents({ subjectId? })`     | Events with their evidence ids.                                           |
+| `listCognitions({ subjectId? })` | Cognitions with provenance links and read-time `effectiveConfidence`.     |
+| `checkIntegrity()`               | A read-only report of orphan event/evidence and cognition/evidence links. |
 
-- **Change freely in a minor version**, changing it is not a broken promise.
-- **A one-line CHANGELOG mention is enough**, no migration note owed, no `@deprecated` alias owed.
+### State, authorization, and deletion
 
-### 5.5 internal surface
+| Method                               | Not-found or refusal behavior                                          | Notes                                                                                                            |
+| ------------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `invalidateCognition(input)`         | Returns `null` when absent.                                            | Sets `invalidAt`; requires `reason`.                                                                             |
+| `archiveCognition(input)`            | Returns `null` when absent.                                            | Sets `archivedAt`; requires `reason`.                                                                            |
+| `muteCognition(input)`               | Returns `null` when absent.                                            | Mutes or unmutes recall without changing confidence; requires `reason`.                                          |
+| `updateEvidenceAuthorization(input)` | Returns `null` when absent.                                            | Changes `allowCloudRead` and/or `allowInference`; no-op changes are not audited.                                 |
+| `mergeCognition(input)`              | Throws for missing, cross-subject, invalid, or archived targets.       | Moves deduplicated provenance links, recomputes target confidence, and invalidates the source.                   |
+| `removeEvidenceSafely(input)`        | Returns `{ removed: false, blockers }` when referenced and not forced. | `force: true` removes reference links in the same database transaction.                                          |
+| `removeCognitionSafely(input)`       | Returns `removed: false` when absent.                                  | Removes the cognition and its links, not the underlying evidence.                                                |
+| `resetSubject(input)`                | Returns removal counts.                                                | Destructive reset; `reason` is optional and is not retained because the subject's audit history is also removed. |
 
-**Don't depend on it**. Still exported only because this step is "mark-only, no deletion" (deletion belongs to Step 10); once collected and deleted, it does not follow the three requirements of stable, a one-line CHANGELOG mention is enough.
+Successful management mutations are written to `management_log` with metadata and a reason, except `resetSubject`, which deliberately removes that log. Rejected and no-op operations do not create audit rows.
 
----
+`resetSubject` transactionally removes the subject's evidence, events, cognitions, relationship rows, interaction contexts, semantic resolutions, and management audit rows. Its returned counts cover evidence, events, cognitions, and audit rows. Recall-index clearing happens afterward through `indexAll([])` and is not part of the database transaction; the method may return before an asynchronous external index finishes clearing.
 
-## VI. Questionable symbol tiering (conclusions confirmed back to source)
+MemoWeft's audit metadata does not retain the raw content of a deleted cognition.
 
-The following 6 easily-misjudged symbols are tiered item by item according to their usage in the source:
+## Portable bundles
 
-| Symbol | Tier | Tiering basis (pointed to source) |
-|---|---|---|
-| `AskProposal` / `AskPolicy` / `proposeAsk` (`src/asking/`) | **internal** | The facade `MemoWeftCore` (`createCore.ts:120-145`) **does not expose** proposeAsk; the Host (`apps/memoweft-host`) grep has **no hits**. The only direct-use point is the **development testbench** `testbench/server.mjs:25-26,463-464` — the testbench is a dev debugging harness, not a product host, and does not constitute a contract surface to the host. Hence tiered internal (AskProposal/AskPolicy are its input/output, internal accordingly). `revisitConflicts` is internal for the same reason. |
-| `Cognition` / `Evidence` domain shapes | **stable** | `recall`/`TurnOutcome.storedEvidence` return the whole `Evidence` (`createCore.ts:122`, `conversation.ts:46`); `listCognitions`/`listEvidence`/`listEvents` return the whole `Cognition`/`Evidence`/`Event` to the host (`managementApi.ts:167-171`). Returned to the host → promoted to stable. |
-| `Conversation` class | **internal** | The facade `handleConversationTurn` **wraps** `Conversation` internally (`createCore.ts:207-228` creates the instance, caches, reuses); the host does not directly new it. The facade already collects it → the class is judged internal. |
-| `TurnOutcome` / `RecalledCognition` | **stable** | As the return shapes of `handleConversationTurn` / `recall`, returned to the host (`createCore.ts:126,128`). → stable. |
-| `Observation` (`src/perception/ingest.ts`) | **stable** (`meta` field experimental) | The "collector plugin→Host→Core" cross-layer contract, the input of `ingestObservation` (`createCore.ts:124`, `ingest.ts:19-34`). The `meta` field's source notes "this version only carries it, does not persist" → that field is experimental. |
-| `EventInput` / `CognitionInput` | **experimental** | The host generally does not directly construct them (produced internally by distill/consolidate; Host grep has no direct construction point). Not listed in the host's main surface. Basis `event/model.ts:20-26`, `cognition/model.ts:63-75`. |
-| `ManagementLogEntry` | **experimental** | Weakly typed fields (`op`/`targetKind` are `string`, `managementLog.ts:23-33`); the facade does not expose a path to read audit history, the Host writes only via `core.memory.*` and does not read audit through the facade. → experimental. |
+```text
+core.portable.exportBundle(options?)
+core.portable.validateBundle(bundle)
+core.portable.importBundle(bundle, { mode: 'dryRun' | 'merge' })
+```
 
----
+A bundle contains evidence, events, cognitions, provenance relationships, pending-event state, interaction contexts, and semantic resolutions for one subject. It preserves ids and timestamps. It excludes vector indexes, logs, API keys, environment files, and host UI state.
 
-## VII. Adapter degradation semantics (§16.2)
+- `dryRun` validates and reports planned writes without modifying the database.
+- `merge` imports transactionally through the Core facade and deduplicates by id and evidence `originId`.
+- Bundle schema v2 imports schema v1 bundles with missing interaction sections treated as empty.
+- There is no `replace` import mode in 0.6.x.
 
-> Scope: the official MemoWeft adapters (`@memoweft/adapter-ai-sdk`, `@memoweft/mcp-server`). When the memory layer (`core.recall` / `core.ingestUserMessage`) fails or times out, an adapter **degrades instead of interrupting the conversation**. Human-approved wording, 2026-07-11 (see `DECISIONS.md` D-0012). This section governs the adapters only; it does not add any obligation to the Core facade above.
+After an import, call `updateProfile()` when you want the retriever index rebuilt from the imported profile.
 
-- **recall timeout**: the read path wraps `core.recall` in a **200ms** timeout by default, **configurable** through the adapter factory option (`recallTimeoutMs`). A timeout counts as a failure.
-- **Retry**: the **read path (recall) does not retry** — on failure/timeout it degrades immediately; the **write path (ingest) retries once** before giving up.
-- **Degradation behavior**: on failure/timeout the adapter **injects an empty context (no memory) and the conversation is not interrupted**; one line is recorded through the **injected logger** (no logger by default = silent; the host may inject one).
-- **Implementation boundary**: the timeout is a `Promise.race` wrapping `core.recall` inside the adapter; the logger is an optional adapter-factory parameter. This **does not touch the Core api-freeze** — Core's `src/index.ts` export surface / `tests/api/api-surface.snapshot` are unchanged (`npm run api:check` still passes).
-- **Logger records structured degradation events only** — shape `{ event: 'memory_degraded', op: 'recall' | 'ingest', reason: 'timeout' | 'error' }` (the MCP server adds an optional `tool` field) — and **never records user content, verbatim text, or secrets** (cognitive discipline + privacy).
-- **Degradation vs. real error**: only memory-layer internal faults/timeouts (`core.recall` / `core.ingestUserMessage` throwing or timing out) degrade. Caller errors — invalid parameters, protocol-level errors — are **not** swallowed as degradation and still surface as errors. In the MCP server, input-schema (`zod`) validation runs before the handler, so a bad parameter stays a protocol error with `isError: true`; only the wrapped `core.*` call degrades.
+## Memory graph
 
-Basis: `packages/adapter-ai-sdk/src/recallMiddleware.ts` (recall timeout + degrade), `packages/adapter-ai-sdk/src/persistOnEnd.ts` (write retry-once + degrade), `packages/mcp-server/src/tools.ts` (read/write tool guards), `packages/adapter-ai-sdk/src/degrade.ts` + `packages/mcp-server/src/degrade.ts` (shared `DEFAULT_RECALL_TIMEOUT_MS = 200`, `withTimeout`, logger event types).
+```text
+core.graph.buildMemoryGraph(options?): MemoryGraphPayload
+```
 
----
+The payload contains subject, evidence, event, and cognition nodes plus emitted `belongs_to_subject`, `distilled_into`, `supports`, and `contradicts` edges. `conflicts_with` and `corrects` are reserved edge values but are not emitted in 0.6.x because cognition-to-cognition links are not persisted.
 
-## VIII. Recall v2 adapter surface and the MCP mute tool
+## Behavioral guarantees
 
-> Scope: the same two official adapters as §VII. This is the **recall v2 pass-through** face — the recall-quality surface D-0021/D-0022/D-0023 added to the `core.recall` facade (`explain`→`provenance`, the `contentTypes` filter + `contentType` on results, mute negative feedback) is now wired **end-to-end to the host through the adapters** (D-0024), plus the one new MCP write tool. Human-approved 2026-07-13 (`DECISIONS.md` D-0024). Adapters only; it adds no obligation to the Core facade above.
+- Evidence and cognition are separate layers; a stored statement does not become a trusted belief automatically.
+- Cognition confidence is an integer from 0 to 1000 computed by MemoWeft rules, not accepted from a model's self-report.
+- Explicit corrections retain invalidated history. Unresolved contradictions remain visible instead of being silently overwritten.
+- Built-in ingestion paths do not turn assistant replies into evidence. Context-dependent user replies can still be interpreted through a separate interaction-context record.
+- `originId` makes supported ingestion paths idempotent for a given stored evidence record.
+- In the default configuration, facts and preferences do not use the same time-decay policy as transient states and hypotheses.
+- SQLite is not encrypted by MemoWeft. Hosts own consent, access control, deletion UX, backups, and encryption at rest.
 
-**`@memoweft/adapter-ai-sdk` (read middleware) — purely additive:**
+## Errors and degradation
 
-- `MemoWeftMiddlewareOptions` gains **`contentTypes?: ContentType[]`** and **`explain?: boolean`**, passed straight through to `core.recall`. Unset = all types / no provenance (behavior unchanged); the filtering/explanation happen once, in the Core facade — the adapter only forwards.
-- The **`onRecall(items)`** callback now carries the v2 fields per item: `id?`, `contentType?`, `score?`, and — only when `explain: true` — `provenance?: RecalledEvidence[]` (each brief with its `allowCloudRead` / `allowInference` bits).
-- **Privacy hard constraint (must not violate):** `provenance` — and `contentType` / `id` / `score` — **never enter `buildKnowledgeBlock` / the injected prompt**; the injected block still uses only `content` / `confidence` / `credStatus`. Provenance is evidence **verbatim** plus its authorization bits (including cloud-restricted `observed` / `tool` evidence); putting it in the prompt would bypass tier filtering and feed cloud-restricted text to the model. It reaches the host **only via `onRecall`**, and the host tier-filters (by `allowCloudRead` / `allowInference`) before forwarding to a cloud model.
-- No mute on the read middleware (it is a read adapter; D-0024's mute lands on the MCP server only).
+- Missing model configuration does not prevent Core creation; a model-dependent call rejects when it reaches the missing client.
+- Missing embed configuration selects local keyword retrieval. Missing FTS5 degrades further to empty recall.
+- Profile writes and index rebuilds are deliberately separated: an indexing error does not erase successful cognition updates.
+- Management methods use `null`, result flags, or thrown errors as documented above; callers should not infer one universal not-found convention.
+- `subjectId` defaults to `config.identity.subjectId` when omitted. Applications serving multiple users should pass it explicitly and enforce their own authorization boundary.
 
-**`@memoweft/mcp-server` — recall v2 outputs + one new write tool:**
+## Related references
 
-- `memoweft_recall` input gains **`contentTypes?`** (a `zod` enum manually mirroring the 8 `ContentType` values in `src/cognition/model.ts`, kept in lockstep with `RecallInput.contentTypes`) and **`explain?`**; output gains **`contentType`** per item and, when `explain: true`, a **`provenance`** chain.
-- **Provenance tier pre-filter (D-0024 — the tool layer does it, not the client):** for each provenance brief, `allowCloudRead: true` → the full brief (**keeps `summary`**); `allowCloudRead: false` → the **summary is withheld**, only `{ evidenceId, relation, sourceKind, allowCloudRead, allowInference }` is returned. The authorization bits are metadata (not the sensitive payload), left in so the host can still tier-self-filter before forwarding — consistent with the server's "tool evidence defaults to local-only" stance (the library holds its own privacy line rather than pushing the whole decision to the protocol peer).
-- **New tool `memoweft_mute_cognition`** (light write, wraps `core.memory.muteCognition`): `WRITE_TOOL_NAMES` **2 → 3**, `ALL_TOOL_NAMES` **7 → 8**. So `muteCognition` is **no longer on the "never registered" blacklist** — it is a controlled, reversible light write: it only toggles a cognition's recall visibility (`mutedAt`), the cognition stays active and keeps participating in consolidation, it is **orthogonal to confidence** (iron rule 3b), and it **deletes nothing and changes no cloud-read authorization**. Input `{ cognitionId, muted, reason? }`; a nonexistent id returns `{ muted: false, cognition: null }` (a real not-found, not a degradation).
-
-Basis: `packages/adapter-ai-sdk/src/recallMiddleware.ts` (`contentTypes` / `explain` options + `onRecall` pass-through; `provenance` never in `buildKnowledgeBlock`), `packages/mcp-server/src/tools.ts` (`memoweft_recall` inputs/outputs + provenance tier pre-filter; `memoweft_mute_cognition` registration, `WRITE_TOOL_NAMES` / `ALL_TOOL_NAMES`). See `DECISIONS.md` D-0021 / D-0022 / D-0023 / D-0024.
+- [Getting started](../getting-started.md)
+- [Architecture](../internals/architecture.md)
+- [Plugin contract](../plugin-contract.md)
+- [Deployment and privacy](../deployment.md)
+- [Changelog](../../CHANGELOG.md)
+- [Type declarations](../../src/index.ts)

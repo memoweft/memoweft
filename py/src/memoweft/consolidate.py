@@ -1,10 +1,10 @@
-"""画像生成 · 增量更新(consolidate)—— 移植自 src/consolidation/consolidate.ts。
+"""画像增量更新，与 TypeScript consolidate 实现保持行为一致。
 
 处理未消化的新事件,连同现有画像给 LLM,判断新事件对画像的影响,输出四类:
   new / reinforce(含并存新 stated 认知)/ correct(旧失效保留、采纳新)/ conflict(标 conflicted、不消解)。
-纪律:把握度自算(不采信 LLM 自报)、推测低置信、旧判断失效保留可溯源。同步(见 D-0043)。
+把握度由规则计算而非采信模型自报；推测保持低置信；失效判断保留完整溯源。
 
-关键陷阱(逐一钉):私有 _resolve_evidence_id 只剥 `ev-`(≠共享 resolve_echoed_id 的 `ev-|cog-`);
+关键兼容约束：私有 _resolve_evidence_id 只去除 `ev-`（不同于共享 resolve_echoed_id 的 `ev-|cog-`）；
   pick_support 保序去重用 dict.fromkeys;四分支顺序;reinforce 并存用 add 非 cited;MIN_ID_PREFIX 从 config 读。
 """
 from __future__ import annotations
@@ -101,7 +101,7 @@ class _Mutation:
 
 
 def _cited_ids(c: dict[str, Any]) -> list[str]:
-    """取候选引的原话 id(容错字段名);复刻 TS `?? []`(空数组不回落)。"""
+    """读取候选引用的证据 id；兼容字段别名，并保留 TS `?? []` 对空数组的语义。"""
     v = c.get("support_evidence_ids")
     if v is not None:
         return list(v)
@@ -114,10 +114,10 @@ def _cited_ids(c: dict[str, Any]) -> list[str]:
 def _resolve_evidence_id(
     raw: Optional[str], whitelist: set[str], tag_to_evidence_id: dict[str, str], cfg: Config
 ) -> Optional[str]:
-    """把模型写回的 evidence id 解回白名单内真 id;解不出→None。对齐 consolidate.ts:129-151。
+    """将模型返回的 evidence id 解析为白名单内的唯一 id；无法解析时返回 None。
 
-    ① 标号 tag → ② 精确 → ③ 剥【只 ev-】前缀后唯一前缀(< min_id_prefix / 歧义 / 捏造 → None)。
-    ⚠ 只剥 `ev-`,不复用共享 resolve_echoed_id(剥 `ev-|cog-`)——否则 cog- 前缀 evidence id 会被误剥命中。
+    顺序为标号 tag、精确匹配、仅去除 `ev-` 后的唯一前缀匹配；未知、歧义或过短前缀返回 None。
+    此处不能复用会同时去除 `ev-|cog-` 的 resolve_echoed_id，否则以 cog- 开头的 evidence id 可能误匹配。
     """
     if not raw:
         return None
@@ -140,7 +140,7 @@ def _resolve_evidence_id(
 
 
 def _pick_cognition(c: dict[str, Any]) -> Optional[tuple[str, ContentType, bool]]:
-    """抽认知(容错字段名 + 缺类型给 fact);无内容→None。返回 (content, content_type, model_says_inferred)。对齐 consolidate.ts:168-179。"""
+    """从兼容字段中提取认知；缺少类型时使用 fact，无内容时返回 None。"""
     raw = c.get("content")
     if raw is None:
         raw = c.get("new_content")
@@ -160,7 +160,7 @@ def _pick_cognition(c: dict[str, Any]) -> Optional[tuple[str, ContentType, bool]
 def _build_messages(
     existing: list[Cognition], events: list[_EventView], lang: Lang
 ) -> tuple[list[ChatMessage], dict[str, str]]:
-    """拼 prompt + 返回【短标号 → 真 evidence id】映射(D-0036 治本)。对齐 consolidate.ts:201-235。"""
+    """构造 prompt，并返回短标号到真实 evidence id 的映射。"""
     zh = lang == "zh"
     if existing:
         profile = "\n".join(f"- [{c.id}] ({c.content_type}) {c.content}" for c in existing)
@@ -204,7 +204,7 @@ def consolidate(
     now_iso: str = "",
     lang: Optional[Lang] = None,
 ) -> ConsolidateResult:
-    """对齐 consolidate.ts:237-551。now_iso 为 correct 分支的失效时间戳(空则调用方须传;P2-6 用注入 clock)。"""
+    """执行增量合并；now_iso 是 correct 分支使用的失效时间戳，由调用方或注入时钟提供。"""
     new_events = event_store.unconsolidated(subject_id)
     if len(new_events) == 0:
         return ConsolidateResult(
@@ -347,7 +347,7 @@ def consolidate(
             links = cognition_store.sources_of(cog.id)
             support_count = sum(1 for l in links if l.relation == "support")
             contradict_count = sum(1 for l in links if l.relation == "contradict")
-            formed_by = cog.formed_by  # 恒继承(D-0035 拍板③ 取消就地升级)
+            formed_by = cog.formed_by  # 恒继承（取消就地升级）
             confidence = compute_confidence(
                 ConfidenceInputs(content_type=cog.content_type, formed_by=formed_by, support_count=support_count, contradict_count=contradict_count), cfg
             )

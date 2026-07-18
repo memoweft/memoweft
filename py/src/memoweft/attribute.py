@@ -1,8 +1,8 @@
-"""M4 归因 / 可解释假设 —— 移植自 src/attribution/attribute.ts。
+"""归因与可解释假设，与 TypeScript attribution 实现保持行为一致。
 
 从【现象】(一条 state 认知)出发,拉时间窗内证据,让 LLM 推"为什么"→ 可解释假设(低置信封顶、挂证据、可推翻)。
-纪律:假设只当假设(formed_by=inferred + hypothesis_cap 封顶);禁 state→state(一个抱怨不解释另一个抱怨);
-  ④治脑补(现象要攒够 min_phenomenon_support 条支撑才归因);隐私门 tier + inference。同步(见 D-0043)。
+假设保持 formed_by=inferred 并受 hypothesis_cap 限制；state 不能作为另一个 state 的原因；
+  现象达到 min_phenomenon_support 后才允许归因；输入同时受 tier 与 inference 授权约束。
 """
 from __future__ import annotations
 
@@ -38,14 +38,14 @@ class AttributeResult:
 
 
 def _minus_hours(iso: str, hours: int) -> str:
-    """减 hours 小时 → ISO。对齐 attribute.ts:91-93。"""
+    """返回向前偏移指定小时数的 ISO 时间戳。"""
     return ms_to_iso(parse_iso_ms(iso) - hours * 3_600_000)
 
 
 def _build_messages(
     phenomenon: str, evidences: Sequence[tuple[str, str, str, str]], lang: Lang
 ) -> tuple[list[ChatMessage], dict[str, str]]:
-    """发短标号 [e1](D-0036),tag_to_id 落库前翻回真 id。对齐 attribute.ts:61-88。"""
+    """构造短标号 [e1]，并返回用于写入前恢复真实 id 的映射。"""
     tag_to_id: dict[str, str] = {}
     parts: list[str] = []
     for i, (eid, source_kind, occurred_at, text) in enumerate(evidences):
@@ -77,7 +77,7 @@ def attribute(
     clock: Clock = system_clock,
     lang: Optional[Lang] = None,
 ) -> AttributeResult:
-    """对未归因的 state 现象做一次归因。对齐 attribute.ts:99-213。"""
+    """为尚未归因的 state 现象执行一次受约束的归因。"""
     lg = lang if lang is not None else resolve_lang()
     a = cfg.attribution
     active = cognition_store.active(subject_id)
@@ -99,7 +99,7 @@ def attribute(
     def is_attributed(phenom_id: str) -> bool:
         return any(i in hypo_ref_evidence for i in support_of(phenom_id))
 
-    # ④治脑补:现象要攒够 ≥min_phenomenon_support 条支撑;按 updated_at 降序取最近 max_phenomena_per_run 个。
+    # 现象必须达到 min_phenomenon_support；按 updated_at 降序取最近 max_phenomena_per_run 个。
     pool = [c for c in states if not is_attributed(c.id) and len(support_of(c.id)) >= a.min_phenomenon_support]
     phenomena = sorted(pool, key=lambda c: c.updated_at, reverse=True)[: a.max_phenomena_per_run]
 
@@ -127,7 +127,7 @@ def attribute(
             llm.tier if llm.tier is not None else "cloud",
         )
         if len(causes) == 0:
-            continue  # 没有行为/观察类原因 → 不硬编
+            continue  # 缺少行为或观察类原因时不生成假设。
         considered += 1
         candidates = [(e.id, e.source_kind, e.occurred_at, e.summary or e.raw_content) for e in causes]
         candidate_ids = {c[0] for c in candidates}
@@ -147,14 +147,14 @@ def attribute(
                 )
             )[: a.max_causes_per_hypothesis]
             if len(cited) == 0:
-                continue  # 没引到真实原因 → 不硬编
+                continue  # 未引用有效原因证据时不生成假设。
             # 支撑 = ≤N 条原因 + 1 个现象锚点(让"已归因"判定有据)。
             anchor_ids = [anchor_evidence.id] if anchor_evidence is not None else []
             based_on = list(dict.fromkeys([*cited, *anchor_ids]))
             raw_conf = compute_confidence(
                 ConfidenceInputs(content_type="hypothesis", formed_by="inferred", support_count=len(based_on), contradict_count=0), cfg
             )
-            confidence = min(raw_conf, a.hypothesis_cap)  # 假设级封顶:低声说
+            confidence = min(raw_conf, a.hypothesis_cap)  # 假设置信度不得超过配置上限。
             cognition = cognition_store.put(
                 CognitionInput(
                     subject_id=subject_id, content=content, content_type="hypothesis", formed_by="inferred",

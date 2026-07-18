@@ -1,4 +1,4 @@
-"""自然过期 —— 移植自 src/background/expire.ts。
+"""自然过期规则，与 TypeScript expire 实现保持行为一致。
 
 临时类(state/hypothesis/trend)久没被印证 → 标 invalid_at(保留可溯源、不再召回);
 稳定类(fact/preference 等,不在 expire_after_days 名单)永不自动失效。纯规则、无 LLM。
@@ -17,7 +17,7 @@ _DAY_MS = 86_400_000
 
 
 def expire(subject_id: str, store: SqliteCognitionStore, now: datetime, cfg: Config = CONFIG) -> int:
-    """把临时类里超过期阈值(严格 >)的认知标 invalid_at。稳定类不动。返回过期条数。对齐 expire.ts:28-43。"""
+    """将时效类中严格超过期限的认知标记为 invalid_at；稳定类型不受影响。"""
     thresholds = cfg.expire_after_days
     now_ms = epoch_ms(now)
     now_iso = to_iso_z(now)

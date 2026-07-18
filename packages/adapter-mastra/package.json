@@ -2,22 +2,44 @@
   "name": "@memoweft/adapter-mastra",
   "version": "0.1.0",
   "description": "Mastra adapter for MemoWeft — inject long-term memory into the system channel via a Processor's processInput (recall) and persist the user's turn + tool results + assistant reply via processOutputResult (write).",
-  "keywords": ["mastra", "processor", "memoweft", "memory", "llm", "agent"],
+  "keywords": [
+    "mastra",
+    "processor",
+    "memoweft",
+    "memory",
+    "llm",
+    "agent"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
-  "files": ["dist/**/*.js", "dist/**/*.d.ts", "README.md", "README.zh-CN.md"],
-  "engines": { "node": ">=20" },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.map",
+    "examples/**/*.ts",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/memoweft/memoweft.git",
     "directory": "packages/adapter-mastra"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"tests/**/*.test.ts\"",
@@ -26,7 +48,7 @@
   },
   "peerDependencies": {
     "@mastra/core": "^1.51.0",
-    "memoweft": "^0.5.0 || ^0.6.0"
+    "memoweft": "^0.6.0"
   },
   "devDependencies": {
     "@mastra/core": "^1.51.0",

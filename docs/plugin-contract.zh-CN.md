@@ -4,67 +4,67 @@
 
 > 本文档**以英文版为准**；中文为尽力同步，如有出入以 [英文版](./plugin-contract.md) 为准。
 
-
 > 稳定性：**experimental**（pre-1.0，签名可能演进——尤其 hook 参数以后可能增字段，插件作者留扩展余地）。
-> 类型定义：`src/plugin/contract.ts`，从包主入口 `memoweft` 导出。配套：[记忆面契约 `memory-surface-contract.md`](./memory-surface-contract.md)。
+> 类型定义：`src/plugin/contract.ts`，从包主入口 `memoweft` 导出。配套：[记忆面契约](./reference/memory-surface-contract.zh-CN.md)。
 
 ## 一句话
 
-插件给同一套 MemoWeft 记忆底座加"脸 / 工具 / 感知"，**只能观察 + 经受限接口请求，绝不能改管线或绕过记忆规则**。
+插件给同一套 MemoWeft 记忆底座加"脸 / 工具 / 感知"。公开插件接口提供观察与请求能力，但不提供改写管线的 API 或直接访问 store 的 API。
 
 ## 三类插件
 
-| type | 干什么 | 靠什么 |
-|---|---|---|
-| `experience` | 换回话人设 / 语气（普通助手 / 星瑶） | `systemPrompt`（Host 按会话选、每轮传给 `handleConversationTurn`） |
-| `tool` | 工具（如将来的 GitHub / 文件） | hook + `PluginContext` 请求式能力 |
-| `collector` | 感知采集（如活动窗口） | 采集器多是独立进程经 `/api/observe` 产观察；也可用 `onObservation` 反应 |
+| type         | 干什么                                 | 靠什么                                                                  |
+| ------------ | -------------------------------------- | ----------------------------------------------------------------------- |
+| `experience` | 切换会话人设 / 语气（普通助手 / 星瑶） | `systemPrompt`（Host 按会话选、每轮传给 `handleConversationTurn`）      |
+| `tool`       | 宿主定义的工具与能力                   | hook + `PluginContext` 请求式能力                                       |
+| `collector`  | 感知采集（如活动窗口）                 | 采集器多是独立进程经 `/api/observe` 产观察；也可用 `onObservation` 反应 |
 
 ## `MemoWeftPlugin`
 
 ```ts
 interface MemoWeftPlugin {
-  id: string;            // 稳定机器标识（注册表键）
-  name: string;          // 给用户看的名字
+  id: string; // 稳定机器标识（注册表键）
+  name: string; // 给用户看的名字
   type: 'experience' | 'tool' | 'collector';
   systemPrompt?: string; // experience 用
-  permissions?: PluginPermissions;                 // 声明式：要用 ctx 的哪些能力
+  permissions?: PluginPermissions; // 声明式：要用 ctx 的哪些能力
   onLoad?(ctx: PluginContext): void | Promise<void>;
   onUserMessage?(msg: PluginUserMessage, ctx: PluginContext): void | Promise<void>;
   onObservation?(obs: Observation, ctx: PluginContext): void | Promise<void>;
 }
 ```
 
-注册：`createMemoWeftCore({ ..., plugins: [...] })`。不传 = 无插件，行为同旧。
+通过 `createMemoWeftCore({ ..., plugins: [...] })` 注册插件；省略 `plugins` 时，Core 行为不变。
 
-## Hook：只观察，不改管线（红线）
+## Hook：只观察，不改管线
 
-- **`onLoad`**：建 core 时烧一次（stores/retriever 已就绪）。**fire-and-forget**（不 await，保 `createMemoWeftCore` 同步返回）——插件的异步 onLoad 在后台跑、不保证在首次调用前完成。
-- **`onUserMessage`**：每轮对话**之后**烧（回话已生成）。拿到 `{ content, subjectId, reply }`——观察这轮说了啥 / 回了啥。
-- **`onObservation`**：每条经 `core.ingestObservation` 摄入的观察**落库后**烧。
+- **`onLoad`**：在 stores 与 retriever 就绪后调用一次。该 hook 不会被等待，以保持 `createMemoWeftCore` 同步返回；异步处理器可能在第一次 Core 调用时仍在运行。
+- **`onUserMessage`**：每轮对话完成、回复已经生成后调用。它只接收 `{ content, subjectId, reply }` 供观察。
+- **`onObservation`**：经 `core.ingestObservation` 摄入的观察落库后调用。
 
-铁律：
-- **返回值一律丢弃**——hook 返回"改过的回话/消息"也不回灌管线。
-- **不改**用户消息、不改回话文本。
-- 每个 hook `try/catch` 包裹：**插件抛错记日志、不崩会话 / 不崩摄入**（呼应"召回失败不挡回话"）。
-- hook 烧在 Core 的**方法层**（`createCore.ts`）——`conversation.ts` / `ingest.ts` 的纯逻辑一行不碰。
+不变式：
 
-## `PluginContext`：受限能力壳
+- **返回值会被丢弃**——hook 返回的“修改后回复/消息”不会进入管线。
+- **不改**用户消息、不改回复文本。
+- 每个 hook 由 `try/catch` 包裹：插件异常会记录日志，Core 方法按其正常结果路径继续；hook 处理不为宿主设定回复时延或可用性预期。
+- hook 在 Core 的**方法层**（`createCore.ts`）运行；`conversation.ts` 与 `ingest.ts` 中的纯管线函数不依赖插件分发。
+
+## `PluginContext`：受限能力
 
 ```ts
 interface PluginContext {
-  submitObservation(input: PluginObservationInput): Promise<void>;  // 需 permissions.submitObservation
-  requestMemory(query: string): Promise<RecalledCognitionItem[]>;   // 需 permissions.requestMemory
+  submitObservation(input: PluginObservationInput): Promise<void>; // 需 permissions.submitObservation
+  requestMemory(query: string): Promise<RecalledCognitionItem[]>; // 需 permissions.requestMemory
 }
 ```
 
-- **闭包给、绝不交 store**：ctx 只是两个绑好的方法，插件够不到 `store` / `cognitionStore`。
-- **绑当次 subject**（v1 单人单宿主 = `config.identity.subjectId`）；方法不收 subjectId。
+- **通过闭包提供，不暴露 store API**：context 只包含两个预绑定方法，不包含 `store` 或 `cognitionStore`。
+- **绑定当前 subject**（当前单用户宿主模型中为 `config.identity.subjectId`）；方法不接收 `subjectId`。
 - **`submitObservation`**：
-  - 入参 `PluginObservationInput` = `Observation` **去掉三个授权位**——插件**不能设** `allowCloudRead/Local/Inference`；Core 侧还会白名单重构一遍，就算插件运行时硬塞 `allowCloudRead:true` 也丢弃 → 一律走 `observed` 保守默认（**本地可读 / 不上云 / 可推画像**）。这是 Host `sanitizeObservation` 的 Core 侧等价。
-  - 走**纯函数 `ingestObservations`、不走烧 hook 的方法** → 插件提交的观察照常落库，但**不级联触发 `onObservation`**，杜绝"观察→提交→再观察"的重入死循环。
+  - 入参 `PluginObservationInput` = `Observation` **去掉三个授权位**。Core 会按白名单重构可接受字段，因此运行时额外传入的 `allowCloudRead:true` 会被丢弃，并应用 `observed` 的保守默认（**本地可读 / 不上云 / 可推画像**）。这些标记只影响 MemoWeft 的 prompt 选择，不是访问控制或加密。这是 Host `sanitizeObservation` 的 Core 侧等价。
+  - 直接调用纯函数 `ingestObservations`，而不经过 hook 分发方法。观察会正常落库，但**不会递归触发 `onObservation`**，从而避免“观察→提交→再次观察”的循环。
   - 幂等：带稳定 `originId` 才去重（由插件负责）。
-- **`requestMemory`**：读"与 query 相关"的召回认知（走既有召回门控 topK / minSimilarity）。v2 不按 `contentType` 细分——**声明式权限只门控"能不能调"这个能力**；给了 `requestMemory` 权限的插件即信任它不滥用（信任模型，宿主选择装哪些插件时自负）。
+- **`requestMemory`**：读取与 query 相关的召回认知（遵循既有 topK / minSimilarity 门控）。v2 不按 `contentType` 细分；声明式权限只控制插件能否调用该能力。宿主必须评估获准插件，因为该权限不会进一步限制其查询范围。
 
 ## 声明式权限
 
@@ -72,11 +72,11 @@ interface PluginContext {
 
 ## UI 在 Host，不在 Core
 
-Core 是**无头库**、不画界面。插件管理界面（列已注册插件 / 类型 / 权限 / 换人设）在 Host——参考实现见 `apps/memoweft-host` 的记忆管理页「插件」tab + `GET /api/plugins`。草案 §7.1 的 `requestPermission` / `emitUIEvent` **不进 Core 的 `PluginContext`**（那是 Host/UI 的事）。
+Core 是**无头库**，不提供界面。参考 Host 负责列出插件、显示声明权限、启停控制与人格选择；可查看记忆管理页的“插件”标签和 `GET /api/plugins`。动态权限提示与 UI 事件不属于 Core 的 `PluginContext`。
 
-## 现状与边界（v2 诚实交底）
+## 当前使用者与不支持的能力
 
-- v2 铺的是**基础设施**：现有 experience 插件靠 `systemPrompt`（无 hook）、活动窗口采集器走 `/api/observe`（不消费 `onObservation`）——**hook 目前没有生产消费者**，真实的 tool / hook 型采集器待后续。活体 demo 见 `examples/plugin-hook.ts`。
-- **不做**：运行时动态装卸外部插件包（模块加载 / 插件市场 / 沙箱）；会改管线的 hook；动态权限弹窗。
+- 内置 experience 插件使用 `systemPrompt`，活动窗口采集器通过 `/api/observe` 提交观察；二者都不依赖 hook。[`examples/plugin-hook.ts`](../examples/plugin-hook.ts) 是 hook 行为的可执行参考。
+- **不支持：**运行时安装或卸载外部插件包、模块沙箱、修改管线的 hook，以及动态权限提示。
 
-关联：[记忆面契约](./memory-surface-contract.md) · [三层边界](./internals/boundaries.md) · 示例 `examples/plugin-hook.ts`。
+关联：[记忆面契约](./reference/memory-surface-contract.zh-CN.md) · [三层边界](./internals/boundaries.zh-CN.md) · [插件示例](../examples/plugin-hook.ts)。

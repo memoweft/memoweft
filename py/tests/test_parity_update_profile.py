@@ -1,6 +1,6 @@
 """updateProfile 编排 parity:distill→consolidate→attribute→重索引 与 TS(shared/parity/update-profile.json)一致。
 
-钉串链顺序 + 各步 llmCalls + metrics 透传(promptChars UTF-16)+ 索引只含 active∧未 muted + 索引失败不回滚(P2-9)。
+钉串链顺序 + 各步 llmCalls + metrics 透传(promptChars UTF-16)+ 索引只含 active∧未 muted + 索引失败不回滚()。
 """
 from __future__ import annotations
 

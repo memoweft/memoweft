@@ -1,5 +1,5 @@
 /**
- * 受治理提示词的公共形状（§15.3 提示词集中版本化 / DECISIONS D-0009）。
+ * 受治理提示词的公共形状。
  *
  * 8 条受治理提示词从各模块散落的 export 常量收敛到 src/prompts/ 下：每条实现 VersionedPrompt，
  * 由 src/prompts/registry.ts 聚合。tests/prompts/registry.test.ts 是 npm test 里的哈希闸门——

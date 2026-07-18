@@ -1,4 +1,4 @@
-"""事件存储层 —— 移植自 src/event/store.ts。两表:event + event_evidence(事件覆盖了哪些原话证据)。"""
+"""与 TypeScript event store 契约一致的 event 与 event_evidence 存储。"""
 from __future__ import annotations
 
 import sqlite3
@@ -21,7 +21,7 @@ def _from_row(r: sqlite3.Row) -> Event:
 
 
 class SqliteEventStore:
-    """事件存储(event/store.ts:65-179)。db = open_db 返回的共享连接。"""
+    """使用 open_db 共享连接的事件存储。"""
 
     def __init__(self, db: sqlite3.Connection, clock: Clock = system_clock) -> None:
         self._db = db
@@ -60,7 +60,7 @@ class SqliteEventStore:
         return [r["evidence_id"] for r in rows]
 
     def covered_evidence_ids(self, subject_id: str) -> list[str]:
-        # 子查询 IN(不 DISTINCT,去重靠调用方 set),对齐 event/store.ts:129-136。
+        # 子查询使用 IN；去重由调用方提供的 set 保证，无需 DISTINCT。
         rows = row_all(
             self._db,
             "SELECT evidence_id FROM event_evidence WHERE event_id IN (SELECT id FROM event WHERE subject_id = ?)",

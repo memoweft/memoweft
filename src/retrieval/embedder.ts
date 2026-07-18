@@ -1,8 +1,8 @@
 /**
- * 嵌入器（地图 cell 7 / 11：召回靠向量语义；嵌入器云端优先、可替换）。
+ * 嵌入器：召回依赖向量语义；嵌入器云端优先、可替换。
  * 用内置 fetch 打 OpenAI 兼容 /embeddings，不装 SDK。换本地只改这一处。
  *
- * 配置从 .env 读 MEMOWEFT_EMBED_*（兼容旧名 DLA_EMBED_*）；未配则 loadEmbedConfig 返回 null（召回降级为空，不报错）。
+ * 配置从 .env 读 MEMOWEFT_EMBED_*（兼容旧名 DLA_EMBED_*）；未配则 loadEmbedConfig 返回 null，Core 使用本地 FTS5 关键词召回。
  * 请求超时可经 MEMOWEFT_EMBED_TIMEOUT_MS 配置（兼容旧名 DLA_EMBED_TIMEOUT_MS），默认 60s；
  * 失败由上游容错（召回失败不挡回话、indexError 不回滚画像）。
  */
@@ -12,9 +12,9 @@ import type { UsageStats } from '../llm/client.ts';
 export interface Embedder {
   /** 把一组文本编码成向量。 */
   embed(texts: string[]): Promise<number[][]>;
-  /** 累计嵌入调用次数（可选·档8·观测）：宿主自注入的 embedder 不带也照跑（缺省 undefined）。 */
+  /** 累计嵌入调用次数（可选·用量统计·观测）：宿主自注入的 embedder 不带也照跑（缺省 undefined）。 */
   readonly callCount?: number;
-  /** token 用量累计（可选·档8）：embedding 常是灌记忆的 token 大头，同 LLMClient.usage——读到才加、读不到跳过。 */
+  /** token 用量累计（可选·用量统计）：embedding 常是灌记忆的 token 大头，同 LLMClient.usage——读到才加、读不到跳过。 */
   readonly usage?: UsageStats;
 }
 
@@ -45,18 +45,23 @@ export function loadEmbedConfig(): EmbedConfig | null {
 export class OpenAICompatEmbedder implements Embedder {
   private readonly config: EmbedConfig;
   private _callCount = 0;
-  private _usage: UsageStats = { promptTokens: 0, completionTokens: 0, totalTokens: 0, callsWithUsage: 0 };
+  private _usage: UsageStats = {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    callsWithUsage: 0,
+  };
 
   constructor(cfg: EmbedConfig) {
     this.config = cfg;
   }
 
-  /** 累计嵌入调用次数（档8·观测）：空输入直接返回、不计数（未打网络）。 */
+  /** 累计嵌入调用次数（用量统计·观测）：空输入直接返回、不计数（未打网络）。 */
   get callCount(): number {
     return this._callCount;
   }
 
-  /** token 用量累计（档8）：返回快照拷贝，防外部改内部计数。 */
+  /** token 用量累计（用量统计）：返回快照拷贝，防外部改内部计数。 */
   get usage(): UsageStats {
     return { ...this._usage };
   }
@@ -65,9 +70,10 @@ export class OpenAICompatEmbedder implements Embedder {
     if (texts.length === 0) return [];
     this._callCount++;
     const url = `${this.config.baseUrl.replace(/\/$/, '')}/embeddings`;
-    // 超时中断：嵌入端点挂起时别让 fetch 裸奔无限等（上游 LLM client 已有同款 120s 超时）。
+    // 嵌入请求使用有界超时，避免端点挂起导致 fetch 无限等待（上游 LLM client 同样设有 120s 超时）。
     // 毫秒从 env 读、默认 60000；双前缀兼容旧名（与本文件 loadEmbedConfig 口径一致）。
-    const timeoutMs = Number(process.env.MEMOWEFT_EMBED_TIMEOUT_MS ?? process.env.DLA_EMBED_TIMEOUT_MS) || 60000;
+    const timeoutMs =
+      Number(process.env.MEMOWEFT_EMBED_TIMEOUT_MS ?? process.env.DLA_EMBED_TIMEOUT_MS) || 60000;
     let res: Response;
     try {
       res = await fetch(url, {
@@ -103,7 +109,7 @@ export class OpenAICompatEmbedder implements Embedder {
       // embeddings 响应的 usage 只有 prompt_tokens / total_tokens（无 completion——嵌入不生成）。
       usage?: { prompt_tokens?: number; total_tokens?: number };
     };
-    // token 用量（档8·观测/计费）：读到才加、读不到静默跳过（同 chat 口径，绝不因缺 usage 崩）。
+    // token 用量（用量统计·观测/计费）：读到才加、读不到静默跳过（同 chat 口径，绝不因缺 usage 崩）。
     const rawUsage = data.usage;
     if (rawUsage) {
       const p = typeof rawUsage.prompt_tokens === 'number' ? rawUsage.prompt_tokens : 0;

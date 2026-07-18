@@ -1,13 +1,13 @@
 /**
- * 交互会话（v0.6 · D-0034）：per-conversation 的上下文窗口 + episode 切分。
+ * 交互会话（v0.6）：per-conversation 的上下文窗口 + episode 切分。
  *
  * 把「记住上一句 AI + 切分对话段」从回话逻辑里独立出来——让【不走回话】的宿主（如 weftmate，
  * 自建 agent 循环、只用裸 ingestUserMessage）也能捕获交互上下文。core 为每个 conversationId 维护一个实例：
  *   - ingestUserMessage(conversationId) 前调 beginUserTurn → 拿到「上一轮 AI 那句」+ 本轮 episodeId。
- *   - recordAssistantReply(conversationId) 把宿主生成的 AI 回复 push 进窗口（**只作后续上下文、永不落证据**，3a）。
+ *   - recordAssistantReply(conversationId) 把宿主生成的 AI 回复 push 进窗口（**只作后续上下文、永不落证据**）。
  *
  * 纪律：只管内存窗口 + episode 归属，不碰库、不产 Cognition、不算置信度。上一轮 AI 那句经此进入
- *   EvidenceInput.precedingAiContext（D-0033 结构墙列），下游 distill/consolidate 的注入逻辑一字不改即生效。
+ *   EvidenceInput.precedingAiContext 专用列，下游 distill/consolidate 可直接使用该上下文。
  */
 import { randomUUID } from 'node:crypto';
 import { WorkingMemory, type Turn } from './workingMemory.ts';
@@ -42,7 +42,10 @@ export class InteractionSession {
    *   - 返回「上一轮 AI 那句」（供 preceding_ai_context）。
    * @param atMs 本轮发生时间（ms）——来自 occurredAt 或注入 clock，切分判定确定性由调用方保证。
    */
-  beginUserTurn(atMs: number, explicitEpisodeId?: string): { precedingAiContext: string | null; episodeId: string } {
+  beginUserTurn(
+    atMs: number,
+    explicitEpisodeId?: string,
+  ): { precedingAiContext: string | null; episodeId: string } {
     const preceding = this.precedingAiContext();
     if (explicitEpisodeId) {
       this.episodeId = explicitEpisodeId;
@@ -66,7 +69,7 @@ export class InteractionSession {
     this.window.push({ role: 'user', content });
   }
 
-  /** push 宿主生成的 AI 回复（recordAssistantReply）——只作后续上下文，绝不落证据（3a）。 */
+  /** push 宿主生成的 AI 回复（recordAssistantReply）——只作后续上下文，绝不落证据。 */
   pushAssistant(content: string): void {
     this.window.push({ role: 'assistant', content });
   }

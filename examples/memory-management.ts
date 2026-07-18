@@ -27,12 +27,20 @@ const SUBJECT = 'demo-user';
 async function main() {
   const core = createMemoWeftCore({ dbPath: DB });
   if (!core.health().llmReady) {
-    console.log('!  No chat model configured — updateProfile needs one to form cognitions. See examples/minimal.ts.\n');
+    console.log(
+      '!  No chat model configured — updateProfile needs one to form cognitions. See examples/minimal.ts.\n',
+    );
   }
 
   // 1) Seed some evidence and form cognitions.
-  await core.ingestUserMessage({ subjectId: SUBJECT, content: 'I love pour-over coffee in the morning.' });
-  await core.ingestUserMessage({ subjectId: SUBJECT, content: 'I switched from tea to coffee this year.' });
+  await core.ingestUserMessage({
+    subjectId: SUBJECT,
+    content: 'I love pour-over coffee in the morning.',
+  });
+  await core.ingestUserMessage({
+    subjectId: SUBJECT,
+    content: 'I switched from tea to coffee this year.',
+  });
   await core.updateProfile({ subjectId: SUBJECT });
 
   // 2) List the active profile.
@@ -43,11 +51,18 @@ async function main() {
   // 3) Invalidate the first one with a reason (recorded to the audit log).
   if (profile.length > 0) {
     const target = profile[0]!;
-    core.memory.invalidateCognition({ cognitionId: target.id, reason: 'example: user retracted this' });
-    console.log(`\nInvalidated [${target.id}] with a reason (soft-invalidate: retained & traceable, not deleted).`);
+    core.memory.invalidateCognition({
+      cognitionId: target.id,
+      reason: 'example: user retracted this',
+    });
+    console.log(
+      `\nInvalidated [${target.id}] with a reason (soft-invalidate: retained & traceable, not deleted).`,
+    );
 
     profile = core.memory.listCognitions({ subjectId: SUBJECT });
-    console.log(`Active cognitions now (${profile.length}) — invalidated ones drop out of the active profile.`);
+    console.log(
+      `Active cognitions now (${profile.length}) — invalidated ones drop out of the active profile.`,
+    );
   }
 
   core.close();

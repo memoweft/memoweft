@@ -1,10 +1,4 @@
-# 全仓文本行尾归一为 LF（ROADMAP Next,2026-07-12）。
-#
-# 背景:开发机 core.autocrlf=true 会把工作树检出成 CRLF,与 .prettierrc(endOfLine: lf)冲突——
-# `npm run format` 在 Windows 报 200+ 假 style issue,且每次 git 操作刷 "LF will be replaced by CRLF"。
-# 下面这条让 git 统一按 LF 处理所有文本(索引本已全 LF,`git add --renormalize .` 无内容 diff);
-# 二进制由 text=auto 自动识别不转,另对常见二进制显式 -text 兜底。
-# 工作树已检出的 CRLF 文件不会自动变——要就地归一:`git add --renormalize . && git checkout .`。
+# Keep text files stable across operating systems.
 * text=auto eol=lf
 *.png -text
 *.gif -text
@@ -14,6 +8,6 @@
 *.db -text
 *.gguf -text
 
-# 机读快照另显式钉死 LF —— 逐字比对;api-freeze / 提示词哈希闸门在 Windows 新克隆上曾因 CRLF 假红(2026-07-10 实测)。
+# These snapshots are compared byte-for-byte in CI.
 tests/api/api-surface.snapshot        text eol=lf
 tests/prompts/prompt-hashes.snapshot  text eol=lf

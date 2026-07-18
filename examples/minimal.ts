@@ -14,8 +14,8 @@
  * Prerequisites:
  *   - Build the package first (examples import by package name): `npm run build`.
  *   - A .env at the repo root with at least a chat model (MEMOWEFT_LLM_*, or legacy DLA_LLM_*).
- *     A chat model alone is enough: without MEMOWEFT_EMBED_*, recall degrades to empty
- *     (the profile is still written; only reply-time injection is skipped).
+ *     A chat model alone is enough: without MEMOWEFT_EMBED_*, recall falls back to local
+ *     FTS5 keyword search. Semantic/vector recall requires an embedder.
  *   - Node >= 20 to import the built package. (Node >= 24 also runs .ts directly with the
  *     built-in node:sqlite; on Node 20/22 install the optional driver better-sqlite3 — see docs/INSTALL.md.)
  *
@@ -36,8 +36,12 @@ async function main() {
   const core = createMemoWeftCore({ dbPath: DB });
 
   const { llmReady, embedReady } = core.health();
-  if (!llmReady) console.log('!  No chat model configured (MEMOWEFT_LLM_* / legacy DLA_LLM_*): a real call will error; the write-to-db part still runs.');
-  if (!embedReady) console.log('!  No embedder configured (MEMOWEFT_EMBED_*): recall degrades to empty; write path still runs.');
+  if (!llmReady)
+    console.log(
+      '!  No chat model configured (MEMOWEFT_LLM_* / legacy DLA_LLM_*): a real call will error; the write-to-db part still runs.',
+    );
+  if (!embedReady)
+    console.log('!  No embedder configured (MEMOWEFT_EMBED_*): using local FTS5 keyword recall.');
   console.log();
 
   // 2) Ingest one "user-spoken" piece of evidence (authorization flags & time defaulted by Core).
@@ -46,7 +50,9 @@ async function main() {
     hostId: 'example',
     content: 'I focus best coding at night; daytime meetings make it hard to settle down.',
   });
-  console.log('Wrote 1 piece of evidence. Running updateProfile (distill event -> profile -> attribute -> index)...');
+  console.log(
+    'Wrote 1 piece of evidence. Running updateProfile (distill event -> profile -> attribute -> index)...',
+  );
 
   // 3) updateProfile = the one-shot write path. Real model calls; latency depends on your model
   //    (the returned timings show which step is slow).
@@ -62,7 +68,9 @@ async function main() {
   const profile = core.memory.listCognitions({ subjectId: SUBJECT });
   console.log(`\nCurrent profile (${profile.length}):`);
   for (const c of profile) {
-    console.log(`  - [${c.contentType}/${c.credStatus}] ${c.content}  (confidence ${c.confidence})`);
+    console.log(
+      `  - [${c.contentType}/${c.credStatus}] ${c.content}  (confidence ${c.confidence})`,
+    );
   }
 
   // 4) Read path: handle the next message and see whether it recalls & injects the profile above.
@@ -73,7 +81,8 @@ async function main() {
   if (turn.recall.length) {
     console.log(`(recalled & injected: ${turn.recall.map((r) => r.content).join(' / ')})`);
   }
-  if (turn.error) console.log(`(reply error: ${turn.error} — but your message was stored as evidence)`);
+  if (turn.error)
+    console.log(`(reply error: ${turn.error} — but your message was stored as evidence)`);
 
   // 5) Clean up (close db + retriever).
   core.close();

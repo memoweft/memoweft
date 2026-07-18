@@ -1,4 +1,4 @@
-"""感知 —— 移植自 src/pipeline/perceive.ts。把原始输入包装成 EvidenceInput(默认 spoken,不落库)。
+"""感知入口，将原始输入包装为默认 source_kind=spoken 的 EvidenceInput，不执行持久化。
 
 授权默认全下沉到 evidence.put(按 source_kind 分流),perceive 不判授权。
 """
@@ -21,7 +21,7 @@ class PerceiveOptions:
 
 
 def perceive(raw_content: str, opts: Optional[PerceiveOptions] = None, cfg: Config = CONFIG) -> EvidenceInput:
-    """对齐 perceive.ts:16-26。subject_id/host_id 缺省取 cfg.identity;source_kind 缺省 spoken。"""
+    """构造 EvidenceInput；subject_id/host_id 默认取 cfg.identity，source_kind 默认使用 spoken。"""
     o = opts if opts is not None else PerceiveOptions()
     return EvidenceInput(
         subject_id=o.subject_id if o.subject_id is not None else cfg.identity.subject_id,
@@ -30,5 +30,5 @@ def perceive(raw_content: str, opts: Optional[PerceiveOptions] = None, cfg: Conf
         origin_id=o.origin_id,
         occurred_at=o.occurred_at,
         raw_content=raw_content,
-        # summary 留空:存储层补成 raw_content(v1)
+        # summary 留空时由存储层使用 raw_content。
     )

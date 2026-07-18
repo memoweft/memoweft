@@ -2,17 +2,24 @@
 
 > 中文版 · [README.zh-CN.md](./README.zh-CN.md)
 
+> [!IMPORTANT]
+> **Unreleased source preview.** This adapter is not published on npm. Its package name resolves inside this repository's npm workspace only.
+
 **OpenAI Agents SDK adapter for [MemoWeft](https://github.com/memoweft/memoweft).** Give your `@openai/agents` app long-term memory by **wrapping `run`**: **read** = recall relevant memory and inject it before the model call; **write** = persist the user's own words and each tool result.
 
 This is an **external integration package**. It wraps MemoWeft's public Core facade (`createMemoWeftCore`) — it does not touch Core internals. `@openai/agents` is a peer dependency (bring your own).
 
-## Install
+## Try from a source checkout
 
 ```bash
-npm i @openai/agents memoweft @memoweft/adapter-openai-agents
+git clone https://github.com/memoweft/memoweft.git
+cd memoweft
+npm ci
+npm run build
+npm run build --workspace @memoweft/adapter-openai-agents
 ```
 
-`@openai/agents` `^0.13` and `memoweft` `^0.5.0 || ^0.6.0` are peer dependencies.
+`@openai/agents` `^0.13` and `memoweft` `^0.6.0` are peer dependencies.
 
 ## v0.6 conversation context (optional)
 
@@ -24,7 +31,7 @@ const result = await mw.run(agent, input, {
 });
 ```
 
-When `conversationId` is set (and the Core is 0.6), the user's turn is ingested with it — Core captures the **previous** turn's AI reply into `preceding_ai_context` — and after the run the wrapper reports the turn's **final AI reply** via `recordAssistantReply`. That reply is **context only, never evidence** (iron rule 3a): it lets the *next* turn be understood, and is never stored as a memory. On memoweft `0.5` (no `recordAssistantReply`) this whole line is skipped via a runtime capability probe, and everything else works unchanged.
+When `conversationId` is set (and the Core is 0.6), the user's turn is ingested with it — Core captures the **previous** turn's AI reply into `preceding_ai_context` — and after the run the wrapper reports the turn's **final AI reply** via `recordAssistantReply`. The source-role boundary is explicit: assistant replies are **context only, never evidence**. This lets the _next_ turn be understood without storing the reply as memory. On memoweft `0.5` (no `recordAssistantReply`) this whole line is skipped via a runtime capability probe, and everything else works unchanged.
 
 ## One factory, three pieces, three paths
 
@@ -44,17 +51,17 @@ const result = await mw.run(agent, 'What theme do I prefer?', {
 });
 ```
 
-- **`run` wrapper** does three things. It **captures the user's original words** from the `input` argument (before any injection) and stores them as a `spoken` evidence (`core.ingestUserMessage`). It **chains the recall filter** into the run's `callModelInputFilter` option (recall injection, below). After the run finishes it **scans `RunResult.newItems`** and stores each **tool result** (`core.ingestToolResult`) — only items of type `tool_call_output_item`, reading their `output` and `rawItem.callId`; the model's `tool_call_item` (call intent / arguments) is a separate item type and never enters scope (AD-3 / iron rule 3a, enforced *by construction*).
+- **`run` wrapper** does three things. It **captures the user's original words** from the `input` argument (before any injection) and stores them as a `spoken` evidence (`core.ingestUserMessage`). It **chains the recall filter** into the run's `callModelInputFilter` option (recall injection, below). After the run finishes it **scans `RunResult.newItems`** and stores each **tool result** (`core.ingestToolResult`) — only items of type `tool_call_output_item`, reading their `output` and `rawItem.callId`; the model's `tool_call_item` (call intent / arguments) is a separate item type and never enters scope. This enforces the evidence invariant that call intent is not evidence.
 - **`callModelInputFilter`** is the recall injection on its own — for hosts who drive `run` / `Runner` / `RunConfig` themselves. It recalls relevant memory and appends the neutral knowledge block to the model's `instructions`. A guard injects **once per turn** (only when the last input item is a `user` message), so tool-call rounds are not re-injected. If you pass your own `callModelInputFilter` via `opts`, it is chained **first** (your edit runs, then recall is appended).
 - **`persistToolOutputs(newItems)`** is the tool-result write on its own — call it with `result.newItems` if you drive the run yourself.
 
-The injected block uses MemoWeft's own neutral wording (ported verbatim from Core's `knowledgeBlock`). Low-confidence items are explicitly marked *"only guesses — do not treat as established facts."* The adapter **adds no persona / character prompt** of its own.
+The injected block uses MemoWeft's own neutral wording (ported verbatim from Core's `knowledgeBlock`). Low-confidence items are explicitly marked _"only guesses — do not treat as established facts."_ The adapter **adds no persona / character prompt** of its own.
 
-## Privacy hard constraint (D-0024)
+## Privacy hard constraint
 
 `provenance` (evidence text + authorization bits), `contentType`, `score`, and `id` **never** enter the injected `instructions`. `buildKnowledgeBlock` uses only `content` / `confidence` / `credStatus`. The richer recall surface is handed to the host **only** through the `onRecall` callback, so the host can filter before forwarding anything to a cloud model. Injection targets `instructions` (never the user `input` items), so the captured original input can never contain the injected memory.
 
-## Degradation (§16.2)
+## Degradation
 
 - Recall is bounded by `recallTimeoutMs` (default 200ms). On timeout or error the turn proceeds **without injection** — recall failure never blocks the reply. The read path does not retry.
 - Writes (`ingest`) retry once on real errors; a still-failing write is logged (if a `logger` is provided) and swallowed. Nothing is ever thrown to the SDK or the caller.

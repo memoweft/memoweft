@@ -1,0 +1,902 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {},
+        "privacyMode": false,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": true
+        },
+        "privacyMode": false,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true
+        },
+        "privacyMode": false,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": true
+        },
+        "privacyMode": false,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": false
+        },
+        "privacyMode": false,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true,
+          "allowInference": false,
+          "allowLocalRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {},
+        "privacyMode": false,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": true
+        },
+        "privacyMode": false,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true
+        },
+        "privacyMode": false,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": true
+        },
+        "privacyMode": false,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": false
+        },
+        "privacyMode": false,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true,
+          "allowInference": false,
+          "allowLocalRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {},
+        "privacyMode": false,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": true
+        },
+        "privacyMode": false,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true
+        },
+        "privacyMode": false,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": true
+        },
+        "privacyMode": false,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": false,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": false
+        },
+        "privacyMode": false,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true,
+          "allowInference": false,
+          "allowLocalRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {},
+        "privacyMode": false,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": true
+        },
+        "privacyMode": false,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true
+        },
+        "privacyMode": false,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": true
+        },
+        "privacyMode": false,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": false,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": false
+        },
+        "privacyMode": false,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true,
+          "allowInference": false,
+          "allowLocalRead": false
+        },
+        "privacyMode": false,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {},
+        "privacyMode": true,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": true
+        },
+        "privacyMode": true,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true
+        },
+        "privacyMode": true,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": true
+        },
+        "privacyMode": true,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": false,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": false
+        },
+        "privacyMode": true,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true,
+          "allowInference": false,
+          "allowLocalRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "spoken"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {},
+        "privacyMode": true,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": true
+        },
+        "privacyMode": true,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true
+        },
+        "privacyMode": true,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": true
+        },
+        "privacyMode": true,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": false,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": false
+        },
+        "privacyMode": true,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true,
+          "allowInference": false,
+          "allowLocalRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "inferred"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {},
+        "privacyMode": true,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": true
+        },
+        "privacyMode": true,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true
+        },
+        "privacyMode": true,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": true
+        },
+        "privacyMode": true,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": false,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": false
+        },
+        "privacyMode": true,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true,
+          "allowInference": false,
+          "allowLocalRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "observed"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {},
+        "privacyMode": true,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": true
+        },
+        "privacyMode": true,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowLocalRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true
+        },
+        "privacyMode": true,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": true
+        },
+        "privacyMode": true,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": false,
+        "allowInference": false,
+        "allowLocalRead": true
+      },
+      "input": {
+        "explicit": {
+          "allowInference": false
+        },
+        "privacyMode": true,
+        "sourceKind": "tool"
+      }
+    },
+    {
+      "expected": {
+        "allowCloudRead": true,
+        "allowInference": false,
+        "allowLocalRead": false
+      },
+      "input": {
+        "explicit": {
+          "allowCloudRead": true,
+          "allowInference": false,
+          "allowLocalRead": false
+        },
+        "privacyMode": true,
+        "sourceKind": "tool"
+      }
+    }
+  ],
+  "fn": "EvidenceStore.put 授权分流",
+  "note": "sourceKind × 显式授权 × privacyMode → 最终三位授权(observed/tool 保守 local✓/cloud✗/infer✓;spoken/inferred 走 evidenceDefaults + cloudReadDefault=!privacyMode;显式永远优先)"
+}

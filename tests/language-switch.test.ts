@@ -1,12 +1,12 @@
 /**
- * 双语层（0.4.0 · T1）：语言开关真生效 + 认知纪律英译等义仍在。
+ * 双语层：语言开关生效，并验证中英文认知约束语义一致。
  *
  * 断言：
  *  - resolveLang 缺省 en / 显式 zh / undefined 回落 en。
  *  - consolidate 的 system prompt 按 config.language 切 en/zh；correct/conflict 纪律文本在两语都在；
  *    en 侧无残留中文；user 骨架标签（【新材料】↔ [New material]）同切。
  *  - reply（走单例 resolveLang）缺省英文。
- * 走 tests/**\/*.test.ts glob（离线、进 npm test 护栏）。装配抄 eval 套的 store 直建 + core.test.ts 的 stub 手法。
+ * 测试保持离线，通过直接构造 store 与确定性 LLM stub 验证语言切换。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -52,10 +52,27 @@ async function captureConsolidatePrompt(lang: Lang): Promise<{ system: string; u
   const evt = new SqliteEventStore(':memory:');
   const cog = new SqliteCognitionStore(':memory:');
   try {
-    const e = ev.put({ subjectId: 'owner', sourceKind: 'observed', hostId: 'h', rawContent: 'hello', allowCloudRead: true });
-    evt.put({ subjectId: 'owner', summary: 'said hello', occurredAt: e.occurredAt, evidenceIds: [e.id] });
+    const e = ev.put({
+      subjectId: 'owner',
+      sourceKind: 'observed',
+      hostId: 'h',
+      rawContent: 'hello',
+      allowCloudRead: true,
+    });
+    evt.put({
+      subjectId: 'owner',
+      summary: 'said hello',
+      occurredAt: e.occurredAt,
+      evidenceIds: [e.id],
+    });
     const llm = capturingLLM('{}');
-    await consolidate('owner', { eventStore: evt, evidenceStore: ev, cognitionStore: cog, llm, config: withLang(lang) });
+    await consolidate('owner', {
+      eventStore: evt,
+      evidenceStore: ev,
+      cognitionStore: cog,
+      llm,
+      config: withLang(lang),
+    });
     assert.ok(llm.calls.length >= 1, 'consolidate 应调到 LLM');
     const msgs = llm.calls[0]!;
     return { system: msgs[0]!.content, user: msgs[1]!.content };
@@ -69,7 +86,11 @@ async function captureConsolidatePrompt(lang: Lang): Promise<{ system: string; u
 test('consolidate system prompt：en 缺省下为英文、correct/conflict 纪律等义在、无残留中文', async () => {
   const { system, user } = await captureConsolidatePrompt('en');
   assert.match(system, /You maintain a cognitive profile/, 'en system 开头');
-  assert.match(system, /only flag the conflict, do not replace/, 'conflict 纪律：只标不替换（英译等义）');
+  assert.match(
+    system,
+    /only flag the conflict, do not replace/,
+    'conflict 纪律：只标不替换（英译等义）',
+  );
   assert.match(system, /explicitly corrected\/negated/, 'correct 纪律：明确纠正（英译等义）');
   assert.equal(CJK.test(system), false, 'en system 无残留中文');
   assert.match(user, /\[New material\]/, 'en user 骨架标签英文');

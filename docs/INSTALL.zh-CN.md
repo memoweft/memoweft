@@ -10,17 +10,17 @@
 
 ## 0. 前置条件
 
-| 要求 | 说明 |
-| --- | --- |
-| **Node ≥ 24（开箱即用）或 Node 20/22 + `better-sqlite3`（后备）** | 存储底层是 SQLite。驱动**优先用内置 `node:sqlite`**、加载不到才回退可选的 `better-sqlite3`。Node ≥24 上 `node:sqlite` 转正稳定、零额外依赖；Node 20 上没有它、必须装 `better-sqlite3`（`npm i better-sqlite3`，见下方 §1.2）；Node 22 视你的版本 / flag 是否已提供 `node:sqlite` 而定，用不上时才需装 `better-sqlite3`。 |
-| **一个 OpenAI-compatible 对话模型端点** | 默认推荐云端端点：最省事、最容易让开发者跑起来。只要兼容 `/chat/completions` 即可。 |
-| **可选：写路径小快模型端点** | 用于 `distill → consolidate → attribute`，缺配会回退对话模型。 |
-| **可选：嵌入端点** | 用于语义召回。缺配时召回降级为关键词检索（FTS5），画像照写；丢的只是*语义*召回、不是召回本身。 |
-| **零运行时依赖** | runtime `dependencies` 为空，存储 / HTTP / 向量计算均用 Node 内置。`better-sqlite3` 只是**可选 peer 依赖**，Node ≥24 用户根本不需要装它。 |
+| 要求                                                    | 说明                                                                                                                                          |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node ≥ 24（推荐），或 Node 20/22 + `better-sqlite3`** | 存储底层是 SQLite。MemoWeft 优先使用内置 `node:sqlite`，不可用时回退可选 peer 驱动。为保证 Node 20/22 环境一致，执行 `npm i better-sqlite3`。 |
+| **一个 OpenAI-compatible 对话模型端点**                 | 默认推荐云端端点：最省事、最容易让开发者跑起来。只要兼容 `/chat/completions` 即可。                                                           |
+| **可选：写路径小快模型端点**                            | 用于 `distill → consolidate → attribute`，缺配会回退对话模型。                                                                                |
+| **可选：嵌入端点**                                      | 用于语义召回。缺配时召回降级为关键词检索（FTS5），画像照写；丢的只是*语义*召回、不是召回本身。                                                |
+| **小依赖边界**                                          | Node 24 上 runtime `dependencies` 为空；Node 20/22 使用可选的 `better-sqlite3` peer 驱动。                                                    |
 
-> ⚙️ **`node:sqlite` 加载不到时，装可选驱动 `better-sqlite3` 兜底。** MemoWeft **优先用内置 `node:sqlite`**、加载不到才回退 `better-sqlite3`（原生模块，见 §1.2）。`node:sqlite` 到 Node 24 才转正稳定；Node 20 上没有它，**必须**装 `better-sqlite3`；Node 22 是否可用取决于你的 Node 版本 / flag——用不上时才需装 `better-sqlite3`（装了也只在 `node:sqlite` 加载不到时才会被选中，不会顶替已可用的内置驱动）。开发库本身（跑仓库里的 `.ts` 示例 / 测试台）另有门槛：Node 22 需 22.18+ 才默认支持原生剥 `.ts` 类型，Node 20 没有此能力——想跑 `.ts` 请用 Node ≥24；只是**当库用**（`import 'memoweft'` 吃编译后的 `.js`）则装好可用驱动即可。
+> ⚙️ `better-sqlite3` 是原生模块，可能需要对应平台的预编译包或本地编译工具链。Node 24 使用稳定的内置 `node:sqlite`，是最省事的路径。运行本仓库的 `.ts` 示例也需要 Node 24；包使用者加载的是编译后的 JavaScript。
 
-> ℹ️ **云端优先，不是无脑上云。** MemoWeft 推荐开发者用云端端点快速开始，但每条证据仍有 `allowCloudRead` 等授权位。宿主负责隐私政策和同意 UI；MemoWeft 负责保留模型切换和过滤钩子。完整模式见 [`deployment.md`](./deployment.md)。
+> ℹ️ **云端优先，不是无脑上云。** MemoWeft 推荐开发者用云端端点以降低接入成本，但每条 evidence 记录都有 `allowCloudRead` 等授权位。MemoWeft 在选择写路径 prompt 的记录时使用这些标记；它们不是访问控制或加密。隐私策略、同意 UI、存储安全和其他数据流仍归宿主负责。完整模式见 [`deployment.md`](./deployment.md)。
 
 ---
 
@@ -34,7 +34,7 @@ MemoWeft 已发布到 npm。宿主开发者直接装：
 npm install memoweft
 ```
 
-然后 `import { createMemoWeftCore } from 'memoweft'`（用法见 README「当库用」/ [`integration.zh-CN.md`](./integration.zh-CN.md)）。装出来**零 runtime 依赖**（Node ≥24 用内置 `node:sqlite`）。TypeScript 项目按常规装 `@types/node` 即可。
+然后 `import { createMemoWeftCore } from 'memoweft'`（用法见 README 与 [`integration.zh-CN.md`](./integration.zh-CN.md)）。Node 24 使用内置 `node:sqlite`；Node 20/22 还需安装下方的可选 peer 驱动。
 
 ### 1.2 Node 20/22：装可选驱动 `better-sqlite3`
 
@@ -46,19 +46,19 @@ npm i better-sqlite3
 
 装上后 MemoWeft 会在开库时自动选它当底层，其余用法完全一致。几点说明：
 
-- `better-sqlite3` 是**原生模块**，一般走 prebuilt 二进制、秒装；若你的平台 / Node 版本没有匹配的 prebuilt，会回落到 `node-gyp` 现编译（需要 Python + C++ 工具链）。所以**不承诺一定装得上**——装不上时最稳的出路是把 Node 升到 ≥24（内置驱动、零依赖）。
+- `better-sqlite3` 是**原生模块**，常会使用 prebuilt 二进制；若你的平台 / Node 版本没有匹配的 prebuilt，会回落到 `node-gyp` 现编译（需要 Python + C++ 工具链）。安装失败时可把 Node 升到 ≥24，改用内置驱动并避开这个可选依赖。
 - 没装它、又不在 Node ≥24 上时，`import 'memoweft'` 会直接报一句人话错误，列出两条出路（升 Node ≥24 / 装 `better-sqlite3`）。
 
-### 1.3 从源码跑（开发库本身 / 跑参考宿主与测试台）
+### 1.3 从源码运行（开发库本身 / 参考宿主与可选诊断台）
 
 ```bash
 git clone https://github.com/memoweft/memoweft.git
 cd memoweft
-npm install        # 只装 devDependencies，无运行时依赖
+npm ci
 npm run typecheck && npm test && npm run build   # 三绿 = 环境就绪
 ```
 
-参考宿主 `npm start -w @memoweft/host`（:7788）、测试台 `npm run testbench`（:7888）都从源码跑。发布流程见 [`PUBLISHING.md`](./PUBLISHING.md)。
+参考宿主 `npm start -w @memoweft/host`（:7788）、可选诊断台 `npm run testbench`（:7888）都从源码跑。发布流程见 [`PUBLISHING.md`](./PUBLISHING.md)。
 
 ---
 
@@ -74,7 +74,7 @@ cp .env.example .env
 
 代码先读 `MEMOWEFT_*` 主名，读不到再回退旧名 `DLA_*`：
 
-- **新装的人**：一律用 `MEMOWEFT_*`。
+- **新装的人**：使用 `MEMOWEFT_*`。
 - **老用户**：已有 `DLA_*` 的 `.env` 可继续用。
 - 两个前缀都没配：真调用模型时会报错。
 
@@ -85,7 +85,7 @@ cp .env.example .env
 这是最推荐的新手 / 开发者接入方式：全部使用云端 OpenAI-compatible endpoint，先把链路跑通。
 
 ```ini
-# ── 对话模型（必填）：读路径 / 回话质量优先 ────────────────
+# ── 对话模型（必填）：读路径 / 对话质量优先 ────────────────
 MEMOWEFT_LLM_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_LLM_API_KEY=sk-xxxx
 MEMOWEFT_LLM_MODEL=your-chat-model
@@ -105,9 +105,9 @@ MEMOWEFT_EMBED_MODEL=your-embedding-model
 
 这种模式最省事，适合：
 
-- 快速体验测试台；
+- 快速体验诊断台；
 - 让其他开发者最小成本接入；
-- 先验证 `聊天 → 记住 → 召回 → 注入回话` 主链路。
+- 先验证 `聊天 → 记住 → 召回 → 注入上下文` 主链路。
 
 ---
 
@@ -117,13 +117,13 @@ MEMOWEFT_EMBED_MODEL=your-embedding-model
 
 建议默认：
 
-| 证据来源 | 默认云端策略 | 理由 |
-| --- | --- | --- |
-| 用户聊天 / 明确输入的记忆 | 宿主可默认 `allowCloudRead=true` | 用户本来就在和 AI 宿主交互。 |
-| 用户手动批准的观察 | 宿主决定 | 需要清晰同意开关。 |
-| 桌面窗口 / 设备观察 | 默认 `allowCloudRead=false` | 可能包含应用名、窗口标题、文件路径。 |
-| 屏幕 OCR / 剪贴板 / 文件内容 | 默认 `allowCloudRead=false` | 高风险隐私内容。 |
-| 睡眠 / 心率 / 健康数据 | 默认 `allowCloudRead=false` | 敏感个人数据。 |
+| 证据来源                     | 默认云端策略                     | 理由                                 |
+| ---------------------------- | -------------------------------- | ------------------------------------ |
+| 用户聊天 / 明确输入的记忆    | 宿主可默认 `allowCloudRead=true` | 用户本来就在和 AI 宿主交互。         |
+| 用户手动批准的观察           | 宿主决定                         | 需要清晰同意开关。                   |
+| 桌面窗口 / 设备观察          | 默认 `allowCloudRead=false`      | 可能包含应用名、窗口标题、文件路径。 |
+| 屏幕 OCR / 剪贴板 / 文件内容 | 默认 `allowCloudRead=false`      | 高风险隐私内容。                     |
+| 睡眠 / 心率 / 健康数据       | 默认 `allowCloudRead=false`      | 敏感个人数据。                       |
 
 > MemoWeft 只提供授权位和过滤能力；宿主必须把用户同意、撤销、查看和纠正做成明确体验。
 
@@ -147,7 +147,7 @@ MEMOWEFT_WRITE_LLM_API_KEY=local
 MEMOWEFT_WRITE_LLM_MODEL=your-local-model
 
 # 嵌入器可用本地 Ollama / LM Studio / 其他兼容服务
-MEMOWEFT_EMBED_BASE_URL=http://localhost:11435/v1
+MEMOWEFT_EMBED_BASE_URL=http://localhost:11434/v1
 MEMOWEFT_EMBED_API_KEY=ollama
 MEMOWEFT_EMBED_MODEL=bge-m3
 ```
@@ -158,33 +158,33 @@ MEMOWEFT_EMBED_MODEL=bge-m3
 
 ## 6. 九个 env 键一览
 
-| 用途 | 主名 | 兼容旧名 | 缺配时 |
-| --- | --- | --- | --- |
-| 对话模型 | `MEMOWEFT_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_LLM_*` | 真调用时报错 |
-| 写路径模型 | `MEMOWEFT_WRITE_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_WRITE_LLM_*` | 回退对话模型 |
-| 嵌入召回 | `MEMOWEFT_EMBED_{BASE_URL,API_KEY,MODEL}` | `DLA_EMBED_*` | 召回降级为关键词（FTS5） |
+| 用途       | 主名                                          | 兼容旧名          | 缺配时                   |
+| ---------- | --------------------------------------------- | ----------------- | ------------------------ |
+| 对话模型   | `MEMOWEFT_LLM_{BASE_URL,API_KEY,MODEL}`       | `DLA_LLM_*`       | 真调用时报错             |
+| 写路径模型 | `MEMOWEFT_WRITE_LLM_{BASE_URL,API_KEY,MODEL}` | `DLA_WRITE_LLM_*` | 回退对话模型             |
+| 嵌入召回   | `MEMOWEFT_EMBED_{BASE_URL,API_KEY,MODEL}`     | `DLA_EMBED_*`     | 召回降级为关键词（FTS5） |
 
 > ⚠️ 不要提交 `.env`。它包含密钥，应被 `.gitignore` 忽略。
 
 ---
 
-## 7. 跑测试台
+## 7. 运行可选诊断台
 
-测试台是本地网页：左边像正常聊天，右边是 MemoWeft 的“透视区”。你可以看到证据如何落库、如何整理成事件、如何沉淀成画像，以及系统想主动问什么。
+诊断台是本地网页：左边是正常聊天，右边是 MemoWeft 的诊断视图。你可以观察证据如何落库、如何整理成事件、如何沉淀成画像，以及系统想主动问什么。它是可选的本地诊断工具，不是部署运行所必需的组件。
 
 ```bash
 npm run testbench
 # 打开 http://localhost:7888
 ```
 
-测试台特性：
+诊断台特性：
 
-- 使用独立的 `testbench/testbench-evidence.db`，不污染正式数据库。
-- 配了 `MEMOWEFT_EMBED_*` 就用向量召回；没配则召回为空。
+- 使用独立的 `testbench/testbench-evidence.db`，而非安装示例中使用的数据库路径。
+- 配了 `MEMOWEFT_EMBED_*` 就用向量召回；诊断台在没配置时明确使用空召回。公共 Core 工厂本身会回退到 FTS5 关键词召回。
 - 每轮内幕落盘到 `logs/run-*.jsonl`，方便诊断。
 - 支持聊天、看证据 / 事件 / 画像、手动更新画像、归因、主动询问、注入活动窗口观察。
 
-> 看不到画像更新？测试台默认攒批：攒够 5 条新对话或空闲 30 分钟才自动 `updateProfile`。想立刻看效果，点“立即更新画像”。
+> 看不到画像更新？诊断台服务器有自己的调度器：攒够 5 条新对话或空闲 30 分钟后会排队运行 `updateProfile`。这是诊断台行为，不是 Core 的自动调度；可点“立即更新画像”请求一次运行。
 
 ---
 
@@ -199,10 +199,10 @@ node examples/minimal.ts
 
 它演示（全走统一入口 `createMemoWeftCore`）：
 
-1. 一行装配 `createMemoWeftCore({ dbPath })`：三层 store + 召回器 + 模型池一次到位，全部从 `.env` 读、缺配自动降级不崩。
+1. 一行装配 `createMemoWeftCore({ dbPath })`：三层 store + 召回器 + 模型池一次到位，环境配置从 `.env` 读取。未配置模型时仍可构造用于存储和管理；调用需要该模型的操作时会报告错误。
 2. `core.ingestUserMessage()` 写入一条用户亲口证据。
 3. `core.updateProfile()` 跑完整写路径（distill → consolidate → attribute → 重建索引）生成画像。
-4. `core.handleConversationTurn()` 处理下一轮消息：召回相关画像并注入回话。
+4. `core.handleConversationTurn()` 处理下一轮消息：召回相关画像并注入上下文。
 5. `core.close()` 收口连接。
 
 还有两个进阶示例可参考：[`examples/memory-management.ts`](../examples/memory-management.ts)（受控记忆管理）、[`examples/portable-bundle.ts`](../examples/portable-bundle.ts)（便携记忆包导入 / 导出）。
@@ -211,25 +211,26 @@ node examples/minimal.ts
 
 ## 9. 核心 API 速览
 
-推荐一律经统一入口 `createMemoWeftCore` 调 Core，不再散装 `new Sqlite*Store` 手工拼底层：
+推荐经统一入口 `createMemoWeftCore` 调 Core，而非散装 `new Sqlite*Store` 手工拼底层：
 
 ```ts
 import { createMemoWeftCore, MEMOWEFT_VERSION } from 'memoweft';
 
-const core = createMemoWeftCore({ dbPath: './my-app.db' });
+const core = createMemoWeftCore({ dbPath: ':memory:' });
+core.close();
 ```
 
-| 你想做的事 | 用什么 |
-| --- | --- |
-| 一行装配 Core（三层 store + 召回 + 模型） | `createMemoWeftCore({ dbPath })` |
-| 自检能否聊天 / 语义召回 | `core.health()` → `{ llmReady, embedReady }` |
-| 写入用户亲口证据 | `core.ingestUserMessage({ content, subjectId?, hostId? })` |
-| 摄入行为观察 | `core.ingestObservation({ observations })` |
-| 写路径（更新画像） | `core.updateProfile({ subjectId? })` |
-| 读路径（处理一轮对话） | `core.handleConversationTurn({ message, subjectId? })` |
-| 召回相关认知 | `core.recall({ query, subjectId? })` |
-| 受控记忆管理 | `core.memory.*` |
-| 便携记忆包 | `core.portable.*` |
+| 你想做的事                                | 用什么                                                     |
+| ----------------------------------------- | ---------------------------------------------------------- |
+| 一行装配 Core（三层 store + 召回 + 模型） | `createMemoWeftCore({ dbPath })`                           |
+| 自检能否聊天 / 语义召回                   | `core.health()` → `{ llmReady, embedReady }`               |
+| 写入用户亲口证据                          | `core.ingestUserMessage({ content, subjectId?, hostId? })` |
+| 摄入行为观察                              | `core.ingestObservation({ observations })`                 |
+| 写路径（更新画像）                        | `core.updateProfile({ subjectId? })`                       |
+| 读路径（处理一轮对话）                    | `core.handleConversationTurn({ message, subjectId? })`     |
+| 召回相关认知                              | `core.recall({ query, subjectId? })`                       |
+| 受控记忆管理                              | `core.memory.*`                                            |
+| 便携记忆包                                | `core.portable.*`                                          |
 
 完整导出清单见 [`src/index.ts`](../src/index.ts) 和 [`docs/integration.zh-CN.md`](./integration.zh-CN.md)。
 
@@ -237,13 +238,13 @@ const core = createMemoWeftCore({ dbPath: './my-app.db' });
 
 ## 10. 命令速查
 
-| 命令 | 作用 |
-| --- | --- |
-| `npm run typecheck` | 类型检查 |
-| `npm test` | 跑测试 |
-| `npm run build` | 产出 `dist/` |
-| `npm run testbench` | 启动测试台 |
-| `npm run experience` | 测试台别名 |
+| 命令                 | 作用           |
+| -------------------- | -------------- |
+| `npm run typecheck`  | 类型检查       |
+| `npm test`           | 跑测试         |
+| `npm run build`      | 产出 `dist/`   |
+| `npm run testbench`  | 启动可选诊断台 |
+| `npm run experience` | 诊断台别名     |
 
 ---
 
@@ -263,7 +264,7 @@ const core = createMemoWeftCore({ dbPath: './my-app.db' });
 
 ### 记忆库文件加密吗？
 
-不。当前明文落盘：三层记忆存进标准 SQLite 库、库文件不加密。磁盘加密属宿主 / 系统责任（见 §4）。
+不。当前明文落盘：三层记忆存进标准 SQLite 库、库文件不加密。磁盘加密属宿主 / 系统责任。
 
 ### MemoWeft 替我处理隐私合规吗？
 

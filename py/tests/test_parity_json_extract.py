@@ -1,6 +1,6 @@
 """extract_json_object + parse_json_object parity:Python 与 TS(shared/parity/json-extract.json)逐例一致。
 
-钉括号配平(跳字符串内花括号/转义)+ 去围栏 + 只认对象 + JSON.parse 拒 NaN/Infinity(parse_constant)(P2-3)。
+验证括号配平（跳字符串内花括号/转义）+ 去围栏 + 只认对象 + JSON.parse 拒 NaN/Infinity（parse_constant）。
 """
 from __future__ import annotations
 

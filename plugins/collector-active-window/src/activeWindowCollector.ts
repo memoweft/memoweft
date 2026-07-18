@@ -1,14 +1,14 @@
 /**
- * 活动窗口采集循环（Collector Plugin · 真采集器 V1）。顺着 activeWindow.ts 的契约实现：
+ * 活动窗口采集循环（Collector Plugin）。使用 activeWindow.ts 定义的平台适配器接口：
  * 实现 ActiveWindowCollector（start/stop），并加 pause/resume/tick。
  *
- * 职责边界（boundaries.md §4.1 / 四步定案 #1）：本文件只管「定时采样 → 连续相同合并 → 阈值过滤 → 产出」；
+ * 职责边界：本文件只管「定时采样 → 连续相同合并 → 阈值过滤 → 产出」；
  * 停留时长由这里算好（Core 不碰"几点进/出窗口"的平台细节），产出统一走
  * activeWindowToObservation → 由调用方（运行器）决定落到哪（POST Host /api/observe）。
- * observed 隐私默认（不上云）不在这层放宽：产出的 Observation 不带任何显式授权位，
+ * observed 默认不进入 MemoWeft 内建云写模型 prompt 不在这层放宽：产出的 Observation 不带任何显式授权位，
  * 下游 Host 审核 + Core ingestObservations 才套 observed 保守默认（local✓ / cloud✗ / infer✓）。
  *
- * 合并 / 计时口径（V1，先简单可解释）：
+ * 合并 / 计时口径：
  *   - 每 tick 采一次前台窗口；连续相同 app+title → 同一段，只推进 lastMs。
  *   - 切换：旧段截到「发现切换的这一 tick」（时长按真实时钟差算，不按 tick 数 × 间隔）。
  *   - 采不到（null：锁屏/出错）：旧段保守截到「最后一次确认看见」的时刻，不知道的时间不算停留。
@@ -25,9 +25,9 @@ import {
   type ActiveWindowSample,
 } from './activeWindow.ts';
 
-/** 采集参数缺省（本插件自持，不再依赖 Core 的 config——采集参数属插件知识）。dogfood 后调。 */
+/** 采集参数缺省（本插件自持，不依赖 Core 的 config；宿主可按需要覆盖）。 */
 export const DEFAULT_SAMPLE_INTERVAL_SEC = 5; // 5s 采一次：够分辨"在哪个窗口"，又不至于狂 spawn PowerShell
-export const DEFAULT_MIN_DURATION_SEC = 30;   // 停留 <30s 的碎片丢弃：路过式切窗不算"停留"
+export const DEFAULT_MIN_DURATION_SEC = 30; // 停留 <30s 的碎片丢弃：路过式切窗不算"停留"
 
 /** 一次前台窗口采样结果（无时长——时长由本采集循环合并计算）。 */
 export interface ForegroundWindow {
@@ -62,7 +62,7 @@ export interface ActiveWindowCollectorOptions {
   clearIntervalFn?: (timer: unknown) => void;
 }
 
-/** V1 采集器：契约的 start/stop + 本版加的 pause/resume/tick（stop/pause 会异步冲刷，返回 Promise）。 */
+/** 运行时采集器：start/stop + pause/resume/tick（stop/pause 会异步冲刷，返回 Promise）。 */
 export interface RunningActiveWindowCollector extends ActiveWindowCollector {
   start(): void;
   /** 暂停：冲刷当前段后停止采样（pause 期间一次都不采）。 */
@@ -88,13 +88,19 @@ interface Segment {
 }
 
 /** 工厂：创建活动窗口采集器（真采集 = sampler 传 Win32 采样器；测试 = 全注入）。 */
-export function createActiveWindowCollector(opts: ActiveWindowCollectorOptions): RunningActiveWindowCollector {
-  const intervalMs = Math.max(200, Math.round((opts.sampleIntervalSec ?? DEFAULT_SAMPLE_INTERVAL_SEC) * 1000));
+export function createActiveWindowCollector(
+  opts: ActiveWindowCollectorOptions,
+): RunningActiveWindowCollector {
+  const intervalMs = Math.max(
+    200,
+    Math.round((opts.sampleIntervalSec ?? DEFAULT_SAMPLE_INTERVAL_SEC) * 1000),
+  );
   const minDurationSec = opts.minDurationSec ?? DEFAULT_MIN_DURATION_SEC;
   const now = opts.now ?? Date.now;
   const onError = opts.onError ?? (() => {});
   const setIntervalFn = opts.setIntervalFn ?? ((fn: () => void, ms: number) => setInterval(fn, ms));
-  const clearIntervalFn = opts.clearIntervalFn ?? ((t: unknown) => clearInterval(t as ReturnType<typeof setInterval>));
+  const clearIntervalFn =
+    opts.clearIntervalFn ?? ((t: unknown) => clearInterval(t as ReturnType<typeof setInterval>));
 
   let state: RunningActiveWindowCollector['state'] = 'idle';
   let timer: unknown = null;
@@ -174,7 +180,9 @@ export function createActiveWindowCollector(opts: ActiveWindowCollectorOptions):
       if (state === 'running') return;
       if (state === 'stopped') throw new Error('采集器已 stop，不能重启；请新建实例');
       state = 'running';
-      timer = setIntervalFn(() => { void tick(); }, intervalMs);
+      timer = setIntervalFn(() => {
+        void tick();
+      }, intervalMs);
     },
     async pause(): Promise<void> {
       if (state !== 'running') return;
@@ -185,7 +193,9 @@ export function createActiveWindowCollector(opts: ActiveWindowCollectorOptions):
     resume(): void {
       if (state !== 'paused') return;
       state = 'running';
-      timer = setIntervalFn(() => { void tick(); }, intervalMs);
+      timer = setIntervalFn(() => {
+        void tick();
+      }, intervalMs);
     },
     async stop(): Promise<void> {
       if (state === 'stopped') return;

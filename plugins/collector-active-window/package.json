@@ -4,7 +4,9 @@
   "private": true,
   "description": "MemoWeft Collector Plugin —— Windows 前台活动窗口采集器。采集 → Host 审核 → Core。",
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "node run.mjs",
     "typecheck": "tsc -p tsconfig.json",

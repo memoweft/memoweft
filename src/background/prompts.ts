@@ -1,18 +1,18 @@
 /**
- * TRENDS_PROMPT —— 跨会话趋势聚合的 system 提示词（aggregateTrends 后台 · §15.3 集中版本化）。
+ * TRENDS_PROMPT —— 跨会话趋势聚合的 system 提示词（aggregateTrends 后台 ·  集中版本化）。
  *
  * 把反复出现的瞬时状态片段聚成一条【持续趋势】认知；频率由规则先筛，LLM 只负责归纳命名。
  *
  * 版本变更日志：
  *   - v1：基线。
- *   - v2（2026-07-18 · D-0036 同款陷阱收口）：**证据 id 改发短标号**。只动「id 长什么样」——
+ *   - v2：**证据 id 改发短标号**。只动「id 长什么样」——
  *     `buildMessages` 不再发 36 字符 UUID，改发 `[e1]`（代码维护 标号↔真 id 映射、落库前翻回真 id），
- *     示例里的 `["ev-1","ev-2","ev-3"]` 相应改成 `["e1","e2","e3"]`。根因同 consolidate（D-0036）：
+ *     示例里的 `["ev-1","ev-2","ev-3"]` 相应改成 `["e1","e2","e3"]`。根因同 consolidate：
  *     模型模仿示例的 id 形态、间歇性把 UUID 截成前缀写回 → `windowEvidence` 精确匹配落空 → 趋势被
- *     静默丢弃。**认知纪律措辞一字未动（铁律 3）**：「多条状态指向同一持续模式才给」「别把一次性情绪
- *     说成趋势」等全部原样，只改 id 书写形态。注：trends 无专门全量 eval harness，本版只需哈希快照 + 单测。
+ *     静默丢弃。**关键认知约束保持不变**：「多条状态指向同一持续模式才给」「别把一次性情绪
+ *     说成趋势」等全部原样，只改 id 书写形态。趋势提示词由哈希快照与单元测试共同覆盖。
  *
- * 改动纪律（§15.3 / D-0009）：改内容必须 bump version；有 eval harness 的须重跑并附前后分数。
+ * 改动纪律（提示词变更规则）：改内容必须 bump version；有 eval harness 的须重跑并附前后分数。
  *   否则 tests/prompts/registry.test.ts 的哈希快照会变红。
  */
 import type { VersionedPrompt } from '../prompts/types.ts';

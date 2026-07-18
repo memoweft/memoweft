@@ -5,7 +5,7 @@
  * OFFLINE stub LLM defined right here in this file. It shows the two things that set MemoWeft apart:
  *   1. A conflict (the user moves Tokyo -> Osaka) is EXPOSED and the old belief is KEPT — MemoWeft
  *      does not silently overwrite what it knew.
- *   2. An inferred item stays a low-confidence GUESS, never promoted to a fact. Confidence is
+ *   2. An inferred item stays a low-confidence GUESS rather than being presented as a stated memory. Confidence is
  *      computed by MemoWeft from the evidence — it is never taken from the LLM's own say-so.
  *
  * No API key, no network: the stub LLM returns fixed, deterministic output. A trivial in-memory
@@ -64,18 +64,19 @@ function createOfflineStubLLM() {
       // consolidate: emit new / conflict, each citing a real evidence id parsed from the prompt.
       const existing = parseProfile(body);
       const utterances = parseUtterances(body);
-      const out: { new: unknown[]; reinforce: unknown[]; correct: unknown[]; conflict: unknown[] } = {
-        new: [],
-        reinforce: [],
-        correct: [],
-        conflict: [],
-      };
+      const out: { new: unknown[]; reinforce: unknown[]; correct: unknown[]; conflict: unknown[] } =
+        {
+          new: [],
+          reinforce: [],
+          correct: [],
+          conflict: [],
+        };
 
       const tokyo = utterances.find((u) => u.text.includes('Tokyo'));
       const osaka = utterances.find((u) => u.text.includes('Osaka'));
 
       if (tokyo) {
-        // A stated fact, plus a separate INFERRED guess (kept low-confidence, never a fact).
+        // A stated memory, plus a separate INFERRED claim that stays low-confidence.
         out.new.push({
           content: 'The user lives in Tokyo',
           content_type: 'fact',
@@ -132,12 +133,15 @@ function createDemoRetriever(): Retriever {
 // How to read a credibility status for a human.
 const label = (credStatus: string, formedBy?: string) => {
   if (credStatus === 'conflicted') return 'conflict kept, not overwritten';
-  if (credStatus === 'candidate' || credStatus === 'low' || formedBy === 'inferred') return 'guess (low confidence)';
-  return 'fact';
+  if (credStatus === 'candidate' || credStatus === 'low' || formedBy === 'inferred')
+    return 'guess (low confidence)';
+  return 'stated memory';
 };
 
 async function main() {
-  console.log('=== MemoWeft · no-key demo (offline stub LLM — no API key, no network, no config) ===\n');
+  console.log(
+    '=== MemoWeft · no-key demo (offline stub LLM — no API key, no network, no config) ===\n',
+  );
 
   const core = createMemoWeftCore({
     dbPath: ':memory:',
@@ -153,7 +157,9 @@ async function main() {
       subjectId: SUBJECT,
       occurredAt: '2026-01-10T09:00:00.000Z',
     });
-    console.log('2) updateProfile() -> distill -> consolidate  (forms the Tokyo belief + an inferred guess)');
+    console.log(
+      '2) updateProfile() -> distill -> consolidate  (forms the Tokyo belief + an inferred guess)',
+    );
     await core.updateProfile({ subjectId: SUBJECT });
 
     console.log('3) ingest: "Actually, I moved to Osaka last month."');
@@ -178,8 +184,12 @@ async function main() {
           `${c.content}  — ${label(c.credStatus, c.formedBy)}`,
       );
     }
-    console.log('\n  -> The old belief (Tokyo) is KEPT and flagged as conflicted — not silently replaced by Osaka.');
-    console.log("  -> The inferred item stays a low-confidence guess. Confidence is computed by MemoWeft,");
+    console.log(
+      '\n  -> The old belief (Tokyo) is KEPT and flagged as conflicted — not silently replaced by Osaka.',
+    );
+    console.log(
+      '  -> The inferred item stays a low-confidence guess. Confidence is computed by MemoWeft,',
+    );
     console.log("     never taken from the LLM's own claim.\n");
 
     // ── Recall: results still carry their credStatus, so guesses/conflicts stay visible ──
@@ -195,7 +205,7 @@ async function main() {
     const conflicts = cogs.filter((c) => c.credStatus === 'conflicted');
     console.log(
       `\nSummary: ${cogs.length} cognitions, ${conflicts.length} in conflict-exposed state; ` +
-        'guesses are kept apart from facts by confidence.',
+        'inference remains labeled and rule-scored separately from stated memory.',
     );
     if (cogs.length === 0 || conflicts.length === 0) {
       console.error('Self-check FAILED: expected >=1 cognition and >=1 conflict.');

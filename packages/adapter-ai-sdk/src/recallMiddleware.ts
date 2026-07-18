@@ -6,7 +6,7 @@
  * 按 Core 现成的 knowledgeBlock 中性口径拼成一段说明 → 注入回最后一条 user 消息。
  *
  * 边界（照 MemoWeft「Core 无头」纪律）：注入文案只搬 Core `action.ts` 的中性措辞，
- *   低置信条目明确标 "only guesses—do not treat as established facts"。适配器里不自造人格/人设 prompt。
+ *   低置信条目明确标 "only guesses—do not treat as established facts"。适配器不添加专属角色指令。
  *
  * 类型：用 `ai` re-export 的宽松 `LanguageModelMiddleware`（specificationVersion 可选，抗大版本漂移），
  *   不直绑 `@ai-sdk/provider` 的强版类型。
@@ -22,24 +22,24 @@ import {
 
 /**
  * 召回项形状。注入块只用前三个字段（content/confidence/credStatus）；
- * id/contentType/score/provenance 是召回 v2 面（D-0022/D-0021/D-0024）——【只】经 onRecall 透传给宿主，
+ * id/contentType/score/provenance 是召回 v2 面——【只】经 onRecall 透传给宿主，
  * 全部可选以保持与 Core 松耦合、兼容旧构造。
  *
- * 隐私硬约束（D-0024·不可违反）：provenance 是证据【原文】+ 授权位（含云受限的 observed/tool），
- *   【绝不】进 buildKnowledgeBlock / 注入 prompt（进 prompt = 绕过 tier 把受限原文喂给云模型）——
+ * 写路径隐私保证：provenance 是证据【原文】+ 授权位（含默认不进入内建云写模型 prompt 的 observed/tool），
+ *   【绝不】进 buildKnowledgeBlock / 注入 prompt（否则会绕过 tier，将受限原文提供给云模型）——
  *   只经 onRecall 交宿主，宿主转发云模型前据 allowCloudRead/allowInference 自筛。
  */
 interface RecalledLike {
   content: string;
   confidence: number;
   credStatus: string;
-  /** 认知 id（D-0022）：随召回带回，仅经 onRecall 交宿主（管理/透视反查），不进注入块。 */
+  /** 认知 id：随召回带回，仅经 onRecall 交宿主（管理/透视反查），不进注入块。 */
   id?: string;
-  /** 认知类型（D-0022）：仅经 onRecall 交宿主，不进注入块。 */
+  /** 认知类型：仅经 onRecall 交宿主，不进注入块。 */
   contentType?: ContentType;
   /** 相似度分：仅经 onRecall 交宿主观测，不进注入块。 */
   score?: number;
-  /** 召回解释链（D-0021/D-0024·仅 explain 时带）：证据原文 + 授权位。仅经 onRecall 交宿主，绝不进注入 prompt。 */
+  /** 召回解释链（仅在 explain 时提供）：证据原文 + 授权位。仅经 onRecall 交宿主，绝不进注入 prompt。 */
   provenance?: RecalledEvidence[];
 }
 
@@ -55,14 +55,14 @@ export interface MemoWeftMiddlewareOptions {
    */
   lang?: 'en' | 'zh';
   /**
-   * 召回按认知类型过滤（D-0022/D-0024）：透传进 `core.recall` 的 `contentTypes`（允许名单）。
+   * 召回按认知类型过滤：透传进 `core.recall` 的 `contentTypes`（允许名单）。
    * 不传/空 = 全类型（行为不变）。过滤在 Core 侧做（后过滤，可能欠填），适配器只负责透传。
    */
   contentTypes?: ContentType[];
   /**
-   * 召回解释（D-0021/D-0024）：透传进 `core.recall` 的 `explain`。true → onRecall 收到的每项带 provenance
+   * 召回解释：透传进 `core.recall` 的 `explain`。true → onRecall 收到的每项带 provenance
    *   （其支撑/反证证据链，每条含 allowCloudRead/allowInference 授权位）。缺省 false = 不做额外查询、行为不变。
-   * 隐私硬约束（D-0024·不可违反）：provenance【绝不】进注入 prompt——只经 onRecall 交宿主自筛（见 buildKnowledgeBlock）。
+   * 隐私保证：provenance【绝不】进注入 prompt——只经 onRecall 交宿主自筛（见 buildKnowledgeBlock）。
    */
   explain?: boolean;
   /** 每次成功召回后的回调（可选，便于宿主观测/日志）；召回为空也会以空数组触发。
@@ -70,12 +70,12 @@ export interface MemoWeftMiddlewareOptions {
    *  透传召回 v2 面：items 带 id/contentType/score，explain 时还带 provenance（含授权位）——宿主据此自筛/透视。 */
   onRecall?: (items: RecalledLike[]) => void;
   /**
-   * recall 超时阈值（毫秒，契约 §16.2）。缺省 200ms。超时即视为召回失败 → 降级为不注入。
+   * recall 超时阈值（毫秒，降级契约）。缺省 200ms。超时即视为召回失败 → 降级为不注入。
    * 读路径不重试（超时/抛错直接降级），呼应 Core「召回失败不阻塞对话」纪律。
    */
   recallTimeoutMs?: number;
   /**
-   * 注入式 logger（可选，契约 §16.2）：召回超时/抛错降级时记一条【结构化事件】
+   * 注入式 logger（可选，降级契约）：召回超时/抛错降级时记一条【结构化事件】
    *   （`{ event:'memory_degraded', op:'recall', reason:'timeout'|'error' }`）。缺省不注入 = 静默降级。
    * 认知纪律 + 隐私：只记事件/原因，绝不记用户内容 / 原话 / 密钥。
    */
@@ -83,12 +83,12 @@ export interface MemoWeftMiddlewareOptions {
 }
 
 /**
- * 拼注入块：照搬 Core `src/pipeline/action.ts` 的 knowledgeBlock 中性措辞（逐字对齐，别自造人设）。
+ * 使用与 Core `src/pipeline/action.ts` 一致的中性 knowledgeBlock 文本契约，不添加适配器专属角色设定。
  * 空召回返回空串（调用方据此决定不注入）。
  *
- * 隐私硬约束（D-0024·不可违反）：本块【只】用 content/confidence/credStatus。
+ * 隐私保证：本块【只】用 content/confidence/credStatus。
  *   provenance（证据原文 + 授权位）、contentType、id、score 一律【不】入块——provenance 进 prompt = 绕过 tier
- *   把云受限原文喂给模型；这些字段只经 onRecall 交宿主。改这里前先想清楚这条。
+ *   将未获当前 tier 授权的证据原文暴露给模型；这些字段只能通过 onRecall 返回给宿主。
  */
 export function buildKnowledgeBlock(relevant: RecalledLike[], lang: 'en' | 'zh' = 'en'): string {
   if (relevant.length === 0) return '';
@@ -131,7 +131,7 @@ export function getLastUserMessageText(prompt: unknown): string | null {
 }
 
 /**
- * 把一段说明追加进最后一条 user 消息（作为额外的 text part 塞在原文本之前——
+ * 把一段说明追加进最后一条 user 消息（作为额外的 text part 置于原文本之前——
  *   让"你已了解的情况"排在用户这轮问题之前，符合 knowledgeBlock 进 system 的语序意图）。
  * 返回一个【新的】prompt 数组（不原地改，避免污染调用方持有的对象）。找不到 user 消息则原样返回。
  */
@@ -149,7 +149,7 @@ export function addToLastUserMessage(prompt: unknown, block: string): unknown {
 }
 
 /**
- * 造一个 MemoWeft 读适配器 middleware。
+ * 创建 MemoWeft 读取中间件。
  * @param core 只需持有 `recall` 方法的 Core（或任意实现了 recall 的对象）。
  * @param opts subjectId / lang / onRecall。
  */
@@ -157,7 +157,15 @@ export function createMemoWeftMiddleware(
   core: RecallOnly,
   opts: MemoWeftMiddlewareOptions = {},
 ): LanguageModelMiddleware {
-  const { subjectId, lang = 'en', contentTypes, explain, onRecall, recallTimeoutMs = DEFAULT_RECALL_TIMEOUT_MS, logger } = opts;
+  const {
+    subjectId,
+    lang = 'en',
+    contentTypes,
+    explain,
+    onRecall,
+    recallTimeoutMs = DEFAULT_RECALL_TIMEOUT_MS,
+    logger,
+  } = opts;
   return {
     async transformParams({ params }) {
       const query = getLastUserMessageText(params.prompt);
@@ -166,8 +174,8 @@ export function createMemoWeftMiddleware(
 
       let recalled: RecalledCognition[];
       try {
-        // 契约 §16.2：Promise.race 包 recallTimeoutMs（默认 200ms）超时；读路径不重试。
-        // 召回 v2 透传（D-0024）：contentTypes / explain 原样交给 Core（过滤/解释都在 Core 侧做，适配器只透传）。
+        // 契约 ：Promise.race 包 recallTimeoutMs（默认 200ms）超时；读路径不重试。
+        // 召回 v2 透传：contentTypes / explain 原样交给 Core（过滤/解释都在 Core 侧做，适配器只透传）。
         recalled = await withTimeout(
           core.recall({ query, subjectId, contentTypes, explain }),
           recallTimeoutMs,
@@ -175,7 +183,11 @@ export function createMemoWeftMiddleware(
       } catch (err) {
         // 召回失败/超时不挡回话（呼应 Core "召回失败不阻塞对话"纪律）：降级为不注入。
         //   经注入 logger 记一条结构化事件（缺省无 logger = 静默）；绝不记用户内容/原话。
-        logger?.({ event: 'memory_degraded', op: 'recall', reason: err instanceof RecallTimeoutError ? 'timeout' : 'error' });
+        logger?.({
+          event: 'memory_degraded',
+          op: 'recall',
+          reason: err instanceof RecallTimeoutError ? 'timeout' : 'error',
+        });
         return params;
       }
       onRecall?.(recalled);

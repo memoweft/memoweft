@@ -1,11 +1,11 @@
 /**
  * 写适配器离线护栏：不打真模型，直接调 persist helper / onEnd 回调。
- * 验收：
+ * Test coverage:
  *  - createPersistOnEnd 造的回调真调 core.ingestUserMessage，存的是【用户原话】、不掺助手回话；
- *  - 稳定 originId 透传（幂等靠它）；不传任何上云授权位（红线：ingestUserMessage 存 spoken 不涉授权位）；
+ *  - 稳定 originId 透传（用于幂等）；不传云读取授权位（ingestUserMessage 存 spoken，不接受授权覆盖）；
  *  - 空串 / 全空白用户话不落库；
  *  - ingest 抛错不外抛（走 onError / 静默吞，不崩宿主主流程）；
- *  - onEnd 事件对象不被使用（用户原话来自闭包捕获，不从响应回捞）。
+ *  - onEnd 事件对象不被使用（用户原话来自闭包捕获，不从响应读取）。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -47,7 +47,7 @@ test('onEnd 回调存用户原话、带 originId、不掺助手回话', async ()
   assert.equal(rec.subjectId, 'alice');
 });
 
-test('不给上云授权位（红线）', async () => {
+test('spoken 摄入不传云读取授权位', async () => {
   const { core, ingested } = fakeCore();
   await createPersistOnEnd(core, { userMessage: 'hi', originId: 't1' })({});
   const rec = ingested[0]!;

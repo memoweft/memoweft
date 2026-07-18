@@ -3,11 +3,12 @@
  *
  * 一个工厂造两个 hook，覆盖读写三条路径（摊进 query 的 options.hooks）：
  *   读 + 写（同一 UserPromptSubmit hook）：先存【用户原话】（spoken），再召回相关记忆 → 经返回值 additionalContext 注入本轮。
- *   写（PostToolUse hook）：把每条【工具结果】沉淀成 tool 证据（只读 tool_response，绝不碰 tool_input——铁律 3a）。
+ *   写（PostToolUse hook）：把每条【工具结果】沉淀成 tool 证据（只读 tool_response，绝不碰 tool_input——tool-result-only ingestion）。
  *
- * 跑法（示意——query 会拉起真实 Claude Agent SDK 运行时，需你已装好 SDK 并配好鉴权）：
- *   npm i @anthropic-ai/claude-agent-sdk memoweft @memoweft/adapter-claude-agent-sdk
- *   node --experimental-strip-types examples/basic.ts
+ * 从源码检出运行（query 会调用 Claude Agent SDK，需配置相应鉴权）：
+ *   git clone https://github.com/memoweft/memoweft.git && cd memoweft
+ *   npm ci && npm run build && npm run build --workspace @memoweft/adapter-claude-agent-sdk
+ *   node --experimental-strip-types packages/adapter-claude-agent-sdk/examples/basic.ts
  * 只想看接线、不连模型：把下面的 for-await 段注释掉即可——createMemoWeftAgentHooks 的返回值是纯离线数据。
  */
 import { query } from '@anthropic-ai/claude-agent-sdk';

@@ -1,5 +1,5 @@
 /**
- * 大模型调用封装（地图 cell 11：换模型只动这里；参考 reference/migrated-baseline/llm/client.ts）。
+ * 大模型调用封装：换模型只动这里。
  * 用内置 fetch 打 OpenAI 兼容 /chat/completions，不装 SDK（依赖取向：小而可换）。
  *
  * "问什么"（prompt）不在这里——留在 pipeline/action.ts。本文件只负责"发消息、拿文本、计数"。
@@ -12,16 +12,16 @@ export interface ChatMessage {
 }
 
 /**
- * 模型部署位置（隐私分流维度·档2）：
- *   'cloud' = 云端模型（只能读 allowCloudRead=true 的证据）；
- *   'local' = 本地模型（可读 allowLocalRead=true 的证据，含 observed 默认不上云的那些）。
+ * 模型部署位置（隐私分流维度·模型路由）：
+ *   'cloud' = 云端模型（内建云写模型 prompt 只能选 allowCloudRead=true 的证据）；
+ *   'local' = 本地模型（内建本地写模型 prompt 可选 allowLocalRead=true 的证据，含 observed 默认不进入云写 prompt 的那些）。
  * 谁云谁本地由宿主/用户【显式声明】（向导选 / env `*_TIER`）——库不按 baseUrl 猜（守"库不替宿主做安全策略"）。
  * 缺省视为 'cloud'（最保守：不误把敏感证据当本地放行）。见 evidence/privacy.ts filterReadableByTier。
  */
 export type ModelTier = 'cloud' | 'local';
 
 /**
- * LLM token 用量累计（观测/计费·档8「宿主能算钱」）：单调递增、绑 client 实例，复刻 callCount 形态。
+ * LLM token 用量累计（观测/计费·用量统计「宿主能算钱」）：单调递增、绑 client 实例，复刻 callCount 形态。
  * 很多本地 / OpenAI 兼容端点【不回 usage】（llama.cpp / ollama / vLLM 某些配置）——读到才加、读不到跳过，
  * 故 `callsWithUsage` ≤ callCount。宿主要算"每次均耗"应拿 totalTokens / callsWithUsage，别拿 total / callCount
  * （会被没回 usage 的调用稀释而偏低）。只做纯计数供宿主乘单价，库不内置价目表、绝不流入置信度自算。
@@ -39,11 +39,11 @@ export interface LLMClient {
   chat(messages: ChatMessage[]): Promise<string>;
   /** 至今累计调用次数（用于统计本轮调了几次）。 */
   readonly callCount: number;
-  /** 部署位置（可选·档2）：缺省 = 'cloud'（写路径隐私关据此决定按哪个授权位筛）。
+  /** 部署位置（可选·模型路由）：缺省 = 'cloud'（写路径隐私关据此决定按哪个授权位筛）。
    *  宿主自注入的 client 不带此字段也照跑（缺省当 cloud，非破坏）。tier 绑在 client 实例上，
    *  故 pool 缺配回退成对话模型时自然继承对话模型的 tier——杜绝"标 local 实跑云端"。 */
   readonly tier?: ModelTier;
-  /** token 用量累计（可选·档8·观测/计费）：宿主自注入的 client 不带也照跑（缺省 undefined，同 tier?）。
+  /** token 用量累计（可选·用量统计·观测/计费）：宿主自注入的 client 不带也照跑（缺省 undefined，同 tier?）。
    *  只做纯计数供宿主算钱，绝不流入置信度自算（同 temperature/tier 的洁癖）。见 UsageStats。 */
   readonly usage?: UsageStats;
 }
@@ -56,7 +56,7 @@ export interface LLMConfig {
    *  `MEMOWEFT_LLM_TEMPERATURE`（对话）/ `MEMOWEFT_WRITE_LLM_TEMPERATURE`（写路径），双前缀兼容 `DLA_*`。
    *  仅进生成请求体，绝不流入置信度自算（confidence 由 MemoWeft 按规则算）。 */
   temperature?: number;
-  /** 部署位置（可选·档2）：`MEMOWEFT_<prefix>_TIER=local|cloud`（双前缀兼容 `DLA_*`）。
+  /** 部署位置（可选·模型路由）：`MEMOWEFT_<prefix>_TIER=local|cloud`（双前缀兼容 `DLA_*`）。
    *  缺省 / 非法值 → undefined（下游按 'cloud' 处理，最保守）。仅决定写路径隐私关按哪个授权位筛，
    *  不进生成请求体、不流入置信度。 */
   tier?: ModelTier;
@@ -75,18 +75,19 @@ export function stripReasoning(s: string): string {
  * 从响应消息里取模型的话。**推理模型要兜底读 `reasoning_content`**——这是与 stripReasoning 互补的另一半：
  * 那个管「思考段混在 content 里」，这个管「答案整个跑到 reasoning_content 里、content 留空」。
  *
- * dogfood 实测（mimo-v2.5-pro，2026-07-17）：同一模型【间歇性】把整个回答（含要求的 JSON）放进
- * `reasoning_content` 而 `content` 留空，且 `finish_reason=stop`、completion_tokens 正常——
- * 模型自认为答完了，不是截断也不是限流。原样一例（节选）：
+ * 部分 OpenAI-compatible 推理模型会把完整回答放进 `reasoning_content`，同时让 `content` 为空，
+ * 即使 `finish_reason=stop` 且 token 统计正常。典型响应形态：
  *   {"content":"", "reasoning_content":"{\"thought\":\"…\",\"done\":{\"summary\":\"…\"}}"}
  * 只读 content 时 `typeof '' === 'string'` 通过校验 → chat() 静默返回空串 → 上游 JSON 解析失败 →
- * consolidate 的四类全空（`?? {}`）→ **整批证据 0 解析 0 认知，event 仍被标 consolidated**。
- * 真实 dogfood 里 7 轮固化撞掉 3 轮，全靠这个。
+ * consolidate 的四类全空（`?? {}`）→ 整批证据没有形成解析或认知。
  *
  * 取值顺序：content 有实质内容就用它（标准模型、绝大多数情况）；只有 content 空/缺才回落
  * reasoning_content —— 免得给正常模型平白掺进思考段（那是 stripReasoning 的活）。
  */
-export function readReplyText(message?: { content?: string; reasoning_content?: string }): string | undefined {
+export function readReplyText(message?: {
+  content?: string;
+  reasoning_content?: string;
+}): string | undefined {
   const content = message?.content;
   if (typeof content === 'string' && content.trim()) return content;
   const reasoning = message?.reasoning_content;
@@ -114,7 +115,7 @@ function readEnvWithFallback(name: string): string {
 /**
  * 从环境变量组装配置；缺关键项则抛错（早失败优于静默错调）。
  * 双前缀兼容：每个键先读 `MEMOWEFT_*` 主名、回退旧名 `DLA_*`（见 readEnvWithFallback）。
- * @param prefix 前缀语义（不含品牌），默认 `LLM`（对话模型）；写路径小模型传 `WRITE_LLM`（治慢·可切换模型第一块）。
+ * @param prefix 前缀语义（不含品牌），默认 `LLM`（对话模型）；写路径模型传 `WRITE_LLM`。
  *   历史兼容：也接受带旧品牌的 `DLA_LLM` / `DLA_WRITE_LLM`（自动剥去 `DLA_` 再走双前缀）。
  */
 export function loadLLMConfig(prefix = 'LLM'): LLMConfig {
@@ -135,10 +136,11 @@ export function loadLLMConfig(prefix = 'LLM'): LLMConfig {
   const tempRaw = readEnvWithFallback(`${base}_TEMPERATURE`);
   const tempNum = Number(tempRaw);
   const temperature = tempRaw !== '' && Number.isFinite(tempNum) ? tempNum : undefined;
-  // tier 可选（档2）：只认精确 'local' / 'cloud'（大小写不敏感）；其余（空 / 拼错 / 未知）→ undefined。
+  // tier 可选（模型路由）：只认精确 'local' / 'cloud'（大小写不敏感）；其余（空 / 拼错 / 未知）→ undefined。
   //   保守：拼错绝不误当 'local'（否则敏感证据会被当本地放行）。下游 filterReadableByTier 用 `?? 'cloud'` 兜。
   const tierRaw = readEnvWithFallback(`${base}_TIER`).trim().toLowerCase();
-  const tier: ModelTier | undefined = tierRaw === 'local' ? 'local' : tierRaw === 'cloud' ? 'cloud' : undefined;
+  const tier: ModelTier | undefined =
+    tierRaw === 'local' ? 'local' : tierRaw === 'cloud' ? 'cloud' : undefined;
   return { baseUrl, apiKey, model, temperature, tier };
 }
 
@@ -146,7 +148,12 @@ export function loadLLMConfig(prefix = 'LLM'): LLMConfig {
 export class OpenAICompatClient implements LLMClient {
   private readonly config: LLMConfig;
   private _callCount = 0;
-  private _usage: UsageStats = { promptTokens: 0, completionTokens: 0, totalTokens: 0, callsWithUsage: 0 };
+  private _usage: UsageStats = {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    callsWithUsage: 0,
+  };
 
   constructor(cfg?: LLMConfig) {
     this.config = cfg ?? loadLLMConfig();
@@ -156,12 +163,12 @@ export class OpenAICompatClient implements LLMClient {
     return this._callCount;
   }
 
-  /** 部署位置（档2）：透传配置里的 tier；未配 = undefined（下游按 'cloud' 处理）。 */
+  /** 部署位置（模型路由）：透传配置里的 tier；未配 = undefined（下游按 'cloud' 处理）。 */
   get tier(): ModelTier | undefined {
     return this.config.tier;
   }
 
-  /** token 用量累计（档8）：返回快照拷贝，防外部改内部计数。 */
+  /** token 用量累计（用量统计）：返回快照拷贝，防外部改内部计数。 */
   get usage(): UsageStats {
     return { ...this._usage };
   }
@@ -180,7 +187,11 @@ export class OpenAICompatClient implements LLMClient {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.config.apiKey}`,
         },
-        body: JSON.stringify({ model: this.config.model, messages, temperature: this.config.temperature ?? 0.3 }),
+        body: JSON.stringify({
+          model: this.config.model,
+          messages,
+          temperature: this.config.temperature ?? 0.3,
+        }),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (err) {
@@ -206,7 +217,7 @@ export class OpenAICompatClient implements LLMClient {
       choices?: Array<{ message?: { content?: string; reasoning_content?: string } }>;
       usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
-    // token 用量（档8·观测/计费）：读到才加、读不到静默跳过（本地 / 兼容端点常不回 usage，绝不因此崩）。
+    // token 用量（用量统计·观测/计费）：读到才加、读不到静默跳过（本地 / 兼容端点常不回 usage，绝不因此崩）。
     // 累加放在 content 校验【之前】：token 已真实消耗，即便下面因格式异常抛错也该记账。
     const rawUsage = data.usage;
     if (rawUsage) {

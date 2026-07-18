@@ -1,5 +1,5 @@
 /**
- * 日志模块 sanity 测试。地图 cell 15：自动测是底线护栏。
+ * 日志模块 sanity 测试。：自动测是底线护栏。
  * 离线、不调模型、确定。
  */
 import { test } from 'node:test';
@@ -74,7 +74,7 @@ test('透视字段齐全（与测试台透视区对齐）', () => {
   }
 });
 
-test('appendProfileUpdate：记各步耗时 + 摘要，kind=profile_update，与对话轮同文件（治慢②）', () => {
+test('appendProfileUpdate：记录各步耗时与摘要，kind=profile_update，与对话轮同文件', () => {
   const dir = freshDir();
   try {
     const log = createRunLogger({ dir, sessionId: 'p1' });
@@ -82,7 +82,16 @@ test('appendProfileUpdate：记各步耗时 + 摘要，kind=profile_update，与
     const rec = log.appendProfileUpdate({
       trigger: 'manual',
       timings: { distillMs: 10, consolidateMs: 20, attributeMs: 5, indexMs: 1, totalMs: 36 },
-      summary: { pendingCount: 2, created: 1, reinforced: 0, corrected: 0, conflicted: 0, hypotheses: 1, trends: 0, expired: 0 },
+      summary: {
+        pendingCount: 2,
+        created: 1,
+        reinforced: 0,
+        corrected: 0,
+        conflicted: 0,
+        hypotheses: 1,
+        trends: 0,
+        expired: 0,
+      },
       llmCalls: 3,
     });
     assert.equal(rec.kind, 'profile_update');

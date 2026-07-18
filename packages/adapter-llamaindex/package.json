@@ -2,22 +2,44 @@
   "name": "@memoweft/adapter-llamaindex",
   "version": "0.1.0",
   "description": "[LEGACY — upstream LlamaIndex.TS archived 2026-04-30, frozen] LlamaIndex adapter for MemoWeft — inject long-term memory via a BaseMemoryBlock (recall) and persist the user's turn + tool results by tapping agent.runStream (write).",
-  "keywords": ["llamaindex", "memory-block", "agent-workflow", "memoweft", "memory", "llm"],
+  "keywords": [
+    "llamaindex",
+    "memory-block",
+    "agent-workflow",
+    "memoweft",
+    "memory",
+    "llm"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
-  "files": ["dist/**/*.js", "dist/**/*.d.ts", "README.md", "README.zh-CN.md"],
-  "engines": { "node": ">=20" },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.map",
+    "examples/**/*.ts",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/memoweft/memoweft.git",
     "directory": "packages/adapter-llamaindex"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"tests/**/*.test.ts\"",
@@ -27,7 +49,7 @@
   "peerDependencies": {
     "llamaindex": "^0.12",
     "@llamaindex/workflow": "^1.1.24",
-    "memoweft": "^0.5.0 || ^0.6.0"
+    "memoweft": "^0.5.1 || ^0.6.0"
   },
   "devDependencies": {
     "llamaindex": "^0.12",

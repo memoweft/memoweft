@@ -8,17 +8,17 @@
  *   ② 用户原话摄入（写）= `run` 包装器闭包捕获【未注入的原始 input】→ ingestUserMessage(spoken)；
  *   ③ 工具结果摄入（写）= `run` 结束后扫 `RunResult.newItems`，筛 `tool_call_output_item` → ingestToolResult。
  *
- * 边界（照 MemoWeft「Core 无头」纪律）：注入文案只搬 Core `action.ts` 的中性措辞（见 knowledgeBlock.ts），
- *   适配器里不自造人格/人设 prompt。
+ * 边界（遵循 MemoWeft「Core 无头」纪律）：注入文案只搬 Core `action.ts` 的中性措辞（见 knowledgeBlock.ts），
+ *   适配器不添加专属角色指令。
  *
- * 隐私硬约束（D-0024·不可违反）：provenance / contentType / score / id【绝不】进注入的 instructions 文本，
+ * 隐私保证：provenance / contentType / score / id【绝不】进注入的 instructions 文本，
  *   只经 onRecall 交宿主自筛；buildKnowledgeBlock 只用 content/confidence/credStatus。
  *
- * 铁律 3a（代码级 by-construction）：③ 只筛 `type==='tool_call_output_item'`（工具真实【返回结果】）并只读其
+ * tool-result-only ingestion boundary（代码级 by-construction）：③ 只筛 `type==='tool_call_output_item'`（工具真实【返回结果】）并只读其
  *   `output`/`rawItem.callId`；`tool_call_item`（LLM 的调用意图/入参）是独立 item 类型，从不进入本适配器作用域。
  *
  * 类型：全部从 `@openai/agents` 用 `import type` 引（peer + dev 依赖）。运行时不启真实 SDK——
- *   `run` 包装器用【动态 import】按需加载 SDK，故只测 filter/摄入函数时（喂构造的 ModelInputData / RunItem）
+ *   `run` 包装器用【动态 import】按需加载 SDK，故只测 filter/摄入函数时（传入构造的 ModelInputData / RunItem）
  *   根本不加载 `@openai/agents`。
  */
 import type {
@@ -48,19 +48,19 @@ export interface MemoWeftRunnerOptions {
   /** 召回/摄入归属的 subject；缺省交给 Core（config.identity.subjectId）。 */
   subjectId?: string;
   /**
-   * 注入块的语言（措辞照 Core action.ts 的 knowledgeBlock 双语口径）。缺省 'en'。
+   * 注入块的语言（措辞沿用 Core action.ts 的 knowledgeBlock 双语口径）。缺省 'en'。
    * 只影响适配器拼的这段说明文字，不改 Core 行为。
    */
   lang?: 'en' | 'zh';
   /**
-   * 召回按认知类型过滤（D-0022/D-0024）：透传进 `core.recall` 的 `contentTypes`（允许名单）。
+   * 召回按认知类型过滤：透传进 `core.recall` 的 `contentTypes`（允许名单）。
    * 不传/空 = 全类型（行为不变）。过滤在 Core 侧做（后过滤，可能欠填），适配器只负责透传。
    */
   contentTypes?: ContentType[];
   /**
-   * 召回解释（D-0021/D-0024）：透传进 `core.recall` 的 `explain`。true → onRecall 收到的每项带 provenance
+   * 召回解释：透传进 `core.recall` 的 `explain`。true → onRecall 收到的每项带 provenance
    *   （其支撑/反证证据链，每条含 allowCloudRead/allowInference 授权位）。缺省 false = 不做额外查询、行为不变。
-   * 隐私硬约束（D-0024·不可违反）：provenance【绝不】进注入 instructions——只经 onRecall 交宿主自筛（见 buildKnowledgeBlock）。
+   * 隐私保证：provenance【绝不】进注入 instructions——只经 onRecall 交宿主自筛（见 buildKnowledgeBlock）。
    */
   explain?: boolean;
   /** 每次成功召回后的回调（可选，便于宿主观测/日志）；召回为空也会以空数组触发。
@@ -73,7 +73,7 @@ export interface MemoWeftRunnerOptions {
    */
   callModelInputFilter?: CallModelInputFilter;
   /**
-   * recall 超时阈值（毫秒，契约 §16.2）。缺省 200ms。超时即视为召回失败 → 降级为不注入。
+   * recall 超时阈值（毫秒，降级契约）。缺省 200ms。超时即视为召回失败 → 降级为不注入。
    * 读路径不重试（超时/抛错直接降级），呼应 Core「召回失败不阻塞对话」纪律。
    */
   recallTimeoutMs?: number;
@@ -84,14 +84,14 @@ export interface MemoWeftRunnerOptions {
    */
   ingestTimeoutMs?: number;
   /**
-   * 注入式 logger（可选，契约 §16.2）：召回超时/抛错、或 ingest 一次重试后仍失败降级时记一条【结构化事件】
+   * 注入式 logger（可选，降级契约）：召回超时/抛错、或 ingest 一次重试后仍失败降级时记一条【结构化事件】
    *   （`{ event:'memory_degraded', op, reason }`）。缺省不注入 = 静默降级。
    * 认知纪律 + 隐私：只记事件/原因，绝不记用户内容 / 原话 / 工具返回 / 密钥。
    */
   logger?: MemoWeftLogger;
 }
 
-/** 适配器专属的【每轮】附加配置（塞进 `run` 包装器的 options.memoweft，调 SDK 前会被剥掉）。 */
+/** 适配器专属的每轮配置（通过 `run` 包装器的 options.memoweft 传入，调用 SDK 前移除）。 */
 export interface MemoWeftRunExtras {
   /**
    * 稳定幂等键：这轮【用户原话】(spoken) 摄入的 originId。同一轮重放/重试只落一条。
@@ -99,9 +99,9 @@ export interface MemoWeftRunExtras {
    */
   spokenOriginId?: string | null;
   /**
-   * 会话标识（v0.6·D-0034）：跨轮用同一个（如线程 id）。传了它且 Core 具备 recordAssistantReply（0.6 面）时，
+   * 会话标识（v0.6）：跨轮用同一个（如线程 id）。传了它且 Core 具备 recordAssistantReply（0.6 接口）时，
    *   本轮用户原话带 conversationId 摄入（Core 据此把【上一轮】AI 那句捕获进 preceding_ai_context），
-   *   且 run 结束后把【本轮 AI 最终回复】经 recordAssistantReply 报告给 Core（**只进上下文窗口、永不落证据**，铁律 3a），
+   *   且 run 结束后把【本轮 AI 最终回复】经 recordAssistantReply 报告给 Core（**只进上下文窗口、永不落证据**，tool-result-only ingestion boundary），
    *   供下一轮理解附和/短回答。不传 = 无会话上下文，行为同旧（裸摄入）；0.5 Core 无此面则整条静默跳过。
    */
   conversationId?: string;
@@ -134,15 +134,15 @@ export interface MemoWeftRunner {
   callModelInputFilter: CallModelInputFilter;
   /**
    * ③ 工具结果摄入（可测）：扫一批 `RunItem`，筛 `tool_call_output_item` → ingestToolResult。
-   * `run` 包装器内部即调它；也供自驱动 `run` 的宿主在拿到 `result.newItems` 后手动调。
+   * `run` 包装器内部即调它；也供自驱动 `run` 的宿主在获取 `result.newItems` 后手动调。
    * @returns 符合条件、被【尝试】摄入的 tool_call_output_item 条数（**非**成功落库数）。写路径降级不中断:
-   *   ingest 真失败会经 logger 记 `memory_degraded` 后静默吞、不体现在此计数(§16.2)——要观测写入成败请读 logger 事件。
+   *   ingest 真失败会经 logger 记 `memory_degraded` 后静默吞、不体现在此计数()——要观测写入成败请读 logger 事件。
    */
   persistToolOutputs(newItems: readonly RunItem[]): Promise<number>;
 }
 
 /**
- * ingest（写路径）执行器：契约 §16.2——【真错】重试一次再放弃；仍失败经 logger 记一条结构化事件后【静默吞】。
+ * ingest（写路径）执行器：契约 ——【真错】重试一次再放弃；仍失败经 logger 记一条结构化事件后【静默吞】。
  * 绝不向 SDK / 调用方抛（本函数从不 reject）。ingest 的降级 reason 恒为 'error'（含超时也归 error）。
  * 幂等前提：重试去重靠【稳定非空 originId】（spoken 用宿主 turnId、tool 用 callId）。originId=null 时 Core 不去重，
  *   故【超时不重试】：withTimeout 只 race、不取消底层写，超时后底层 ingest 可能仍提交，盲重试会重复落库。
@@ -233,13 +233,14 @@ function lastUserText(input: readonly AgentInputItem[]): string | null {
  *   - `result.finalOutput` 为非空 string → 直接用（文本 agent 的常态）；
  *   - 否则从 newItems 倒扫最后一条 `message_output_item`，拼其 `rawItem.content` 里的 `output_text` 部分。
  * 结构化输出（finalOutput 非串）且无文本消息 → null（无可当「AI 那句」的文本，不 record）。按 unknown 防御解析。
- * 注意：这只用于【上下文窗口】(recordAssistantReply)，绝不落证据——助手输出永不成 evidence（铁律 3a）。
+ * 注意：这只用于【上下文窗口】(recordAssistantReply)，绝不落证据——助手输出永不成 evidence（tool-result-only ingestion boundary）。
  */
 export function finalAssistantText(result: {
   finalOutput?: unknown;
   newItems?: readonly RunItem[];
 }): string | null {
-  if (typeof result.finalOutput === 'string' && result.finalOutput.trim() !== '') return result.finalOutput;
+  if (typeof result.finalOutput === 'string' && result.finalOutput.trim() !== '')
+    return result.finalOutput;
   const items = result.newItems;
   if (!Array.isArray(items)) return null;
   for (let i = items.length - 1; i >= 0; i--) {
@@ -261,7 +262,7 @@ export function finalAssistantText(result: {
 }
 
 /**
- * 把【本轮 AI 最终回复】报告给 Core 的 recordAssistantReply（0.6 会话上下文·**只进上下文窗口、永不落证据**·铁律 3a）。
+ * 把【本轮 AI 最终回复】报告给 Core 的 recordAssistantReply（0.6 会话上下文·**只进上下文窗口、永不落证据**·tool-result-only ingestion boundary）。
  * 自带门控（可测·run 包装器内部即调它）：
  *   - Core 无 recordAssistantReply（0.5）或未传 conversationId → 不 record，返回 false；
  *   - finalAssistantText 提不出非空文本（结构化输出等）→ 不 record，返回 false；
@@ -353,7 +354,7 @@ export function createMemoWeftRunner(
     const query = lastUserText(modelData.input);
     if (!query) return modelData;
 
-    // 契约 §16.2：withTimeout 包 recallTimeoutMs；读路径不重试，超时/抛错即降级为不注入。
+    // 契约 ：withTimeout 包 recallTimeoutMs；读路径不重试，超时/抛错即降级为不注入。
     let recalled: RecalledCognition[];
     try {
       recalled = await withTimeout(
@@ -368,10 +369,10 @@ export function createMemoWeftRunner(
       });
       return modelData;
     }
-    // 观测回调 + 拼块一并纳入降级 guard：宿主 onRecall 或拼块万一抛错，绝不 reject 本 filter / 掀翻这轮对话。
+    // 观测回调 + 拼块一并纳入降级 guard：宿主 onRecall 或拼块如果抛错，绝不 reject 本 filter / 中断本轮对话。
     try {
       onRecall?.(recalled);
-      // 隐私硬约束（D-0024）：buildKnowledgeBlock 只用 content/confidence/credStatus——provenance 等绝不进 instructions。
+      // 隐私保证：buildKnowledgeBlock 只用 content/confidence/credStatus——provenance 等绝不进 instructions。
       const block = buildKnowledgeBlock(recalled, lang);
       if (block === '') return modelData;
       const instructions = modelData.instructions
@@ -386,11 +387,13 @@ export function createMemoWeftRunner(
 
   // 对外暴露的 filter：宿主 opts.callModelInputFilter 前置 chain（先宿主、后召回注入）。标记「已含召回注入」防呆重复注入。
   markRecallInjected(recallInject);
-  const callModelInputFilter: CallModelInputFilter = markRecallInjected(chainFilters(hostFilter, recallInject));
+  const callModelInputFilter: CallModelInputFilter = markRecallInjected(
+    chainFilters(hostFilter, recallInject),
+  );
 
   // ── ③ 工具结果摄入（可测）：只筛 tool_call_output_item，只读 output + rawItem.callId ──
   //
-  // 铁律 3a（by-construction）：tool_call_item（调用意图/入参）不是本类型，天然不入循环；只有工具【返回结果】落库。
+  // tool-result-only ingestion boundary（by-construction）：tool_call_item（调用意图/入参）不是本类型，天然不入循环；只有工具【返回结果】落库。
   const persistToolOutputs = async (newItems: readonly RunItem[]): Promise<number> => {
     let stored = 0;
     for (const item of newItems) {
@@ -398,7 +401,7 @@ export function createMemoWeftRunner(
       const text = toolOutputText(item.output);
       if (text === null || text.trim() === '') continue; // 空/无载荷不落库
       const originId = readCallId(item.rawItem);
-      // 落库走 ingestToolResult → sourceKind='tool' → 默认不上云（config.toolDefaults 兜底）。
+      // 落库走 ingestToolResult → sourceKind='tool' → 默认不进入内建云写模型 prompt（config.toolDefaults 兜底）。
       await runIngestWithRetry(
         () => core.ingestToolResult({ content: text, originId, subjectId }),
         ingestTimeoutMs,
@@ -422,13 +425,18 @@ export function createMemoWeftRunner(
     const conversationId = canRecordReply ? memoweft?.conversationId : undefined;
 
     // ② 写：把【用户这轮原话】(从原始 input 提，注入前) 沉淀成 spoken 证据。originId 用宿主 turnId 保证幂等。
-    //    不传任何授权位——ingestUserMessage 存 spoken，本就不涉上云授权位（红线）。
+    //    不传任何授权位——ingestUserMessage 存 spoken，该入口不接受云读取授权覆盖。
     //    带 conversationId 时（0.6）：Core 据此把【上一轮】AI 那句捕获进 preceding_ai_context。
     const spoken = spokenTextFromRunInput(input);
     if (spoken !== null) {
       await runIngestWithRetry(
         () =>
-          core.ingestUserMessage({ content: spoken, originId: memoweft?.spokenOriginId ?? null, subjectId, conversationId }),
+          core.ingestUserMessage({
+            content: spoken,
+            originId: memoweft?.spokenOriginId ?? null,
+            subjectId,
+            conversationId,
+          }),
         ingestTimeoutMs,
         logger,
       );
@@ -452,7 +460,7 @@ export function createMemoWeftRunner(
     await persistToolOutputs(result.newItems);
 
     // ④ 上下文（0.6·仅能力具备 + 有 conversationId）：把【本轮 AI 最终回复】报告给 Core 供下一轮捕获。
-    //    **只进上下文窗口、永不落证据**（铁律 3a）；recordFinalReply 内部再核能力/失败不崩对话。
+    //    **只进上下文窗口、永不落证据**（tool-result-only ingestion boundary）；recordFinalReply 内部再核能力/失败不崩对话。
     recordFinalReply(core, result, conversationId);
     return result;
   };

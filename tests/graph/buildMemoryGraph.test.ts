@@ -1,5 +1,5 @@
 /**
- * 图谱 payload 构建（Phase 6-B G1）。纯离线，用内存库。
+ * 图谱 payload 构建。纯离线，使用内存数据库。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,12 +10,50 @@ import type { MemoryGraphNode, MemoryGraphEdge } from '../../src/graph/model.ts'
 /** 造：2 证据（1 spoken + 1 observed）+ 1 事件 + 2 活跃认知（preference/hypothesis 各挂 1 证据）+ 1 失效认知。 */
 function seed() {
   const s = openStores(':memory:');
-  const e1 = s.evidenceStore.put({ subjectId: 'owner', sourceKind: 'spoken', hostId: 'h', rawContent: '我喜欢喝茶' });
-  const e2 = s.evidenceStore.put({ subjectId: 'owner', sourceKind: 'observed', hostId: 'h', rawContent: '游戏开到3:30' });
-  const ev = s.eventStore.put({ subjectId: 'owner', summary: '聊了茶+游戏', occurredAt: e1.occurredAt, evidenceIds: [e1.id, e2.id] });
-  const cPref = s.cognitionStore.put({ subjectId: 'owner', content: '用户喜欢喝茶', contentType: 'preference', formedBy: 'stated', confidence: 600, credStatus: 'limited', evidence: [{ evidenceId: e1.id, relation: 'support' }] });
-  const cHyp = s.cognitionStore.put({ subjectId: 'owner', content: '可能熬夜打游戏导致没睡好', contentType: 'hypothesis', formedBy: 'inferred', confidence: 200, credStatus: 'low', evidence: [{ evidenceId: e2.id, relation: 'support' }] });
-  const cOld = s.cognitionStore.put({ subjectId: 'owner', content: '旧判断', contentType: 'fact', formedBy: 'stated', confidence: 500, credStatus: 'limited' });
+  const e1 = s.evidenceStore.put({
+    subjectId: 'owner',
+    sourceKind: 'spoken',
+    hostId: 'h',
+    rawContent: '我喜欢喝茶',
+  });
+  const e2 = s.evidenceStore.put({
+    subjectId: 'owner',
+    sourceKind: 'observed',
+    hostId: 'h',
+    rawContent: '游戏开到3:30',
+  });
+  const ev = s.eventStore.put({
+    subjectId: 'owner',
+    summary: '聊了茶+游戏',
+    occurredAt: e1.occurredAt,
+    evidenceIds: [e1.id, e2.id],
+  });
+  const cPref = s.cognitionStore.put({
+    subjectId: 'owner',
+    content: '用户喜欢喝茶',
+    contentType: 'preference',
+    formedBy: 'stated',
+    confidence: 600,
+    credStatus: 'limited',
+    evidence: [{ evidenceId: e1.id, relation: 'support' }],
+  });
+  const cHyp = s.cognitionStore.put({
+    subjectId: 'owner',
+    content: '可能熬夜打游戏导致没睡好',
+    contentType: 'hypothesis',
+    formedBy: 'inferred',
+    confidence: 200,
+    credStatus: 'low',
+    evidence: [{ evidenceId: e2.id, relation: 'support' }],
+  });
+  const cOld = s.cognitionStore.put({
+    subjectId: 'owner',
+    content: '旧判断',
+    contentType: 'fact',
+    formedBy: 'stated',
+    confidence: 500,
+    credStatus: 'limited',
+  });
   s.cognitionStore.update(cOld.id, { invalidAt: '2026-06-30T00:00:00.000Z' });
   return { s, e1, e2, ev, cPref, cHyp, cOld };
 }
@@ -62,7 +100,10 @@ test('includeEvidence=false：只留 subject + cognition，无 evidence/event', 
     const g = buildMemoryGraph('owner', s, { includeEvidence: false });
     assert.equal(byKind(g.nodes, 'evidence').length, 0);
     assert.equal(byKind(g.nodes, 'event').length, 0);
-    assert.ok(g.edges.every((e) => e.kind === 'belongs_to_subject'), '只剩归属边');
+    assert.ok(
+      g.edges.every((e) => e.kind === 'belongs_to_subject'),
+      '只剩归属边',
+    );
     assert.equal(g.depth, 1, '未展开 → depth 1');
   } finally {
     s.close();
@@ -98,8 +139,21 @@ test('contentType 过滤：只留 hypothesis，其余计入 hiddenCount', () => 
 test('conflicted 认知：colorKey=conflicted 且 stats.conflictedCount 计数', () => {
   const s = openStores(':memory:');
   try {
-    const e = s.evidenceStore.put({ subjectId: 'owner', sourceKind: 'spoken', hostId: 'h', rawContent: 'x' });
-    const c = s.cognitionStore.put({ subjectId: 'owner', content: '有冲突的判断', contentType: 'fact', formedBy: 'stated', confidence: 400, credStatus: 'conflicted', evidence: [{ evidenceId: e.id, relation: 'contradict' }] });
+    const e = s.evidenceStore.put({
+      subjectId: 'owner',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: 'x',
+    });
+    const c = s.cognitionStore.put({
+      subjectId: 'owner',
+      content: '有冲突的判断',
+      contentType: 'fact',
+      formedBy: 'stated',
+      confidence: 400,
+      credStatus: 'conflicted',
+      evidence: [{ evidenceId: e.id, relation: 'contradict' }],
+    });
     const g = buildMemoryGraph('owner', s, {});
     const node = g.nodes.find((n) => n.id === c.id)!;
     assert.equal(node.colorKey, 'conflicted');
@@ -116,9 +170,32 @@ test('onlyCloudBlocked：只留 allowCloudRead=false 的证据', () => {
   const s = openStores(':memory:');
   try {
     // spoken 默认可上云；observed 默认不上云（云端受限）。
-    const spoken = s.evidenceStore.put({ subjectId: 'owner', sourceKind: 'spoken', hostId: 'h', rawContent: '亲口', allowCloudRead: true });
-    const observed = s.evidenceStore.put({ subjectId: 'owner', sourceKind: 'observed', hostId: 'h', rawContent: '观察', allowCloudRead: false });
-    s.cognitionStore.put({ subjectId: 'owner', content: 'c1', contentType: 'fact', formedBy: 'stated', confidence: 500, credStatus: 'limited', evidence: [{ evidenceId: spoken.id, relation: 'support' }, { evidenceId: observed.id, relation: 'support' }] });
+    const spoken = s.evidenceStore.put({
+      subjectId: 'owner',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: '亲口',
+      allowCloudRead: true,
+    });
+    const observed = s.evidenceStore.put({
+      subjectId: 'owner',
+      sourceKind: 'observed',
+      hostId: 'h',
+      rawContent: '观察',
+      allowCloudRead: false,
+    });
+    s.cognitionStore.put({
+      subjectId: 'owner',
+      content: 'c1',
+      contentType: 'fact',
+      formedBy: 'stated',
+      confidence: 500,
+      credStatus: 'limited',
+      evidence: [
+        { evidenceId: spoken.id, relation: 'support' },
+        { evidenceId: observed.id, relation: 'support' },
+      ],
+    });
     const g = buildMemoryGraph('owner', s, { onlyCloudBlocked: true });
     const evIds = g.nodes.filter((n) => n.kind === 'evidence').map((n) => n.id);
     assert.deepEqual(evIds, [observed.id], '只剩云端受限的那条证据');
@@ -127,12 +204,33 @@ test('onlyCloudBlocked：只留 allowCloudRead=false 的证据', () => {
   }
 });
 
-test('tool 证据：节点 colorKey=tool + stats.toolEvidenceCount 计数（AD-3/D-0013）', () => {
+test('tool 证据：节点 colorKey=tool + stats.toolEvidenceCount 计数（tool-result-ingest）', () => {
   const s = openStores(':memory:');
   try {
-    const eTool = s.evidenceStore.put({ subjectId: 'owner', sourceKind: 'tool', hostId: 'h', rawContent: '{"temp":31}' });
-    const eObs = s.evidenceStore.put({ subjectId: 'owner', sourceKind: 'observed', hostId: 'h', rawContent: '观察' });
-    s.cognitionStore.put({ subjectId: 'owner', content: 'c1', contentType: 'fact', formedBy: 'stated', confidence: 500, credStatus: 'limited', evidence: [{ evidenceId: eTool.id, relation: 'support' }, { evidenceId: eObs.id, relation: 'support' }] });
+    const eTool = s.evidenceStore.put({
+      subjectId: 'owner',
+      sourceKind: 'tool',
+      hostId: 'h',
+      rawContent: '{"temp":31}',
+    });
+    const eObs = s.evidenceStore.put({
+      subjectId: 'owner',
+      sourceKind: 'observed',
+      hostId: 'h',
+      rawContent: '观察',
+    });
+    s.cognitionStore.put({
+      subjectId: 'owner',
+      content: 'c1',
+      contentType: 'fact',
+      formedBy: 'stated',
+      confidence: 500,
+      credStatus: 'limited',
+      evidence: [
+        { evidenceId: eTool.id, relation: 'support' },
+        { evidenceId: eObs.id, relation: 'support' },
+      ],
+    });
     const g = buildMemoryGraph('owner', s, {});
     const toolNode = g.nodes.find((n) => n.id === eTool.id)!;
     assert.equal(toolNode.colorKey, 'tool', 'tool 证据有独立着色键');

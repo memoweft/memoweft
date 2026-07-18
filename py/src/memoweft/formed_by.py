@@ -1,7 +1,7 @@
-"""deriveFormedBy —— 从支持证据集派生认知的【载体维】来源强度(取最弱)。
+"""deriveFormedBy —— 从支持证据集派生认知的【载体维】形成方式（按最保守项取值）。
 
-移植自 src/consolidation/deriveFormedBy.ts(D-0035)。**只算载体维**(stated/confirmed/observed),
-不算 inferred(那由模型报)。多证据取最弱。spoken 但无解析走结构事实兜底(有 AI 上句→confirmed,否则→stated)。
+与 TypeScript deriveFormedBy 契约保持一致，只计算载体维（stated/confirmed/observed），
+不计算由模型产生的 inferred。多证据取最低可信载体；spoken 缺少解析时使用结构事实后备规则。
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ _CARRIER_RANK = CONFIG.carrier_rank
 
 
 def _derive_one(e: CarrierInput) -> CarrierFormedBy:
-    """单条证据 → 载体维。逐条对应派生表,见 deriveFormedBy.ts:65-89。"""
+    """按共享派生规则将单条证据映射为载体维。"""
     # 前两行:非 spoken(observed/tool/inferred 型证据)不是用户在说话 → observed。
     if e.source_kind != "spoken":
         return "observed"
@@ -23,7 +23,7 @@ def _derive_one(e: CarrierInput) -> CarrierFormedBy:
     has_ai_context = bool((e.preceding_ai_context or "").strip())
     r = e.resolution
 
-    # 兜底:没解析、或 propositionOrigin 收敛成 null —— 结构事实兜底。
+    # 未解析或 propositionOrigin 为 null 时使用结构事实后备规则。
     if r is None or r.proposition_origin is None:
         return "confirmed" if has_ai_context else "stated"
 
@@ -40,7 +40,7 @@ def _derive_one(e: CarrierInput) -> CarrierFormedBy:
 
 
 def derive_formed_by(evidences: Sequence[CarrierInput]) -> Optional[CarrierFormedBy]:
-    """支持证据集 → 载体维(取最弱);空集返回 None(调用方按「算不出」处理)。deriveFormedBy.ts:96-103。"""
+    """将支持证据集映射为最低可信载体维；空集返回 None。"""
     weakest: Optional[CarrierFormedBy] = None
     for e in evidences:
         c = _derive_one(e)

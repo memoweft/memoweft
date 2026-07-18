@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
- * test:live — 真实模型三腿编排器（Phase 2 · §15.4 A3）。
+ * test:live — 真实模型三阶段编排器。
  *
- * 消灭 nightly `--if-present` 空跑陷阱：缺 LLM key 不再静默跳过退 0，而是打印【缺哪个 + 怎么配】并 exit 1。
- * 开跑前打印【计划表】（哪条跑 / 跳过 / 为什么），跑完打印【汇总】（逐腿 跑了 / 跳过(原因) / 通过 / 失败）。
+ * 避免 nightly `--if-present` 在缺少 LLM 配置时静默成功：输出缺失项与配置方法并返回非零状态。
+ * 执行前打印计划（运行项、跳过项及原因），完成后按阶段汇总运行、跳过、通过与失败状态。
  *
- * 三条腿：
- *   腿1 · live e2e        node --test tests/**\/*.e2e.ts（等价 npm run test:e2e）。非零退出 = 失败。
- *   腿2 · 固化真实臂(全量42) node bench/eval-consolidation.mjs --out bench/runs/<date>-<sha>-consolidation-live
- *                          读 <prefix>.json：agg.errored>0 = 失败（崩溃门，非质量门；§15.2 / D-0009 不设质量阈）。
- *                          用 --out 是为了不覆盖 bench/consolidation-baseline.*（那是基线，只有 bench:consolidation 才更新）。
- *   腿3 · 检索真实臂       仅当 embed 配置（MEMOWEFT_EMBED_*，含 DLA_ 回退）存在时跑：
+ * 三个阶段：
+ *   阶段 1 · live e2e       node --test tests/**\/*.e2e.ts（等价 npm run test:e2e）。非零退出 = 失败。
+ *   阶段 2 · 固化真实臂（全量 42） node bench/eval-consolidation.mjs --out bench/runs/<date>-<sha>-consolidation-live
+ *                          读 <prefix>.json：agg.errored>0 = 失败（崩溃门，非质量门； /  不设质量阈）。
+ *                          --out keeps the two run artifacts grouped under one timestamped prefix.
+ *   阶段 3 · 检索真实臂：仅当 embed 配置（MEMOWEFT_EMBED_*，含 DLA_ 回退）存在时运行：
  *                          EVAL_REAL_ARM=1 node bench/eval-retrieval.mjs --ablation --require-real-arm --out <prefix>
- *                          非零退出 = 失败；未配 embed → 大声跳过（不算失败，但进汇总，不静默截断）。
+ *                          非零退出 = 失败；未配置 embed 时明确记录跳过原因，不计为失败。
  *
- * 退出码：任一"实际跑了的"腿失败 → 1；否则 0（跳过的腿不计入失败）。
- * 纪律：只读 process.env，绝不打印 api key（脱敏，只显示 base_url 与 model）；不碰 src/tests，只编排既有脚本。
+ * 退出码：任一实际运行的阶段失败 → 1；否则 0（跳过的阶段不计入失败）。
+ * 安全约束：仅读取 process.env，绝不打印 API key（只显示 base_url 与 model）；不修改 src/tests。
  */
 import { execFileSync, execSync } from 'node:child_process';
 import { readFileSync, mkdirSync } from 'node:fs';
@@ -47,7 +47,7 @@ export function checkLlmConfig(env) {
   };
 }
 
-/** 纯函数：embed 三件套齐否（腿3 触发条件；预测 loadEmbedConfig 会不会返回非 null）。 */
+/** 纯函数：检查 embed 三项配置是否齐备（阶段 3 的运行条件）。 */
 export function checkEmbedConfig(env) {
   const need = ['EMBED_BASE_URL', 'EMBED_API_KEY', 'EMBED_MODEL'];
   const missing = need.filter((k) => !readEnvWithFallback(env, k));
@@ -92,7 +92,7 @@ function readJsonSafe(p) {
   }
 }
 
-/** 跑一条子进程腿：node <argv…>，stdio 直通。返回 { code }（非零从异常 .status 取，取不到当 1）。 */
+/** 运行一个 Node.js 子进程阶段并直通 stdio；无法读取退出状态时按失败处理。 */
 function runNodeLeg(argv, env) {
   try {
     execFileSync(process.execPath, argv, { cwd: ROOT, stdio: 'inherit', env });
@@ -128,42 +128,63 @@ async function main() {
   // ── 计划表（开跑前）──
   console.log('════════════════════ test:live 计划表 ════════════════════');
   console.log(`LLM（必需·已配）  ${maskConfig(llm)}`);
-  console.log(`embed（可选）      ${embed.ok ? maskConfig(embed) : '未配置 → 腿3 大声跳过'}`);
+  console.log(`embed（可选）      ${embed.ok ? maskConfig(embed) : '未配置 → 阶段 3 将跳过'}`);
   console.log('');
-  console.log('腿1 · live e2e            将跑  node --test tests/**/*.e2e.ts（各用例靠 HAS_LLM 自动 skip/run）');
-  console.log(`腿2 · 固化真实臂(全量42)  将跑  eval-consolidation --out ${consolidationPrefix}`);
-  console.log('                          崩溃门：agg.errored>0 → 失败；不设质量分数阈（§15.2 / D-0009）');
+  console.log(
+    '阶段 1 · live e2e：将运行 node --test tests/**/*.e2e.ts（各用例靠 HAS_LLM 自动 skip/run）',
+  );
+  console.log(
+    `阶段 2 · 固化真实臂（全量 42）：将运行 eval-consolidation --out ${consolidationPrefix}`,
+  );
+  console.log(
+    '                          崩溃门：agg.errored>0 → 失败；不设质量分数阈（提示词变更规则）',
+  );
   if (embed.ok) {
-    console.log(`腿3 · 检索真实臂          将跑  EVAL_REAL_ARM=1 eval-retrieval --ablation --require-real-arm --out ${retrievalPrefix}`);
+    console.log(
+      `阶段 3 · 检索真实臂：将运行 EVAL_REAL_ARM=1 eval-retrieval --ablation --require-real-arm --out ${retrievalPrefix}`,
+    );
   } else {
-    console.log('腿3 · 检索真实臂          跳过  未配置 MEMOWEFT_EMBED_*（本地 Ollama 端点在 CI 不可达），不计入失败');
+    console.log(
+      '阶段 3 · 检索真实臂：跳过；未配置 MEMOWEFT_EMBED_*（本地 Ollama 端点在 CI 不可达），不计入失败',
+    );
   }
   console.log('==========================================================');
   console.log('');
 
   const results = [];
 
-  // ── 腿1 · live e2e ──
-  console.log('──────── 腿1 · live e2e 起跑 ────────');
+  // ── 阶段 1 · live e2e ──
+  console.log('──────── 阶段 1 · live e2e 开始 ────────');
   const r1 = runNodeLeg(['--test', 'tests/**/*.e2e.ts'], process.env);
   results.push({
-    name: '腿1 · live e2e',
+    name: '阶段 1 · live e2e',
     ran: true,
     passed: r1.code === 0,
-    detail: r1.code === 0 ? '通过（含 HAS_LLM 未命中而自动 skip 的用例）' : `node --test 退出码 ${r1.code}`,
+    detail:
+      r1.code === 0
+        ? '通过（含 HAS_LLM 未命中而自动 skip 的用例）'
+        : `node --test 退出码 ${r1.code}`,
   });
 
-  // ── 腿2 · 固化真实臂（全量 42）──
+  // ── 阶段 2 · 固化真实臂（全量 42）──
   console.log('');
-  console.log('──────── 腿2 · 固化真实臂（全量 42）起跑 ────────');
-  const r2 = runNodeLeg(['bench/eval-consolidation.mjs', '--out', consolidationPrefix], process.env);
+  console.log('──────── 阶段 2 · 固化真实臂（全量 42）开始 ────────');
+  const r2 = runNodeLeg(
+    ['bench/eval-consolidation.mjs', '--out', consolidationPrefix],
+    process.env,
+  );
   if (r2.code !== 0) {
-    results.push({ name: '腿2 · 固化真实臂', ran: true, passed: false, detail: `进程崩溃，退出码 ${r2.code}` });
+    results.push({
+      name: '阶段 2 · 固化真实臂',
+      ran: true,
+      passed: false,
+      detail: `进程崩溃，退出码 ${r2.code}`,
+    });
   } else {
     const json = readJsonSafe(`${consolidationPrefix}.json`);
     if (!json) {
       results.push({
-        name: '腿2 · 固化真实臂',
+        name: '阶段 2 · 固化真实臂',
         ran: true,
         passed: false,
         detail: `未产出 JSON（${consolidationPrefix}.json）——LLM 未配置 / 语料缺失？`,
@@ -171,10 +192,14 @@ async function main() {
     } else {
       const agg = json.agg ?? {};
       const pv = json.meta?.promptVersions ?? {};
-      const pvStr = Object.keys(pv).sort().map((k) => `${k}@${pv[k]}`).join(' · ') || '(无)';
+      const pvStr =
+        Object.keys(pv)
+          .sort()
+          .map((k) => `${k}@${pv[k]}`)
+          .join(' · ') || '(无)';
       const errored = agg.errored ?? 0;
       results.push({
-        name: '腿2 · 固化真实臂',
+        name: '阶段 2 · 固化真实臂',
         ran: true,
         passed: errored === 0,
         detail:
@@ -184,26 +209,30 @@ async function main() {
     }
   }
 
-  // ── 腿3 · 检索真实臂（embed 配置存在才跑）──
+  // ── 阶段 3 · 检索真实臂（embed 配置存在时运行）──
   if (embed.ok) {
     console.log('');
-    console.log('──────── 腿3 · 检索真实臂 起跑 ────────');
+    console.log('──────── 阶段 3 · 检索真实臂 开始 ────────');
     const r3 = runNodeLeg(
       ['bench/eval-retrieval.mjs', '--ablation', '--require-real-arm', '--out', retrievalPrefix],
       { ...process.env, EVAL_REAL_ARM: '1' },
     );
     results.push({
-      name: '腿3 · 检索真实臂',
+      name: '阶段 3 · 检索真实臂',
       ran: true,
       passed: r3.code === 0,
-      detail: r3.code === 0 ? '通过（真实嵌入臂已跑，非 pending）' : `退出码 ${r3.code}（真实臂 pending / 调用失败，--require-real-arm 判失败）`,
+      detail:
+        r3.code === 0
+          ? '通过（真实嵌入臂已跑，非 pending）'
+          : `退出码 ${r3.code}（真实臂 pending / 调用失败，--require-real-arm 判失败）`,
     });
   } else {
     results.push({
-      name: '腿3 · 检索真实臂',
+      name: '阶段 3 · 检索真实臂',
       ran: false,
       skipped: true,
-      detail: '未配置 MEMOWEFT_EMBED_*（含 DLA_ 回退）；本地 Ollama 端点在 CI 不可达 → 大声跳过，不计入失败',
+      detail:
+        '未配置 MEMOWEFT_EMBED_*（含 DLA_ 回退）；CI 无法访问本地 Ollama 端点，因此明确跳过且不计入失败',
     });
   }
 
@@ -224,10 +253,10 @@ async function main() {
   console.log('========================================================');
 
   if (failed > 0) {
-    console.error(`test:live 失败：${failed} 条实际跑了的腿未通过。`);
+    console.error(`test:live 失败：${failed} 个实际运行的阶段未通过。`);
     process.exit(1);
   }
-  console.log('test:live 通过：所有实际跑了的腿均通过（跳过的腿不计入失败）。');
+  console.log('test:live 通过：所有实际运行的阶段均通过（跳过的阶段不计入失败）。');
   process.exit(0);
 }
 

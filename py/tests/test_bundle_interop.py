@@ -1,7 +1,7 @@
 """便携包互通:TS 生成的合法包(shared/parity/bundle.json)→ Python 建同构库导入 → 保真(id/时间戳/溯源链)。
 
 这是 1.3 最强的跨语言证据:TS 侧产出的记忆包,Python 侧原样读回、数据不丢。
-(P2-旁 起走完整 ImportPlan 语义:validate 门 + duplicates + 事务。)
+( 起走完整 ImportPlan 语义:validate 门 + duplicates + 事务。)
 """
 from __future__ import annotations
 

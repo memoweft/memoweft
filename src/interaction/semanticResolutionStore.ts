@@ -1,12 +1,12 @@
 /**
- * 语义解析存储层(v0.6 · D-0034)。
+ * 语义解析存储层。
  *
  * 挂 openStores 的共享连接;单测可传路径 / ':memory:' 自开连接。
  * 一条证据一条语义解析(通过 evidence_id 关联,本表不冗余存 subject_id)。
  *
- * Phase 1:只建表结构 + insert / 读接口(供便携包与迁移收敛)。**写路径(put)由 Phase 2 resolver 调用**——
- * Phase 1 不产解析数据(既有对话无解析字段)。resolvedContent / 各解析维度是【解释结果、不是证据】,
- * 永不进 consolidate 的 support 白名单(3a/3d)。
+ * :只建表结构 + insert / 读接口(供便携包与迁移收敛)。**写路径(put)由  resolver 调用**——
+ *  不产解析数据(既有对话无解析字段)。resolvedContent / 各解析维度是【解释结果、不是证据】,
+ * 解析结果不是证据，永不进入 consolidate 的 support 白名单。
  */
 import { DatabaseSync } from '../store/nodeSqliteDriver.ts';
 import { randomUUID } from 'node:crypto';
@@ -66,7 +66,7 @@ function fromRow(r: Row): SemanticResolution {
 }
 
 export interface SemanticResolutionStore {
-  /** 落一条解析(Phase 2 resolver 调用)。 */
+  /** 持久化一条 resolver 解析结果。 */
   put(input: SemanticResolutionInput): SemanticResolution;
   get(id: string): SemanticResolution | null;
   /** 某条证据的解析(1↔1;无则 null)。 */
@@ -139,7 +139,9 @@ export class SqliteSemanticResolutionStore implements SemanticResolutionStore {
 
   ofEvidence(evidenceId: string): SemanticResolution | null {
     const row = this.db
-      .prepare('SELECT * FROM semantic_resolution WHERE evidence_id = ? ORDER BY created_at ASC, rowid ASC LIMIT 1')
+      .prepare(
+        'SELECT * FROM semantic_resolution WHERE evidence_id = ? ORDER BY created_at ASC, rowid ASC LIMIT 1',
+      )
       .get(evidenceId) as unknown as Row | undefined;
     return row ? fromRow(row) : null;
   }
@@ -148,7 +150,9 @@ export class SqliteSemanticResolutionStore implements SemanticResolutionStore {
     if (evidenceIds.length === 0) return [];
     const placeholders = evidenceIds.map(() => '?').join(',');
     const rows = this.db
-      .prepare(`SELECT * FROM semantic_resolution WHERE evidence_id IN (${placeholders}) ORDER BY created_at ASC, rowid ASC`)
+      .prepare(
+        `SELECT * FROM semantic_resolution WHERE evidence_id IN (${placeholders}) ORDER BY created_at ASC, rowid ASC`,
+      )
       .all(...evidenceIds) as unknown as Row[];
     return rows.map(fromRow);
   }
@@ -160,7 +164,9 @@ export class SqliteSemanticResolutionStore implements SemanticResolutionStore {
   removeByEvidenceIds(evidenceIds: string[]): number {
     if (evidenceIds.length === 0) return 0;
     const placeholders = evidenceIds.map(() => '?').join(',');
-    const r = this.db.prepare(`DELETE FROM semantic_resolution WHERE evidence_id IN (${placeholders})`).run(...evidenceIds);
+    const r = this.db
+      .prepare(`DELETE FROM semantic_resolution WHERE evidence_id IN (${placeholders})`)
+      .run(...evidenceIds);
     return Number(r.changes);
   }
 

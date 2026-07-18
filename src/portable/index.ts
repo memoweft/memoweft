@@ -1,5 +1,5 @@
 /**
- * 便携记忆包（Portable Memory Bundle · Phase 5-A）对外汇出。
+ * 便携记忆包（Portable Memory Bundle）对外汇出。
  * 让 MemoWeft 的用户记忆成为可导出 / 备份 / 迁移 / 恢复的资产。
  */
 export { exportBundle, type ExportDeps, type ExportOptions } from './exportBundle.ts';

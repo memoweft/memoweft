@@ -1,27 +1,27 @@
 /**
- * @memoweft/adapter-langchain · v1 Agent Middleware 入口（读写一体·LangChain v1 正门）。
+ * @memoweft/adapter-langchain · LangChain v1 Agent Middleware 入口（读写一体）。
  *
- * 现有 retriever + callback 面（retriever.ts / writeCallback.ts）是 v0 时代载体（callbacks 观察-only、
- *   召回注入靠宿主自拼进 prompt）。LangChain v1 的 `createAgent` 主推 Agent Middleware——本文件用
- *   `createMiddleware`（来自 `langchain` 伞包）造一个把 MemoWeft 长期记忆一肩挑的 middleware：
+ * 现有 retriever + callback 面（retriever.ts / writeCallback.ts）是 v0 时代载体（callbacks 仅观察、
+ *   召回注入由宿主拼入 prompt）。LangChain v1 的 `createAgent` 推荐 Agent Middleware——本文件用
+ *   `createMiddleware`（来自 `langchain` 包）创建统一集成 MemoWeft 长期记忆读写路径的 middleware：
  *
  *   - 读（`wrapModelCall`，每次模型调用前·临时注入不持久）：取本轮最后一条 human 文本 → core.recall →
  *       `handler({ ...request, systemMessage: request.systemMessage.concat(块) })`（官方推荐的临时扩 system 消息法）
  *       → 只对本次模型调用生效，【不写进会话 state】（避开逐轮累积旧召回）。
  *   - 写①（`beforeAgent`，一轮一次）：最后一条 human 原话 → ingestUserMessage(spoken)。
  *   - 写②（`wrapToolCall`，每次工具调用）：调 handler 拿 ToolMessage【返回结果】→ ingestToolResult；
- *       `request.toolCall`（LLM 的调用意图/入参）【绝不】读——铁律 3a by-construction。
+ *       `request.toolCall`（LLM 的调用意图/入参）【绝不】读——tool-result-only ingestion boundary by-construction。
  *   - 写③（`afterAgent`，一轮一次）：最后一条 ai 回复 → recordAssistantReply（0.6 面·只进上下文窗口、
  *       永不落证据；能力探测，0.5 缺此面则跳过）。
  *
  * 0.6 会话上下文：写①用 conversationId ingest（此刻 session 里是【上一轮】AI 那句），写③再 record 本轮 AI 供下一轮捕获。
  *   conversationId 来源：opts.conversationId > opts.getConversationId(runtime) > runtime.configurable?.thread_id（LangGraph 线程）。
  *
- * 边界（Core 无头纪律）：注入文案只搬 Core 中性 knowledgeBlock；不自造人设。
- * 降级（§16.2）：recall 超时（默认 200ms）/抛错 → 不注入、经注入 logger 记一条；写路径失败重试一次再放弃（`runIngestWithRetry`）。
- * 隐私（D-0024）：provenance/id/score 绝不进注入的 system 消息——只经 onRecall 交宿主。
+ * 边界：注入文案沿用 Core 的中性 knowledgeBlock，不添加适配器专属角色指令。
+ * 降级：recall 超时（默认 200ms）/抛错 → 不注入、经注入 logger 记一条；写路径失败重试一次再放弃（`runIngestWithRetry`）。
+ * 隐私：provenance/id/score 绝不进注入的 system 消息——只经 onRecall 交宿主。
  *
- * peer 说明：本入口需 `langchain` 伞包（v1 middleware 所在）。它是【可选 peer】——只用 retriever/callback 老路的宿主
+ * peer 说明：本入口需 `langchain` 伞包（v1 middleware 所在）。它是【可选 peer】——只用 retriever/callback 集成的宿主
  *   仍只需 `@langchain/core`，import 本入口才需伞包。
  */
 import { createMiddleware } from 'langchain';
@@ -46,20 +46,20 @@ export interface MemoWeftMiddlewareOptions {
   name?: string;
   /** 召回/摄入归属的 subject；缺省交给 Core（config.identity.subjectId）。 */
   subjectId?: string;
-  /** 注入块语言（措辞照 Core 双语口径）。缺省 'en'。只影响这段说明文字，不改 Core 行为。 */
+  /** 注入块语言（措辞沿用 Core 双语口径）。缺省 'en'。只影响这段说明文字，不改 Core 行为。 */
   lang?: 'en' | 'zh';
-  /** 召回按认知类型过滤（D-0022/D-0024）：透传进 core.recall 的 contentTypes（允许名单）。不传/空 = 全类型。 */
+  /** 召回按认知类型过滤：透传进 core.recall 的 contentTypes（允许名单）。不传/空 = 全类型。 */
   contentTypes?: ContentType[];
-  /** 召回解释（D-0021/D-0024）：透传进 core.recall 的 explain。true → onRecall 每项带 provenance（含授权位）。
-   *  隐私硬约束：provenance【绝不】进注入的 system 消息——只经 onRecall 交宿主自筛。 */
+  /** 召回解释：透传进 core.recall 的 explain。true → onRecall 每项带 provenance（含授权位）。
+   *  隐私保证：provenance【绝不】进注入的 system 消息——只经 onRecall 交宿主自筛。 */
   explain?: boolean;
   /** 每次成功召回后的回调（可选）：透传召回 v2 面（id/contentType/score，explain 时含 provenance）供宿主自筛/透视。 */
   onRecall?: (items: RecalledLike[]) => void;
-  /** recall 超时阈值（毫秒，§16.2）。缺省 200ms。超时/出错这次模型调用降级为不注入；读路径不重试。 */
+  /** recall 超时阈值（毫秒，）。缺省 200ms。超时/出错这次模型调用降级为不注入；读路径不重试。 */
   recallTimeoutMs?: number;
   /** ingest 单次尝试超时（毫秒，可选，同 writeCallback）。传正数则每次尝试套超时；超时按失败计入「重试一次」（超时不重试）。 */
   ingestTimeoutMs?: number;
-  /** 注入式 logger（§16.2）：召回/摄入降级时记结构化事件。缺省无 = 静默；只记事件/原因，不记内容。 */
+  /** 注入式 logger：召回/摄入降级时记结构化事件。缺省无 = 静默；只记事件/原因，不记内容。 */
   logger?: MemoWeftLogger;
   /** 0.6 会话上下文的 conversationId（直传）。优先级最高。 */
   conversationId?: string;
@@ -94,7 +94,12 @@ function lastOfType(messages: unknown, type: 'human' | 'ai'): MsgView | undefine
   if (!Array.isArray(messages)) return undefined;
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i] as { getType?: () => string; _getType?: () => string };
-    const t = typeof m?.getType === 'function' ? m.getType() : typeof m?._getType === 'function' ? m._getType() : undefined;
+    const t =
+      typeof m?.getType === 'function'
+        ? m.getType()
+        : typeof m?._getType === 'function'
+          ? m._getType()
+          : undefined;
     if (t === type) return m as MsgView;
   }
   return undefined;
@@ -106,7 +111,7 @@ function stableId(v: unknown): string | null {
 }
 
 /**
- * 造 MemoWeft × LangChain v1 的一组 middleware hook（纯函数，便于离线契约测试直接驱动）。
+ * 创建 MemoWeft × LangChain v1 的一组 middleware hook（纯函数，便于离线契约测试直接驱动）。
  * `createMemoWeftMiddleware` 用它 + createMiddleware 薄接线。
  */
 export function buildMemoWeftHooks(core: MiddlewareCore, opts: MemoWeftMiddlewareOptions = {}) {
@@ -127,7 +132,8 @@ export function buildMemoWeftHooks(core: MiddlewareCore, opts: MemoWeftMiddlewar
   function convId(runtime: unknown): string | undefined {
     if (conversationId) return conversationId;
     if (getConversationId) return getConversationId(runtime);
-    const r = runtime as { configurable?: { thread_id?: unknown }; context?: { thread_id?: unknown } } | undefined;
+    const r = runtime as
+      { configurable?: { thread_id?: unknown }; context?: { thread_id?: unknown } } | undefined;
     const t = r?.configurable?.thread_id ?? r?.context?.thread_id;
     return typeof t === 'string' ? t : undefined;
   }
@@ -139,22 +145,37 @@ export function buildMemoWeftHooks(core: MiddlewareCore, opts: MemoWeftMiddlewar
     if (!text) return;
     const cid = canRecordReply ? convId(runtime) : undefined;
     await runIngestWithRetry(
-      () => core.ingestUserMessage({ content: text, originId: human ? stableId(human.id) : null, subjectId, conversationId: cid }),
+      () =>
+        core.ingestUserMessage({
+          content: text,
+          originId: human ? stableId(human.id) : null,
+          subjectId,
+          conversationId: cid,
+        }),
       ingestTimeoutMs,
       logger,
     );
   }
 
   /** 读：recall + 临时注入 system 消息（不持久）。返回给 wrapModelCall 用的「注入后 request」或原 request。 */
-  async function recallInjectedRequest<T extends { messages?: unknown; systemMessage?: { concat(x: string): unknown } }>(request: T): Promise<T> {
+  async function recallInjectedRequest<
+    T extends { messages?: unknown; systemMessage?: { concat(x: string): unknown } },
+  >(request: T): Promise<T> {
     const human = lastOfType(request.messages, 'human');
     const query = human ? messageText(human.content) : null;
     if (!query) return request;
     let recalled: RecalledCognition[];
     try {
-      recalled = await withTimeout(core.recall({ query, subjectId, contentTypes, explain }), recallTimeoutMs);
+      recalled = await withTimeout(
+        core.recall({ query, subjectId, contentTypes, explain }),
+        recallTimeoutMs,
+      );
     } catch (err) {
-      logger?.({ event: 'memory_degraded', op: 'recall', reason: err instanceof RecallTimeoutError ? 'timeout' : 'error' });
+      logger?.({
+        event: 'memory_degraded',
+        op: 'recall',
+        reason: err instanceof RecallTimeoutError ? 'timeout' : 'error',
+      });
       return request;
     }
     onRecall?.(recalled as RecalledLike[]);
@@ -163,7 +184,7 @@ export function buildMemoWeftHooks(core: MiddlewareCore, opts: MemoWeftMiddlewar
     return { ...request, systemMessage: request.systemMessage.concat(block) };
   }
 
-  /** 写②：工具返回结果 → tool 证据（只取 result content、绝不取 request.toolCall 的调用意图/入参，铁律 3a）。 */
+  /** 写②：工具返回结果 → tool 证据（只取 result content、绝不取 request.toolCall 的调用意图/入参，tool-result-only ingestion boundary）。 */
   async function persistToolResult(result: unknown, toolCall: unknown): Promise<void> {
     const text = toolOutputText((result as { content?: unknown } | null | undefined)?.content);
     if (text === null || text.trim() === '') return;
@@ -223,14 +244,17 @@ export function buildMemoWeftHooks(core: MiddlewareCore, opts: MemoWeftMiddlewar
 }
 
 /**
- * 造一个 MemoWeft × LangChain v1 Agent Middleware，塞进 `createAgent({ middleware: [mw] })`。
- * 读写一肩挑（召回临时注入 + 用户原话/工具结果/AI 回复落库），是 v1 生态的正门入口。
+ * 创建 MemoWeft × LangChain v1 Agent Middleware，用于 `createAgent({ middleware: [mw] })`。
+ * 它统一处理召回临时注入，以及用户原话、工具结果和 AI 回复的写入。
  *
  * @param core 需持有 recall / ingestUserMessage / ingestToolResult；recordAssistantReply 可选（0.6 面·能力探测）。
  * @param opts name / subjectId / lang / contentTypes / explain / onRecall / recallTimeoutMs / ingestTimeoutMs / logger / conversationId。
  * @returns `createMiddleware(...)` 的产物（AgentMiddleware），直接进 createAgent 的 middleware 数组。
  */
-export function createMemoWeftMiddleware(core: MiddlewareCore, opts: MemoWeftMiddlewareOptions = {}) {
+export function createMemoWeftMiddleware(
+  core: MiddlewareCore,
+  opts: MemoWeftMiddlewareOptions = {},
+) {
   const hooks = buildMemoWeftHooks(core, opts);
   return createMiddleware({
     name: opts.name ?? 'memoweft-memory',

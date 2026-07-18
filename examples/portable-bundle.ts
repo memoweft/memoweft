@@ -26,21 +26,30 @@ const SUBJECT = 'demo-user';
 async function main() {
   // 1) Source store: ingest a couple of evidence pieces (storing evidence needs no model).
   const src = createMemoWeftCore({ dbPath: SRC });
-  await src.ingestUserMessage({ subjectId: SUBJECT, content: 'I love pour-over coffee in the morning.' });
+  await src.ingestUserMessage({
+    subjectId: SUBJECT,
+    content: 'I love pour-over coffee in the morning.',
+  });
   await src.ingestUserMessage({ subjectId: SUBJECT, content: 'I usually run before work.' });
 
   // 2) Export a portable bundle (synchronous — deps already bound by the core facade).
   const bundle = src.portable.exportBundle({ subjectId: SUBJECT });
-  console.log(`Exported bundle: ${bundle.data.evidence.length} evidence, ${bundle.data.cognitions.length} cognitions.`);
+  console.log(
+    `Exported bundle: ${bundle.data.evidence.length} evidence, ${bundle.data.cognitions.length} cognitions.`,
+  );
 
   // 3) Validate before importing — never import a malformed / dangling bundle.
   const check = src.portable.validateBundle(bundle);
-  console.log(`Bundle valid: ${check.valid} (errors: ${check.errors.length}, warnings: ${check.warnings.length})`);
+  console.log(
+    `Bundle valid: ${check.valid} (errors: ${check.errors.length}, warnings: ${check.warnings.length})`,
+  );
 
   // 4) Destination store: import the bundle. mode 'merge' actually writes (idempotent by id).
   const dst = createMemoWeftCore({ dbPath: DST });
   const plan = dst.portable.importBundle(bundle, { mode: 'merge' });
-  console.log(`Imported: ${plan.counts.evidence} evidence written, ${plan.duplicates.evidence} duplicate(s) skipped.`);
+  console.log(
+    `Imported: ${plan.counts.evidence} evidence written, ${plan.duplicates.evidence} duplicate(s) skipped.`,
+  );
 
   // 5) Verify the destination now holds the evidence — a portable memory asset moved across stores.
   const restored = dst.memory.listEvidence({ subjectId: SUBJECT });

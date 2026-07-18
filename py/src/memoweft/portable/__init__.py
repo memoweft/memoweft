@@ -1,7 +1,6 @@
-"""便携记忆包(Portable Memory Bundle)—— 移植自 src/portable(1.3 · D-0042 Phase 1c + D-0043 P2-旁)。
+"""便携记忆包（Portable Memory Bundle），与 TypeScript 实现共享契约资产。
 
-parity:validate_bundle 逐字对拍 shared/parity/bundle-validate.json;
-      import_bundle 完整 ImportPlan 对拍 shared/parity/import.json;往返保真对拍 shared/parity/bundle.json。
+共享 parity 资产分别验证 validate_bundle、import_bundle 的完整 ImportPlan，以及便携包往返保真语义。
 """
 from __future__ import annotations
 

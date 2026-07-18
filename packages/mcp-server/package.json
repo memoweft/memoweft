@@ -1,25 +1,49 @@
 {
   "name": "@memoweft/mcp-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "mcpName": "io.github.memoweft/memoweft",
-  "description": "MCP server for MemoWeft — expose a portable AI memory (recall, read-only views, and one safe write) as Model Context Protocol tools.",
-  "keywords": ["mcp", "model-context-protocol", "memoweft", "memory", "llm", "ai"],
+  "description": "MCP server for MemoWeft — expose a portable AI memory through five read tools and three controlled writes.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "memoweft",
+    "memory",
+    "llm",
+    "ai"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "bin": { "memoweft-mcp-server": "dist/bin.js" },
-  "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  "bin": {
+    "memoweft-mcp-server": "dist/bin.js"
   },
-  "files": ["dist/**/*.js", "dist/**/*.d.ts", "README.md", "README.zh-CN.md", "server.json"],
-  "engines": { "node": ">=20" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.map",
+    "README.md",
+    "README.zh-CN.md",
+    "server.json",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/memoweft/memoweft.git",
     "directory": "packages/mcp-server"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"tests/**/*.test.ts\"",
@@ -31,7 +55,7 @@
     "zod": "^4.0.0"
   },
   "peerDependencies": {
-    "memoweft": "^0.5.0"
+    "memoweft": "^0.5.1 || ^0.6.0"
   },
   "devDependencies": {
     "memoweft": "*"

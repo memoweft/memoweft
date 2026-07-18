@@ -1,7 +1,7 @@
-"""把模型【回显的 id】解回白名单内的真 id;解不出返回 None。移植自 src/llm/echoedId.ts(D-0036)。
+"""将模型回显标识解析为白名单内的唯一标识；无法解析时返回 None。
 
-三级:① 标号映射 → ② 精确匹配 → ③ 唯一前缀兜底(剥示例前缀 ev-/cog-)。
-护栏一寸不让(3a/3d):只解到白名单内、且唯一命中;捏造/歧义前缀/过短(< MIN_ID_PREFIX)一律 None。
+解析顺序为标号映射、精确匹配、去除 ev-/cog- 后的唯一前缀匹配。
+安全边界要求结果位于白名单且唯一；未知、歧义或过短前缀均返回 None。
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Mapping, Optional, Set
 
 from .config import CONFIG
 
-#: 前缀容错的最短长度(echoedId.ts:17);短于此不猜。源自 shared/config-constants(minIdPrefix)。
+#: 前缀匹配的最短长度；短于此值时拒绝推断。源自 shared/config-constants(minIdPrefix)。
 MIN_ID_PREFIX: int = CONFIG.min_id_prefix
 
 _PREFIX_RE = re.compile(r"^(ev-|cog-)", re.IGNORECASE)
@@ -21,17 +21,17 @@ def resolve_echoed_id(
     whitelist: Set[str],
     tag_map: Optional[Mapping[str, str]] = None,
 ) -> Optional[str]:
-    """逐位对拍 echoedId.ts:19-38。"""
+    """将模型回显标识解析为白名单中的唯一标识；语义与 echoedId.ts 一致。"""
     if not raw:
         return None
     key = raw.strip()
     if tag_map is not None:
         by_tag = tag_map.get(key)
         if by_tag and by_tag in whitelist:
-            return by_tag  # ① 标号(治本)
+            return by_tag  # ① 标号映射
     if raw in whitelist:
         return raw  # ② 精确
-    bare = _PREFIX_RE.sub("", key)  # ③ 剥 ev-/cog- 前缀后唯一前缀兜底
+    bare = _PREFIX_RE.sub("", key)  # ③ 去除 ev-/cog- 后执行唯一前缀匹配。
     if len(bare) < MIN_ID_PREFIX:
         return None
     hit: Optional[str] = None

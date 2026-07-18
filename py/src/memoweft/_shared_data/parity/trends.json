@@ -1,0 +1,51 @@
+{
+  "en": {
+    "consideredCount": 3,
+    "llmCalls": 1,
+    "messages": [
+      {
+        "content": "You are given the user's recent [recurring state fragments] (each with a tag, e.g. [e1]). Decide whether they add up to some [sustained trend].\nIron rules:\n- Only give one when multiple states genuinely point to the same sustained pattern (e.g., repeated irritable/tired/slept-badly → \"persistently low mood / under stress lately\").\n- Describe the trend in one sentence; note which evidence tags it relies on (copy the tag inside the brackets verbatim, e.g. \"e1\"); give an empty array if no clear trend can be formed.\n- Do not call a \"one-off emotion\" a trend; a trend is [recurring over a period of time].\nOutput a single JSON object strictly using the example field names; no explanation (the e1/e2/e3 below are what tags look like):\n{\"trends\":[{\"content\":\"The user has been persistently low in mood lately\",\"based_on_evidence_ids\":[\"e1\",\"e2\",\"e3\"]}]}",
+        "role": "system"
+      },
+      {
+        "content": "[Recent recurring states]:\n- [e1] (2026-01-01) state \"很累\" ← utterance: 好累\n- [e2] (2026-01-01) state \"没睡好\" ← utterance: 没睡好\n- [e3] (2026-01-01) state \"提不起劲\" ← utterance: 提不起劲",
+        "role": "user"
+      }
+    ],
+    "trends": [
+      {
+        "confidence": 530,
+        "content": "用户最近持续情绪低落",
+        "contentType": "trend",
+        "credStatus": "limited",
+        "formedBy": "ruled",
+        "supportCount": 3
+      }
+    ]
+  },
+  "note": "trends 趋势:窗口内 state 支撑证据(all() 历史口径、排除 confirmed、不筛 allowInference)+ trendMinCount=3 规则门 + 短标号 + formedBy=ruled",
+  "zh": {
+    "consideredCount": 3,
+    "llmCalls": 1,
+    "messages": [
+      {
+        "content": "给你用户近期【反复出现的状态片段】（每条带标号，如 [e1]）。判断它们有没有汇成某种【持续趋势】。\n铁律：\n- 只有当多条状态确实指向同一个持续模式时才给（如多次烦/累/没睡好 → \"最近持续情绪低落/压力大\"）。\n- 一句话描述这个趋势；注明依据了哪些证据标号（照抄方括号里的，如 \"e1\"）；凑不出明确趋势就给空数组。\n- 别把\"一次性的情绪\"说成趋势；趋势是【一段时间反复】。\n严格按示例字段名输出一个 JSON 对象，不要解释（示例里的 e1/e2/e3 就是标号的样子）：\n{\"trends\":[{\"content\":\"用户最近这段时间持续情绪低落\",\"based_on_evidence_ids\":[\"e1\",\"e2\",\"e3\"]}]}",
+        "role": "system"
+      },
+      {
+        "content": "【近期反复出现的状态】：\n- [e1] (2026-01-01) 状态「很累」← 原话：好累\n- [e2] (2026-01-01) 状态「没睡好」← 原话：没睡好\n- [e3] (2026-01-01) 状态「提不起劲」← 原话：提不起劲",
+        "role": "user"
+      }
+    ],
+    "trends": [
+      {
+        "confidence": 530,
+        "content": "用户最近持续情绪低落",
+        "contentType": "trend",
+        "credStatus": "limited",
+        "formedBy": "ruled",
+        "supportCount": 3
+      }
+    ]
+  }
+}

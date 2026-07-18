@@ -1,5 +1,5 @@
 /**
- * 召回底座接口（地图 cell 7：可替换 seam）。阶段 1b 泛化。
+ * 召回底座接口：可替换 seam，便于泛化。
  *
  * 通用化：索引 {id, text} 条目、按 query 找 top-k。读路径用它召回相关【认知】注入回话。
  * 实现可换：NullRetriever（空）/ VectorRetriever（云端嵌入 + JS 余弦）/ 将来 Mem0 等。

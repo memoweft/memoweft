@@ -1,4 +1,4 @@
-"""通用观察摄入口 —— 移植自 src/perception/ingest.ts。Observation → observed 证据(origin_id 幂等)。
+"""通用观察摄入，将 Observation 转为 origin_id 幂等的 observed 证据。
 
 授权(隐私默认本地):observed 证据默认 { local:True, cloud:False, inference:True };显式 > 默认。
 """
@@ -37,7 +37,7 @@ def ingest_observations(
     host_id: Optional[str] = None,
     cfg: Config = CONFIG,
 ) -> IngestResult:
-    """批量摄入观察 → observed 证据。带 origin_id 的幂等(已存在跳过、计 skipped)。对齐 ingest.ts:55-88。"""
+    """批量摄入 observed 证据；origin_id 提供幂等性，已存在项计入 skipped。"""
     hid = host_id if host_id is not None else cfg.identity.host_id
     d = cfg.observed_defaults
     stored: list[Evidence] = []
@@ -55,7 +55,7 @@ def ingest_observations(
                 origin_id=obs.origin_id,
                 occurred_at=obs.occurred_at,
                 raw_content=obs.content,
-                # 授权:显式 > observed 保守默认(双保险:put 已按 observed 兜底,这里再显式传一次等价)。
+                # 显式授权优先；此处传入 observed 的保守默认值，与 put 的默认策略保持一致。
                 allow_local_read=obs.allow_local_read if obs.allow_local_read is not None else d.allow_local_read,
                 allow_cloud_read=obs.allow_cloud_read if obs.allow_cloud_read is not None else d.allow_cloud_read,
                 allow_inference=obs.allow_inference if obs.allow_inference is not None else d.allow_inference,

@@ -1,5 +1,5 @@
 /**
- * 导出便携记忆包（Phase 5-A）。
+ * 导出便携记忆包。
  *
  * 读某 subject 的三层数据 + 溯源关系，组装成 MemoryBundle。
  * 保真：保留原 id 与时间戳（用 store 的读接口原样取回）。
@@ -23,9 +23,9 @@ export interface ExportDeps {
   evidenceStore: EvidenceStore;
   eventStore: EventStore;
   cognitionStore: CognitionStore;
-  /** 交互上下文 store（v0.6·D-0034）：按 subject 导出交互上下文快照。 */
+  /** 交互上下文 store（v0.6）：按 subject 导出交互上下文快照。 */
   interactionContextStore: InteractionContextStore;
-  /** 语义解析 store（v0.6·D-0034）：按导出的证据集过滤导出语义解析。 */
+  /** 语义解析 store（v0.6）：按导出的证据集过滤导出语义解析。 */
   semanticResolutionStore: SemanticResolutionStore;
 }
 
@@ -43,8 +43,18 @@ export interface ExportOptions {
 /**
  * 导出某 subject 的完整三层记忆 + 溯源关系为一个 MemoryBundle。
  */
-export function exportBundle(subjectId: string, deps: ExportDeps, opts: ExportOptions = {}): MemoryBundle {
-  const { evidenceStore, eventStore, cognitionStore, interactionContextStore, semanticResolutionStore } = deps;
+export function exportBundle(
+  subjectId: string,
+  deps: ExportDeps,
+  opts: ExportOptions = {},
+): MemoryBundle {
+  const {
+    evidenceStore,
+    eventStore,
+    cognitionStore,
+    interactionContextStore,
+    semanticResolutionStore,
+  } = deps;
 
   // evidenceStore.all() 返回全 subject，这里按 subjectId 收口（证据无 subject 过滤读法，靠 filter）。
   const evidence = evidenceStore.all().filter((e) => e.subjectId === subjectId);
@@ -61,14 +71,18 @@ export function exportBundle(subjectId: string, deps: ExportDeps, opts: ExportOp
   const cognitionEvidence: CognitionEvidenceLink[] = [];
   for (const c of cognitions) {
     for (const link of cognitionStore.sourcesOf(c.id)) {
-      cognitionEvidence.push({ cognitionId: c.id, evidenceId: link.evidenceId, relation: link.relation });
+      cognitionEvidence.push({
+        cognitionId: c.id,
+        evidenceId: link.evidenceId,
+        relation: link.relation,
+      });
     }
   }
 
   // 保真 consolidated：记下导出时尚未消化的事件，导入端据此还原（防"未消化事件导入后漏消化"）。
   const unconsolidatedEventIds = eventStore.unconsolidated(subjectId).map((e) => e.id);
 
-  // 交互层（v0.6·D-0034）：上下文按 subject 全取；语义解析按导出的证据集过滤（通过 evidence_id 关联）。
+  // 交互层（v0.6）：上下文按 subject 全取；语义解析按导出的证据集过滤（通过 evidence_id 关联）。
   const interactionContexts = interactionContextStore.all(subjectId);
   const semanticResolutions = semanticResolutionStore.forEvidenceIds(evidence.map((e) => e.id));
 
@@ -79,7 +93,16 @@ export function exportBundle(subjectId: string, deps: ExportDeps, opts: ExportOp
     memoWeftVersion: opts.memoWeftVersion ?? MEMOWEFT_VERSION,
     subjectId,
     source: { hostId: opts.hostId ?? 'memoweft', exportMode: 'full' },
-    data: { evidence, events, eventEvidence, cognitions, cognitionEvidence, unconsolidatedEventIds, interactionContexts, semanticResolutions },
+    data: {
+      evidence,
+      events,
+      eventEvidence,
+      cognitions,
+      cognitionEvidence,
+      unconsolidatedEventIds,
+      interactionContexts,
+      semanticResolutions,
+    },
     metadata: {
       counts: {
         evidence: evidence.length,

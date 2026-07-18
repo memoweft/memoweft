@@ -1,7 +1,7 @@
 /**
- * 适配器降级基础件（Phase 3 §16.2「记忆层故障→降级不中断」）。
+ * Shared adapter degradation behavior.
  *
- * 契约（docs/memory-surface-contract.md §16.2，人类已批准；见 D-0012）：
+ * Contract:
  *   - recall 超时：默认 200ms，可配（工厂选项 recallTimeoutMs）；超时即视为失败。
  *   - 重试：读路径（recall）不重试，直接降级；写路径（ingest）失败重试一次再放弃。
  *   - 降级 = 注入空上下文（无记忆），对话不中断；经注入 logger 记一条结构化事件（默认无 logger = 静默）。
@@ -10,7 +10,7 @@
  *   绝不记用户内容 / 原话 / 密钥。
  */
 
-/** recall 超时的默认阈值（毫秒）。契约值，见 §16.2。 */
+/** Default recall timeout in milliseconds. */
 export const DEFAULT_RECALL_TIMEOUT_MS = 200;
 
 /** 结构化降级事件（只含事件类型与元信息，不含任何用户内容 / 原话 / 密钥）。

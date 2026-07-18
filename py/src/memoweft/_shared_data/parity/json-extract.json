@@ -1,0 +1,114 @@
+{
+  "extractJsonObject": {
+    "cases": [
+      {
+        "expected": "{\"a\":1}",
+        "input": "{\"a\":1}"
+      },
+      {
+        "expected": "{\"a\":1}",
+        "input": "```json\n{\"a\":1}\n```"
+      },
+      {
+        "expected": "{\"a\":1}",
+        "input": "前缀说明 {\"a\":1} 后缀"
+      },
+      {
+        "expected": "{\"a\":{\"b\":2},\"c\":[1,2]}",
+        "input": "{\"a\":{\"b\":2},\"c\":[1,2]}"
+      },
+      {
+        "expected": "{\"a\":\"内含 } 花括号\"}",
+        "input": "{\"a\":\"内含 } 花括号\"}"
+      },
+      {
+        "expected": "{\"a\":\"转义 \\\" 引号 } 内\"}",
+        "input": "{\"a\":\"转义 \\\" 引号 } 内\"}"
+      },
+      {
+        "expected": null,
+        "input": "没有花括号"
+      },
+      {
+        "expected": null,
+        "input": "{ 没闭合"
+      },
+      {
+        "expected": "{\"first\":1}",
+        "input": "{\"first\":1} {\"second\":2}"
+      },
+      {
+        "expected": "{\"x\":true}",
+        "input": "```\n{\"x\":true}\n```"
+      },
+      {
+        "expected": "{\"trimmed\":1}",
+        "input": "  {\"trimmed\":1}  "
+      }
+    ],
+    "fn": "extractJsonObject",
+    "note": "去围栏 + 括号配平取第一个平衡对象(跳字符串内花括号/转义);抠不到→null"
+  },
+  "parseJsonObject": {
+    "cases": [
+      {
+        "expected": {
+          "a": 1
+        },
+        "input": "{\"a\":1}"
+      },
+      {
+        "expected": null,
+        "input": "[1,2,3]"
+      },
+      {
+        "expected": null,
+        "input": "42"
+      },
+      {
+        "expected": null,
+        "input": "null"
+      },
+      {
+        "expected": null,
+        "input": "\"string\""
+      },
+      {
+        "expected": null,
+        "input": "{\"a\":NaN}"
+      },
+      {
+        "expected": null,
+        "input": "{\"a\":Infinity}"
+      },
+      {
+        "expected": null,
+        "input": "{\"a\":-Infinity}"
+      },
+      {
+        "expected": {
+          "ok": 1
+        },
+        "input": "```json {\"ok\":1} ```"
+      },
+      {
+        "expected": null,
+        "input": "garbage no json"
+      },
+      {
+        "expected": {
+          "arr": [
+            1,
+            2
+          ],
+          "nested": {
+            "x": 1
+          }
+        },
+        "input": "{\"nested\":{\"x\":1},\"arr\":[1,2]}"
+      }
+    ],
+    "fn": "parseJsonObject",
+    "note": "只认对象(数组/标量/null 不合法→null);JSON.parse 拒 NaN/Infinity(py 须 parse_constant 拒)"
+  }
+}

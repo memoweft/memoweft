@@ -1,119 +1,95 @@
-# Contributing to MemoWeft
+# 参与 MemoWeft
+
+感谢你帮助改进 MemoWeft。核心库、框架集成、示例、文档、兼容性测试和评测用例都欢迎贡献。
 
 [English](./CONTRIBUTING.md) | **简体中文**
 
+## 开始之前
 
-这份文件讲**每次改代码都要守的硬规矩**。人和 AI 都适用。
+- 使用 [GitHub Discussions](https://github.com/memoweft/memoweft/discussions) 讨论用法和早期方案。
+- 提交问题前先搜索现有 [Issues](https://github.com/memoweft/memoweft/issues)。
+- 安全漏洞请按照 [SECURITY.md](./.github/SECURITY.md) 私密报告。
+- 较大的改动请先开 Issue，提前确认范围和兼容性影响。
 
-刚接手先读仓库根的 [`AGENTS.md`](AGENTS.md)（极简开工说明）和 [`CURRENT.md`](CURRENT.md)（现在在做什么）。`docs/internal/` 只保留可选的长期边界说明，不是必读。
+## 开发环境
 
----
-
-## 一句话规矩
-
-> 任何代码改动，交付前 **`npm run typecheck && npm test && npm run build` 三个必须全绿**。跑不过就没完成，不许提。
-
-这不是建议，是门槛。CI（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）会在 PR 上跑同样三步，红的合不进来。
-
----
-
-## 环境要求
-
-- **Node ≥ 24 开箱即用；Node 20/22 需 `npm i better-sqlite3`。** 存储底层用 SQLite，有两条驱动：Node ≥24 默认走内置 `node:sqlite`（该模块到 24 才转正），零额外依赖；Node 20/22 上内置模块不可用，装上可选的 `better-sqlite3` 即可跑（见 [`docs/INSTALL.md`](docs/INSTALL.md)）。开发库本身（跑 `.ts` 测试、原生剥类型）仍推荐 Node ≥24：Node 22 需 22.18+ 才默认支持原生剥 `.ts` 类型，Node 20 没有此能力（全套 `.ts` 测试在 20 上跑不了，CI 改用 dist 冒烟脚本验）。
-- **零 runtime 依赖**。runtime `dependencies` 永远为空——这是「零运行时依赖」的准确含义。`better-sqlite3` 是**可选 peer 依赖**（`peerDependenciesMeta.optional`），装不装用户自己定，可选 peer 不算破戒。开发时装依赖装的是 devDependencies：`typescript`、`@types/node`，外加仅供多版本测试矩阵用的 `better-sqlite3`（Node 24 默认走内置驱动，测零依赖路径时会先 `rm` 掉它）。
-- 想跑测试台 / 真实写路径，需要在 `.env` 配模型与嵌入器（见下方「配置」）。**但单元测试不需要任何 .env**——测试用假 LLM，纯离线，以 `npm test` 各 workspace 实际输出为准、`fail` 必须为 0。
+仓库开发推荐 Node 24。构建后的包通过可选的 `better-sqlite3` 驱动支持 Node 20 和 22，但源码测试依赖较新 Node 提供的原生 TypeScript 执行能力。
 
 ```bash
-npm ci            # 或 npm install
-npm run typecheck # 类型
-npm test          # Core 单元测试（离线，以实际输出为准、fail 必须为 0）
-npm run build     # 出 dist/
+git clone https://github.com/memoweft/memoweft.git
+cd memoweft
+npm ci
+npm run typecheck
+npm test
+npm run build
 ```
 
-Host 与采集插件各有独立测试：`npm test -w @memoweft/host`、`npm test -w @memoweft/collector-active-window`——同样以各 workspace 实际输出为准、`fail` 必须为 0。
+单元测试完全离线，不需要 `.env` 或模型凭据。真实模型测试和交互式测试台使用 [docs/INSTALL.zh-CN.md](./docs/INSTALL.zh-CN.md) 中记录的环境变量。
 
-> **镜像源开发（CI 有 lockfile 护栏）：** 维护者本地可继续用国内镜像源日常开发；但**任何会改写 `package-lock.json` 的 `npm install`** 都要带官方源前缀——`npm_config_registry=https://registry.npmjs.org npm install`，否则镜像源 URL 会被写进 lockfile，CI 的 `lockfile registry guard`（见 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)）会因此变红。本仓**不提交**项目级 `.npmrc`，你的本地镜像配置不受影响。
+## 贡献流程
 
----
+1. 从 `main` 创建范围明确的分支。
+2. 一次改动只解决一个问题。
+3. 行为变化必须新增或更新测试。
+4. 用法或行为变化必须同步公开文档。
+5. 在本地运行相关检查。
+6. Pull Request 说明改了什么、为什么改以及如何验证。
 
-## 三绿护栏（提交前必跑）
+推荐分支前缀为 `feat/`、`fix/`、`docs/` 和 `chore/`。不要强推共享分支，也不要绕过仓库检查。
 
-| 命令 | 干什么 | 绿的标准 |
-| --- | --- | --- |
-| `npm run typecheck` | `tsc` 全量类型检查（`src` + `tests`） | 无报错 |
-| `npm test` | `node --test tests/**/*.test.ts`，纯离线 | 以实际输出为准，`fail` 必须为 0（pass 数字随测试增减） |
-| `npm run build` | `tsc` 出 `dist/`（含 `.d.ts`） | 无报错、`dist/` 更新 |
+## 必须通过的检查
 
-三条要**按顺序都过**才算完成。别只跑 typecheck 就交。
+代码改动应通过：
 
----
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run api:check
+```
 
-## 分支与提交约定
+文档改动还应通过：
 
-- **别直接在默认分支（`main`）上改。** 开分支：
-  - `feat/<简述>` 新功能
-  - `fix/<简述>` 修 bug
-  - `docs/<简述>` 只改文档
-  - `chore/<简述>` 杂项（构建、配置、改名）
-- **小步提交，一个提交一件事。** 提交信息写清楚「改了什么 + 为什么」，别写 "update"、"fix" 这种没信息量的。
-- **禁止 `git commit --no-verify`、禁止跳过测试。** 护栏是给整个项目兜底的，绕过等于把风险塞给下一个接手的人。
-- PR 正文至少说清 **改了什么 / 为什么 / 怎么验的（贴三绿结果）**。
+```bash
+npm run docs:links
+npm run docs:snippets
+```
 
----
+各 workspace 另有自己的 `typecheck`、`test` 和 `build` 脚本。CI 会运行受支持的 Node 矩阵、workspace 检查、API 表面验证和文档检查。
 
-## 依赖最小化（默认拒绝新依赖）
+## 核心不变式
 
-这是刻在 `package.json` 里的原则（见地图 cell 11）：
+MemoWeft 明确区分记录与认知。修改记忆模型时必须保留以下约束：
 
-- 存储用 `node:sqlite`、HTTP 用 `node:http`、日志/文件用 `node:fs`——**能用 Node 内置就绝不加包**。
-- 想加任何新依赖（包括 dev 依赖），先在 issue 里说清**为什么内置的搞不定**，由作者拍板。默认答案是「不加」。
-- runtime `dependencies` 目标永远是空的。宿主 `npm install memoweft` 时不该被拖进一堆传递依赖。
+- 助手回复只是上下文，本身永远不会成为证据；
+- 置信度由确定性规则计算，不接受模型自报；
+- 未解决的冲突保持可见，不被静默裁决；
+- 派生认知只能引用获准的证据 ID；
+- 纠正、失效、授权和删除始终保留可审计的数据路径。
 
----
+修改公共 API、SQLite schema、便携包格式、授权行为、置信度规则或衰减策略前，请先用 Issue 说明兼容性和迁移影响。
 
-## 认知层是核心，别顺手动
+## 依赖策略
 
-品牌名、文档、注释、构建配置——这些随便改，改错了三绿能兜住。但下面这些属于**核心机制**，动它们之前必须先在 issue 里摊开权衡、由作者（PM）确认，不许「顺手优化」：
+核心包刻意保持零运行时依赖。Node 内置模块可以满足需求时，应优先使用内置能力。新增依赖需要在 Pull Request 中说明运行时、安全、维护和包体积影响。
 
-- 三层数据模型（evidence → event → cognition）
-- 认知纪律：记≠信（LLM 推的先当低置信候选）、禁止系统自证（助手输出/用户沉默不算证据）、冲突先暴露不自动消解、把握度 MemoWeft 自算不听 LLM 自报、分型过期（情绪快忘/明确偏好不忘）
-- 置信度算法、衰减半衰期、读写解耦逻辑
-- 公共 API 签名（`src/index.ts` 导出的东西）——宿主可能已经在用，破坏性改名要保留 deprecated 别名（例如 `DLA_VERSION` / `DlaConfig` 就是这么留的）
+`better-sqlite3` 是 Node 20/22 使用的可选 peer dependency，也是兼容性测试使用的开发依赖；Node 24 的零依赖路径不需要它。
 
-判断标准很简单：**拿不准这算不算「核心」，就当它是，先问。**
+## 文档与发布说明
 
----
+- 用户可见行为写入对应 README 或 `docs/` 页面。
+- 公共 API 变化必须同步 Memory Surface Contract 和 API 快照。
+- 重要的用户可见变化写入 `CHANGELOG.md` 的 `[Unreleased]`。
+- Roadmap 只描述结果目标，实施记录放在 Issue 和 Pull Request 中。
 
-## 文档同步（改完必做）
+## Pull Request 检查表
 
-代码和文档一起动，别只绿了代码：
+- [ ] 改动范围明确，动机清楚。
+- [ ] 相关测试已经新增或更新。
+- [ ] lint、typecheck、测试、构建和 API 检查通过。
+- [ ] 文档与示例和实际行为一致。
+- [ ] 没有提交凭据、本地数据库、运行产物或用户数据。
+- [ ] 必要时记录了兼容性与迁移影响。
 
-- 改动了**当前主线的进展 / 边界** → 更新 [`CURRENT.md`](CURRENT.md)。
-- 有值得记的**历史 / 决策** → 写进提交说明；对外里程碑补进 [`CHANGELOG.md`](CHANGELOG.md)。
-- 改了**对外能力 / 用法** → 同步对外文档（`README`、`docs/` 下的 architecture / integration 等）。
-
-「代码绿了但文档没跟上」= 没做完。
-
----
-
-## 环境变量 / 配置
-
-- 改名后**双认前缀**：代码读每个 env 键都先读 `MEMOWEFT_*` 主名、读不到再回退旧名 `DLA_*`。文档一律写 `MEMOWEFT_*`，并注明 `DLA_*` 仍向后兼容。
-- **别碰 `.env`**（含用户真实密钥），也别删 / 改 `DLA_*` 旧键——只新增 `MEMOWEFT_*`，让代码同时认两套。
-- 涉及的键：`MEMOWEFT_LLM_*`、`MEMOWEFT_WRITE_LLM_*`、`MEMOWEFT_EMBED_*`（各自兼容对应 `DLA_*`）。
-- 默认 SQLite 文件名 `./dla.db` 不改（改了会脱离根目录已有数据文件）；物理目录名 `memoweft` 不改。
-
----
-
-## 提交前自查清单
-
-- [ ] `npm run typecheck` 绿
-- [ ] `npm test` 绿（`fail 0`）
-- [ ] `npm run build` 绿，`dist/` 是新的
-- [ ] 没加新依赖（或已在 issue 里获批）
-- [ ] 没擅自动核心机制 / 破坏公共 API
-- [ ] 相关文档已同步（CURRENT.md / 对外 docs / 里程碑进 CHANGELOG）
-- [ ] 没碰 `.env`、没删 `DLA_*` 旧键、没改物理目录名与 `./dla.db`
-- [ ] PR 正文写清了「改了什么 / 为什么 / 怎么验的（贴三绿）」
-
-License：MIT（见仓库根 [`LICENSE`](LICENSE)）。提交贡献即表示同意以 MIT 许可你的改动。
+提交贡献即表示你同意以仓库的 [MIT License](./LICENSE) 授权该贡献。参与项目空间时请遵守 [行为准则](./CODE_OF_CONDUCT.md)。

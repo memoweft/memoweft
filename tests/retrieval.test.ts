@@ -1,5 +1,5 @@
 /**
- * 召回测试（地图 cell 15）。用 stub 嵌入器，不依赖网络。
+ * 召回测试。用 stub 嵌入器，不依赖网络。
  * stub 已改造为**可计数**：记录 embed 被调用次数与收到的文本，用于验证增量索引只嵌入 Δ。
  */
 import { test } from 'node:test';
@@ -46,7 +46,7 @@ test('VectorRetriever：余弦召回，最相关排第一', async () => {
   }
 });
 
-test('VectorRetriever：自开连接设 busy_timeout=5000（向量表与主库同文件，多进程写不裸抛）', () => {
+test('VectorRetriever：自开连接设 busy_timeout=5000（向量表与主库同文件，多进程写先等待再报告）', () => {
   const r = new VectorRetriever(':memory:', stubEmbedder());
   try {
     // Node 24 实测：PRAGMA busy_timeout 结果列名是 timeout，取 .timeout 别断言裸数字。
@@ -80,7 +80,7 @@ test('VectorRetriever：空索引 → 空召回', async () => {
   }
 });
 
-// ---- 增量索引（T4）：以下用例验证嵌入调用量 = Δ，而非 N ----
+// ---- 增量索引：以下用例验证嵌入调用量 = Δ，而非 N ----
 
 test('VectorRetriever 增量：(a) 首次 indexAll N 条 → embed 恰收到 N 条文本', async () => {
   const e = stubEmbedder();

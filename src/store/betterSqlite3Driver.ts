@@ -1,5 +1,5 @@
 /**
- * better-sqlite3 驱动（T6 步2·可选第二实现，触达 Node 20/22）。
+ * better-sqlite3 可选驱动，用于 Node 20/22。
  *
  * 为什么要它：`node:sqlite` 到 Node 24 才转正，把仍大量在产的 Node 20/22 挡在门外。
  *   本文件给 driver.ts 的接口补第二实现——底层换成 better-sqlite3（社区最成熟的同步 SQLite 绑定），
@@ -53,7 +53,7 @@ const require = createRequire(import.meta.url);
 
 /**
  * 同步加载 better-sqlite3 的构造器。失败（没装 / 原生模块没编译出来）→ 抛错，
- * 交给 nodeSqliteDriver.ts 的选择链去 catch 并汇成人话错误（那里才知道 node:sqlite 也不可用）。
+ * 交给 nodeSqliteDriver.ts 的选择链捕获并汇总成驱动配置错误（那里能判断 node:sqlite 是否也不可用）。
  */
 export function loadBetterSqlite3(): BetterDatabaseConstructor {
   // CJS 的 better-sqlite3 `module.exports = Database`，require 回来的就是构造器本身。

@@ -1,23 +1,23 @@
-"""SQLite 持久化 schema —— 照 TS 各 store 的 SCHEMA 常量逐字移植(fresh 库直接建全列)。
+"""SQLite 持久化 schema，与 TypeScript store 的完整新库结构保持一致。
 
-对齐锚点(fresh :memory: 库经 openStores 的等效结构,由 shared/parity/schema.json 守门对拍):
-  evidence            ← src/evidence/store.ts:17-37
-  event/event_evidence← src/event/store.ts:11-26
-  cognition/…evidence ← src/cognition/store.ts:22-47
-  management_log      ← src/memory/managementLog.ts:11-21
+共享 parity 资产验证 fresh :memory: 库与 openStores 的等效结构：
+  evidence            ← src/evidence/store.ts
+  event/event_evidence← src/event/store.ts
+  cognition/…evidence ← src/cognition/store.ts
+  management_log      ← src/memory/managementLog.ts
   interaction_context ← src/interaction/interactionContextStore.ts
   semantic_resolution ← src/interaction/semanticResolutionStore.ts
 
 注:preceding_ai_context / asked_at / archived_at / muted_at 在 TS 里 fresh 库由 SCHEMA 常量直接带全,
-  老库才由各 store 私有 migrate() ALTER 补(D-0033/34)。Python 只建 fresh 库 → 照 SCHEMA 建全列即可。
+  旧数据库由各 store 的 migrate() 补列；Python 新建数据库时直接按 SCHEMA 建立完整列集。
 LATEST_SCHEMA_VERSION = 1(store/migrations.ts);新库 user_version 盖 1。
 """
 from __future__ import annotations
 
-#: 版本号(PRAGMA user_version);对齐 TS LATEST_SCHEMA_VERSION(migrations.ts:44)。
+#: PRAGMA user_version，与 TS LATEST_SCHEMA_VERSION 保持一致。
 SCHEMA_VERSION = 1
 
-#: 建表 + 索引 DDL(幂等 IF NOT EXISTS,逐条 exec)。列序/NOT NULL/DEFAULT/PK 须与 TS 一致(schema.json 对拍)。
+#: 幂等的建表与索引 DDL；shared/parity/schema.json 验证列序、NOT NULL、DEFAULT 与主键契约。
 SCHEMA_SQL: tuple[str, ...] = (
     # ── evidence(唯一真相层)──
     """CREATE TABLE IF NOT EXISTS evidence (
@@ -88,7 +88,7 @@ SCHEMA_SQL: tuple[str, ...] = (
   created_at  TEXT NOT NULL
 )""",
     "CREATE INDEX IF NOT EXISTS ix_mgmt_target ON management_log(target_id)",
-    # ── interaction_context(v0.6·D-0034) ──
+    # ── interaction_context（v0.6） ──
     """CREATE TABLE IF NOT EXISTS interaction_context (
   id              TEXT PRIMARY KEY,
   subject_id      TEXT NOT NULL,
@@ -101,7 +101,7 @@ SCHEMA_SQL: tuple[str, ...] = (
     "CREATE INDEX IF NOT EXISTS ix_ictx_subject ON interaction_context(subject_id)",
     "CREATE INDEX IF NOT EXISTS ix_ictx_conversation ON interaction_context(conversation_id)",
     "CREATE INDEX IF NOT EXISTS ix_ictx_hash ON interaction_context(context_hash)",
-    # ── semantic_resolution(v0.6·D-0034) ──
+    # ── semantic_resolution（v0.6） ──
     """CREATE TABLE IF NOT EXISTS semantic_resolution (
   id                 TEXT PRIMARY KEY,
   evidence_id        TEXT NOT NULL,

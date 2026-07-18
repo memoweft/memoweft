@@ -12,12 +12,12 @@
 
 MemoWeft 是一个**被宿主 import 的库**。它自己不做聊天界面、不做人设、不管 UI，也不替宿主决定隐私政策。
 
-| MemoWeft | 宿主应用 |
-| --- | --- |
-| 存证据、生成事件、沉淀认知、计算把握度 | 负责聊天、人设、语气、UI |
-| 召回相关用户上下文 | 决定什么时候用、怎么表达 |
+| MemoWeft                                 | 宿主应用                         |
+| ---------------------------------------- | -------------------------------- |
+| 存证据、生成事件、沉淀认知、计算把握度   | 负责聊天、人设、语气、UI         |
+| 召回相关用户上下文                       | 决定什么时候用、怎么表达         |
 | 提供 `allowCloudRead` 等 evidence 授权位 | 负责隐私政策、用户同意、可见设置 |
-| 保持模型 / 嵌入器可替换 | 决定云端、本地或混合部署 |
+| 保持模型 / 嵌入器可替换                  | 决定云端、本地或混合部署         |
 
 一句话：**MemoWeft 给“对用户的理解”，宿主决定“怎么使用这份理解”。**
 
@@ -71,45 +71,45 @@ MEMOWEFT_EMBED_API_KEY=sk-xxxx
 MEMOWEFT_EMBED_MODEL=your-embedding-model
 ```
 
-旧前缀 `DLA_*` 仍兼容；新接入一律推荐 `MEMOWEFT_*`。
+旧前缀 `DLA_*` 仍兼容；新接入推荐使用 `MEMOWEFT_*`。
 
 部署模式详见 [`deployment.md`](./deployment.md)：
 
-- **Cloud-first**：最快跑通，适合 demo / 原型 / 普通开发者接入。
-- **Cloud-guarded**：仍用云端模型，但 `allowCloudRead=false` 的证据不进云端 prompt。
+- **Cloud-first**：适合 demo / 原型 / 普通开发者接入。
+- **Cloud-guarded**：仍用云端模型，但 MemoWeft 写路径会把 `allowCloudRead=false` 的记录从其云端模型 prompt 中筛掉。其他转发、存储与访问控制仍由宿主负责。
 - **Hybrid / local-sensitive**：敏感观察走本地模型或本地嵌入器，低风险调用可走云端。
 
 ---
 
 ## 4. 30 秒心智模型
 
-```txt
-evidence（证据·原始事实） → event（事件·情境化） → cognition（认知·判断）
-用户说了/做了什么          一段对话的情境摘要       对用户的理解，带把握度和溯源
-```
+| evidence（证据·来源记录）      | event（事件·情境化） | cognition（认知·判断）       |
+| ------------------------------ | -------------------- | ---------------------------- |
+| 说了、观察到或由工具返回的内容 | 一段对话的情境摘要   | 对用户的理解，带把握度和溯源 |
 
-- **读路径**：一轮对话 → 存证据 → 召回相关认知 → 注入回话。
+- **读路径**：一轮对话 → 存证据 → 召回相关认知 → 注入上下文。
 - **写路径**：攒批整理证据 → 生成事件 → 更新认知 → 归因 → 重建索引。
-- **读写解耦**：聊天时不等画像更新；画像更新在后台或手动触发。
+- **读写解耦**：画像更新与对话路径分离；宿主可在后台或按需运行它。
 
 ---
 
 ## 5. 端到端最小接入
 
-推荐一律经统一入口 `createMemoWeftCore` 调 Core：一行把三层 store + 召回器 + 模型池装好（全部从 `.env` 读、缺配自动降级不崩），宿主不用自己拼底层件。
+推荐经统一入口 `createMemoWeftCore` 调 Core：一行把三层 store + 召回器 + 模型池装好，环境配置从 `.env` 读取。未配置模型时仍可构造用于存储和管理；调用需要该模型的操作时会报告错误。
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 import { createMemoWeftCore } from 'memoweft';
 
-// 一行装配：三层 store + 召回器 + 模型池，全部从 .env 读、缺配降级不崩。
+// 一行装配：三层 store + 召回器 + 模型池；环境配置从 .env 读取。
 // subjectId / hostId 不传则用默认（config.identity：'owner' / 'local'）。
 const core = createMemoWeftCore({ dbPath: './my-app.db' });
 
 // 自检：能否聊天 / 能否语义召回（决定要不要提示用户去配 .env）。
 const { llmReady, embedReady } = core.health();
 
-// 读路径：用户发来一轮消息 → 存证据 → 召回相关认知 → 注入回话。
+// 读路径：用户发来一轮消息 → 存证据 → 召回相关认知 → 注入上下文。
 const turn = await core.handleConversationTurn({
   message: '我最近在赶一个副业项目，天天熬夜',
 });
@@ -126,9 +126,9 @@ console.log(upd.timings);
 core.close();
 ```
 
-> 真实宿主里不建议每轮都立刻 `updateProfile()`。写路径较重，应该攒批、空闲、定时或手动触发。
+> 真实宿主里不建议每轮都调用 `updateProfile()`。写路径较重；Core 暴露一次性操作，攒批、空闲定时器、队列与按 subject 串行控制由宿主负责。
 >
-> 需要更细的手工装配（自己 `new Sqlite*Store` / 注入自定义召回器）？可参考 [`examples/minimal.ts`](../examples/minimal.ts) 与 §8「可替换点」——但绝大多数宿主经 `createMemoWeftCore` 即可。
+> 需要更细的手工装配（自己 `new Sqlite*Store` / 注入自定义召回器）？可参考 [`examples/minimal.ts`](../examples/minimal.ts) 与[可替换点](#8-可替换点)。
 
 ---
 
@@ -137,6 +137,7 @@ core.close();
 除了对话，宿主也可以把桌面、设备、窗口等观察统一灌进 evidence 层。Core 只提供**通用观察摄入口** `core.ingestObservation({ observations })`：它把宿主标准化好的 `Observation` 落成 `observed` 证据（默认不上云、带 `originId` 幂等）。
 
 <!-- snippet:skip (continues the snippet above; needs a live model) -->
+
 ```ts
 import type { Observation } from 'memoweft';
 
@@ -145,15 +146,15 @@ const obs: Observation = {
   kind: 'active_window',
   occurredAt: new Date().toISOString(),
   content: '在 VS Code（memoweft）停留约 40 分钟',
-  originId: 'win-session-123',   // 可选幂等键：同一窗口会话不重复落
+  originId: 'win-session-123', // 可选幂等键：同一窗口会话不重复落
   // 授权位不传 → 走 observed 保守默认（本地可读 / 不上云 / 可推画像）。
 };
 
 const stored = await core.ingestObservation({ observations: [obs] });
-console.log(stored.length);   // 本次新落库的 observed 证据条数
+console.log(stored.length); // 本次新落库的 observed 证据条数
 ```
 
-> **真采集器不在 Core 里。** 「怎么从操作系统抓活动窗口」是采集插件（Plugin 层）的活，不属于 Core（`boundaries.md §4.1`）。真实数据流是：采集插件采窗口 → 映射成 `Observation` → POST 宿主 `/api/observe`（宿主审核：采集总开关、强制剥掉 `allowCloudRead`）→ 宿主调 `core.ingestObservation` 落库。参考实现见 [`plugins/collector-active-window/README.md`](../plugins/collector-active-window/README.md)。
+> **真采集器不在 Core 里。** 「怎么从操作系统抓活动窗口」是采集插件（Plugin 层）的活，不属于 Core；见[边界说明](./internals/boundaries.zh-CN.md)。真实数据流是：采集插件采窗口 → 映射成 `Observation` → POST 宿主 `/api/observe`（宿主审核采集总开关与授权策略）→ 宿主调 `core.ingestObservation` 落库。参考实现见 [`plugins/collector-active-window/README.md`](../plugins/collector-active-window/README.md)。
 
 建议默认策略：
 
@@ -167,11 +168,11 @@ console.log(stored.length);   // 本次新落库的 observed 证据条数
 
 ## 7. 接入时别绕过的纪律
 
-- 只有**用户消息 / 用户授权观察**进入 evidence。
-- **助手回话不应当作证据**，避免系统自证。
+- 使用 Core 的**内置摄入方法**时，用户消息、观察与工具结果会成为 evidence 记录。
+- 内置路径不会把助手回复持久化为 evidence。宿主若摄入或持久化其他内容，仍需自行维护这一区分。
 - LLM 推测只能进入低置信候选 / hypothesis。
 - 冲突先暴露，不自动覆盖。
-- 写路径喂云端模型前必须尊重 `allowCloudRead`。
+- MemoWeft 写路径会在选择云端模型 prompt 的记录时使用 `allowCloudRead`；该标记不是访问控制或加密机制，宿主仍需为其他数据流实施自己的控制。
 - 短期状态要走衰减 / 过期，不应永久注入。
 
 ---
@@ -180,13 +181,13 @@ console.log(stored.length);   // 本次新落库的 observed 证据条数
 
 统一入口 `createMemoWeftCore` 已把下面这些默认装好；需要换实现时，通过它的选项注入（如 `retriever` / `embedder` / `llm`），或从源码手工装配（见 [`examples/minimal.ts`](../examples/minimal.ts)）。
 
-| 部分 | 默认实现 | 替换目的 |
-| --- | --- | --- |
-| LLM client | `OpenAICompatClient` | 接不同云端 / 本地模型服务 |
-| LLM pool | `loadLLMPool()` | 区分 chat / write 模型 |
-| Embedder | `OpenAICompatEmbedder` | 接云端或本地 embedding endpoint |
-| Retriever | `VectorRetriever` / `NullRetriever` | 后续可替换为混合检索、图检索等 |
-| Stores | SQLite stores | 后续可迁移到其他存储后端 |
+| 部分       | 默认实现                                                                                                        | 替换目的                        |
+| ---------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| LLM client | `OpenAICompatClient`                                                                                            | 接不同云端 / 本地模型服务       |
+| LLM pool   | `loadLLMPool()`                                                                                                 | 区分 chat / write 模型          |
+| Embedder   | `OpenAICompatEmbedder`                                                                                          | 接云端或本地 embedding endpoint |
+| Retriever  | 有 embedder 时 `VectorRetriever`；无 embedder 时 `KeywordRetriever`（FTS5）；仅 FTS5 不可用时为 `NullRetriever` | 后续可替换为混合检索、图检索等  |
+| Stores     | SQLite stores                                                                                                   | 后续可迁移到其他存储后端        |
 
 ---
 
@@ -194,23 +195,23 @@ console.log(stored.length);   // 本次新落库的 observed 证据条数
 
 绝大多数宿主只需 `createMemoWeftCore` + 它返回的门面（`core.memory` / `core.portable` / `core.graph`）+ 领域类型。下面列出常用面。
 
-| 类别 | 导出 |
-| --- | --- |
-| 统一入口 | `createMemoWeftCore`, `MemoWeftCore` |
-| 证据层 | `Evidence`, `EvidenceInput`, `SourceKind` |
-| 事件层 | `Event`, `EventWithEvidence` |
-| 认知层 | `Cognition`, `CognitionWithSources`, `ContentType`, `CredStatus` |
-| 观察摄入 | `Observation`（配 `core.ingestObservation`） |
-| 会话返回形状 | `TurnOutcome`, `RecalledCognition` |
-| 受控记忆管理 | `MemoryManagementAPI`（门面 `core.memory`） |
-| 便携记忆包 | `MemoryBundle`, `ImportPlan`（门面 `core.portable`） |
-| 图谱视图 | `MemoryGraphPayload`（门面 `core.graph`） |
+| 类别                        | 导出                                                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 统一入口                    | `createMemoWeftCore`, `MemoWeftCore`                                                                               |
+| 证据层                      | `Evidence`, `EvidenceInput`, `SourceKind`                                                                          |
+| 事件层                      | `Event`, `EventWithEvidence`                                                                                       |
+| 认知层                      | `Cognition`, `CognitionWithSources`, `ContentType`, `CredStatus`                                                   |
+| 观察摄入                    | `Observation`（配 `core.ingestObservation`）                                                                       |
+| 会话返回形状                | `TurnOutcome`, `RecalledCognition`                                                                                 |
+| 受控记忆管理                | `MemoryManagementAPI`（门面 `core.memory`）                                                                        |
+| 便携记忆包                  | `MemoryBundle`, `ImportPlan`（门面 `core.portable`）                                                               |
+| 图谱视图                    | `MemoryGraphPayload`（门面 `core.graph`）                                                                          |
 | 模型 / 召回（可替换注入点） | `OpenAICompatClient`, `OpenAICompatEmbedder`, `loadLLMPool`, `loadEmbedConfig`, `VectorRetriever`, `NullRetriever` |
-| 配置 / 版本 | `config`, `MEMOWEFT_VERSION` |
+| 配置 / 版本                 | `config`, `MEMOWEFT_VERSION`                                                                                       |
 
 真实导出以 [`src/index.ts`](../src/index.ts) 为准。
 
-**便携记忆包（Phase 5-A）**：`core.portable.exportBundle({ subjectId })` 把某用户的完整三层记忆导出成可校验 JSON；`core.portable.importBundle(bundle, { mode: 'dryRun' | 'merge' })` 保真导入（保留原 id 与时间戳、按 id/originId 幂等去重、非法包不写库、可选事务防污染）。向量索引不入包，导入后画像更新（`core.updateProfile`）会重建召回索引。可跑示例见 [`examples/portable-bundle.ts`](../examples/portable-bundle.ts)。
+**便携记忆包**：`core.portable.exportBundle({ subjectId })` 把某用户的完整三层记忆导出成可校验 JSON；`core.portable.importBundle(bundle, { mode: 'dryRun' | 'merge' })` 保真导入（保留原 id 与时间戳、按 id/originId 幂等去重、非法包不写库、可选事务防污染）。向量索引不入包，导入后画像更新（`core.updateProfile`）会重建召回索引。可跑示例见 [`examples/portable-bundle.ts`](../examples/portable-bundle.ts)。
 
 ---
 

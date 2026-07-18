@@ -1,10 +1,11 @@
 [project]
 name = "memoweft"
 version = "0.6.0.dev0"
-description = "MemoWeft — portable AI long-term memory that keeps facts and guesses apart (Python port, 1.3 · D-0042). Parity kernel: pure-logic invariants verified bit-exact against the TypeScript source via ../shared/parity fixtures."
+description = "Experimental Python parity implementation for MemoWeft's memory rules, storage, and portable-data contracts."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     "regex>=2024.0.0", # \p{L}/\p{N}/\p{Han} Unicode property classes for tokenize (stdlib re lacks \p{Script=...})
     "httpx>=0.27", # OpenAI 兼容端点 HTTP 客户端(同步 httpx.Client;不引 SDK,同 TS 精神)
@@ -23,6 +24,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/memoweft"]
+include = ["src/memoweft/_shared_data/**/*.json"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/uv.lock"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

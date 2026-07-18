@@ -1,5 +1,5 @@
 /**
- * 体验插件注册表测试（架构归位·批次5 做插件 v1）。
+ * 体验插件注册表测试。
  *
  * 验注册表契约，不验端到端"语气"（那要真模型）：
  *   - getExperience 已知 id 取对、未知 id 回退 plain（永不抛）。
@@ -43,7 +43,9 @@ test('listExperiences：至少含 plain + xingyao，只透 id/name', () => {
 });
 
 test('EXPERIENCE_IDS 与 listExperiences 口径一致（白名单 = 全部）', () => {
-  const listed = listExperiences().map((e) => e.id).sort();
+  const listed = listExperiences()
+    .map((e) => e.id)
+    .sort();
   assert.deepEqual([...EXPERIENCE_IDS].sort(), listed);
 });
 
@@ -60,7 +62,10 @@ test('每个体验插件形状对：type/systemPrompt/name 非空', () => {
 test('listPlugins：列出 id/name/type/permissions（experience 类无声明权限）', () => {
   const plugins = listPlugins();
   assert.ok(plugins.length >= 2, '至少 plain + xingyao');
-  assert.ok(plugins.some((p) => p.id === 'plain') && plugins.some((p) => p.id === 'xingyao'), '含 plain + 星瑶');
+  assert.ok(
+    plugins.some((p) => p.id === 'plain') && plugins.some((p) => p.id === 'xingyao'),
+    '含 plain + 星瑶',
+  );
   for (const p of plugins) {
     assert.equal(p.type, 'experience', 'v2 现注册的都是 experience 类');
     assert.ok(Array.isArray(p.permissions), 'permissions 是数组');
@@ -72,7 +77,7 @@ test('listPlugins：列出 id/name/type/permissions（experience 类无声明权
 test('星瑶人设守 naming 护栏：不出现过度承诺话术', () => {
   const prompt = getExperience('xingyao').systemPrompt;
   assert.ok(prompt, 'xingyao 是 experience 类、必带 systemPrompt'); // v2 契约里 systemPrompt 可选 → 先窄化
-  // 记 ≠ 信（docs/internal/naming-positioning.md §2）：星瑶可拟人，但不许替记忆层吹"真正理解/全方位掌握/永远不忘"。
+  // Remembering is not the same as certainty: Xingyao may be personable but must not overclaim.
   //   这些短语作为【被禁止说的示例】出现在 prompt 里（"别说…"），所以校验它们是否出现在"别说"的否定语境中，
   //   而不是作为正面承诺——这里退一步只做冒烟级检查：确认 prompt 显式带了"不要把话说满"的护栏措辞。
   assert.ok(prompt.includes('不要') && prompt.includes('说满'), '星瑶 prompt 含"不要把话说满"护栏');

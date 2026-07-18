@@ -1,8 +1,8 @@
 /**
- * 认知存储层（地图 cell 6：判断层）。参考 evidence/store.ts 的 node:sqlite 模式。
+ * 认知存储层：判断层。参考 evidence/store.ts 的 node:sqlite 模式。
  * 两张表：cognition（认知）+ cognition_evidence（溯源链）。
  *
- * 用户可查/改/删（cell 8 规则 10）。consolidate 用 removeBySubject 做"重算替换"（merge 留阶段 2）。
+ * 用户可查/改/删（management contract）。consolidate 用 removeBySubject 做"重算替换"（merge 留）。
  */
 import { DatabaseSync } from '../store/nodeSqliteDriver.ts';
 import type { SQLInputValue } from '../store/driver.ts';
@@ -88,18 +88,18 @@ export interface CognitionPatch {
   content?: string;
   confidence?: number;
   credStatus?: CredStatus;
-  /** 来源强度升级（D-0033 Phase 1b）:reinforce 里 confirmed 认知被【用户主动亲口】印证时 confirmed→stated,
+  /** 形成方式更新：reinforce 中的 confirmed 认知被用户主动陈述印证时 confirmed→stated，
    *  破 480 封顶。**仅 consolidate.reinforce 的升级路径写它**;是形成方式分类(由 LLM 判、结构护栏兜),
-   *  置信度分数仍由规则算(铁律 3b)。缺省不改（保持原 formedBy）。 */
+   *  置信度分数仍由规则计算，与形成方式更新相互独立。缺省不改（保持原 formedBy）。 */
   formedBy?: FormedBy;
   scope?: string | null;
-  /** 标失效（被纠正/过期）；保留条目可溯源（cell 6 默认保留 + cell 8 反证）。 */
+  /** 标失效（被纠正/过期）；保留条目可溯源（retention contract）。 */
   invalidAt?: string | null;
-  /** 主动询问时间戳（阶段 3 M5）：proposeAsk 发问后写入，用于"问过不再问"去重。 */
+  /** 主动询问时间戳：proposeAsk 发问后写入，用于"问过不再问"去重。 */
   askedAt?: string | null;
-  /** 归档时间（批次2 受控管理）：非 null = 已归档，召回跳过；传 null 可恢复。经 core.memory.archiveCognition 写入。 */
+  /** 归档时间：非 null = 已归档并从召回跳过；传 null 可恢复。经 core.memory.archiveCognition 写入。 */
   archivedAt?: string | null;
-  /** 静音时间（D-0023 召回负反馈）：非 null = 已静音，召回跳过【但仍 active、仍参与画像演化】；传 null 可取消。经 core.memory.muteCognition 写入。 */
+  /** 静音时间：非 null = 已静音并从召回跳过，但仍 active 且参与画像演化；传 null 可取消。 */
   mutedAt?: string | null;
 }
 
@@ -108,10 +108,10 @@ export interface CognitionStore {
   get(id: string): Cognition | null;
   all(subjectId?: string): Cognition[];
   /** 只取【未失效 且 未归档】的（invalid_at IS NULL AND archived_at IS NULL）——召回 / 写路径读现有认知用。
-   *  归档全面雪藏（批次3 用户拍板）：画像更新不当现有认知、不被主动问起、定期清理不碰（保住可恢复）。 */
+   *  归档项从活动路径排除：不参与画像更新或主动询问，也不由定期清理标失效，因此可恢复。 */
   active(subjectId: string): Cognition[];
   sourcesOf(cognitionId: string): EvidenceLink[];
-  /** 用户主动改一条认知 / 标失效（cell 8 规则 10 / cell 6）。 */
+  /** 用户主动改一条认知 / 标失效（management contract）。 */
   update(id: string, patch: CognitionPatch): Cognition | null;
   /** 给一条认知补挂证据（增量强化用）。 */
   addEvidence(cognitionId: string, links: EvidenceLink[]): void;
@@ -142,9 +142,9 @@ export class SqliteCognitionStore implements CognitionStore {
     this.migrate();
   }
 
-  /** 幂等迁移：旧库补上后加的列（阶段 3 asked_at / 批次2 archived_at / D-0023 muted_at）。新库由 SCHEMA 直接带上。
+  /** 幂等迁移：旧库补上后加的列（asked_at / archived_at / muted_at）。新库由 SCHEMA 直接带上。
    *  为何 muted_at 走这里而非 migrations.ts v2：它是与 archived_at 同族的 nullable 状态位，缺列补对【任何构造路径】
-   *  （含直接构造老库、不经 openStores/runMigrations）都稳；formal 迁移路径留给需版本化/备份/数据变换的迁移（见 D-0023）。 */
+   *  （含直接构造老库、不经 openStores/runMigrations）都稳；formal 迁移路径留给需版本化/备份/数据变换的迁移。 */
   private migrate(): void {
     const cols = this.db
       .prepare("SELECT name FROM pragma_table_info('cognition')")
@@ -175,7 +175,7 @@ export class SqliteCognitionStore implements CognitionStore {
       invalidAt: input.invalidAt ?? null,
       askedAt: null, // 新建的认知一律未问过；提问后由 proposeAsk 经 update 写入
       archivedAt: null, // 新建的认知一律未归档；归档走 core.memory.archiveCognition
-      mutedAt: null, // 新建的认知一律未静音；静音走 core.memory.muteCognition（D-0023）
+      mutedAt: null, // 新建的认知一律未静音；静音走 core.memory.muteCognition()
       createdAt: now,
       updatedAt: now,
     };
@@ -216,24 +216,25 @@ export class SqliteCognitionStore implements CognitionStore {
   }
 
   get(id: string): Cognition | null {
-    const row = this.db
-      .prepare('SELECT * FROM cognition WHERE id = ?')
-      .get(id) as unknown as CognitionRow | undefined;
+    const row = this.db.prepare('SELECT * FROM cognition WHERE id = ?').get(id) as unknown as
+      CognitionRow | undefined;
     return row ? fromRow(row) : null;
   }
 
   all(subjectId?: string): Cognition[] {
-    const rows = (
-      subjectId
-        ? this.db
-            .prepare('SELECT * FROM cognition WHERE subject_id = ? ORDER BY confidence DESC, created_at ASC')
-            .all(subjectId)
-        : this.db.prepare('SELECT * FROM cognition ORDER BY confidence DESC, created_at ASC').all()
-    ) as unknown as CognitionRow[];
+    const rows = (subjectId
+      ? this.db
+          .prepare(
+            'SELECT * FROM cognition WHERE subject_id = ? ORDER BY confidence DESC, created_at ASC',
+          )
+          .all(subjectId)
+      : this.db
+          .prepare('SELECT * FROM cognition ORDER BY confidence DESC, created_at ASC')
+          .all()) as unknown as CognitionRow[];
     return rows.map(fromRow);
   }
 
-  /** 语义升级（批次3 用户拍板·归档全面雪藏）：active = 未失效【且未归档】。
+  /** active = 未失效且未归档；归档项保留在存储中，但不参与活动路径。
    *  升级后 consolidate/attribute/proposeAsk/revisitConflicts/expire 等走 active() 的写路径自动跳过归档。 */
   active(subjectId: string): Cognition[] {
     const rows = this.db
@@ -248,7 +249,10 @@ export class SqliteCognitionStore implements CognitionStore {
     const rows = this.db
       .prepare('SELECT evidence_id, relation FROM cognition_evidence WHERE cognition_id = ?')
       .all(cognitionId) as unknown as Array<{ evidence_id: string; relation: string }>;
-    return rows.map((r) => ({ evidenceId: r.evidence_id, relation: r.relation as EvidenceRelation }));
+    return rows.map((r) => ({
+      evidenceId: r.evidence_id,
+      relation: r.relation as EvidenceRelation,
+    }));
   }
 
   update(id: string, patch: CognitionPatch): Cognition | null {
@@ -258,7 +262,7 @@ export class SqliteCognitionStore implements CognitionStore {
       content: patch.content ?? cur.content,
       confidence: patch.confidence ?? cur.confidence,
       credStatus: patch.credStatus ?? cur.credStatus,
-      formedBy: patch.formedBy ?? cur.formedBy, // D-0033: confirmed→stated 升级路径写它;缺省保持原值
+      formedBy: patch.formedBy ?? cur.formedBy, // : confirmed→stated 升级路径写它;缺省保持原值
       scope: patch.scope === undefined ? cur.scope : patch.scope,
       invalidAt: patch.invalidAt === undefined ? cur.invalidAt : patch.invalidAt,
       askedAt: patch.askedAt === undefined ? cur.askedAt : patch.askedAt,
@@ -270,7 +274,19 @@ export class SqliteCognitionStore implements CognitionStore {
       .prepare(
         'UPDATE cognition SET content=?, confidence=?, cred_status=?, formed_by=?, scope=?, invalid_at=?, asked_at=?, archived_at=?, muted_at=?, updated_at=? WHERE id=?',
       )
-      .run(next.content, next.confidence, next.credStatus, next.formedBy, next.scope, next.invalidAt, next.askedAt, next.archivedAt, next.mutedAt, next.updatedAt, id);
+      .run(
+        next.content,
+        next.confidence,
+        next.credStatus,
+        next.formedBy,
+        next.scope,
+        next.invalidAt,
+        next.askedAt,
+        next.archivedAt,
+        next.mutedAt,
+        next.updatedAt,
+        id,
+      );
     return this.get(id);
   }
 

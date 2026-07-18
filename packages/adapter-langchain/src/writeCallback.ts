@@ -2,21 +2,21 @@
  * 写路径适配器：`MemoWeftWriteCallback extends BaseCallbackHandler`——把【工具返回结果】沉淀成 tool 证据；
  * 另导出宿主闭包 `persistUserTurn`——把【用户原话】沉淀成 spoken 证据。
  *
- * 铁律 3a（代码级 by-construction·物理隔离）：本 handler【只】实现 `handleToolEnd`（output = 工具真实
+ * tool-result-only ingestion boundary（代码级 by-construction·物理隔离）：本 handler【只】实现 `handleToolEnd`（output = 工具真实
  *   【返回结果】），【绝不】声明 `handleToolStart`——LangChain 的 CallbackManager 是
  *   `if (handler.handleToolStart) …` 才投递，本类无此方法 → 工具的【调用意图 / 入参 string】永不到达本适配器。
  *   不是"实现了但不落库"，是"根本没有这个方法" → 调用意图物理上进不来。
  *
- * 硬事实（观察-only）：LangChain callbacks 丢弃 handler 返回值，故 callback【不能】用于注入（注入走 retriever.ts）；
+ * 框架行为（仅观察）：LangChain callbacks 丢弃 handler 返回值，故 callback【不能】用于注入（注入走 retriever.ts）；
  *   本 handler 是纯写路径观察者，读取 output 落库、不回吐任何东西给链。
  *
  * originId 承载字段（实测 `@langchain/core` .d.ts 核对）：
  *   `handleToolEnd(output: any, runId: string, parentRunId?, tags?)`——【没有】 tool_call_id 形参，
  *   故 tool 证据的幂等 originId 用 `runId`（该工具调用这一 run 的稳定 id）。
  *
- * 降级 §16.2：写路径 `runIngestWithRetry`——真错重试一次、超时不重试；仍失败经 logger 记事件后静默吞，绝不向链抛。
+ * 降级：写路径 `runIngestWithRetry`——真错重试一次、超时不重试；仍失败经 logger 记事件后静默吞，绝不向链抛。
  *
- * 隐私：只落工具【返回结果】文本（不落调用意图），走 `core.ingestToolResult` → sourceKind='tool' → 默认不上云。
+ * 写路径边界：只落工具【返回结果】文本（不落调用意图），走 `core.ingestToolResult` → sourceKind='tool' → 默认不进入内建云写模型 prompt。
  */
 import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 import type { MemoWeftCore } from 'memoweft';
@@ -29,7 +29,7 @@ type ToolIngestOnly = Pick<MemoWeftCore, 'ingestToolResult'>;
 type UserIngestOnly = Pick<MemoWeftCore, 'ingestUserMessage'>;
 
 /**
- * ingest（写路径）执行器：契约 §16.2——【真错】重试一次再放弃；仍失败经 logger 记一条结构化事件后【静默吞】。
+ * ingest（写路径）执行器：契约 ——【真错】重试一次再放弃；仍失败经 logger 记一条结构化事件后【静默吞】。
  * 绝不向链 / 调用方抛（本函数从不 reject）。ingest 的降级 reason 恒为 'error'（含超时也归 error）。
  * 幂等前提：重试去重靠【稳定非空 originId】（tool 用 runId、spoken 用宿主 turnId）。originId=null 时 Core 不去重，
  *   故【超时不重试】：withTimeout 只 race、不取消底层写，超时后底层 ingest 可能仍提交，盲重试会重复落库。
@@ -119,7 +119,7 @@ export interface MemoWeftWriteCallbackOptions {
    */
   ingestTimeoutMs?: number;
   /**
-   * 注入式 logger（可选，契约 §16.2）：ingest 一次重试后仍失败降级时记一条【结构化事件】
+   * 注入式 logger（可选，降级契约）：ingest 一次重试后仍失败降级时记一条【结构化事件】
    *   （`{ event:'memory_degraded', op:'ingest', reason:'error' }`）。缺省不注入 = 静默降级。
    * 认知纪律 + 隐私：只记事件/原因，绝不记工具返回内容 / 密钥。
    */
@@ -127,11 +127,11 @@ export interface MemoWeftWriteCallbackOptions {
 }
 
 /**
- * MemoWeft 写回调：塞进 LangChain 的 `callbacks`（Runnable/链的 config.callbacks）→ 工具跑完自动落 tool 证据。
+ * MemoWeft 写回调：注册到 LangChain 的 `callbacks`（Runnable/链的 config.callbacks），在工具完成后存储 tool 证据。
  *
  * 必填抽象成员（实测 `@langchain/core` .d.ts 核对）：`abstract name: string`——须给（`lc_namespace` 基类已实现）。
  *
- * 铁律 3a：本类【只】有 `handleToolEnd`，【没有】 `handleToolStart`——调用意图物理上进不来（见文件头）。
+ * tool-result-only ingestion boundary：本类【只】有 `handleToolEnd`，【没有】 `handleToolStart`——调用意图物理上进不来（见文件头）。
  */
 export class MemoWeftWriteCallback extends BaseCallbackHandler {
   /** `BaseCallbackHandler` 抽象成员：handler 名（序列化 / 日志用）。 */
@@ -151,11 +151,11 @@ export class MemoWeftWriteCallback extends BaseCallbackHandler {
   }
 
   /**
-   * ③ 工具结果摄入：`output` = 工具真实【返回结果】→ ingestToolResult（tool 证据，默认不上云）。
+   * ③ 工具结果摄入：`output` = 工具真实【返回结果】→ ingestToolResult（tool 证据，默认不进入内建云写模型 prompt）。
    * originId 用 `runId`（该工具调用 run 的稳定 id）保证幂等。空/无文本载荷不落库。
    * 降级不中断：`runIngestWithRetry` 内部从不抛——落记忆失败不该掀翻链。
    *
-   * 【绝不】声明 `handleToolStart`：CallbackManager 无此方法便不投递调用意图（铁律 3a·物理隔离）。
+   * 【绝不】声明 `handleToolStart`：CallbackManager 无此方法便不投递调用意图（tool-result-only ingestion boundary·物理隔离）。
    */
   async handleToolEnd(output: unknown, runId: string): Promise<void> {
     const text = toolOutputText(output);
@@ -170,7 +170,7 @@ export class MemoWeftWriteCallback extends BaseCallbackHandler {
 }
 
 export interface PersistUserTurnInput {
-  /** 用户这轮说的原话（由宿主在发起链调用时就持有的那份，别从模型响应里回捞）。 */
+  /** 宿主在发起链调用前捕获的用户原话；该值不得从模型响应中派生。 */
   text: string;
   /**
    * 稳定幂等键：同一轮对话给同一个 originId，重复摄入也只落一条。
@@ -183,20 +183,23 @@ export interface PersistUserTurnInput {
   occurredAt?: string;
   /** ingest 单次尝试超时（毫秒，可选，同 MemoWeftWriteCallbackOptions.ingestTimeoutMs）。 */
   ingestTimeoutMs?: number;
-  /** 注入式 logger（契约 §16.2）：一次重试后仍失败降级时记结构化事件。 */
+  /** 注入式 logger（降级契约）：一次重试后仍失败降级时记结构化事件。 */
   logger?: MemoWeftLogger;
 }
 
 /**
  * 宿主闭包摄入【用户原话】→ spoken 证据（薄封装 `core.ingestUserMessage`，走 `runIngestWithRetry` 降级）。
  *
- * 为什么由宿主显式传原话、不从事件解析：LangChain 的 callbacks 是观察-only，且发给模型的输入已被召回
- *   注入过——从那里回捞会把注入的记忆当"用户原话"存回去（脏数据）。故原话必须由宿主在调用点（注入前）持有并显式传入。
+ * 为什么由宿主显式传原话、不从事件解析：LangChain 的 callbacks 是仅观察，且发给模型的输入已被召回
+ *   注入过；从事件载荷派生该值会将召回内容错误地重新存储为用户证据。原话必须由宿主在注入前显式传入。
  *
- * Core 纪律：只存【用户原话】(spoken)、不存助手回话；不传任何授权位（spoken 本就不涉上云授权位·红线）。
+ * Core 约束：只存用户原话（spoken），不存助手回复，也不传云读取授权覆盖。
  * 空串 / 全空白不落库。降级不中断：失败经一次重试仍失败 → logger 记事件、静默吞，绝不向宿主抛。
  */
-export async function persistUserTurn(core: UserIngestOnly, input: PersistUserTurnInput): Promise<void> {
+export async function persistUserTurn(
+  core: UserIngestOnly,
+  input: PersistUserTurnInput,
+): Promise<void> {
   const text = input.text;
   if (typeof text !== 'string' || text.trim() === '') return;
   await runIngestWithRetry(
@@ -207,7 +210,7 @@ export async function persistUserTurn(core: UserIngestOnly, input: PersistUserTu
         subjectId: input.subjectId,
         hostId: input.hostId,
         occurredAt: input.occurredAt,
-        // sourceKind 不传：Core 缺省 'spoken'；不传授权位（spoken 不涉上云授权位·红线）。
+        // sourceKind 不传：Core 默认使用 spoken；不传云读取授权覆盖。
       }),
     input.ingestTimeoutMs,
     input.logger,

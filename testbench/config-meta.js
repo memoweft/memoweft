@@ -17,14 +17,14 @@ export const CONFIG_META = [
   {
     path: 'identity.subjectId',
     label: '记忆归属 ID',
-    hint: '这本记忆属于谁的标识；v1 恒为 owner，改了等于换一个人的记忆空间（本版只读，不建议改）。',
+    hint: '这本记忆属于谁的标识；诊断台固定使用 owner，并将该字段设为只读。',
     group: 'identity',
     control: 'readonly',
   },
   {
     path: 'identity.hostId',
     label: '宿主环境 ID',
-    hint: '这套记忆跑在哪个环境的标识；缺省 local，多宿主时用来区分来源（本版只读）。',
+    hint: '这套记忆运行环境的标识；缺省为 local，多宿主时用于区分来源。诊断台将该字段设为只读。',
     group: 'identity',
     control: 'readonly',
   },
@@ -73,7 +73,7 @@ export const CONFIG_META = [
     control: 'toggle',
   },
 
-  // ===== activeWindowCollector（活动窗口采集，阶段 8-A）=====
+  // ===== activeWindowCollector（活动窗口采集）=====
   {
     path: 'activeWindowCollector.sampleIntervalSec',
     label: '采样间隔（秒）',
@@ -121,7 +121,7 @@ export const CONFIG_META = [
   {
     path: 'retrieval.minEffectiveConfidence',
     label: '注入的最低有效置信',
-    hint: '衰减后有效置信低于此门槛就不注入（千分制同一把尺）；调高=只让很有把握的进来但可能太保守，调低=半信半疑也塞进来但易带过气结论。',
+    hint: '衰减后有效置信低于此门槛就不注入（千分制同一尺度）；调高只注入高置信内容但可能过于保守，调低会纳入更多低置信内容，也可能带入过期结论。',
     group: 'retrieval',
     control: 'slider',
     min: 0,
@@ -162,8 +162,8 @@ export const CONFIG_META = [
   },
   {
     path: 'consolidation.baseByFormedBy.inferred',
-    label: '起步分·模型脑补的',
-    hint: '「模型推测出来的」认知起步分（最不可靠）；调高=脑补更易被当真、画像丰富但风险大，调低=脑补一律低声说更稳但偏空。',
+    label: '起步分·模型推断',
+    hint: '模型推断形成的认知起步分（可靠性最低）；调高会增加推断进入画像的概率与误判风险，调低更保守但画像可能较少。',
     group: 'consolidation',
     control: 'slider',
     min: 0,
@@ -259,7 +259,7 @@ export const CONFIG_META = [
     step: 10,
   },
 
-  // ===== attribution（M4 归因）=====
+  // ===== attribution（归因）=====
   {
     path: 'attribution.windowHours',
     label: '归因回看小时数',
@@ -273,7 +273,7 @@ export const CONFIG_META = [
   {
     path: 'attribution.hypothesisCap',
     label: '假设置信封顶',
-    hint: '归因产出的假设把握度封顶（假设只敢低声说，建议 ≤ 低置信门槛）；调高=假设更笃定可能把猜测说成结论，调低=永远心虚更保守。',
+    hint: '归因产出的假设把握度上限（建议不高于低置信门槛）；调高可能使推测呈现得过于确定，调低则更保守。',
     group: 'attribution',
     control: 'slider',
     min: 0,
@@ -303,7 +303,7 @@ export const CONFIG_META = [
   {
     path: 'attribution.minPhenomenonSupport',
     label: '现象归因最少支撑',
-    hint: '现象要反复出现 ≥N 条支撑才归因（治脑补）；调大=极稳但反应迟钝可能错过真问题，设 1=偶发一次就归因灵敏但爱脑补。',
+    hint: '现象至少有 N 条支撑才进行归因；调大可降低误判但响应更慢，设为 1 会提高灵敏度，同时增加偶发现象被误归因的风险。',
     group: 'attribution',
     control: 'slider',
     min: 1,
@@ -311,7 +311,7 @@ export const CONFIG_META = [
     step: 1,
   },
 
-  // ===== asking（M5 主动询问）=====
+  // ===== asking（主动询问）=====
   {
     path: 'asking.maxAsks',
     label: '一轮最多问几个',
@@ -489,7 +489,7 @@ export const CONFIG_META = [
   {
     path: '_temperature',
     label: '模型温度',
-    hint: '当前 0.3，写死在 src/llm/client.ts:85，本版不可调',
+    hint: '当前固定为 0.3，诊断台暂不提供调整入口',
     control: 'readonly',
     group: 'llm',
   },

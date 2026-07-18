@@ -1,163 +1,100 @@
-# Model deployment & privacy modes · MemoWeft
+# Deployment, privacy, and production operations
 
-> MemoWeft is cloud-friendly by default, but not cloud-blind. It should be easy to run with an OpenAI-compatible cloud endpoint, while still keeping evidence-level control over what may be sent to a cloud model.
+**English** | [简体中文](./deployment.zh-CN.md)
 
-## Positioning
+MemoWeft is an embedded SQLite library, not a managed service. It can use local or OpenAI-compatible cloud models, while evidence-level routing flags control what its built-in write-model prompts may include.
 
-MemoWeft does **not** require local models as the default path. For most host developers, the simplest way to try or integrate MemoWeft is:
+For a local proof that needs no endpoint, key, network, or persistent database, run the [offline demo](./demo-script.md). The bundled [reference host](./reference-host.md) is a local, single-user example—not a production template.
 
-1. provide an OpenAI-compatible chat endpoint;
-2. optionally provide a separate small/fast write-path model;
-3. optionally provide an embedding endpoint for semantic recall.
+## Model and retrieval configuration
 
-Local models remain supported, but they are an advanced deployment option rather than the default onboarding path.
-
-The key boundary is:
-
-- ✅ model calls may be cloud-first;
-- ❌ raw evidence should not be sent to cloud blindly;
-- ✅ each evidence item carries authorization bits such as `allowCloudRead`, and MemoWeft filters cloud-readable evidence before cloud LLM calls.
-
-MemoWeft keeps the switch and filtering rules. The **host application** still owns the actual privacy policy, consent UI, and user-facing security decisions.
-
----
-
-## Recommended modes
-
-### 1. Cloud-first mode
-
-Use this for quick demos, prototypes, and normal developer onboarding.
+The minimum model-backed setup uses one chat endpoint. A separate write-path model and an embedder are optional.
 
 ```ini
 MEMOWEFT_LLM_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_LLM_API_KEY=sk-xxxx
 MEMOWEFT_LLM_MODEL=your-chat-model
 
-# Optional: faster/cheaper model for distill/consolidate/attribute.
+# Optional: a separate model for distill, consolidate, and attribute
 MEMOWEFT_WRITE_LLM_BASE_URL=https://your-cloud-endpoint/v1
 MEMOWEFT_WRITE_LLM_API_KEY=sk-xxxx
 MEMOWEFT_WRITE_LLM_MODEL=your-small-fast-model
+MEMOWEFT_WRITE_LLM_TIER=cloud
 
-# Optional: semantic recall. Without it, recall degrades to empty search.
-MEMOWEFT_EMBED_BASE_URL=https://your-cloud-endpoint/v1
-MEMOWEFT_EMBED_API_KEY=sk-xxxx
+# Optional: semantic/vector recall
+MEMOWEFT_EMBED_BASE_URL=https://your-embedding-endpoint/v1
+MEMOWEFT_EMBED_API_KEY=your-embedding-key
 MEMOWEFT_EMBED_MODEL=your-embedding-model
-
-# Optional deployment switch, read by the bundled testbench/experience server only:
-#   off = run MemoWeft as a library, no web UI;
-#   any other value (or unset) = start the experience UI.
-MEMOWEFT_EXPERIENCE_UI=on
 ```
 
-> **Legacy names:** every `MEMOWEFT_*` model var falls back to its old `DLA_*` name (e.g. `DLA_LLM_BASE_URL`, `DLA_EMBED_MODEL`), so existing `.env` files keep working unchanged. New setups should use the `MEMOWEFT_*` names.
+The legacy `DLA_*` aliases remain supported, but new deployments should use `MEMOWEFT_*` names. Without an embedder, Core normally uses local FTS5 keyword recall; it falls back to empty recall only when FTS5 is unavailable.
 
-Best for:
+`MEMOWEFT_WRITE_LLM_TIER=cloud|local` selects which evidence-eligibility flags MemoWeft applies to the write endpoint:
 
-- getting MemoWeft running quickly;
-- integrating it into an LLM app without local model setup;
-- testing the read/write path before tuning privacy rules.
+- `cloud` reads evidence with `allowCloudRead=true`;
+- `local` reads evidence with `allowLocalRead=true`.
 
-Trade-off:
+The tier is a declaration, not endpoint verification. Labeling a cloud URL as `local` does not keep data on the device. A deployment currently chooses one write model and tier per profile-update run; per-evidence routing across two write models is not built in.
 
-- anything marked `allowCloudRead=true` may be included in prompts sent to the configured cloud endpoint.
+## Privacy boundary
 
----
+- `allowCloudRead` limits evidence selection for MemoWeft's built-in cloud write-model prompts. It does not restrict recall, list/read APIs, MCP tools, adapter prompt injection, derived cognitions/events/graphs, custom host code, exports, or logs. It is not access control.
+- `observed` evidence and tool results default to no cloud read. The host still needs clear consent, review, authorization-change, and deletion flows.
+- The SQLite database is not encrypted by MemoWeft. Disk, volume, or application-level encryption is the host's responsibility.
+- Core does not provide authentication, authorization, tenant isolation, key management, or a compliance policy.
+- Assistant replies can be retained as interaction context by built-in conversation helpers, but built-in ingestion does not turn them into evidence. Custom integrations must preserve role boundaries themselves.
 
-### 2. Cloud-guarded mode
+## Production checklist
 
-Use this as the normal production-minded baseline: cloud models are still used, but evidence-level authorization controls what the write path may send to them.
+Complete and test these controls in the application that hosts MemoWeft.
 
-Recommended defaults:
+### Process, network, and tenancy
 
-| Evidence source | Default cloud policy | Reason |
-| --- | --- | --- |
-| User chat / explicit memory | `allowCloudRead=true` by host choice | The user is already talking to an AI-powered host. |
-| Manual observation approved by user | host choice | The host should expose a clear consent switch. |
-| Desktop / device observations | `allowCloudRead=false` | Window titles, app usage, file paths, and device state can be sensitive. |
-| Screen OCR / clipboard / files | `allowCloudRead=false` | High-risk raw private content. |
-| Health / sleep / heart-rate data | `allowCloudRead=false` | Sensitive personal data. |
+- [ ] Run a supervised process with a restart policy, bounded logs, and graceful shutdown. Call `core.close()` after in-flight work finishes.
+- [ ] Bind only permitted network interfaces. Provide TLS, authentication, authorization, rate limits, and request-size limits at the host or edge boundary.
+- [ ] Define the tenant boundary before writing data. Authenticate each request, enforce authorization before each memory operation, and pass a tenant-scoped `subjectId`.
+- [ ] Do not share a SQLite file, default `subjectId`, conversation cache, or exported bundle across users without a separately enforced isolation design.
+- [ ] Do not expose the reference host unchanged. It binds to `127.0.0.1` and intentionally has no authentication or multi-tenant isolation.
 
-Best for:
+### Persistent storage and recovery
 
-- real desktop assistants;
-- personal agents that ingest behavior signals;
-- hosts that want cloud convenience without sending all raw observations to the cloud.
+- [ ] Put the SQLite database and host-owned session state on a durable, access-controlled volume. Do not rely on an ephemeral container filesystem.
+- [ ] Encrypt disks or volumes at rest and restrict database-file permissions.
+- [ ] Back up the database and host state on a documented schedule. Encrypt backups, restrict access, and set retention.
+- [ ] Test restoration in an isolated environment and verify that representative memory can be read and recalled.
+- [ ] Use portable bundles for user export/import. Validate with `dryRun` before `merge`; rebuild derived recall indexes when required.
 
-Trade-off:
+### Secrets and model routing
 
-- if too much evidence is marked local-only while only cloud models are configured, write-path cognition may be less complete. The host should make this visible rather than silently pretending the model saw everything.
+- [ ] Inject model credentials through a secret manager or protected runtime environment. Never commit `.env`, databases, exported bundles, or logs containing user memory.
+- [ ] Limit secret access, rotate credentials, and redact diagnostics.
+- [ ] Document the chosen write tier and verify the endpoint behind it. The tier setting alone is not a security control.
+- [ ] Review evidence authorization defaults and every custom path that can send, export, or log memory content.
 
----
+### Schema and release operations
 
-### 3. Hybrid / local-sensitive mode
+- [ ] Pin a MemoWeft version and read its changelog before upgrading.
+- [ ] Test startup and migrations against a copy of production data, then back up before deployment.
+- [ ] Deploy one compatible version at a time unless concurrent access by old and new versions has been tested.
+- [ ] Verify the database path, mount, ownership, and permissions after deployment so a path error cannot silently create an empty database.
 
-Use this for privacy-sensitive deployments.
+### Scheduling and observability
 
-**Implementation status (today):** The write-path model now carries a **tier** — `MEMOWEFT_WRITE_LLM_TIER=cloud|local` (default `cloud`). The write-path privacy gate `filterReadableByTier` filters by that tier: a `cloud` write model only ever sees `allowCloudRead=true` evidence (unchanged); a `local` write model sees `allowLocalRead=true` evidence — including the `observed` behavioural evidence that is cloud=false by default. So **"sensitive observation → local model" is available**: point `MEMOWEFT_WRITE_LLM_*` at a local endpoint (e.g. Ollama / llama.cpp) and set `MEMOWEFT_WRITE_LLM_TIER=local`. Notes:
+- [ ] Schedule `core.updateProfile()` outside the latency-sensitive reply path. Batch by turns, run after idle time, use a periodic job, or expose a user-triggered refresh.
+- [ ] Prevent overlapping profile updates for the same subject.
+- [ ] Treat `core.health()` as a configuration signal. `embedReady: false` means vector recall is unavailable, not necessarily that all recall is unavailable.
+- [ ] Use `core.usage()` deltas only for Core-owned clients whose endpoints return usage; it is not a universal billing meter.
+- [ ] Alert on failed profile updates, repeated model timeouts, database-open errors, backup failures, restore-test failures, and unexpected empty databases—without logging raw evidence.
 
-- Evidence a `cloud` write model can't read is **not silently consumed**: `distill` covers only what the current tier actually digested, so cloud=false observations stay pending and get digested later once a local write model — or per-memory cloud authorization — is configured. `updateProfile().distilled.tierBlockedCount` reports how many are waiting.
-- `WRITE_LLM_TIER` is a **declaration, not a probe** — MemoWeft does not inspect the endpoint. If you declare `local` but point the base URL at a cloud endpoint, sensitive evidence still leaves the machine; that is the deployment's responsibility.
-- Routing evidence to *two* models in one pass (cloud model for cloud-safe + local model for sensitive, then merged) is a possible future step; today a deployment picks one write model + tier. Embeddings still use one endpoint (`MEMOWEFT_EMBED_*`) — local *or* cloud for the whole deployment, not per memory.
+## Acceptance exercise
 
-Routes available today:
+Before launch, rehearse the complete lifecycle:
 
-| Purpose | Route |
-| --- | --- |
-| Chat quality | cloud chat model |
-| Write path (`tier=cloud`, default) | cloud small/fast model, non-sensitive evidence only (`MEMOWEFT_WRITE_LLM_*`) |
-| Write path (`tier=local`) | local model privately digests `observed` (cloud=false) evidence (`MEMOWEFT_WRITE_LLM_TIER=local`) |
-| Embeddings | one embedder for the whole deployment — point it at a local endpoint to keep memory on-device |
+1. deploy to an empty persistent volume and store representative synthetic memory;
+2. restart the process and verify that data survives;
+3. restore a backup into an isolated environment;
+4. verify that tenant A cannot read, export, or recall tenant B;
+5. run a profile update and inspect health and usage signals;
+6. rotate a non-production model credential.
 
-Best for:
-
-- local-first desktop assistants (local embedder + conservative evidence defaults);
-- users who want behavior data to remain on-device;
-- teams planning ahead for future per-evidence local/cloud routing.
-
-Trade-off:
-
-- A local write model (`MEMOWEFT_WRITE_LLM_TIER=local`) now digests private `observed` evidence into the profile — "keep it private" can mean "processed by a local model", not only "kept out of cloud prompts". What is **not** built yet is *per-evidence routing across two models in one pass* (cloud model for cloud-safe evidence + local model for sensitive, merged): today a deployment picks one write model + tier.
-
----
-
-## Design rules
-
-### Cloud-first is the onboarding path
-
-A new developer should be able to clone MemoWeft, fill in cloud-compatible env vars, and see the testbench work without installing Ollama, LM Studio, or a local embedding model.
-
-### Evidence authorization is the safety valve
-
-The model endpoint is not the privacy policy. The evidence layer is where MemoWeft records what each item may be used for:
-
-- `allowLocalRead`
-- `allowCloudRead`
-- `allowInference`
-
-Cloud LLM calls must respect `allowCloudRead`. If an item is not cloud-readable, it should be excluded before cloud prompts are built.
-
-### Data at rest is unencrypted
-
-MemoWeft stores the three memory layers in a standard SQLite database file (e.g. `./dla.db`), and that file is not encrypted. `allowCloudRead` governs *what content may enter a cloud prompt*, not encryption on disk. Data at rest is unencrypted; disk encryption is the host/OS responsibility (BitLocker, FileVault, LUKS, or equivalent).
-
-### Observed behavior should be conservative by default
-
-Behavior observations are powerful but sensitive. A host may ingest desktop, browser, device, or wearable signals, but those observations should default to local-readable and inference-allowed, not cloud-readable, unless the host explicitly asks the user.
-
-### The host owns consent
-
-MemoWeft is a library. It does not render the final consent UI, does not decide legal policy, and does not choose what the user is comfortable sharing. It only provides the data model and filtering hooks so the host can implement that policy honestly.
-
----
-
-## README wording
-
-Use this product sentence when explaining deployment:
-
-> MemoWeft is cloud-friendly by default: developers can start with any OpenAI-compatible cloud endpoint. For sensitive data, MemoWeft keeps evidence-level authorization (`allowCloudRead`) so hosts can prevent local-only observations from being sent to cloud models.
-
-Avoid these misleading framings:
-
-- “MemoWeft is local-first only.” — too much friction for normal developers.
-- “MemoWeft sends everything to the cloud.” — wrong and unsafe.
-- “MemoWeft handles privacy for you.” — the host must still own policy, consent, and UI.
+Record the result and owner for each control. A checklist that has not been exercised is not a recovery or isolation guarantee.

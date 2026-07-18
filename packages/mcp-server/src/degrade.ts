@@ -1,7 +1,7 @@
 /**
- * MCP server 降级基础件（Phase 3 §16.2「记忆层故障→降级不中断」）。
+ * MCP server degradation behavior.
  *
- * 契约（docs/memory-surface-contract.md §16.2，人类已批准；见 D-0012）：
+ * Contract:
  *   - recall 超时：默认 200ms，可配（createMcpServer 选项 recallTimeoutMs）；超时即视为失败。
  *   - 重试：读路径（recall / list_* / graph）不重试，直接降级；写路径（ingest）失败重试一次再放弃。
  *   - 降级 = 读工具返回空结果、写工具返回未落库标记，均 isError:false、对话不中断；经注入 logger 记一条。
@@ -13,7 +13,7 @@
  *   绝不记用户内容 / 原话 / 密钥。
  */
 
-/** recall 超时的默认阈值（毫秒）。契约值，见 §16.2。 */
+/** Default recall timeout in milliseconds. */
 export const DEFAULT_RECALL_TIMEOUT_MS = 200;
 
 /** 结构化降级事件（只含事件类型与元信息，不含任何用户内容 / 原话 / 密钥）。 */
@@ -62,7 +62,7 @@ export function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 /**
- * 写路径重试一次：首次失败即再试一次（契约 §16.2，稳定 originId 保证重试幂等）；仍失败则把错误抛给调用方。
+ * 写路径重试一次：首次失败即再试一次（契约 ，稳定 originId 保证重试幂等）；仍失败则把错误抛给调用方。
  */
 export async function retryOnce<T>(run: () => Promise<T>): Promise<T> {
   try {

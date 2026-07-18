@@ -1,7 +1,7 @@
-"""语义解析存储(v0.6·D-0034)—— 移植自 src/interaction/semanticResolutionStore.ts。
+"""语义解析存储（v0.6），与 TypeScript 存储实现保持契约一致。
 
-一条证据一条解析(evidence_id 关联,不冗余存 subject_id)。put 由 Phase 2 resolver 调;
-解释结果非证据(3a),永不进 consolidate 的 support 白名单。
+一条证据一条解析(evidence_id 关联,不冗余存 subject_id)。put 由  resolver 调;
+resolved_content 是解释产物，不是 Evidence，永不进入 consolidate 的 support 白名单。
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def _from_row(r: sqlite3.Row) -> SemanticResolution:
 
 
 class SqliteSemanticResolutionStore:
-    """语义解析存储(semanticResolutionStore.ts:82-170)。db = open_db 返回的共享连接。"""
+    """使用 open_db 共享连接的语义解析存储。"""
 
     def __init__(self, db: sqlite3.Connection, clock: Clock = system_clock) -> None:
         self._db = db
@@ -69,7 +69,7 @@ class SqliteSemanticResolutionStore:
         return _from_row(r) if r is not None else None
 
     def of_evidence(self, evidence_id: str) -> Optional[SemanticResolution]:
-        # 1↔1:同证据多条时取最早(created_at ASC, rowid ASC LIMIT 1),对齐 semanticResolutionStore.ts:140-145。
+        # 1↔1：同一证据存在多条记录时，稳定选择 created_at、rowid 最早的一条。
         r = row_one(
             self._db,
             "SELECT * FROM semantic_resolution WHERE evidence_id = ? ORDER BY created_at ASC, rowid ASC LIMIT 1",

@@ -1,8 +1,8 @@
-"""写路径一键更新 —— 移植自 src/consolidation/updateProfile.ts。
+"""与 TypeScript updateProfile 管线保持行为一致的写路径更新入口。
 
-把"未整理"的近期对话沉淀成事件 → 重算画像 → 对新现象归因(M4 自动并进)→ 重建召回索引。
+把未整理的近期对话沉淀成事件 → 重算画像 → 对新现象归因 → 重建召回索引。
 索引是读路径优化:嵌入器/检索器挂了**不该让已落库的画像更新失败**(index_error 记下、不回滚)。
-「是否开口问」(M5 asking)仍独立手动——MemoWeft 给理解、宿主定表达。同步(见 D-0043)。
+“是否开口问”仍由宿主独立决定；MemoWeft 提供理解，宿主负责表达。
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ class Retriever(Protocol):
 
 @dataclass(slots=True)
 class UpdateProfileTimings:
-    """各步耗时(ms),治慢诊断用。"""
+    """各步耗时（ms），供性能诊断使用。"""
 
     distill_ms: float
     consolidate_ms: float
@@ -73,7 +73,7 @@ def update_profile(
     clock: Clock = system_clock,
     lang: Optional[Lang] = None,
 ) -> UpdateProfileResult:
-    """distill → consolidate → attribute → 重建召回索引。对齐 updateProfile.ts:68-129。"""
+    """依次执行 distill、consolidate、attribute，并重建召回索引。"""
     t0 = time.monotonic()
     distilled = distill(subject_id, evidence_store, event_store, llm, lang=lang, cfg=cfg)
     t1 = time.monotonic()
@@ -84,12 +84,12 @@ def update_profile(
         cfg=cfg, now_iso=to_iso_z(clock()), lang=lang,
     )
     t2 = time.monotonic()
-    # M4 归因自动并进:内部自带节流(无现象/无原因不调模型)。
+    # 归因自动并入：内部自带节流（无现象或无原因时不调用模型）。
     attributed = attribute(
         subject_id, evidence_store=evidence_store, cognition_store=cognition_store, llm=llm, cfg=cfg, clock=clock, lang=lang
     )
     t3 = time.monotonic()
-    # 重建索引:只索引未失效(active)且未静音(muted)的认知——静音仍参与画像演化,但不占检索槽(D-0023)。
+    # 重建索引：只索引未失效(active)且未静音(muted)的认知——静音仍参与画像演化，但不占检索槽。
     cogs = [c for c in cognition_store.active(subject_id) if c.muted_at is None]
     indexed = 0
     index_error: Optional[str] = None

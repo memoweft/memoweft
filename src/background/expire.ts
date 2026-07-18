@@ -1,19 +1,19 @@
 /**
- * 自然过期（地图 cell 8 规则 8 · 阶段 4-B）：临时类认知老到一定程度 → 自然失效。
+ * 自然过期：临时类认知老到一定程度 → 自然失效。
  *
  * 只有【临时类】（情绪 state、待验证假设 hypothesis）会自然过期：久没被印证 → 标 invalidAt
  *   （保留可溯源、不再被召回），呼应"此刻的情绪很快就该忘"。
- * 【稳定类】（明确偏好 preference、事实 fact 等）**永不自动失效**——哪怕很久没提（规则 8）。
+ * 【稳定类】（明确偏好 preference、事实 fact 等）即使长期未提及也不会自动失效。
  *
- * 纪律：失效 = 标 invalidAt 保留，不删（cell 6 失效而非删除）。这是 MemoWeft 自己按规则过期，
- *   不是用户主动删；用户纠正/删除走另路（M6 / 规则 10）。
+ * 纪律：失效 = 标 invalidAt 保留，不删（retention contract：失效而非删除）。这是 MemoWeft 自己按规则过期，
+ *   不是用户主动删除；用户纠正和删除走受控管理路径。
  */
 import { config, type MemoWeftConfig } from '../config.ts';
 import type { CognitionStore } from '../cognition/store.ts';
 
 export interface ExpireDeps {
   cognitionStore: CognitionStore;
-  /** 可注入配置（P2-5 config 去单例）：不传 = 用全局单例。 */
+  /** 可注入配置（config 去单例）：不传 = 用全局单例。 */
   config?: MemoWeftConfig;
 }
 
@@ -28,7 +28,7 @@ const DAY_MS = 86_400_000;
 export function expire(subjectId: string, deps: ExpireDeps, now: Date = new Date()): ExpireResult {
   const thresholds = (deps.config ?? config).background.expireAfterDays;
   let expired = 0;
-  // active()（未失效且未归档）：归档全面雪藏（批次3 用户拍板）——定期清理不碰已归档的临时类，
+  // active() 仅返回未失效且未归档项，因此定期清理不会修改已归档的临时类，
   // 【不能】给它标失效（归档要保住可恢复：恢复归档后它应还是原来的有效状态）。
   for (const c of deps.cognitionStore.active(subjectId)) {
     const days = thresholds[c.contentType];

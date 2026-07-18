@@ -1,6 +1,6 @@
-"""把握度自算 —— 由规则算,不采信 LLM 自报(铁律 3b)。移植自 src/consolidation/confidence.ts。
+"""由确定性规则计算把握度，不采信模型自报分数；与 TypeScript 实现保持一致。
 
-parity 硬点:computeConfidence 用 Math.round(半值向上)—— 见 _math.round_half_up。
+跨语言数值契约要求使用 Math.round 的半值向上语义，见 _math.round_half_up。
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def is_transient(content_type: ContentType, cfg: Config = CONFIG) -> bool:
 
 
 def compute_confidence(i: ConfidenceInputs, cfg: Config = CONFIG) -> int:
-    """算把握度 0~1000(恒 >0);临时类封顶。逐位对拍 confidence.ts:25-34。"""
+    """计算 0~1000 的把握度，并对时效类内容应用上限；语义与 confidence.ts 一致。"""
     c = cfg.consolidation
     base = c.base_by_formed_by[i.formed_by]
     support = min(max(i.support_count - 1, 0), c.support_cap) * c.support_step
@@ -31,9 +31,9 @@ def derive_cred_status(
     content_type: ContentType,
     cfg: Config = CONFIG,
 ) -> CredStatus:
-    """由把握度 + 反对证据 + 内容类型定可信状态。逐位对拍 confidence.ts:37-53。"""
+    """根据把握度、反对证据和内容类型确定可信状态；语义与 confidence.ts 一致。"""
     if contradict_count > 0:
-        return "conflicted"  # 有反对证据 → 先暴露,不消解
+        return "conflicted"  # 保留冲突可见性，不自动消解反对证据。
     t = cfg.consolidation.cred_thresholds
     if is_transient(content_type, cfg):
         return "low" if confidence >= t.low else "candidate"

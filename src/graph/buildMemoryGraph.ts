@@ -1,5 +1,5 @@
 /**
- * 构建图谱 payload（Phase 6-B G1）。
+ * 构建图谱 payload。
  *
  * 结构（边方向）：
  *   subject --belongs_to_subject--> cognition
@@ -32,7 +32,7 @@ export interface BuildGraphOptions {
   includeEvidence?: boolean;
   /** 是否含已失效认知（invalidAt≠null）。默认 false = 只活跃。 */
   includeInvalid?: boolean;
-  /** 是否含已归档认知（archivedAt≠null）。默认 false——归档向 invalid 看齐（批次2 受控管理）。 */
+  /** 是否含已归档认知（archivedAt≠null）。默认 false，与 invalid 项采用相同的图谱过滤语义。 */
   includeArchived?: boolean;
   /** 按认知内容类型过滤。 */
   contentType?: ContentType | ContentType[];
@@ -88,7 +88,13 @@ export function buildMemoryGraph(
 
   // subject 中心节点
   const subjectNodeId = SUBJECT_PREFIX + subjectId;
-  nodes.push({ id: subjectNodeId, kind: 'subject', label: subjectId, val: 12, colorKey: 'subject' });
+  nodes.push({
+    id: subjectNodeId,
+    kind: 'subject',
+    label: subjectId,
+    val: 12,
+    colorKey: 'subject',
+  });
 
   // ── 认知筛选 ──
   const cognitions = cognitionStore.all(subjectId).filter((c) => {
@@ -122,14 +128,24 @@ export function buildMemoryGraph(
       val: 4 + Math.max(1, c.confidence / 150),
       colorKey: cognitionColorKey(c),
     });
-    edges.push({ id: `bs:${c.id}`, source: subjectNodeId, target: c.id, kind: 'belongs_to_subject', dashed: true });
+    edges.push({
+      id: `bs:${c.id}`,
+      source: subjectNodeId,
+      target: c.id,
+      kind: 'belongs_to_subject',
+      dashed: true,
+    });
   }
 
   // ── 证据 / 事件（provenance）：仅 includeEvidence 时展开 ──
   const includedEvidenceIds = new Set<string>();
   if (includeEvidence) {
     // 被包含认知引用的证据 + 关系
-    const links: Array<{ evidenceId: string; cognitionId: string; relation: 'support' | 'contradict' }> = [];
+    const links: Array<{
+      evidenceId: string;
+      cognitionId: string;
+      relation: 'support' | 'contradict';
+    }> = [];
     for (const c of cognitions) {
       for (const l of cognitionStore.sourcesOf(c.id)) {
         links.push({ evidenceId: l.evidenceId, cognitionId: c.id, relation: l.relation });
@@ -144,7 +160,10 @@ export function buildMemoryGraph(
       let keep = true;
       if (sourceKinds && !sourceKinds.includes(e.sourceKind)) keep = false;
       if (keep && opts.onlyCloudBlocked && e.allowCloudRead) keep = false;
-      if (!keep) { hiddenCount++; continue; }
+      if (!keep) {
+        hiddenCount++;
+        continue;
+      }
       evidenceById.set(eid, e);
     }
     for (const e of evidenceById.values()) {
@@ -160,13 +179,15 @@ export function buildMemoryGraph(
         occurredAt: e.occurredAt,
         createdAt: e.recordedAt,
         val: 2,
-        colorKey: e.sourceKind === 'observed' || e.sourceKind === 'tool' ? e.sourceKind : 'evidence',
+        colorKey:
+          e.sourceKind === 'observed' || e.sourceKind === 'tool' ? e.sourceKind : 'evidence',
       });
     }
 
     // supports / contradicts 边（两端都在才连）
     for (const l of links) {
-      if (!includedEvidenceIds.has(l.evidenceId) || !includedCognitionIds.has(l.cognitionId)) continue;
+      if (!includedEvidenceIds.has(l.evidenceId) || !includedCognitionIds.has(l.cognitionId))
+        continue;
       edges.push({
         id: `ev:${l.evidenceId}:${l.cognitionId}:${l.relation}`,
         source: l.evidenceId,
@@ -191,7 +212,12 @@ export function buildMemoryGraph(
         colorKey: 'event',
       });
       for (const eid of covered) {
-        edges.push({ id: `di:${eid}:${ev.id}`, source: eid, target: ev.id, kind: 'distilled_into' });
+        edges.push({
+          id: `di:${eid}:${ev.id}`,
+          source: eid,
+          target: ev.id,
+          kind: 'distilled_into',
+        });
       }
     }
   }
@@ -210,8 +236,11 @@ export function buildMemoryGraph(
       activeCognitionCount: cognitions.filter((c) => c.invalidAt == null).length,
       conflictedCount: cognitions.filter((c) => c.credStatus === 'conflicted').length,
       hypothesisCount: cognitions.filter((c) => c.contentType === 'hypothesis').length,
-      observedEvidenceCount: nodes.filter((n) => n.kind === 'evidence' && n.sourceKind === 'observed').length,
-      toolEvidenceCount: nodes.filter((n) => n.kind === 'evidence' && n.sourceKind === 'tool').length,
+      observedEvidenceCount: nodes.filter(
+        (n) => n.kind === 'evidence' && n.sourceKind === 'observed',
+      ).length,
+      toolEvidenceCount: nodes.filter((n) => n.kind === 'evidence' && n.sourceKind === 'tool')
+        .length,
     },
   };
 }

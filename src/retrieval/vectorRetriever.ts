@@ -1,5 +1,5 @@
 /**
- * 向量召回（地图 cell 7/11：抄 Graphiti 语义召回思想，自研最小版）。
+ * 向量召回：借鉴 Graphiti 语义召回思想，自研最小版。
  * SQLite 存向量 + JS 余弦相似度——单人几千条够用，**零依赖**（不上 sqlite-vec 原生扩展）。
  *
  * indexAll 对外仍是"替换式重建"语义（调用后索引 = 传入集合），但内部改为**增量**实现：
@@ -44,7 +44,7 @@ export class VectorRetriever implements Retriever {
 
   constructor(dbPath: string, embedder: Embedder) {
     this.db = new DatabaseSync(dbPath);
-    // 并发保底：向量表缺省与主库同一个文件、又独开这第二条连接，多进程下写路径要靠它等锁而非裸抛。
+    // 并发保护：向量表默认与主库共用文件，但使用独立连接；多进程写入时先等待锁，再报告冲突。
     this.db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
     this.migrateIfNeeded();
     this.db.exec(SCHEMA);
@@ -110,7 +110,10 @@ export class VectorRetriever implements Retriever {
     }>;
     if (rows.length === 0) return [];
     const qv = (await this.embedder.embed([query]))[0] ?? [];
-    const scored = rows.map((r) => ({ id: r.id, score: cosine(qv, JSON.parse(r.vec) as number[]) }));
+    const scored = rows.map((r) => ({
+      id: r.id,
+      score: cosine(qv, JSON.parse(r.vec) as number[]),
+    }));
     scored.sort((a, b) => b.score - a.score);
     return scored.slice(0, topK);
   }

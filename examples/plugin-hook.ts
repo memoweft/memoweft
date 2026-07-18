@@ -45,7 +45,12 @@ const observer: MemoWeftPlugin = {
 };
 
 // Tiny stub model so the demo runs with no .env. In real use, drop `llm` and configure MEMOWEFT_LLM_* instead.
-const stubLLM = { callCount: 0, async chat(_messages: ChatMessage[]): Promise<string> { return '(stub reply) got it, noted.'; } };
+const stubLLM = {
+  callCount: 0,
+  async chat(_messages: ChatMessage[]): Promise<string> {
+    return '(stub reply) got it, noted.';
+  },
+};
 
 async function main(): Promise<void> {
   const core = createMemoWeftCore({ dbPath: ':memory:', llm: stubLLM, plugins: [observer] });
@@ -56,7 +61,13 @@ async function main(): Promise<void> {
 
   console.log('--- ingest an observation directly ---');
   await core.ingestObservation({
-    observations: [{ kind: 'active_window', occurredAt: new Date().toISOString(), content: 'spent 20 min in GuitarTab' }],
+    observations: [
+      {
+        kind: 'active_window',
+        occurredAt: new Date().toISOString(),
+        content: 'spent 20 min in GuitarTab',
+      },
+    ],
   });
 
   await new Promise((r) => setTimeout(r, 30)); // let the fire-and-forget onLoad settle for tidy output

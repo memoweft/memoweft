@@ -1,8 +1,8 @@
 /**
- * 受控管理审计表（架构归位·批次2）：每个管理操作（失效/归档/合并/删除/授权变更）落一行"谁被怎么了、为什么"。
+ * 受控管理审计表：每个管理操作（失效/归档/合并/删除/授权变更）记录目标、操作和原因。
  *
- * 为什么独立成表：管理操作改的是用户记忆资产，原因（reason）必须留痕、可追溯（路线 §5.3
- * "记录操作原因"）；不塞进 cognition/evidence 表——那两张表存的是记忆本体，不是操作历史。
+ * 管理操作会改变用户记忆资产，因此 reason 需要保留并可追溯。审计记录单独存放，
+ * cognition/evidence 表只保存记忆本体。
  * 挂在 openStores 的共享连接上（与三个 store 同连接，管理操作的写+审计能包进一个事务）。
  */
 import type { DatabaseSync } from '../store/driver.ts';
@@ -38,7 +38,7 @@ export interface ManagementLog {
   append(e: Omit<ManagementLogEntry, 'createdAt'>): ManagementLogEntry;
   /** 读审计行（可按 targetId 过滤；按落表顺序升序）。 */
   list(targetId?: string): ManagementLogEntry[];
-  /** 清空全部审计行，返回清掉的行数。仅供「恢复出厂」整库擦除用（批次3 用户拍板：出厂=无历史，
+  /** 清空全部审计行，返回清掉的行数。仅供「恢复出厂」整库擦除用（出厂=无历史，
    *  连 management_log 一起清）——逐条管理操作永远只 append、不清。 */
   clear(): number;
 }
@@ -78,11 +78,13 @@ export class SqliteManagementLog implements ManagementLog {
   }
 
   list(targetId?: string): ManagementLogEntry[] {
-    const rows = (
-      targetId
-        ? this.db.prepare('SELECT * FROM management_log WHERE target_id = ? ORDER BY rowid ASC').all(targetId)
-        : this.db.prepare('SELECT * FROM management_log ORDER BY rowid ASC').all()
-    ) as unknown as Array<{
+    const rows = (targetId
+      ? this.db
+          .prepare('SELECT * FROM management_log WHERE target_id = ? ORDER BY rowid ASC')
+          .all(targetId)
+      : this.db
+          .prepare('SELECT * FROM management_log ORDER BY rowid ASC')
+          .all()) as unknown as Array<{
       op: string;
       target_kind: string;
       target_id: string;

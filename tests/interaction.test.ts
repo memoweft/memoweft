@@ -1,5 +1,5 @@
 /**
- * 交互层 store 测试(v0.6 · D-0034):interaction_context / semantic_resolution 的 CRUD + 幂等 + subject 隔离 + 便携包接口。
+ * 交互层 store 测试：interaction_context / semantic_resolution 的 CRUD + 幂等 + subject 隔离 + 便携包接口。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,7 +18,12 @@ const CTX: VisibleTurn[] = [
 test('interaction_context：record / get / 字段回读', () => {
   const store = new SqliteInteractionContextStore(':memory:');
   try {
-    const c = store.record({ subjectId: 'owner', conversationId: 'conv-1', episodeId: 'ep-1', context: CTX });
+    const c = store.record({
+      subjectId: 'owner',
+      conversationId: 'conv-1',
+      episodeId: 'ep-1',
+      context: CTX,
+    });
     assert.ok(c.id);
     assert.equal(c.subjectId, 'owner');
     assert.equal(c.conversationId, 'conv-1');
@@ -35,12 +40,27 @@ test('interaction_context：record / get / 字段回读', () => {
 test('interaction_context：record 按 context_hash 幂等(同内容二次 record 不重复落库)', () => {
   const store = new SqliteInteractionContextStore(':memory:');
   try {
-    const a = store.record({ subjectId: 'owner', conversationId: 'conv-1', episodeId: 'ep-1', context: CTX });
-    const b = store.record({ subjectId: 'owner', conversationId: 'conv-1', episodeId: 'ep-1', context: CTX });
+    const a = store.record({
+      subjectId: 'owner',
+      conversationId: 'conv-1',
+      episodeId: 'ep-1',
+      context: CTX,
+    });
+    const b = store.record({
+      subjectId: 'owner',
+      conversationId: 'conv-1',
+      episodeId: 'ep-1',
+      context: CTX,
+    });
     assert.equal(a.id, b.id, '同内容返回同一条');
     assert.equal(store.all('owner').length, 1, '不重复落库');
     // 内容变 → 新的一条
-    const c = store.record({ subjectId: 'owner', conversationId: 'conv-1', episodeId: 'ep-1', context: [...CTX, { role: 'assistant', content: '为什么?' }] });
+    const c = store.record({
+      subjectId: 'owner',
+      conversationId: 'conv-1',
+      episodeId: 'ep-1',
+      context: [...CTX, { role: 'assistant', content: '为什么?' }],
+    });
     assert.notEqual(c.id, a.id);
     assert.equal(store.all('owner').length, 2);
   } finally {
@@ -51,9 +71,24 @@ test('interaction_context：record 按 context_hash 幂等(同内容二次 recor
 test('interaction_context：all(subjectId) 隔离 + byConversation', () => {
   const store = new SqliteInteractionContextStore(':memory:');
   try {
-    store.record({ subjectId: 'A', conversationId: 'c1', episodeId: 'e1', context: [{ role: 'user', content: 'a1' }] });
-    store.record({ subjectId: 'A', conversationId: 'c2', episodeId: 'e2', context: [{ role: 'user', content: 'a2' }] });
-    store.record({ subjectId: 'B', conversationId: 'c3', episodeId: 'e3', context: [{ role: 'user', content: 'b1' }] });
+    store.record({
+      subjectId: 'A',
+      conversationId: 'c1',
+      episodeId: 'e1',
+      context: [{ role: 'user', content: 'a1' }],
+    });
+    store.record({
+      subjectId: 'A',
+      conversationId: 'c2',
+      episodeId: 'e2',
+      context: [{ role: 'user', content: 'a2' }],
+    });
+    store.record({
+      subjectId: 'B',
+      conversationId: 'c3',
+      episodeId: 'e3',
+      context: [{ role: 'user', content: 'b1' }],
+    });
     assert.equal(store.all('A').length, 2);
     assert.equal(store.all('B').length, 1);
     assert.equal(store.all().length, 3, '全 subject');
@@ -66,7 +101,12 @@ test('interaction_context：all(subjectId) 隔离 + byConversation', () => {
 test('interaction_context：insert(便携包导入原样落库) + removeBySubject', () => {
   const store = new SqliteInteractionContextStore(':memory:');
   try {
-    const original = store.record({ subjectId: 'owner', conversationId: 'c1', episodeId: 'e1', context: CTX });
+    const original = store.record({
+      subjectId: 'owner',
+      conversationId: 'c1',
+      episodeId: 'e1',
+      context: CTX,
+    });
     const store2 = new SqliteInteractionContextStore(':memory:');
     try {
       store2.insert(original);
@@ -84,11 +124,16 @@ test('interaction_context：insert(便携包导入原样落库) + removeBySubjec
   }
 });
 
-test('interaction_context：注入 clock → createdAt = 注入值(铁律 3b:clock 只产时间戳)', () => {
+test('interaction_context：注入 clock → createdAt = 注入值，且只影响时间戳', () => {
   const fixed = '2026-07-16T08:00:00.000Z';
   const store = new SqliteInteractionContextStore(':memory:', () => new Date(fixed));
   try {
-    const c = store.record({ subjectId: 'owner', conversationId: 'c1', episodeId: 'e1', context: CTX });
+    const c = store.record({
+      subjectId: 'owner',
+      conversationId: 'c1',
+      episodeId: 'e1',
+      context: CTX,
+    });
     assert.equal(c.createdAt, fixed);
   } finally {
     store.close();

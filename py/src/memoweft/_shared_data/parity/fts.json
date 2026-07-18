@@ -1,0 +1,65 @@
+{
+  "cases": [
+    {
+      "ids": [
+        "c4",
+        "c3"
+      ],
+      "match": "\"coffee\""
+    },
+    {
+      "ids": [
+        "c3"
+      ],
+      "match": "\"hiking\""
+    },
+    {
+      "ids": [
+        "c1"
+      ],
+      "match": "\"户外运动\""
+    },
+    {
+      "ids": [
+        "c5"
+      ],
+      "match": "\"爬山爬山\""
+    },
+    {
+      "ids": [],
+      "match": "\"运动\""
+    },
+    {
+      "ids": [],
+      "match": "\"爬山\""
+    }
+  ],
+  "data": [
+    [
+      "c1",
+      "我喜欢爬山和户外运动"
+    ],
+    [
+      "c2",
+      "爬山是很好的运动"
+    ],
+    [
+      "c3",
+      "I like hiking and coffee"
+    ],
+    [
+      "c4",
+      "喝咖啡 coffee 每天喝"
+    ],
+    [
+      "c5",
+      "周末去爬山爬山爬山"
+    ],
+    [
+      "c6",
+      "不喜欢任何运动"
+    ]
+  ],
+  "ddl": "CREATE VIRTUAL TABLE cognition_fts USING fts5(cognition_id UNINDEXED, text, tokenize='trigram')",
+  "note": "FTS5 trigram + bm25 排序 golden;只锁 id 排序(见函数注释)。Python 建同款表+同数据,断言排序一致。"
+}

@@ -1,8 +1,8 @@
-"""证据存储层 —— 移植自 src/evidence/store.ts(node:sqlite 模式)。
+"""与 TypeScript evidence store 契约一致的 SQLite 证据存储层。
 
 职责:只做存储(写入/读取/时间窗查询),不做判断。授权位/双时态在 put 按 source_kind 规则补默认。
 幂等:带 origin_id 的重复写入只存一次。schema 已由 store/schema.py 在 open_db 建全(fresh 库全列)。
-async 取舍(D-0042):SQLite 同步直调(stdlib sqlite3),不引 aiosqlite。
+异步取舍：SQLite 通过 stdlib sqlite3 同步直调，不引入 aiosqlite。
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from ._rows import row_all, row_one
 
 
 def _from_row(r: sqlite3.Row) -> Evidence:
-    # 只读 Evidence 的 13 列,preceding_ai_context 【故意不读】(D-0033 结构墙)——见 preceding_ai_context_of。
+    # 只读 Evidence 的 13 列,preceding_ai_context 【故意不读】( 结构墙)——见 preceding_ai_context_of。
     return Evidence(
         id=r["id"],
         subject_id=r["subject_id"],
@@ -36,7 +36,7 @@ def _from_row(r: sqlite3.Row) -> Evidence:
 
 
 class SqliteEvidenceStore:
-    """证据存储(evidence/store.ts:120-300)。db = open_db 返回的共享连接;cfg 供 put 补授权默认。"""
+    """使用 open_db 共享连接的证据存储；cfg 为 put 提供默认授权。"""
 
     def __init__(self, db: sqlite3.Connection, cfg: Config = CONFIG, clock: Clock = system_clock) -> None:
         self._db = db
@@ -44,13 +44,13 @@ class SqliteEvidenceStore:
         self._clock = clock
 
     def put(self, inp: EvidenceInput) -> Evidence:
-        # 幂等:带 origin_id 且已存在 → 返回原条,不重复落库(evidence/store.ts:157-162)。
+        # origin_id 提供幂等性；已存在时返回原记录而不重复写入。
         if inp.origin_id:
             existing = self.find_by_origin(inp.origin_id)
             if existing is not None:
                 return existing
         recorded_at = to_iso_z(self._clock())
-        # 授权缺省按 source_kind 分流(红线下沉 put,evidence/store.ts:170-176):
+        # 授权默认值按 source_kind 分流（与 evidence/store.ts 的存储边界一致）：
         #   observed/tool → 各自保守默认;spoken/inferred → evidence_defaults + cloud_read_default。显式永远优先。
         if inp.source_kind == "observed":
             local_default = self._cfg.observed_defaults.allow_local_read
@@ -73,7 +73,7 @@ class SqliteEvidenceStore:
             occurred_at=inp.occurred_at if inp.occurred_at is not None else recorded_at,
             recorded_at=recorded_at,
             raw_content=inp.raw_content,
-            summary=inp.summary if inp.summary is not None else inp.raw_content,  # v1:摘要先等于原文
+            summary=inp.summary if inp.summary is not None else inp.raw_content,  # 缺省摘要使用原文。
             allow_local_read=inp.allow_local_read if inp.allow_local_read is not None else local_default,
             allow_cloud_read=inp.allow_cloud_read if inp.allow_cloud_read is not None else cloud_default,
             allow_inference=inp.allow_inference if inp.allow_inference is not None else infer_default,
@@ -124,7 +124,7 @@ class SqliteEvidenceStore:
         allow_cloud_read: Optional[bool] = None,
         allow_inference: Optional[bool] = None,
     ) -> Optional[Evidence]:
-        # 未提供的字段保持原值(复刻 TS `?? cur`);授权位布尔转 0/1 落库。
+        # 未提供字段保持原值，对应 TS `?? cur`；授权位布尔值以 0/1 存储。
         cur = self.get(id)
         if cur is None:
             return None
@@ -148,7 +148,7 @@ class SqliteEvidenceStore:
         return _from_row(r) if r is not None else None
 
     def preceding_ai_context_of(self, evidence_id: str) -> Optional[str]:
-        # 只 SELECT 这一列(不经 SELECT */from_row → AI 上文永不进 Evidence 读结构),3a 护栏。
+        # 仅查询该列，确保 AI 上下文不会进入 Evidence 读取结构。
         r = row_one(self._db, "SELECT preceding_ai_context FROM evidence WHERE id = ?", (evidence_id,))
         return r["preceding_ai_context"] if r is not None else None
 

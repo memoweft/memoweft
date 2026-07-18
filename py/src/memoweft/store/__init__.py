@@ -1,7 +1,6 @@
-"""存储层(SQLite)—— 移植自 src/store / 各 store(1.3 · D-0042 · Phase 1b)。
+"""与 TypeScript store 实现共享契约的 SQLite 存储层。
 
-parity:schema 结构对拍 shared/parity/schema.json;FTS5 trigram 排序对拍 shared/parity/fts.json。
-CRUD 逐操作在 Phase 1c(便携包)按需补。
+shared/parity/schema.json 验证 schema 结构，shared/parity/fts.json 验证 FTS5 trigram 排序。
 """
 from __future__ import annotations
 

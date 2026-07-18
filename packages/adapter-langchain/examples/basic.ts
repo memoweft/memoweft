@@ -3,16 +3,17 @@
  *
  * 一个工厂造读写四件套（`{ retriever, writeCallback, formatKnowledge, persistUserTurn }`），覆盖三条路径：
  *   ① 召回注入（读）= `retriever.invoke(query)` → `Document[]` → `formatKnowledge(docs)` 中性块 → 宿主拼进 prompt。
- *      硬事实：LangChain callbacks 是【观察-only】（CallbackManager 丢弃 handler 返回值），故召回【不能】走 callback，
- *      必须走 BaseRetriever（Runnable）——宿主拿到 Document[] 后自行拼进 prompt。
+ *      框架行为：LangChain callbacks 是【仅观察】（CallbackManager 丢弃 handler 返回值），故召回【不能】走 callback，
+ *      必须走 BaseRetriever（Runnable）——宿主获取 Document[] 后自行拼进 prompt。
  *   ② 用户原话（写）= `persistUserTurn({ text, originId })`——由宿主在调用点（召回注入前）持原话显式传入 → spoken 证据。
  *   ③ 工具结果（写）= `writeCallback` 挂进 `config.callbacks` → 链里工具跑完自动摄入 tool 证据
- *      （只 `handleToolEnd` 读工具【返回结果】，绝不碰调用意图/入参——铁律 3a）。
+ *      （只 `handleToolEnd` 读工具【返回结果】，绝不碰调用意图/入参——tool-result-only ingestion boundary）。
  *
- * 跑法：
- *   npm i @langchain/core memoweft @memoweft/adapter-langchain
+ * 从源码检出运行：
+ *   git clone https://github.com/memoweft/memoweft.git && cd memoweft
+ *   npm ci && npm run build && npm run build --workspace @memoweft/adapter-langchain
  *   # 真实 RAG 链还需一个 chat model（如 @langchain/openai 的 ChatOpenAI）+ 鉴权（OPENAI_API_KEY）
- *   node examples/basic.ts   # Node 22（--experimental-strip-types）；Node 23+ 原生剥类型直接 node examples/basic.ts
+ *   node --experimental-strip-types packages/adapter-langchain/examples/basic.ts
  * 只想看接线、不连模型：本示例的记忆三件（recall / persistUserTurn / writeCallback）都能离线单独调；
  *   真正的 `model.invoke` 段用注释示意（宿主自带 model），示例只渲染出"注入了记忆的 prompt"演示接线。
  */
@@ -23,8 +24,8 @@ import { createMemoWeftLangChain } from '@memoweft/adapter-langchain';
 // 1) 起一个 Core（这里用一次性内存库；真实宿主传自己的 dbPath）。
 const core = createMemoWeftCore({ dbPath: ':memory:' });
 
-// 2) 造 MemoWeft 读写四件套。lang 只影响注入块的说明文字（照 Core 中性措辞），不改 Core 行为。
-//    可选：onRecall 拿到完整召回面（带 id/contentType/score，explain 时还带 provenance 授权位）供宿主观测/自筛。
+// 2) 造 MemoWeft 读写四件套。lang 只影响注入块的说明文字（沿用 Core 中性措辞），不改 Core 行为。
+//    可选：onRecall 获取完整召回面（带 id/contentType/score，explain 时还带 provenance 授权位）供宿主观测/自筛。
 const mw = createMemoWeftLangChain(core, {
   lang: 'en',
   onRecall: (items) => console.log(`[memoweft] recalled ${items.length} cognition(s)`),
@@ -40,11 +41,11 @@ const prompt = ChatPromptTemplate.fromMessages([
 // 4) 一整轮对话：读写三条路径手动接线（自驱动最直观；备选的 LCEL 图接法见文末）。
 async function chatTurn(userText: string, turnId: string) {
   // ② 写：先存这轮【用户原话】(spoken)。turnId 是稳定幂等键，同一轮重放只落一条。
-  //    显式传原话（不从链事件回捞）：发给模型的 prompt 已被召回注入过，回捞会把注入的记忆当"用户原话"存回去（脏数据）。
+  //    显式传入原始文本，不从链事件重新派生；模型 prompt 已包含召回记忆，重新派生会将注入内容错误地存为用户证据。
   await mw.persistUserTurn({ text: userText, originId: turnId });
 
   // ① 读：召回相关记忆 → Document[] → 中性注入块（宿主自拼进 prompt）。
-  //    降级（§16.2）：召回超时/抛错 → retriever 返回 []（不注入）、对话不中断。
+  //    降级：召回超时/抛错 → retriever 返回 []（不注入）、对话不中断。
   const memory = mw.formatKnowledge(await mw.retriever.invoke(userText));
 
   // ③ 写：writeCallback 挂进 config.callbacks → 链里任何工具跑完自动落 tool 证据（只 handleToolEnd）。
@@ -84,6 +85,6 @@ core.close();
  *   // ② 用户原话仍需宿主在调用点显式 persistUserTurn（retriever 只读、不写原话）。
  *
  * 为何不实现 LangChain 的 BaseMemory：BaseMemory 是"把历史对话缓冲塞回 prompt"的会话记忆，语义与 MemoWeft
- *   "区分事实/猜测、置信度由规则算、只存用户原话 + 工具结果"的长期记忆正交——硬塞会把助手回话/注入记忆当历史存回
- *   （脏数据，违铁律 3a + D-0024 隐私）。故本适配器走 retriever（读）+ callback/闭包（写）三缝，而非 BaseMemory。
+ *   "区分事实/猜测、置信度由规则算、只存用户原话 + 工具结果"的长期记忆正交——强行接入会把助手回话/注入记忆当历史存回
+ *   （脏数据，违tool-result-only ingestion boundary +  隐私）。故本适配器走 retriever（读）+ callback/闭包（写）三缝，而非 BaseMemory。
  */

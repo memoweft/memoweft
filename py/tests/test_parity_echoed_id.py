@@ -1,4 +1,4 @@
-"""逐位对拍 resolveEchoedId(shared/parity/echoed-id.json):三级解析 + 护栏。"""
+"""验证 resolveEchoedId 三级解析与边界条件的跨语言一致性。"""
 from __future__ import annotations
 
 from conftest import parity

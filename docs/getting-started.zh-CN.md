@@ -29,11 +29,11 @@ import { createMemoWeftCore } from 'memoweft';
 const core = createMemoWeftCore({ dbPath: ':memory:' });
 
 // Store one thing the user said. This makes no model call — it just records raw evidence.
-await core.ingestUserMessage({ subjectId: 'alice', content: 'I am allergic to peanuts.' });
+await core.ingestUserMessage({ subjectId: 'alice', content: 'I own a red bicycle.' });
 
 // Read it back through the controlled API — you never touch the database directly.
 for (const e of core.memory.listEvidence({ subjectId: 'alice' })) {
-  console.log(e.sourceKind, '·', e.rawContent); // → spoken · I am allergic to peanuts.
+  console.log(e.sourceKind, '·', e.rawContent); // → spoken · I own a red bicycle.
 }
 
 core.close();
@@ -49,21 +49,25 @@ core.close();
 MEMOWEFT_LLM_BASE_URL=https://your-endpoint/v1
 MEMOWEFT_LLM_API_KEY=sk-...
 MEMOWEFT_LLM_MODEL=your-model
-# Optional: an embedder unlocks semantic recall. Without it, recall degrades to empty; the write path still runs.
+# 可选：嵌入器可启用语义召回。未配置时，召回降级为本地 FTS5 关键词检索。
 MEMOWEFT_EMBED_BASE_URL=...
 MEMOWEFT_EMBED_API_KEY=...
 MEMOWEFT_EMBED_MODEL=...
 ```
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 const core = createMemoWeftCore({ dbPath: './memory.db' });
 
-await core.ingestUserMessage({ subjectId: 'alice', content: 'I am allergic to peanuts.' });
+await core.ingestUserMessage({ subjectId: 'alice', content: 'I own a red bicycle.' });
 await core.updateProfile({ subjectId: 'alice' }); // distill → consolidate → attribute → index
 
-// The next turn recalls the allergy and injects it into the reply.
-const turn = await core.handleConversationTurn({ subjectId: 'alice', message: 'Any snack ideas?' });
+// 下一轮会召回这条自行车事实，并把它注入回复上下文。
+const turn = await core.handleConversationTurn({
+  subjectId: 'alice',
+  message: 'What color is my bicycle?',
+});
 console.log(turn.reply);
 ```
 
@@ -71,7 +75,9 @@ console.log(turn.reply);
 
 ## 下一步
 
+- **[30 秒离线运行](./demo-script.zh-CN.md)** —— 依赖安装后，无 key、无网络的确定性验证。
 - **[核心概念](./concepts/README.zh-CN.md)** —— 为什么把事实、猜测、冲突和过期状态分开来放。
 - **[接入配方](./recipes/)** —— 五分钟把 MemoWeft 接进 Vercel AI SDK 或 MCP server。
 - **[API 参考](./reference/memory-surface-contract.zh-CN.md)** —— 每个面向宿主的方法和数据形状。
-- **[跑 demo](./demo-script.md)** —— `npm run demo` 用 90 秒演示四大差异点（脚本暂为英文）。
+- **[参考宿主](./reference-host.zh-CN.md)** —— 本地单用户宿主演示，不是生产模板。
+- **[部署清单](./deployment.zh-CN.md#生产部署清单)** —— 真实宿主必须自行承担的运维和安全工作。

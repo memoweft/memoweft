@@ -1,6 +1,6 @@
-"""隐私读取门 —— 移植自 src/evidence/privacy.ts。
+"""与 TypeScript evidence privacy 契约保持一致的隐私读取边界。
 
-filter_readable_by_tier:把「当前模型 tier 不许读」的证据挡在喂给该模型的材料之外。
+filter_readable_by_tier:从提供给当前模型的材料中排除该 tier 无权读取的证据。
   cloud → 留 allow_cloud_read;local → 留 allow_local_read。缺省 cloud(最保守)。保序过滤。
 ⚠️ 只管读取权;是否可推画像是另一维 allow_inference,由 distill/consolidate/attribute 在本关之外另筛。
 """
@@ -23,7 +23,7 @@ _T = TypeVar("_T", bound=_Readable)
 
 
 def filter_readable_by_tier(items: list[_T], tier: ModelTier = "cloud") -> list[_T]:
-    """按 tier 保留「允许读」的项;其余原样顺序保留。缺省 cloud(最保守)。对齐 privacy.ts:16-21。"""
+    """按 tier 保留允许读取的项并维持顺序；未指定 tier 时使用保守的 cloud 默认值。"""
     if tier == "local":
         return [e for e in items if e.allow_local_read]
     return [e for e in items if e.allow_cloud_read]
@@ -38,5 +38,5 @@ _C = TypeVar("_C", bound=_CloudReadable)
 
 
 def filter_cloud_readable(items: list[_C]) -> list[_C]:
-    """已弃用别名(= tier='cloud');保兼容。对齐 privacy.ts:27。"""
+    """保留用于兼容的已弃用别名，等价于 tier='cloud'。"""
     return [e for e in items if e.allow_cloud_read]

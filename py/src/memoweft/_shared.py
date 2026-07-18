@@ -1,31 +1,37 @@
-"""定位并载入 ../shared 下的语言中立资产(1.3 · D-0042 · Phase 0 产物)。
+"""从包内生成的共享资产载入语言中立 JSON。
 
-TS 是唯一真相源;Python 载入同一份 shared/ JSON(而非手抄),由 shared 的守门测试保证不漂移。
-本模块只管「找到 repo/shared 并读 JSON」。打包分发时如何随包携带 shared 资产是后续(Phase 2+)的事。
+TS 是唯一真相源。``npm run shared:update`` 将其生成结果同步到仓库
+``shared/``（供跨语言开发）和本包的 ``_shared_data/``（供已安装发行版）。
+``npm run shared:check`` 验证两处均未漂移。
 """
 from __future__ import annotations
 
 import json
 from functools import lru_cache
-from pathlib import Path
+from importlib import resources
+from importlib.resources.abc import Traversable
+from pathlib import PurePosixPath
 from typing import Any
 
 
 @lru_cache(maxsize=1)
-def shared_dir() -> Path:
-    """从本文件向上找含 `shared/config-constants.json` 的目录(= 仓库根的 shared/)。找不到即报错。"""
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        candidate = parent / "shared" / "config-constants.json"
-        if candidate.is_file():
-            return parent / "shared"
-    raise FileNotFoundError(
-        "找不到 shared/config-constants.json —— Python parity 内核需与 TS 仓的 shared/ 同源"
-        "(见 D-0042 Phase 0)。运行 `npm run shared:update` 生成。"
-    )
+def shared_dir() -> Traversable:
+    """返回随 ``memoweft`` 分发的生成共享资产目录。"""
+    return resources.files("memoweft").joinpath("_shared_data")
+
+
+def _resource_path(relpath: str) -> Traversable:
+    """解析一个包内共享 JSON 相对路径，拒绝越界路径。"""
+    path = PurePosixPath(relpath)
+    if path.is_absolute() or ".." in path.parts or path.suffix != ".json":
+        raise ValueError(f"共享资产路径必须是相对 JSON 路径: {relpath!r}")
+    return shared_dir().joinpath(*path.parts)
 
 
 def load_shared(relpath: str) -> Any:
-    """读 shared/<relpath> 的 JSON(如 'config-constants.json' / 'parity/confidence.json')。"""
-    with (shared_dir() / relpath).open(encoding="utf-8") as f:
+    """读包内 shared/<relpath> JSON（如 config 常量或 parity 夹具）。"""
+    resource = _resource_path(relpath)
+    if not resource.is_file():
+        raise FileNotFoundError(f"找不到打包的共享资产: {relpath}")
+    with resource.open(encoding="utf-8") as f:
         return json.load(f)

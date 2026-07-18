@@ -1,14 +1,14 @@
 /**
- * asking 提示词 —— 带证据主动询问 + 冲突复看的措辞 system 提示词（§15.3 集中版本化）。
+ * asking 提示词：带证据主动询问与冲突复看的版本化 system 提示词。
  *
  * PROPOSE_ASK_PROMPT：对低置信【假设】亮证据、向用户求证（proposeAsk）。
  * REVISIT_CONFLICTS_PROMPT：对冲突中的认知并排亮正反两面、请用户澄清（revisitConflicts）。
- * 两者都只产「该问什么」，是否开口/最终措辞归宿主（cell 9）；提问不入证据库（规则 4）。
+ * 两者都只产「该问什么」，是否开口/最终措辞归宿主（public contract）；提问不入证据库。
  *
  * 版本变更日志：
  *   - v1：基线。
  *
- * 改动纪律（§15.3 / D-0009）：改内容必须 bump version、重跑 bench/eval-consolidation.mjs 全量、
+ * 改动纪律（提示词变更规则）：改内容必须 bump version、重跑 bench/eval-consolidation.mjs 全量、
  *   commit 正文附前后分数对比。否则 tests/prompts/registry.test.ts 的哈希快照会变红。
  */
 import type { VersionedPrompt } from '../prompts/types.ts';

@@ -1,0 +1,197 @@
+{
+  "en": {
+    "proposeAskLlm": {
+      "llmCalls": 1,
+      "messages": [
+        {
+          "content": "You are helping to understand the user. Below is a [low-confidence hypothesis] about the user and the [evidence] supporting it.\nGenerate one short, sincere, non-assertive question that presents the evidence and asks the user to confirm whether this hypothesis holds.\nOutput only this one question itself, with no explanation and no quotation marks.",
+          "role": "system"
+        },
+        {
+          "content": "[Hypothesis] 可能是熬夜导致没睡好\n[Evidence]\n- 凌晨3点还在打游戏\n- 我最近老熬夜",
+          "role": "user"
+        }
+      ],
+      "proposals": [
+        {
+          "cognitionId": "cog-hypo",
+          "confidence": 240,
+          "contradictSummaries": null,
+          "credStatus": "candidate",
+          "evidenceSummaries": [
+            "凌晨3点还在打游戏",
+            "我最近老熬夜"
+          ],
+          "hypothesis": "可能是熬夜导致没睡好",
+          "kind": "hypothesis",
+          "question": "你最近是不是熬夜比较多?"
+        }
+      ]
+    },
+    "proposeAskTemplate": {
+      "askedAt": "2026-01-01T00:00:00.000Z",
+      "llmCalls": 0,
+      "proposals": [
+        {
+          "cognitionId": "cog-hypo",
+          "confidence": 240,
+          "contradictSummaries": null,
+          "credStatus": "candidate",
+          "evidenceSummaries": [
+            "凌晨3点还在打游戏",
+            "我最近老熬夜"
+          ],
+          "hypothesis": "可能是熬夜导致没睡好",
+          "kind": "hypothesis",
+          "question": "I noticed \"凌晨3点还在打游戏\", \"我最近老熬夜\", which got me wondering: 可能是熬夜导致没睡好. Is that right?"
+        }
+      ]
+    },
+    "revisitLlm": {
+      "llmCalls": 1,
+      "messages": [
+        {
+          "content": "Below is a cognition about the user that [has both supporting and opposing evidence] and is in a conflicted state.\nGenerate one short, sincere, non-presumptive question that touches on both sides and asks the user to clarify which is actually the case.\nOutput only this one question itself, with no explanation and no quotation marks.",
+          "role": "system"
+        },
+        {
+          "content": "[Cognition] 喜欢早睡\n[Supporting evidence]\n- 我喜欢早睡\n[Opposing evidence]\n- 昨晚熬到3点",
+          "role": "user"
+        }
+      ],
+      "proposals": [
+        {
+          "cognitionId": "cog-conflict",
+          "confidence": 600,
+          "contradictSummaries": [
+            "昨晚熬到3点"
+          ],
+          "credStatus": "conflicted",
+          "evidenceSummaries": [
+            "我喜欢早睡"
+          ],
+          "hypothesis": "喜欢早睡",
+          "kind": "conflict",
+          "question": "你现在到底是早睡还是熬夜?"
+        }
+      ]
+    },
+    "revisitTemplate": {
+      "llmCalls": 0,
+      "proposals": [
+        {
+          "cognitionId": "cog-conflict",
+          "confidence": 600,
+          "contradictSummaries": [
+            "昨晚熬到3点"
+          ],
+          "credStatus": "conflicted",
+          "evidenceSummaries": [
+            "我喜欢早睡"
+          ],
+          "hypothesis": "喜欢早睡",
+          "kind": "conflict",
+          "question": "About \"喜欢早睡\" — on one hand \"我喜欢早睡\", but on the other hand \"昨晚熬到3点\". Which is it actually now?"
+        }
+      ]
+    }
+  },
+  "note": "asking:候选筛选(hypothesis/askedAt null/askableStatuses/confidenceBand)+ observed 优先 + 模板 vs LLM 措辞(trim/空回落)+ 两面证据 + askedAt 去重写",
+  "zh": {
+    "proposeAskLlm": {
+      "llmCalls": 1,
+      "messages": [
+        {
+          "content": "你在帮助理解用户。下面是一条关于用户的【低置信假设】和支撑它的【证据】。\n请生成一句简短、真诚、不武断的提问，亮出证据、向用户求证这条假设是否成立。\n只输出这一句问话本身，不要解释、不要引号。",
+          "role": "system"
+        },
+        {
+          "content": "【假设】可能是熬夜导致没睡好\n【证据】\n- 凌晨3点还在打游戏\n- 我最近老熬夜",
+          "role": "user"
+        }
+      ],
+      "proposals": [
+        {
+          "cognitionId": "cog-hypo",
+          "confidence": 240,
+          "contradictSummaries": null,
+          "credStatus": "candidate",
+          "evidenceSummaries": [
+            "凌晨3点还在打游戏",
+            "我最近老熬夜"
+          ],
+          "hypothesis": "可能是熬夜导致没睡好",
+          "kind": "hypothesis",
+          "question": "你最近是不是熬夜比较多?"
+        }
+      ]
+    },
+    "proposeAskTemplate": {
+      "askedAt": "2026-01-01T00:00:00.000Z",
+      "llmCalls": 0,
+      "proposals": [
+        {
+          "cognitionId": "cog-hypo",
+          "confidence": 240,
+          "contradictSummaries": null,
+          "credStatus": "candidate",
+          "evidenceSummaries": [
+            "凌晨3点还在打游戏",
+            "我最近老熬夜"
+          ],
+          "hypothesis": "可能是熬夜导致没睡好",
+          "kind": "hypothesis",
+          "question": "我看到「凌晨3点还在打游戏」、「我最近老熬夜」，所以在想：可能是熬夜导致没睡好。是这样吗？"
+        }
+      ]
+    },
+    "revisitLlm": {
+      "llmCalls": 1,
+      "messages": [
+        {
+          "content": "下面是一条关于用户的认知，它【同时有支撑和反对的证据】，处于矛盾状态。\n请生成一句简短、真诚、不预设立场的提问，把两边都点一下、请用户澄清到底是哪样。\n只输出这一句问话本身，不要解释、不要引号。",
+          "role": "system"
+        },
+        {
+          "content": "【认知】喜欢早睡\n【支撑证据】\n- 我喜欢早睡\n【反对证据】\n- 昨晚熬到3点",
+          "role": "user"
+        }
+      ],
+      "proposals": [
+        {
+          "cognitionId": "cog-conflict",
+          "confidence": 600,
+          "contradictSummaries": [
+            "昨晚熬到3点"
+          ],
+          "credStatus": "conflicted",
+          "evidenceSummaries": [
+            "我喜欢早睡"
+          ],
+          "hypothesis": "喜欢早睡",
+          "kind": "conflict",
+          "question": "你现在到底是早睡还是熬夜?"
+        }
+      ]
+    },
+    "revisitTemplate": {
+      "llmCalls": 0,
+      "proposals": [
+        {
+          "cognitionId": "cog-conflict",
+          "confidence": 600,
+          "contradictSummaries": [
+            "昨晚熬到3点"
+          ],
+          "credStatus": "conflicted",
+          "evidenceSummaries": [
+            "我喜欢早睡"
+          ],
+          "hypothesis": "喜欢早睡",
+          "kind": "conflict",
+          "question": "关于\"喜欢早睡\"——一方面「我喜欢早睡」，另一方面又「昨晚熬到3点」。现在到底是哪样呢？"
+        }
+      ]
+    }
+  }
+}

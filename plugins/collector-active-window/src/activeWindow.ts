@@ -1,7 +1,7 @@
 /**
- * 活动窗口采集器 · 契约 + 标准化映射（Collector Plugin，架构归位后从 Core 迁出）。
+ * 活动窗口采集器 · 契约 + 标准化映射（Collector Plugin）。
  *
- * 边界（boundaries.md §4.1 / 四步定案 #1）：MemoWeft Core 只管"认知 + 通用摄入口（generic Observation）"；
+ * 边界：MemoWeft Core 只管"认知 + 通用摄入口（generic Observation）"；
  * 从操作系统抓窗口、把窗口样本翻译成 Observation，都是【采集插件】的知识，不属于 Core。
  *
  * 本文件是插件对 Core 的产出契约：把一条活动窗口样本映射成通用 Observation（纯函数，可测），
@@ -14,7 +14,7 @@ import type { Observation } from 'memoweft';
 export interface ActiveWindowSample {
   /** 应用名，例 "VS Code"。 */
   app: string;
-  /** 窗口标题，例 "memoweft"。本版不读正文，只取标题。 */
+  /** 窗口标题，例 "memoweft"。采集器不读正文，只取标题。 */
   title: string;
   /** 停留时长（秒），采集器算好。 */
   durationSec: number;

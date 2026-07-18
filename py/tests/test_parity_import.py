@@ -1,7 +1,7 @@
 """importBundle 完整 ImportPlan parity:与 TS(shared/parity/import.json)一致。
 
 钉 dryRun 只算不写 / merge 写入 / 幂等 duplicates / 非法包拒写 / originId 撞库丢悬空 join + 告警 /
-悬空 correctsEvidenceId 置空 + 告警(P2-旁)。
+悬空 correctsEvidenceId 置空并记录告警。
 """
 from __future__ import annotations
 

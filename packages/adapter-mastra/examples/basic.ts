@@ -34,5 +34,5 @@ const agent = new Agent({
   outputProcessors: [memory],
 });
 
-// 4) 之后照常用 agent。给消息带稳定 threadId 即启用 0.6 会话上下文（一句「是的」能对着上一句被理解）。
+// 4) 之后正常使用 agent。给消息带稳定 threadId 即启用 0.6 会话上下文（一句「是的」能对着上一句被理解）。
 export { agent };

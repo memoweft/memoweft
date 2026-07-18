@@ -1,51 +1,69 @@
-# MemoWeft 四幕 demo · 录屏脚本（Phase 4 · §17）
+# MemoWeft's four-scene offline demo
 
-90 秒讲清 MemoWeft 的差异点：**说过的话被记住、纠正有痕、矛盾被看见、情绪会过去而事实会留下**。
-无 API key、无网络、确定性复现。demo 只经公共 API（`import 'memoweft'`）调用核心——它同时是 API 的活体验收。
+**English** | [简体中文](./demo-script.zh-CN.md)
 
-## 一条命令
+This is the quickest proof of MemoWeft's core rules: **what was said is remembered, corrections retain history, conflicts remain visible, and transient states fade while durable facts remain**. It is deterministic and offline: no API key, no network, and no persistent database.
+
+## Run it in about 30 seconds
+
+Requires Node.js 24+ and a repository checkout with dependencies already installed.
 
 ```bash
-npm run demo                      # 顺序演完四幕（先 build，再 node examples/demo.ts）
-npm run demo -- --act 4           # 只演第 4 幕（自动前置第 1 幕建基础事实）
-npm run demo -- --fast-forward 30d  # 第 4 幕快进的时长（缺省 7d）
+npm run build
+node examples/no-key-demo.ts
 ```
 
-确定性靠三件套：注入**固定可前进的 clock**（`CreateCoreOptions.clock`）+ 离线 stub LLM（脚本内写死输出）+ 简易词匹配召回器。真实宿主插自己的模型与向量召回器。
+The script uses an in-memory SQLite database and a stub LLM defined in the source. It writes no database file. Its output includes a stated fact, a visible conflict, and a low-confidence inference; that is the shortest full write-path demonstration.
 
-## 逐幕讲稿
+For the longer four-scene walkthrough below, run:
 
-### 幕 1 · 记住 —— *说过的话被记住，且带置信度*
-- 输入：`I am allergic to peanuts.`
-- 动作：`ingest → updateProfile(distill → consolidate)` 固化为 `fact`。
-- 画面：认知状态表出现 `The user is allergic to peanuts · fact · 600 · limited`；`recall("allergic peanuts")` 把它带回，**置信度由 MemoWeft 自算、不采信 LLM 自报**。
+```bash
+npm run demo
+```
 
-### 幕 2 · 纠正 —— *纠正有痕，历史可溯*
-- 输入：`Actually it is not me — my sister is the one allergic to peanuts.`
-- 动作：`consolidate.correct` 把旧「user allergic」标 `invalidAt`（**失效但不删除**），采纳新「sister allergic」。
-- 画面：旧认知带 `(invalidated, kept)` 仍在表上——历史可溯，不是被悄悄覆盖。
+`npm run demo -- --act 4` runs only scene 4 (with scene 1 prepared first). `npm run demo -- --fast-forward 30d` changes the scene-4 clock jump (default: `7d`).
 
-### 幕 3 · 矛盾 —— *矛盾不是被谁悄悄赢了，而是被看见*
-- 输入：`I love americano.` → 行为：`ordered milk tea again`。
-- 动作：`consolidate.conflict` 把「likes americano」标 `conflicted`，两条都留、不裁决任何一方。
-- 画面：`The user likes americano · preference · 600 · conflicted !! CONFLICT`。
+## Why it is deterministic
 
-### 幕 4 · 时间 —— *情绪会过去，事实会留下*
-- 输入：`I have been really stressed and in a low mood this week.` → `--fast-forward 7d`。
-- 动作：注入 clock 前进 → 读路径 now 前进 → 情绪 `state` 的有效置信衰减到门槛下、不再被召回；`fact`/`preference` 不衰减、留存。
-- 画面：`recall(now)` 有「stressed / low mood」，`recall(+7d)` 里它淡出，花生（sister）与偏好留下。
+The four-scene script injects a fixed, advanceable clock (`CreateCoreOptions.clock`), an offline stub LLM with fixed outputs, and a simple keyword retriever. A production host supplies its own model and retriever. When no embedder is configured in the normal Core setup, MemoWeft uses local FTS5 keyword retrieval; semantic/vector recall is optional.
 
-## 确定性验收（§17.2）
+## The four scenes
 
-同一环境连跑两次，输出逐字一致：
+### 1. Remember — a statement becomes a confidence-scored fact
+
+- Input: `I own a red bicycle.`
+- Action: `ingest → updateProfile (distill → consolidate)` forms a `fact`.
+- Result: `recall("red bicycle")` returns it. MemoWeft computes confidence itself; it does not trust a model-supplied score.
+
+### 2. Correct — history is retained
+
+- Input: `Actually it isn't mine — my sister owns the red bicycle.`
+- Action: `consolidate.correct` marks the old user-ownership cognition with `invalidAt` and accepts the new sister-ownership cognition.
+- Result: the old cognition remains inspectable as invalidated rather than being silently overwritten.
+
+### 3. Conflict — neither side quietly wins
+
+- Input: `I love americano.` followed by `ordered milk tea again`.
+- Action: `consolidate.conflict` marks the americano preference as `conflicted`.
+- Result: both accounts remain visible; MemoWeft does not make an ungrounded choice for the user.
+
+### 4. Time — a state fades; facts and preferences persist
+
+- Input: `I have been really stressed and in a low mood this week.` then `--fast-forward 7d`.
+- Action: the injected clock advances. The effective confidence of the transient `state` decays below the recall threshold.
+- Result: the mood no longer appears in recall after the jump, while the sister's bicycle fact and preference remain.
+
+## Verify deterministic output
 
 ```bash
 npm run build
 node examples/demo.ts > /tmp/run1.txt
 node examples/demo.ts > /tmp/run2.txt
-diff /tmp/run1.txt /tmp/run2.txt   # 期望：无输出（diff 为空）
+diff /tmp/run1.txt /tmp/run2.txt
 ```
 
-## README GIF 位
+An empty `diff` output is the expected result.
 
-README 顶部预留一段 demo GIF：录制 `npm run demo` 的四幕终端输出（约 90 秒）。实际录制由人类执行（如 `asciinema` / `vhs`）。生成后把 GIF 放 `docs/assets/`，在 README hero 区嵌入。
+## Recording note
+
+To record the terminal walkthrough, run `npm run demo` with a terminal recorder such as asciinema or VHS. Store a resulting asset under `docs/assets/` before linking it from the README.

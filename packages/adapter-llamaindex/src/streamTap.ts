@@ -6,19 +6,19 @@
  *   ② 用户原话 = 由宿主在【注入前】持有的原话，经 extras.userMessage 显式传入 → ingestUserMessage(spoken)；
  *   ③ 工具结果 = 扫流里的事件，【只认】`agentToolCallResultEvent`（工具真实【返回结果】）→ ingestToolResult。
  *
- * 铁律 3a（代码级 by-construction·物理隔离）：③ 只用 `agentToolCallResultEvent.include(ev)` 判别【结果事件】，
+ * tool-result-only ingestion boundary（代码级 by-construction·物理隔离）：③ 只用 `agentToolCallResultEvent.include(ev)` 判别【结果事件】，
  *   取 `ev.data.toolOutput.result`（实测 `AgentToolCallResult.toolOutput: ToolResult{ id,result,isError }`）。
  *   `agentToolCallEvent`（LLM 的【调用意图 / 入参 toolKwargs】）是【另一个事件类型】——本适配器【绝不】匹配它，
- *   它只被原样 re-yield、从不进入摄入。不是"匹配了但不落库"，是"判别器根本不认它" → 调用意图物理上进不了写路径。
+ *   它仅被原样 re-yield，事件判别器从类型层面将其排除在写路径之外。
  *
- * 为什么用户原话由宿主显式传、不从流里回捞：发给模型的输入已被召回注入过（memoryBlock 的 'memory' 消息），
- *   从流里回捞会把注入的记忆当"用户原话"存回去（脏数据）。故原话必须由宿主在调用点（注入前）持有并显式传入。
+ * 用户原话必须由宿主在注入前捕获并显式传入。模型输入已包含 memoryBlock 注入的记忆，
+ *   因此从流事件派生用户原话会造成召回内容被错误地重新存储为用户证据。
  *
- * 降级 §16.2：摄入走 `runIngestWithRetry`（真错重试一次、超时不重试）；【绝不向 stream 抛 / 中断】——
+ * 降级：摄入走 `runIngestWithRetry`（真错重试一次、超时不重试）；【绝不向 stream 抛 / 中断】——
  *   re-yield 完全不受摄入成败影响，摄入 promise 收集到末尾统一 settle（runIngestWithRetry 从不 reject）。
  *
- * 隐私：只落工具【返回结果】文本（不落调用意图）→ `core.ingestToolResult` → sourceKind='tool' → 默认不上云；
- *   用户原话 → `core.ingestUserMessage` → spoken（不涉上云授权位·红线）。
+ * 写路径边界：只落工具【返回结果】文本（不落调用意图）→ `core.ingestToolResult` → sourceKind='tool' → 默认不进入内建云写模型 prompt；
+ *   用户原话 → `core.ingestUserMessage` → spoken（不传云读取授权覆盖）。
  *
  * 类型/值 import 自 `@llamaindex/workflow`（peer + dev 依赖）：`agentToolCallResultEvent` 是运行时值（判别器），
  *   故为值 import；`WorkflowEventData` 仅签名用，用 `import type`（该包 `export *` 了 `@llamaindex/workflow-core`）。
@@ -35,7 +35,7 @@ type StreamTapCore = Pick<MemoWeftCore, 'ingestUserMessage' | 'ingestToolResult'
 type UserIngestOnly = Pick<MemoWeftCore, 'ingestUserMessage'>;
 
 /**
- * ingest（写路径）执行器：契约 §16.2——【真错】重试一次再放弃；仍失败经 logger 记一条结构化事件后【静默吞】。
+ * ingest（写路径）执行器：契约 ——【真错】重试一次再放弃；仍失败经 logger 记一条结构化事件后【静默吞】。
  * 绝不向 stream / 调用方抛（本函数从不 reject）。ingest 的降级 reason 恒为 'error'（含超时也归 error）。
  * 幂等前提：重试去重靠【稳定非空 originId】（spoken 用宿主 turnId、tool 用 toolId）。originId=null 时 Core 不去重，
  *   故【超时不重试】：withTimeout 只 race、不取消底层写，超时后底层 ingest 可能仍提交，盲重试会重复落库。
@@ -86,7 +86,7 @@ export function toolOutputText(result: unknown): string | null {
 /** `persistFromAgentStream` 的每轮附加配置。 */
 export interface PersistFromAgentStreamExtras {
   /**
-   * 用户这轮说的原话（由宿主在发起 `runStream` 时就持有的那份，注入前，别从流事件里回捞）。
+   * 宿主在发起 `runStream` 前捕获的用户原话；该值不得从流事件中派生。
    * 空串 / 全空白跳过（不落 spoken）。
    */
   userMessage: string;
@@ -102,7 +102,7 @@ export interface PersistFromAgentStreamExtras {
    * 传正数则每次尝试套 withTimeout，超时按失败计入「重试一次」（超时不重试，见 runIngestWithRetry）。
    */
   ingestTimeoutMs?: number;
-  /** 注入式 logger（契约 §16.2）：一次重试后仍失败降级时记结构化事件。缺省不注入 = 静默降级。 */
+  /** 注入式 logger（降级契约）：一次重试后仍失败降级时记结构化事件。缺省不注入 = 静默降级。 */
   logger?: MemoWeftLogger;
 }
 
@@ -113,13 +113,13 @@ export interface PersistFromAgentStreamExtras {
  *   1. 先摄【用户原话】(② spoken；空白跳过)——在迭代流之前，呼应「注入前持有的原话」；
  *   2. `for await` 遍历上游流：每个事件【先原样 yield】(消费者不受摄入影响)，再判别——
  *        · `agentToolCallResultEvent.include(ev)` → 取 `ev.data.toolOutput.result` → ingestToolResult(③，originId=toolId)；
- *        · 其余事件（含 `agentToolCallEvent` 调用意图）→ 只 re-yield、【不摄】(铁律 3a)。
+ *        · 其余事件（含 `agentToolCallEvent` 调用意图）→ 只 re-yield、【不摄】(tool-result-only ingestion boundary)。
  *   3. 摄入 promise 全程收集、末尾统一 settle——不阻塞 re-yield（runIngestWithRetry 从不 reject，绝不中断 stream）。
  *
  * @param core 只需持有 ingestUserMessage / ingestToolResult 两方法的 Core（或其最小实现）。
- * @param stream `agent.runStream(userMsg)` 返回的事件流（任何 `AsyncIterable<WorkflowEventData>` 皆可，便于测试喂构造流）。
+ * @param stream `agent.runStream(userMsg)` 返回的事件流（任何 `AsyncIterable<WorkflowEventData>` 皆可，便于测试传入构造流）。
  * @param extras userMessage（必填·注入前原话）+ originId / subjectId / ingestTimeoutMs / logger。
- * @returns async generator：逐个 re-yield 上游事件（`T` 原封不动透传，宿主拿去照常消费）。
+ * @returns async generator：逐个 re-yield 上游事件（`T` 原封不动透传，宿主拿去正常消费）。
  */
 export async function* persistFromAgentStream<T extends WorkflowEventData<unknown>>(
   core: StreamTapCore,
@@ -131,11 +131,12 @@ export async function* persistFromAgentStream<T extends WorkflowEventData<unknow
   // 摄入 promise 收集处：runIngestWithRetry 从不 reject，收集起来末尾统一 await，不阻塞 re-yield。
   const pending: Promise<void>[] = [];
 
-  // ② 用户原话（spoken）：注入前持有的原话，空白跳过。不传授权位（spoken 不涉上云授权位·红线）。
+  // ② 用户原话（spoken）：注入前持有的原话，空白跳过，不传云读取授权覆盖。
   if (typeof userMessage === 'string' && userMessage.trim() !== '') {
     pending.push(
       runIngestWithRetry(
-        () => core.ingestUserMessage({ content: userMessage, originId: originId ?? null, subjectId }),
+        () =>
+          core.ingestUserMessage({ content: userMessage, originId: originId ?? null, subjectId }),
         ingestTimeoutMs,
         logger,
       ),
@@ -144,10 +145,10 @@ export async function* persistFromAgentStream<T extends WorkflowEventData<unknow
 
   try {
     for await (const event of stream) {
-      // 【先原样 re-yield】——消费者第一时间拿到事件，完全不受下面摄入成败影响（透传纪律 + §16.2 不中断）。
+      // 【先原样 re-yield】——消费者第一时间获取事件，完全不受下面摄入成败影响（透传纪律 +  不中断）。
       yield event;
 
-      // ③ 工具结果：只认 agentToolCallResultEvent（结果事件）。铁律 3a：agentToolCallEvent（调用意图）不是本类型 → 不匹配、不摄。
+      // ③ 工具结果：只认 agentToolCallResultEvent（结果事件）。tool-result-only ingestion boundary：agentToolCallEvent（调用意图）不是本类型 → 不匹配、不摄。
       if (agentToolCallResultEvent.include(event)) {
         const text = toolOutputText(event.data.toolOutput?.result);
         if (text !== null && text.trim() !== '') {
@@ -172,7 +173,7 @@ export async function* persistFromAgentStream<T extends WorkflowEventData<unknow
 }
 
 export interface PersistUserTurnInput {
-  /** 用户这轮说的原话（由宿主在发起 runStream 前就持有的那份，别从流事件里回捞）。 */
+  /** 宿主在发起 runStream 前捕获的用户原话；该值不得从流事件中派生。 */
   text: string;
   /**
    * 稳定幂等键：同一轮对话给同一个 originId，重复摄入也只落一条。
@@ -185,7 +186,7 @@ export interface PersistUserTurnInput {
   occurredAt?: string;
   /** ingest 单次尝试超时（毫秒，可选，同 PersistFromAgentStreamExtras.ingestTimeoutMs）。 */
   ingestTimeoutMs?: number;
-  /** 注入式 logger（契约 §16.2）：一次重试后仍失败降级时记结构化事件。 */
+  /** 注入式 logger（降级契约）：一次重试后仍失败降级时记结构化事件。 */
   logger?: MemoWeftLogger;
 }
 
@@ -196,12 +197,15 @@ export interface PersistUserTurnInput {
  *   走 `persistFromAgentStream` 的宿主则由其内部摄原话（extras.userMessage），无须再调本函数。
  *
  * 为什么由宿主显式传原话、不从流解析：发给模型的输入已被召回注入过（memoryBlock 的 'memory' 消息）——
- *   从流里回捞会把注入的记忆当"用户原话"存回去（脏数据）。故原话必须由宿主在调用点（注入前）持有并显式传入。
+ *   从流事件派生该值会将注入的记忆错误地重新存储为用户证据，因此必须由宿主在注入前显式传入。
  *
- * Core 纪律：只存【用户原话】(spoken)、不存助手回话；不传任何授权位（spoken 本就不涉上云授权位·红线）。
+ * Core 约束：只存用户原话（spoken），不存助手回复，也不传云读取授权覆盖。
  * 空串 / 全空白不落库。降级不中断：失败经一次重试仍失败 → logger 记事件、静默吞，绝不向宿主抛。
  */
-export async function persistUserTurn(core: UserIngestOnly, input: PersistUserTurnInput): Promise<void> {
+export async function persistUserTurn(
+  core: UserIngestOnly,
+  input: PersistUserTurnInput,
+): Promise<void> {
   const text = input.text;
   if (typeof text !== 'string' || text.trim() === '') return;
   await runIngestWithRetry(
@@ -212,7 +216,7 @@ export async function persistUserTurn(core: UserIngestOnly, input: PersistUserTu
         subjectId: input.subjectId,
         hostId: input.hostId,
         occurredAt: input.occurredAt,
-        // sourceKind 不传：Core 缺省 'spoken'；不传授权位（spoken 不涉上云授权位·红线）。
+        // sourceKind 不传：Core 默认使用 spoken；不传云读取授权覆盖。
       }),
     input.ingestTimeoutMs,
     input.logger,

@@ -1,7 +1,7 @@
-"""逐位对拍 decayFactor / effectiveConfidence(shared/parity/decay.json)。
+"""验证 decayFactor / effectiveConfidence 与 shared/parity/decay.json 的跨语言一致性。
 
-effectiveConfidence 是整数、逐位精确(parity 杀手①:Math.round 半值向上,已用 floor(x+0.5))。
-decayFactor 是 double:2^x 的 IEEE754 在 JS/Python 间**理论**逐位一致,实测容极小 ULP 差(用极紧 isclose)。
+effectiveConfidence 是整数，必须逐值一致；Math.round 的半值向上语义由 floor(x+0.5) 实现。
+decayFactor 是 double；不同 libm 实现可能产生极小 ULP 差异，因此使用严格的 isclose 容差。
 """
 from __future__ import annotations
 

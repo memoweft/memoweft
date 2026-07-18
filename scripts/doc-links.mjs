@@ -35,7 +35,10 @@ function headingsOf(file) {
   const out = new Set();
   let inFence = false;
   for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
-    if (/^(```|~~~)/.test(line)) { inFence = !inFence; continue; }
+    if (/^(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
     if (inFence) continue;
     const m = line.match(/^#{1,6}\s+(.*)$/);
     if (m) out.add(slug(m[1]));
@@ -45,31 +48,52 @@ function headingsOf(file) {
 }
 
 const linkRe = /\[[^\]]*\]\(([^)]+)\)/g;
-let deadPath = 0, deadAnchor = 0, checked = 0;
+let deadPath = 0,
+  deadAnchor = 0,
+  checked = 0;
 for (const file of files) {
   const rel = relative(ROOT, file).replace(/\\/g, '/');
   let inFence = false;
   for (const raw of readFileSync(file, 'utf8').split(/\r?\n/)) {
-    if (/^(```|~~~)/.test(raw)) { inFence = !inFence; continue; }
+    if (/^(```|~~~)/.test(raw)) {
+      inFence = !inFence;
+      continue;
+    }
     if (inFence) continue;
-    let m; linkRe.lastIndex = 0;
+    let m;
+    linkRe.lastIndex = 0;
     while ((m = linkRe.exec(raw))) {
       const target = m[1].trim().split(/\s+/)[0];
       if (/^(https?:|mailto:|tel:)/.test(target)) continue;
       if (target.startsWith('#')) {
         checked++;
-        if (!headingsOf(file).has(target.slice(1).toLowerCase())) { console.log(`ANCHOR?  ${rel} -> ${target}`); deadAnchor++; }
+        if (!headingsOf(file).has(target.slice(1).toLowerCase())) {
+          console.log(`ANCHOR?  ${rel} -> ${target}`);
+          deadAnchor++;
+        }
         continue;
       }
       const [pathPart, anchor] = target.split('#');
       const abs = resolve(dirname(file), pathPart);
       checked++;
-      if (!existsSync(abs)) { console.log(`DEAD     ${rel} -> ${target}`); deadPath++; continue; }
+      if (!existsSync(abs)) {
+        console.log(`DEAD     ${rel} -> ${target}`);
+        deadPath++;
+        continue;
+      }
       if (anchor && abs.endsWith('.md') && statSync(abs).isFile()) {
-        if (!headingsOf(abs).has(anchor.toLowerCase())) { console.log(`ANCHOR?  ${rel} -> ${target}`); deadAnchor++; }
+        if (!headingsOf(abs).has(anchor.toLowerCase())) {
+          console.log(`ANCHOR?  ${rel} -> ${target}`);
+          deadAnchor++;
+        }
       }
     }
   }
 }
-console.log(`\nfiles=${files.length} links=${checked} deadPath=${deadPath} deadAnchor(warn)=${deadAnchor}`);
-if (deadPath > 0) { console.error(`\n${deadPath} dead link(s) — see DEAD lines above.`); process.exit(1); }
+console.log(
+  `\nfiles=${files.length} links=${checked} deadPath=${deadPath} deadAnchor(warn)=${deadAnchor}`,
+);
+if (deadPath > 0) {
+  console.error(`\n${deadPath} dead link(s) — see DEAD lines above.`);
+  process.exit(1);
+}

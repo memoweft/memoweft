@@ -1,10 +1,10 @@
 /**
- * 图谱化记忆视图 · 数据模型（Phase 6-B G1）。
+ * 图谱化记忆视图 · 数据模型。
  *
  * 把三层数据（evidence → event → cognition）+ 溯源关系转成前端力导向图能直接吃的
  * { nodes, edges } payload。后端统一产出，前端不直接读库拼图（借鉴 Cytoscape：图展示与图数据结构分开）。
  *
- * 诚实边界（本轮核对真数据模型）：
+ * 边界（与当前数据模型一致）：
  *  - 能从库里【导出】的边：belongs_to_subject / distilled_into / supports / contradicts。
  *  - conflicts_with / corrects（认知↔认知）当前【数据没存】——cognition 表没有指向"和谁冲突/被谁纠正"的字段，
  *    只有 credStatus='conflicted' 标记和 invalidAt。故 V1 不生成这两种边（枚举保留，等数据模型补了再产）：
@@ -42,7 +42,7 @@ export interface MemoryGraphNode {
   createdAt?: string;
   updatedAt?: string;
   invalidAt?: string | null;
-  /** 仅 cognition：归档时间（批次2；默认被过滤，includeArchived=true 时可见）。 */
+  /** 仅 cognition：归档时间（默认被过滤，includeArchived=true 时可见）。 */
   archivedAt?: string | null;
   // 渲染提示（前端可覆盖）
   val?: number;
@@ -66,7 +66,7 @@ export interface MemoryGraphStats {
   conflictedCount: number;
   hypothesisCount: number;
   observedEvidenceCount: number;
-  /** tool（工具执行结果）证据节点数（AD-3/D-0013，additive）。 */
+  /** tool（工具执行结果）证据节点数。 */
   toolEvidenceCount: number;
 }
 

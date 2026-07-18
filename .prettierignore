@@ -1,0 +1,3 @@
+# Generated deterministically by scripts/gen-shared-assets.mjs.
+shared/**/*.json
+py/src/memoweft/_shared_data/**/*.json

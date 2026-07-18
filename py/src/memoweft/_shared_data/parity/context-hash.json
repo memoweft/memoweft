@@ -1,0 +1,59 @@
+{
+  "cases": [
+    {
+      "expected": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "input": []
+    },
+    {
+      "expected": "b03d228fdf33e7c81a9a7ea3eadadcf2cdcb98823fe93c669b8f0db42e0fa8a0",
+      "input": [
+        {
+          "content": "hi",
+          "role": "user"
+        }
+      ]
+    },
+    {
+      "expected": "ff695eb92f757cecfe4af496d65196323be5a96dfa9d048725e5d62ecbe04518",
+      "input": [
+        {
+          "content": "你喜欢爬山吧?",
+          "role": "assistant"
+        },
+        {
+          "content": "是的",
+          "role": "user"
+        }
+      ]
+    },
+    {
+      "expected": "684a8952d97c563e504b54d37bcd1dd80695dca63e4f97f93860b07dfa84097b",
+      "input": [
+        {
+          "content": "{\"result\": 42}",
+          "role": "tool"
+        }
+      ]
+    },
+    {
+      "expected": "38c591827d7f28811336cf43b3e036d497edebf09c54d1bfe8d04589f657b11a",
+      "input": [
+        {
+          "content": "emoji 😀 和中文",
+          "role": "user"
+        }
+      ]
+    },
+    {
+      "expected": "1e82f68f8ba9f895d023ea00edb05c4ff17bb90faf052d63e9fa1f232b4b371f",
+      "input": [
+        {
+          "content": "含\"引号\"和\\反斜杠\n换行",
+          "role": "user"
+        }
+      ]
+    }
+  ],
+  "fn": "hashContext",
+  "note": "sha256(JSON.stringify(context));Python 用 json.dumps(ensure_ascii=False, separators=(\",\",\":\")).encode(\"utf-8\") 对齐字节"
+}

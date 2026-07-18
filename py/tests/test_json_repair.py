@@ -64,7 +64,7 @@ def test_two_fails_returns_none() -> None:
 
 def test_nan_forces_retry_library_does_not_rescue() -> None:
     # '{"a":NaN}' 首过 parse 失败(parse_constant 拒 NaN)→ 触发重试。
-    # 这坐实 D-0043 偏离决策:若用 json-repair 库首过抢救 NaN→null,会不重试、call_count 从 2 变 1。
+    # 保持严格 JSON 语义：若第三方修复库把 NaN 转成 null，重试次数会从 2 变成 1。
     llm = _StubLLM(['{"a":NaN}', "still bad"])
     logs: list[str] = []
     r = parse_json_object_with_repair(llm, _msgs(), log=logs.append, lang="en")

@@ -1,5 +1,5 @@
 /**
- * 阶段 4-A 档1 离线护栏：通用观察摄入口 + 活动窗口映射。
+ *  observation mode 离线护栏：通用观察摄入口 + 活动窗口映射。
  * 验收：observed 默认授权（本地可读 / 默认不上云 / 可推画像）、originId 幂等、显式授权被尊重。
  */
 import { test } from 'node:test';
@@ -21,10 +21,11 @@ function obs(over: Partial<Observation> = {}): Observation {
 test('ingest：批量落 observed + observed 默认授权（本地可读 / 默认不上云 / 可推画像）', () => {
   const ev = new SqliteEvidenceStore(':memory:');
   try {
-    const r = ingestObservations('owner', [
-      obs(),
-      obs({ occurredAt: '2026-06-23T04:00:00.000Z', content: '在 浏览器 停留约 10 分钟' }),
-    ], { evidenceStore: ev });
+    const r = ingestObservations(
+      'owner',
+      [obs(), obs({ occurredAt: '2026-06-23T04:00:00.000Z', content: '在 浏览器 停留约 10 分钟' })],
+      { evidenceStore: ev },
+    );
     assert.equal(r.stored.length, 2, '两条都落库');
     assert.equal(r.skipped, 0);
     for (const e of r.stored) {
@@ -58,17 +59,25 @@ test('ingest：显式授权位被尊重（测试台"允许上云"勾选 = 显式
   const ev = new SqliteEvidenceStore(':memory:');
   try {
     const r = ingestObservations('owner', [obs({ allowCloudRead: true })], { evidenceStore: ev });
-    assert.equal(r.stored[0]!.allowCloudRead, true, '显式上云被尊重（走路线 A 验证用）');
+    assert.equal(
+      r.stored[0]!.allowCloudRead,
+      true,
+      '显式上云被尊重（走explicit authorization path 验证用）',
+    );
     assert.equal(r.stored[0]!.allowInference, true, '其余仍走 observed 默认');
   } finally {
     ev.close();
   }
 });
 
-test('端到端：手动授权上云的 observed 证据落库 + 可被归因时间窗捞到（路线 A 的库级前提）', () => {
+test('端到端：手动授权上云的 observed 证据落库 + 可被归因时间窗捞到（explicit authorization path 的库级前提）', () => {
   const ev = new SqliteEvidenceStore(':memory:');
   try {
-    const o = obs({ occurredAt: '2026-06-23T03:00:00.000Z', content: '在 某游戏 停留约 60 分钟', allowCloudRead: true });
+    const o = obs({
+      occurredAt: '2026-06-23T03:00:00.000Z',
+      content: '在 某游戏 停留约 60 分钟',
+      allowCloudRead: true,
+    });
     const r = ingestObservations('owner', [o], { evidenceStore: ev });
     assert.equal(r.stored.length, 1);
     const hit = ev.byTimeRange('2026-06-23T02:00:00.000Z', '2026-06-23T09:00:00.000Z');

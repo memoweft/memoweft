@@ -13,10 +13,13 @@ import { createMemoWeftCore } from 'memoweft';
 
 const core = createMemoWeftCore({ dbPath: ':memory:' });
 
-await core.ingestUserMessage({ subjectId: 'alice', content: 'I am allergic to peanuts.' });
-await core.ingestUserMessage({ subjectId: 'alice', content: 'Actually my sister is the allergic one, not me.' });
+await core.ingestUserMessage({ subjectId: 'alice', content: 'I own a red bicycle.' });
+await core.ingestUserMessage({
+  subjectId: 'alice',
+  content: "Actually it isn't mine — my sister owns the red bicycle.",
+});
 
-console.log(core.memory.listEvidence({ subjectId: 'alice' }).length);   // → 2
+console.log(core.memory.listEvidence({ subjectId: 'alice' }).length); // → 2
 console.log(core.memory.listCognitions({ subjectId: 'alice' }).length); // → 0
 
 core.close();
@@ -29,14 +32,15 @@ Two turns are stored, but no cognition exists yet. `correct` and `conflict` both
 An explicit correction sets the old cognition's `invalidAt` to now and writes the corrected content as a **new** cognition. The old row is not deleted — it stays with its provenance chain, so history stays traceable.
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 await core.updateProfile({ subjectId: 'alice' }); // distill → consolidate → attribute
 
 for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
   console.log(c.content, c.invalidAt ? '(invalidated, kept)' : '(active)');
 }
-// → The user is allergic to peanuts     (invalidated, kept)
-// → The user's sister is allergic ...    (active)
+// → The user owns a red bicycle         (invalidated, kept)
+// → The user's sister owns the red ...  (active)
 ```
 
 `recall` skips invalidated cognitions, so the stale belief no longer reaches a reply — but an audit or graph view can still show what changed and when. This is act 2 of the demo.
@@ -46,6 +50,7 @@ for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
 When new evidence contradicts a belief but is **not** an explicit correction — a stated preference for americano versus repeatedly ordering milk tea — `consolidate` links the contradicting evidence with `relation: 'contradict'` and sets the belief's `credStatus` to `'conflicted'`. Both cognitions stay.
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
   if (c.credStatus === 'conflicted') console.log('CONFLICT:', c.content);
@@ -53,11 +58,11 @@ for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
 // → CONFLICT: The user likes americano
 ```
 
-MemoWeft does not decide which side is true. A behaviour that contradicts a stated preference might be a one-off, a change of mind, or noise — deciding for the user would mean guessing. So MemoWeft surfaces the tension and lets the host, or the user, resolve it. This is act 3 of the demo.
+MemoWeft does not treat either side as verified truth. A behaviour that contradicts a stated preference might be a one-off, a change of mind, or noise — deciding for the user would mean guessing. So MemoWeft surfaces the tension and lets the host, or the user, resolve it. This is act 3 of the demo.
 
 ## Why this matters
 
-A memory that overwrites or auto-resolves loses the one thing that makes it trustworthy: you can no longer tell what the user actually said from what the system inferred. Keeping stale beliefs and open conflicts on the record is how MemoWeft stays honest.
+A memory that overwrites or auto-resolves loses the distinction between source records and system judgments. Keeping invalidated cognitions and open conflicts on the record preserves that provenance.
 
 ## Next
 

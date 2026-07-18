@@ -2,22 +2,45 @@
   "name": "@memoweft/adapter-langchain",
   "version": "0.1.0",
   "description": "LangChain adapter for MemoWeft — inject long-term memory via a BaseRetriever (recall) and persist tool results via a BaseCallbackHandler + the user's turn via a host closure (write).",
-  "keywords": ["langchain", "langchain-core", "retriever", "callback-handler", "memoweft", "memory", "llm"],
+  "keywords": [
+    "langchain",
+    "langchain-core",
+    "retriever",
+    "callback-handler",
+    "memoweft",
+    "memory",
+    "llm"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
-  "files": ["dist/**/*.js", "dist/**/*.d.ts", "README.md", "README.zh-CN.md"],
-  "engines": { "node": ">=20" },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "dist/**/*.map",
+    "examples/**/*.ts",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/memoweft/memoweft.git",
     "directory": "packages/adapter-langchain"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "node --test \"tests/**/*.test.ts\"",
@@ -27,10 +50,12 @@
   "peerDependencies": {
     "@langchain/core": "^1",
     "langchain": "^1",
-    "memoweft": "^0.5.0 || ^0.6.0"
+    "memoweft": "^0.6.0"
   },
   "peerDependenciesMeta": {
-    "langchain": { "optional": true }
+    "langchain": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@langchain/core": "^1.2.2",

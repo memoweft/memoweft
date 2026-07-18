@@ -1,12 +1,12 @@
 /**
- * 插件契约 v2（第 7 步 · 路线 §7.1 落地）。
+ * 插件契约 v2：插件契约接口与运行时接线。
  *
  * 【它是什么】
  * MemoWeft 插件 = 给同一套记忆底座加"脸/工具/感知"。三类：
  *   - experience：只出回话人设（systemPrompt）。记忆本体不碰，只决定语气/角色。
  *   - tool / collector：经 hook 观察对话/观察流，经受限 PluginContext 请求能力（提交观察 / 读召回）。
  *
- * 【纪律红线，别越】
+ * 【访问约束】
  *   - hook 只能【观察 + 经 ctx 请求】，不能改管线：返回值一律丢弃，不改用户消息 / 回话文本，
  *     不绕记忆规则塞证据。落观察只能走 ctx.submitObservation（强制 observed 默认、cloud=false）。
  *   - PluginContext 是【受限壳】：只暴露 Core 能真执行的两件事（submitObservation / requestMemory），
@@ -30,9 +30,12 @@ export interface PluginPermissions {
 /**
  * 插件提交观察的入参 = `Observation` 去掉三个授权位。
  * 插件【不能】设授权位——一律走 observed 保守默认（local:true / cloud:false / inference:true），
- * 防插件传 allowCloudRead:true 因"显式 > 默认"绕过"observed 不上云"（等价 Host sanitizeObservation）。
+ * 防插件传 allowCloudRead:true 因"显式 > 默认"绕过"observed 默认不进入内建云写模型 prompt"（等价 Host sanitizeObservation）。
  */
-export type PluginObservationInput = Omit<Observation, 'allowLocalRead' | 'allowCloudRead' | 'allowInference'>;
+export type PluginObservationInput = Omit<
+  Observation,
+  'allowLocalRead' | 'allowCloudRead' | 'allowInference'
+>;
 
 /** hook 看到的用户消息（只读观察用；hook 不能改它）。 */
 export interface PluginUserMessage {
@@ -71,10 +74,10 @@ export interface MemoWeftPlugin {
   systemPrompt?: string;
   /** 声明式权限：要用 ctx 的哪些能力。 */
   permissions?: PluginPermissions;
-  /** 建 core 时烧一次（stores/retriever 已就绪；新库 requestMemory 可能空）。 */
+  /** Core 初始化时触发一次（stores/retriever 已就绪；新库 requestMemory 可能空）。 */
   onLoad?(ctx: PluginContext): void | Promise<void>;
-  /** 每轮对话【之后】烧（观察这轮说了啥/回了啥，不改管线）。 */
+  /** 每轮对话完成后触发（观察本轮输入与回复，不改管线）。 */
   onUserMessage?(msg: PluginUserMessage, ctx: PluginContext): void | Promise<void>;
-  /** 每条观察【落库后】烧（观察，不改管线）。 */
+  /** 每条观察落库后触发（只观察，不改管线）。 */
   onObservation?(obs: Observation, ctx: PluginContext): void | Promise<void>;
 }

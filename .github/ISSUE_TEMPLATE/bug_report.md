@@ -1,39 +1,39 @@
 ---
-name: Bug report · 缺陷报告
-about: Report something that isn't working as expected · 报告一处不符合预期的行为
-title: "[bug] "
+name: Bug report
+about: Report reproducible behavior that differs from the documented contract
+title: '[Bug] '
 labels: bug
+assignees: ''
 ---
 
-<!--
-This project is largely maintained by AI assistants that cold-start with no memory of
-prior conversations. A self-contained issue — background + acceptance + files touched —
-is the cheapest lever to lower the error rate. Please fill in all three.
+## Summary
 
-本项目主要由 AI 协作维护，AI 会话冷启动、没有上次对话的记忆。一个自包含的 issue
-（背景 + 验收 + 涉及文件）是降低出错率最省事的杠杆。请把三块都填上。
--->
+<!-- What happened, and what did you expect instead? -->
 
-## Background · 背景
+## Minimal reproduction
 
-<!-- What happened, what you expected instead, and why it matters.
-     发生了什么、你本来期待什么、为什么重要。 -->
-
-## Steps to reproduce · 复现步骤
-
-<!-- Minimal steps / code. Note Node version and OS if relevant.
-     最小复现步骤或代码；如相关请注明 Node 版本与操作系统。 -->
+```ts
+// Smallest code sample that reproduces the problem
+```
 
 1.
 2.
 3.
 
-## Acceptance · 验收标准
+## Environment
 
-<!-- How do we know it's fixed? Make it verifiable where possible.
-     怎么算修好了？尽量写成可验证的判断。 -->
+- MemoWeft version or commit:
+- Node version:
+- Operating system:
+- SQLite driver: node:sqlite / better-sqlite3
+- Integration or host, if relevant:
 
-## Files / scope (if known) · 涉及文件 / 范围（若已知）
+## Actual output
 
-<!-- Any files or entry points you suspect. Optional but helpful.
-     你怀疑相关的文件或入口；可选，但填了更好接。 -->
+<!-- Include sanitized logs or stack traces. Never include credentials or real user memory. -->
+
+## Expected behavior
+
+## Additional context
+
+<!-- Regression range, related issues, or a minimal repository if useful. -->

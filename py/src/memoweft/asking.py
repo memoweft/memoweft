@@ -1,8 +1,8 @@
-"""M5 主动询问 + 冲突复看 —— 移植自 src/asking/{proposeAsk,revisitConflicts}.ts。
+"""主动询问与冲突复核，与 TypeScript asking 实现保持行为一致。
 
 产出「该问什么 + 附什么证据」的结构化建议(AskProposal);**是否开口、最终措辞归宿主**。
 控制流纯规则(候选筛选/证据挂载/observed 优先/tier 门/askedAt 去重写);仅【措辞】一步可选走 LLM——
-  不给 llm 则用模板拼(逐位可对拍)。提问本身不入证据库(3a)。同步(见 D-0043)。
+  未提供 llm 时使用确定性模板。提问仅作为宿主建议，不进入证据库。
 """
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class AskProposal:
     evidence: list[EvidenceBrief]
     confidence: int
     cred_status: CredStatus
-    #: 仅冲突复看:反对侧证据(与支撑侧并排亮出来)。
+    #: 仅用于冲突复核：与支撑证据并列展示的反对证据。
     contradict_evidence: Optional[list[EvidenceBrief]] = None
 
 
@@ -53,7 +53,7 @@ def _brief(e: Evidence) -> EvidenceBrief:
 
 
 def _template_question(hypothesis: str, evidence: Sequence[EvidenceBrief], lang: Lang) -> str:
-    """模板兜底:带证据、留余地的朴素问法。对齐 proposeAsk.ts:70-79。"""
+    """生成带证据且保留不确定性的确定性后备问题。"""
     if lang == "zh":
         shown = "、".join(f"「{e.summary}」" for e in evidence)
         if not shown:
@@ -66,7 +66,7 @@ def _template_question(hypothesis: str, evidence: Sequence[EvidenceBrief], lang:
 
 
 def _phrase_question(hypothesis: str, evidence: Sequence[EvidenceBrief], llm: LLMClient, lang: Lang) -> str:
-    """LLM 润色;空回落模板。对齐 proposeAsk.ts:81-96。"""
+    """使用 LLM 调整问题措辞；空响应时返回确定性模板。"""
     shown = "\n".join(f"- {e.summary}" for e in evidence)
     user = f"【假设】{hypothesis}\n【证据】\n{shown}" if lang == "zh" else f"[Hypothesis] {hypothesis}\n[Evidence]\n{shown}"
     messages = [
@@ -91,7 +91,7 @@ def propose_ask(
     askable_statuses: Optional[Sequence[str]] = None,
     mark_asked: bool = True,
 ) -> AskResult:
-    """对低置信【假设】产出带证据的询问建议。对齐 proposeAsk.ts:98-159。"""
+    """为低置信假设生成带证据的询问建议。"""
     lg = lang if lang is not None else resolve_lang()
     ma = max_asks if max_asks is not None else cfg.asking.max_asks
     band = confidence_band if confidence_band is not None else cfg.asking.confidence_band
@@ -116,7 +116,7 @@ def propose_ask(
         # observed 优先亮出来(稳定分区,非全序)。
         support_evidence = sorted(support_evidence, key=lambda e: 0 if e.source_kind == "observed" else 1)
         evidence = [_brief(e) for e in support_evidence]
-        # 隐私护栏:只把该 tier 可读的喂措辞模型;返给宿主展示的 evidence 保持完整(展示归宿主)。
+        # 隐私边界：措辞模型仅接收当前 tier 可读的证据；宿主展示数据保留完整证据集合。
         tier = llm.tier if (llm is not None and llm.tier is not None) else "cloud"
         readable = [_brief(e) for e in filter_readable_by_tier(support_evidence, tier)]
         question = _phrase_question(cog.content, readable, llm, lg) if llm is not None else _template_question(cog.content, evidence, lg)
@@ -137,7 +137,7 @@ def propose_ask(
 
 
 def _revisit_template(content: str, support: Sequence[EvidenceBrief], contradict: Sequence[EvidenceBrief], lang: Lang) -> str:
-    """模板兜底:并排亮两面。对齐 revisitConflicts.ts:46-62。"""
+    """生成并列呈现支撑与反对证据的确定性后备问题。"""
     if lang == "zh":
         s = "、".join(f"「{e.summary}」" for e in support)
         c = "、".join(f"「{e.summary}」" for e in contradict)
@@ -154,7 +154,7 @@ def _revisit_template(content: str, support: Sequence[EvidenceBrief], contradict
 def _revisit_phrase(
     content: str, support: Sequence[EvidenceBrief], contradict: Sequence[EvidenceBrief], llm: LLMClient, lang: Lang
 ) -> str:
-    """LLM 润色;空回落模板。对齐 revisitConflicts.ts:64-83。"""
+    """使用 LLM 调整冲突复核措辞；空响应时返回确定性模板。"""
     s = "\n".join(f"- {e.summary}" for e in support)
     c = "\n".join(f"- {e.summary}" for e in contradict)
     user = (
@@ -182,7 +182,7 @@ def revisit_conflicts(
     max_asks: Optional[int] = None,
     mark_asked: bool = True,
 ) -> AskResult:
-    """把 conflicted 认知带正反两面证据拿出来问。对齐 revisitConflicts.ts:85-133。"""
+    """为 conflicted 认知生成同时包含支撑与反对证据的复核问题。"""
     lg = lang if lang is not None else resolve_lang()
     ma = max_asks if max_asks is not None else cfg.asking.max_asks
     # 候选 = active 冲突认知里没复看过的(无置信带过滤、无重排,直接吃 active() 序)。

@@ -1,10 +1,10 @@
 /**
- * 便携记忆包（Portable Memory Bundle）· 数据模型（Phase 5-A）。
+ * 便携记忆包（Portable Memory Bundle）数据模型。
  *
  * 目标：把某个 subject 的三层记忆（evidence → event → cognition）+ 溯源关系
  * 打成一个可读、可校验、可版本化的 JSON 包，用于导出 / 备份 / 迁移 / 恢复。
  *
- * 保真原则（作者拍板）：保留原 id 与全部时间戳，导入后 get(原id) 仍成立、溯源链不丢。
+ * 保真原则（兼容性约束）：保留原 id 与全部时间戳，导入后 get(原id) 仍成立、溯源链不丢。
  * 不含：向量索引（派生物，导入后 retriever.indexAll 重建）、logs、.env / API key、宿主 UI 状态。
  */
 import type { Evidence } from '../evidence/model.ts';
@@ -15,7 +15,7 @@ import type { InteractionContext, SemanticResolution } from '../interaction/mode
 /** 包格式标记（用于导入前辨认）。 */
 export const BUNDLE_FORMAT = 'memoweft-bundle';
 /** 包结构版本（结构演进时 +1，配合 validate/migration）。
- *  v2（D-0034）：data 增 interactionContexts / semanticResolutions（交互上下文 + 语义解析随用户迁移）。
+ *  v2：data 增 interactionContexts / semanticResolutions（交互上下文 + 语义解析随用户迁移）。
  *  向后兼容：导入 v1 包（无这两段）按空处理。 */
 export const BUNDLE_SCHEMA_VERSION = 2;
 
@@ -51,10 +51,10 @@ export interface MemoryBundle {
     cognitionEvidence: CognitionEvidenceLink[];
     /** 导出时尚未消化（consolidated=0）的事件 id；导入按此还原 consolidated 标记（保真，防漏消化）。 */
     unconsolidatedEventIds: string[];
-    /** 交互上下文（v0.6·D-0034，schemaVersion≥2）：跟随用户迁移的会话上下文快照。v1 包无此段（导入按空）。
-     *  注意：内容含 AI 可见文本，但**永不成为证据**（结构墙，3a）——导入回来仍是独立表、不进 consolidate 白名单。 */
+    /** 交互上下文（v0.6，schemaVersion≥2）：跟随用户迁移的会话上下文快照。v1 包无此段（导入按空）。
+     *  注意：内容含 AI 可见文本，但**永不成为证据**——导入回来仍是独立表、不进 consolidate 白名单。 */
     interactionContexts?: InteractionContext[];
-    /** 语义解析（v0.6·D-0034，schemaVersion≥2）：证据的语义解析。Phase 1 通常为空（Phase 2 起产）。v1 包无此段。 */
+    /** 语义解析（v0.6，schemaVersion≥2）：证据的语义解析。通常为空（由写路径按需生成）。v1 包无此段。 */
     semanticResolutions?: SemanticResolution[];
   };
   metadata: {
@@ -90,9 +90,9 @@ export interface ImportPlan {
     cognitions: number;
     eventEvidence: number;
     cognitionEvidence: number;
-    /** 交互上下文新写入条数（v0.6·D-0034）。 */
+    /** 交互上下文新写入条数（v0.6）。 */
     interactionContexts: number;
-    /** 语义解析新写入条数（v0.6·D-0034）。 */
+    /** 语义解析新写入条数（v0.6）。 */
     semanticResolutions: number;
   };
   /** 因 id 已存在（或 originId 冲突）而跳过、未重复写入的条数。 */

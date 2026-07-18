@@ -1,0 +1,85 @@
+{
+  "en": {
+    "attributed": {
+      "consideredPhenomena": 0,
+      "hypothesesCount": 0,
+      "llmCalls": 0
+    },
+    "consolidated": {
+      "conflicted": 0,
+      "corrected": 0,
+      "created": [
+        {
+          "confidence": 600,
+          "content": "喜欢喝咖啡",
+          "contentType": "preference",
+          "credStatus": "limited",
+          "formedBy": "stated"
+        }
+      ],
+      "llmCalls": 1,
+      "processedEvents": 1,
+      "profileSize": 0,
+      "promptChars": 8641,
+      "reinforced": 0
+    },
+    "distilled": {
+      "eventSummary": "用户聊到每天喝咖啡的习惯",
+      "llmCalls": 1,
+      "pendingCount": 2,
+      "tierBlockedCount": 0
+    },
+    "indexError": null,
+    "indexed": 1,
+    "indexedTexts": [
+      "喜欢喝咖啡"
+    ],
+    "metrics": {
+      "profileSize": 0,
+      "promptChars": 8641
+    },
+    "totalLlmCalls": 2
+  },
+  "note": "updateProfile 编排:distill→consolidate→attribute→重索引(active 且未 muted);索引失败不回滚画像;metrics 透传",
+  "zh": {
+    "attributed": {
+      "consideredPhenomena": 0,
+      "hypothesesCount": 0,
+      "llmCalls": 0
+    },
+    "consolidated": {
+      "conflicted": 0,
+      "corrected": 0,
+      "created": [
+        {
+          "confidence": 600,
+          "content": "喜欢喝咖啡",
+          "contentType": "preference",
+          "credStatus": "limited",
+          "formedBy": "stated"
+        }
+      ],
+      "llmCalls": 1,
+      "processedEvents": 1,
+      "profileSize": 0,
+      "promptChars": 3811,
+      "reinforced": 0
+    },
+    "distilled": {
+      "eventSummary": "用户聊到每天喝咖啡的习惯",
+      "llmCalls": 1,
+      "pendingCount": 2,
+      "tierBlockedCount": 0
+    },
+    "indexError": null,
+    "indexed": 1,
+    "indexedTexts": [
+      "喜欢喝咖啡"
+    ],
+    "metrics": {
+      "profileSize": 0,
+      "promptChars": 3811
+    },
+    "totalLlmCalls": 2
+  }
+}

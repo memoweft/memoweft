@@ -1,5 +1,5 @@
-// MemoWeft 公共 API 快照 —— 机读冻结基准(PROJECT_PLAN.md 第 13 章)。
-// 禁止手改;合法变更走 `npm run api:update`(需影响面说明 + 人类批准 + D-xxxx)。
+// MemoWeft public API snapshot — generated compatibility baseline.
+// Do not edit by hand; update intentional API changes with `npm run api:update`.
 
 class Conversation { handle: (userMsg: string, opts?: PerceiveOptions) => Promise<TurnOutcome>; }
 class NullRetriever { indexAll: (_items: Array<{ id: string; text: string; }>) => Promise<void>; search: (_query: string, _topK: number) => Promise<RetrievalHit[]>; }

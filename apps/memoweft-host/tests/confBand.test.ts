@@ -1,5 +1,5 @@
 /**
- * 把握度用户档 credBand（批次5 步3 审查 must-fix）：验档位基于【有效把握度】而非静态 credStatus。
+ * 把握度用户档 credBand：验证档位基于有效把握度而非静态 credStatus。
  * 纯函数，不依赖网络/模型/库。
  */
 import { test } from 'node:test';
@@ -13,7 +13,7 @@ test('高有效把握度 → stable', () => {
   assert.equal(credBand({ credStatus: 'stable', effectiveConfidence: 760 }, TH), 'stable');
 });
 
-test('must-fix 核心：静态 credStatus=stable 但衰减后有效值 190 → 落回 candidate（不再假显"比较确定"）', () => {
+test('静态 credStatus=stable 但衰减后有效值 190 → 落回 candidate（不再假显“比较确定”）', () => {
   // 一条 goal 认知 confidence=760（→credStatus=stable），28 天未印证后 effectiveConfidence≈190。
   //   旧实现按 credStatus 仍显 stable（绿色·比较确定）；新实现按有效值落回 candidate，如实反映"已变淡"。
   assert.equal(credBand({ credStatus: 'stable', effectiveConfidence: 190 }, TH), 'candidate');

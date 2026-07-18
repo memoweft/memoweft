@@ -1,7 +1,7 @@
-"""JSON 解析加固 —— 移植自 src/llm/jsonRepair.ts。
+"""与 TypeScript jsonRepair 实现保持行为一致的 JSON 解析加固。
 
-**逐字复刻手写 extract_json_object(不用 json-repair 库)**:库宽松度 > 手写会在 TS 需重试处直接成功 →
-  吞掉「首坏必重试」契约、llmCalls 分叉(D-0043 偏离说明)。首过严格 json.loads + parse_constant 拒 NaN/Infinity。
+extract_json_object 使用与 TypeScript 相同的确定性扫描规则，而不依赖更宽松的修复库；
+  这保证首次解析失败时仍执行一次修复重试，并保持 llmCalls 计数一致。初次解析严格拒绝 NaN/Infinity。
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ _FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 
 
 def _strip_code_fences(s: str) -> str:
-    """去 ```json … ``` / ``` … ``` 围栏,取里面内容(无围栏原样返回)。对齐 jsonRepair.ts:20-23。"""
+    """移除 ```json … ``` 或 ``` … ``` 围栏；没有围栏时返回原文本。"""
     m = _FENCE_RE.search(s)
     return m.group(1) if m is not None else s
 
@@ -30,7 +30,7 @@ def _strip_code_fences(s: str) -> str:
 def extract_json_object(raw: str) -> Optional[str]:
     """去围栏 → js_trim → 从首个 { 起括号配平取【第一个平衡闭合】对象(跳字符串内花括号/转义);抠不到→None。
 
-    对齐 jsonRepair.ts:26-48(比贪婪 lastIndexOf 更抗 reasoning 残留/尾随文本)。
+    该扫描规则与 TypeScript 实现共享契约，并能忽略 reasoning 残留与尾随文本。
     """
     s = js_trim(_strip_code_fences(raw))
     start = s.find("{")
@@ -67,7 +67,7 @@ def _reject_constant(_x: str) -> Any:
 
 
 def parse_json_object(raw: str) -> Optional[dict[str, Any]]:
-    """抠出对象文本并 parse;只认【对象】(数组/标量/null 都不合法→None),失败→None。对齐 jsonRepair.ts:51-60。"""
+    """提取并解析 JSON 对象；数组、标量、null 或解析失败均返回 None。"""
     text = extract_json_object(raw)
     if text is None:
         return None
@@ -109,7 +109,7 @@ def parse_json_object_with_repair(
     log: Optional[Callable[[str], None]] = None,
     lang: Optional[Lang] = None,
 ) -> Optional[dict[str, Any]]:
-    """调模型 → 解析对象;失败则【落日志 + 最多重试一次】(追加 jsonRepairNudge);仍失败→None。对齐 jsonRepair.ts:81-107。
+    """调用模型并解析对象；失败时记录日志并追加 jsonRepairNudge 重试一次，仍失败则返回 None。
 
     重试会再调一次模型(call_count +1);调用方统计调用数须在本函数前后取 call_count 差。
     """

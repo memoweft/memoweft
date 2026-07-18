@@ -15,10 +15,13 @@ import { createMemoWeftCore } from 'memoweft';
 
 const core = createMemoWeftCore({ dbPath: ':memory:' });
 
-await core.ingestUserMessage({ subjectId: 'alice', content: 'I am allergic to peanuts.' });
-await core.ingestUserMessage({ subjectId: 'alice', content: 'Actually my sister is the allergic one, not me.' });
+await core.ingestUserMessage({ subjectId: 'alice', content: 'I own a red bicycle.' });
+await core.ingestUserMessage({
+  subjectId: 'alice',
+  content: "Actually it isn't mine — my sister owns the red bicycle.",
+});
 
-console.log(core.memory.listEvidence({ subjectId: 'alice' }).length);   // → 2
+console.log(core.memory.listEvidence({ subjectId: 'alice' }).length); // → 2
 console.log(core.memory.listCognitions({ subjectId: 'alice' }).length); // → 0
 
 core.close();
@@ -31,14 +34,15 @@ core.close();
 一次显式纠正会把旧认知的 `invalidAt` 设为当前时间，并把纠正后的内容写成一条**新**认知。旧那一行不会被删除——它连同溯源链一起留着，历史因此保持可追溯。
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 await core.updateProfile({ subjectId: 'alice' }); // distill → consolidate → attribute
 
 for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
   console.log(c.content, c.invalidAt ? '(invalidated, kept)' : '(active)');
 }
-// → The user is allergic to peanuts     (invalidated, kept)
-// → The user's sister is allergic ...    (active)
+// → The user owns a red bicycle         (invalidated, kept)
+// → The user's sister owns the red ...  (active)
 ```
 
 `recall` 会跳过被作废的认知，所以那条过时的信念不再进入任何回复——但审计或图视图仍能看到改了什么、何时改的。这是 demo 的第 2 幕。
@@ -48,6 +52,7 @@ for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
 当新证据与某个信念矛盾、但**不是**一次显式纠正时——比如口头说偏好美式咖啡，却反复点奶茶——`consolidate` 会用 `relation: 'contradict'` 把这条矛盾证据关联上，并把该信念的 `credStatus` 设为 `'conflicted'`。两条认知都保留。
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
   if (c.credStatus === 'conflicted') console.log('CONFLICT:', c.content);
@@ -55,11 +60,11 @@ for (const c of core.memory.listCognitions({ subjectId: 'alice' })) {
 // → CONFLICT: The user likes americano
 ```
 
-MemoWeft 不判定哪一边是真的。一个与口头偏好相矛盾的行为，可能是一次性的、可能是改主意了、也可能只是噪声——替用户做决定就意味着猜。所以 MemoWeft 把这处张力摆出来，交给宿主或用户去化解。这是 demo 的第 3 幕。
+MemoWeft 不把任一方当作已验证的真实。一个与口头偏好相矛盾的行为，可能是一次性的、可能是改主意了、也可能只是噪声——替用户做决定就意味着猜。所以 MemoWeft 把这处张力摆出来，交给宿主或用户去化解。这是 demo 的第 3 幕。
 
 ## 为什么这很重要
 
-一个会覆盖或自动裁决的记忆，会丢掉让它可信的那唯一一样东西：你再也分不清用户真正说过的，和系统推测出来的。把过时的信念和未决的冲突留在记录上，正是 MemoWeft 保持诚实的方式。
+一个会覆盖或自动裁决的记忆，会丢掉来源记录与系统判断之间的区分。把已作废的认知和未决冲突留在记录上，才能保住这条溯源链。
 
 ## 下一步
 

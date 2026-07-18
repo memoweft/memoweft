@@ -1,6 +1,6 @@
 /**
  * 写适配器：一轮对话结束后，把【用户这轮说的原话】沉淀成 MemoWeft 的 spoken 证据；
- * 另提供 persistToolResults 把【工具返回结果】沉淀成 tool 证据（AD-3/D-0013，见文件末段）。
+ * 另提供 persistToolResults 把【工具返回结果】沉淀成 tool 证据（见文件末段）。
  *
  * 为什么由调用方显式传用户原话，而不是从 onEnd 事件里解析：
  *   Vercel AI SDK 的 onEnd（generateText/streamText）事件字段全是【结果侧】
@@ -26,7 +26,7 @@ type IngestOnly = Pick<MemoWeftCore, 'ingestUserMessage'>;
 type ToolIngestOnly = Pick<MemoWeftCore, 'ingestToolResult'>;
 
 export interface PersistUserTurnInput {
-  /** 用户这轮说的原话（由调用方在发起 generateText 时就持有的那份，别从模型响应里回捞）。 */
+  /** 调用方在发起 generateText 前捕获的用户原话；该值不得从模型响应中派生。 */
   userMessage: string;
   /**
    * 稳定幂等键：同一轮对话给同一个 originId，重复触发 onEnd 也只落一条。
@@ -43,7 +43,10 @@ export interface PersistUserTurnInput {
  * 直接落一轮用户原话（薄封装 core.ingestUserMessage，字段名对齐 Core `UserMessageInput`）。
  * 不做任何"从响应里提取"的事——传进来什么原话就存什么。
  */
-export async function persistUserTurn(core: IngestOnly, input: PersistUserTurnInput): Promise<void> {
+export async function persistUserTurn(
+  core: IngestOnly,
+  input: PersistUserTurnInput,
+): Promise<void> {
   const text = input.userMessage;
   // 空串 / 全空白不落库（没有"用户原话"可存）。
   if (typeof text !== 'string' || text.trim() === '') return;
@@ -54,7 +57,7 @@ export async function persistUserTurn(core: IngestOnly, input: PersistUserTurnIn
     hostId: input.hostId,
     occurredAt: input.occurredAt,
     // sourceKind 不传：Core 缺省 'spoken'（用户亲口）。
-    // 注意：不传任何授权位——ingestUserMessage 存 spoken，本就不涉上云授权位（红线）。
+    // 不传任何授权位——ingestUserMessage 存 spoken，该入口不接受云读取授权覆盖。
   });
 }
 
@@ -70,7 +73,7 @@ export interface PersistOnEndOptions {
   /** 落库出错时的回调（可选；不给则静默吞——落记忆失败不该崩主流程）。 */
   onError?: (err: unknown) => void;
   /**
-   * 注入式 logger（可选，契约 §16.2）：写路径一次重试后仍失败降级时记一条【结构化事件】
+   * 注入式 logger（可选，降级契约）：写路径一次重试后仍失败降级时记一条【结构化事件】
    *   （`{ event:'memory_degraded', op:'ingest', reason:'error' }`）。缺省不注入 = 静默降级。
    * 认知纪律 + 隐私：只记事件/原因，绝不记用户内容 / 原话 / 密钥。
    */
@@ -78,7 +81,7 @@ export interface PersistOnEndOptions {
 }
 
 /**
- * 造一个可直接塞进 `generateText({ onEnd })` / `streamText({ onEnd })` 的回调。
+ * 创建可直接传给 `generateText({ onEnd })` / `streamText({ onEnd })` 的回调。
  *
  * onEnd（`onFinish` 是它的 @deprecated 别名）事件对象【不被本回调使用】——
  *   用户原话来自闭包捕获的 opts.userMessage，事件仅作触发时机。
@@ -98,7 +101,7 @@ export function createPersistOnEnd(
   opts: PersistOnEndOptions,
 ): (event?: unknown) => Promise<void> {
   // 形参 event 被【故意忽略】——用户原话来自闭包 opts.userMessage，事件仅作触发时机。
-  //   声明它只为契合 SDK Callback = (event) => PromiseLike<void>，能直接塞进 onEnd。
+  //   该形参仅用于满足 SDK Callback = (event) => PromiseLike<void> 的接口，可直接传给 onEnd。
   const input: PersistUserTurnInput = {
     userMessage: opts.userMessage,
     originId: opts.originId,
@@ -110,7 +113,7 @@ export function createPersistOnEnd(
     try {
       await persistUserTurn(core, input);
     } catch {
-      // 契约 §16.2：写路径（ingest）失败重试一次再放弃（稳定 originId 保证重试幂等）。
+      // 契约 ：写路径（ingest）失败重试一次再放弃（稳定 originId 保证重试幂等）。
       try {
         await persistUserTurn(core, input);
       } catch (err) {
@@ -123,7 +126,7 @@ export function createPersistOnEnd(
   };
 }
 
-// ── AD-3：工具结果 → tool 证据（D-0013）────────────────────────────────────
+// ── 工具结果 → tool 证据 ────────────────────────────────────
 
 /** 从一条 tool-result part 提出的可落库载荷。 */
 interface ExtractedToolResult {
@@ -154,13 +157,15 @@ function toolOutputText(output: unknown): string | null {
 }
 
 /**
- * 从一轮消息里提出全部【工具返回结果】（铁律 3a 的机器化）：
+ * 从一轮消息里提出全部【工具返回结果】（tool-result-only ingestion 的机器化）：
  *   - 只读 role==='tool' 消息的 type==='tool-result' part——那是工具真实返回的外部数据；
  *   - assistant 消息【一概不读】：tool-call part（调用意图/入参）是助手输出，永不成为证据；
  *     provider 执行的工具结果混在 assistant content 里，也一并保守跳过（宁可漏、不可错摄）。
  * 入参按 unknown 防御解析：形状不合的消息/part 静默跳过，不抛。
  */
-function extractToolResults(messages: ReadonlyArray<ModelMessage> | readonly unknown[]): ExtractedToolResult[] {
+function extractToolResults(
+  messages: ReadonlyArray<ModelMessage> | readonly unknown[],
+): ExtractedToolResult[] {
   const out: ExtractedToolResult[] = [];
   for (const m of messages) {
     const msg = m as { role?: unknown; content?: unknown };
@@ -191,27 +196,32 @@ export interface PersistToolResultsInput {
   occurredAt?: string;
   /** 单条落库出错时的回调（可选；不给则静默吞——落记忆失败不该崩主流程）。 */
   onError?: (err: unknown) => void;
-  /** 注入式 logger（契约 §16.2）：单条一次重试后仍失败降级时记 `{ event:'memory_degraded', op:'ingest', reason:'error' }`。 */
+  /** 注入式 logger（降级契约）：单条一次重试后仍失败降级时记 `{ event:'memory_degraded', op:'ingest', reason:'error' }`。 */
   logger?: MemoWeftLogger;
 }
 
 /**
- * 把一轮对话里工具执行的【返回结果】沉淀成 tool 证据（AD-3/D-0013）。
+ * 把一轮对话里工具执行的【返回结果】沉淀成 tool 证据。
  *
  * 纪律与隐私（本适配器严格照做）：
- *   - 铁律 3a：只摄入 role==='tool' 消息里的 tool-result 载荷（外部客观数据）；
+ *   - tool-result-only ingestion：只摄入 role==='tool' 消息里的 tool-result 载荷（外部客观数据）；
  *     LLM 的工具调用意图/入参在 assistant 消息里，本函数根本不读 assistant 消息。
- *   - 落库走 core.ingestToolResult → sourceKind='tool' → 默认不上云（config.toolDefaults 兜底）。
- *   - 契约 §16.2 写路径：每条失败重试一次；仍失败经注入 logger 记一条、走 onError，绝不向外抛。
+ *   - 落库走 core.ingestToolResult → sourceKind='tool' → 默认不进入内建云写模型 prompt（config.toolDefaults 兜底）。
+ *   - 写路径契约：每条失败重试一次；仍失败经注入 logger 记录、调用 onError，绝不向外抛。
  *
  * @returns 成功落库（或幂等命中）的条数。
  */
-export async function persistToolResults(core: ToolIngestOnly, input: PersistToolResultsInput): Promise<number> {
+export async function persistToolResults(
+  core: ToolIngestOnly,
+  input: PersistToolResultsInput,
+): Promise<number> {
   const results = extractToolResults(input.messages);
   let stored = 0;
   for (const r of results) {
     const originId =
-      input.originIdPrefix != null && r.toolCallId !== '' ? `${input.originIdPrefix}:${r.toolCallId}` : null;
+      input.originIdPrefix != null && r.toolCallId !== ''
+        ? `${input.originIdPrefix}:${r.toolCallId}`
+        : null;
     const ingest = () =>
       core.ingestToolResult({
         content: r.text,
@@ -224,7 +234,7 @@ export async function persistToolResults(core: ToolIngestOnly, input: PersistToo
       await ingest();
       stored++;
     } catch {
-      // 契约 §16.2：写路径失败重试一次再放弃（originId 保证重试幂等）。
+      // 契约 ：写路径失败重试一次再放弃（originId 保证重试幂等）。
       try {
         await ingest();
         stored++;

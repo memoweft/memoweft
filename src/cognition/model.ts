@@ -1,5 +1,5 @@
 /**
- * 认知层数据模型（地图 cell 6 / 8：判断层·多维用户模型）。
+ * 认知层数据模型：判断层·多维用户模型。
  *
  * 与 evidence（原料层）彻底分开 —— 记 ≠ 直接改画像：
  *   evidence 存"用户说了/做了什么"（事实），cognition 存"对用户的判断"。
@@ -7,28 +7,21 @@
  */
 
 /**
- * 内容类型（地图 cell 8：多维之一，不互斥的描述属性）。
- * `hypothesis` = 可解释假设（阶段 3 M4 归因产物：从证据推"为什么"，低置信、挂证据、可推翻）。
- * `trend` = 跨会话趋势（阶段 4-B：反复出现的状态聚成的持续模式，如"最近持续低落"；
+ * 内容类型：多维之一，不互斥的描述属性。
+ * `hypothesis` = 可解释假设（归因产物：从证据推"为什么"，低置信、挂证据、可推翻）。
+ * `trend` = 跨会话趋势：反复出现的状态聚成的持续模式，如"最近持续低落"；
  *           基于客观频率用规则聚出 formed_by=ruled，比"特质"可信，会随好转衰减）。
  */
 export type ContentType =
-  | 'fact'
-  | 'preference'
-  | 'goal'
-  | 'project'
-  | 'state'
-  | 'trait'
-  | 'hypothesis'
-  | 'trend';
+  'fact' | 'preference' | 'goal' | 'project' | 'state' | 'trait' | 'hypothesis' | 'trend';
 
-/** 形成方式 —— 来源强度（亲口 > 观察 > 规则 > 附和 > LLM 推测）。
- *  `confirmed`（附和，D-0033）：用户【点头认可 AI 主动提出的猜测】（AI:"你喜欢爬山吧?" 用户:"是的"）——
+/** 形成方式（亲口 > 观察 > 规则 > 附和 > LLM 推测）。
+ *  `confirmed`（附和，）：用户【点头认可 AI 主动提出的猜测】（AI:"你喜欢爬山吧?" 用户:"是的"）——
  *  比 inferred 强（用户确实点了头）、比 observed/stated 弱（附和诱导性猜测有客气/顺着说成分，非主动披露）。
- *  底分 280、自然封顶 480（<limited 500）→ 纯附和顶天"低置信"；只有用户【主动】说才升级破顶（见 D-0033）。 */
+ *  底分 280、自然封顶 480（<limited 500）→ 纯附和顶天"低置信"；只有用户【主动】说才升级破顶。 */
 export type FormedBy = 'stated' | 'observed' | 'ruled' | 'confirmed' | 'inferred';
 
-/** 可信状态（地图 cell 8 规则 9）。 */
+/** 认知可信状态。 */
 export type CredStatus = 'candidate' | 'low' | 'limited' | 'stable' | 'conflicted';
 
 /** 溯源链上一条证据与认知的关系。 */
@@ -53,13 +46,13 @@ export interface Cognition {
   scope: string | null;
   validAt: string | null;
   invalidAt: string | null;
-  /** 主动询问时间戳（阶段 3 M5）：null = 未问过；proposeAsk 发问后写入，用于"问过不再问"去重。 */
+  /** 主动询问时间戳：null = 未问过；proposeAsk 发问后写入，用于"问过不再问"去重。 */
   askedAt: string | null;
-  /** 归档时间（批次2 受控管理）：非 null = 已归档——召回跳过（invalid 同款待遇），数据保留、可恢复。
+  /** 归档时间：非 null = 已归档，召回跳过但数据保留且可恢复。
    *  可选字段以兼容既有构造处（旧代码不填 = 未归档）。 */
   archivedAt?: string | null;
-  /** 静音时间（D-0023 召回负反馈）：非 null = 已静音——【仅】从召回跳过,但仍 active、仍参与 consolidation/画像演化
-   *  （区别于 archive 的全面雪藏、invalidate 的不再为真）。与 confidence 正交、不碰置信度自算（铁律 3b）。
+  /** 静音时间：非 null = 已静音，仅从召回跳过，但仍 active 并参与 consolidation/画像演化。
+   *  （区别于 archive 从全部活动路径排除，以及 invalidate 标记不再为真）。静音只改变召回资格，不改变 confidence。
    *  可选字段以兼容既有构造处（旧代码不填 = 未静音）；经 core.memory.muteCognition 置/清。 */
   mutedAt?: string | null;
   createdAt: string;

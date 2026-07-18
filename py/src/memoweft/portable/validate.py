@@ -1,4 +1,4 @@
-"""校验便携记忆包(纯函数,不触库)。逐字对拍 src/portable/validateBundle.ts。
+"""校验便携记忆包的纯函数，与 TypeScript validateBundle 契约保持一致。
 
 消息语言固定 en(TS 默认 lang;shared/parity/bundle-validate.json 的 expected 即 en)。
 分级:errors(致命·valid=false)/ warnings(软提示·可导入)。
@@ -23,7 +23,7 @@ class ValidateResult:
 
 
 def _js_stringify(v: Any) -> str:
-    """复刻 JS JSON.stringify(单值·无空格);undefined→'undefined'(键缺失),对齐 validateBundle.ts:27。"""
+    """实现 JS JSON.stringify 的单值紧凑格式；缺失键映射为 'undefined'。"""
     if v is _MISSING:
         return "undefined"
     return json.dumps(v, ensure_ascii=False, separators=(",", ":"))

@@ -1,5 +1,5 @@
 /**
- * Schema 版本化 + 迁移器（0.2.0 · 长期硬债收口）。
+ * Schema 版本化 + 迁移器（0.2.0 · 长期兼容性清理）。
  *
  * 为什么要它：npm 上已发布 0.1.0，可能有人在攒真实数据。往后任何改表结构都必须【可版本化、可迁移、
  *   迁移前备份、可回滚、能拿旧库无损打开】——不能再靠各 store 里"缺列就补"的土办法蒙混。
@@ -37,7 +37,13 @@ export interface Migration {
  * 本条只做"标记这库到了 0.1.0 版"的 stamp，不含 DDL。往后真改结构从 v2 追加。
  */
 export const MIGRATIONS: Migration[] = [
-  { version: 1, name: 'baseline-0.1.0', up: () => { /* schema 由 store 构造建，此处只 stamp 版本号 */ } },
+  {
+    version: 1,
+    name: 'baseline-0.1.0',
+    up: () => {
+      /* schema 由 store 构造建，此处只 stamp 版本号 */
+    },
+  },
 ];
 
 /** 当前代码支持的最新 schema 版本。 */
@@ -52,7 +58,9 @@ export function getSchemaVersion(db: DatabaseSync): number {
 function setSchemaVersion(db: DatabaseSync, v: number): void {
   // PRAGMA 不能参数化；v 校验成非负整数后再拼进去，杜绝注入。
   if (!Number.isInteger(v) || v < 0) {
-    throw new Error(resolveLang() === 'zh' ? `非法 schema 版本号：${v}` : `Invalid schema version number: ${v}`);
+    throw new Error(
+      resolveLang() === 'zh' ? `非法 schema 版本号：${v}` : `Invalid schema version number: ${v}`,
+    );
   }
   db.exec(`PRAGMA user_version = ${v}`);
 }
@@ -100,7 +108,7 @@ export function runMigrations(db: DatabaseSync, opts: RunMigrationsOptions = {})
   if (from > latest) {
     throw new Error(
       resolveLang() === 'zh'
-        ? `数据库 schema 版本 v${from} 高于本版 memoweft 支持的 v${latest}：` +
+        ? `数据库 schema 版本 v${from} 高于当前 MemoWeft 支持的 v${latest}：` +
             `这个库由更新版本的 memoweft 创建，请先升级 memoweft 再打开（拒绝用旧代码读写不认识的 schema，防写坏数据）。`
         : `Database schema version v${from} is higher than the v${latest} supported by this memoweft: ` +
             `this database was created by a newer version of memoweft. Please upgrade memoweft before opening it (old code refuses to read/write a schema it doesn't recognize, to avoid corrupting data).`,
@@ -122,7 +130,9 @@ export function runMigrations(db: DatabaseSync, opts: RunMigrationsOptions = {})
   const wantBackup = opts.backup ?? doesRealWork;
 
   if (opts.dryRun) {
-    log(`[migrate] dry-run：${from} → ${latest}，将应用 [${pending.map((m) => m.version).join(', ')}]`);
+    log(
+      `[migrate] dry-run：${from} → ${latest}，将应用 [${pending.map((m) => m.version).join(', ')}]`,
+    );
     return { from, to: from, applied: pending.map((m) => m.version), dryRun: true };
   }
 

@@ -1,5 +1,5 @@
 /**
- * 事件存储层（地图 cell 4）。参考 evidence/store.ts 的 node:sqlite 模式。
+ * 事件存储层。参考 evidence/store.ts 的 node:sqlite 模式。
  * 两张表：event（事件）+ event_evidence（事件覆盖了哪些原话证据）。
  */
 import { DatabaseSync } from '../store/nodeSqliteDriver.ts';
@@ -77,8 +77,10 @@ export class SqliteEventStore implements EventStore {
     if (this.ownsDb) this.db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
     this.clock = clock;
     this.db.exec(SCHEMA);
-    // 迁移：旧库 event 表可能缺 consolidated 列（增量消化追踪，阶段 2）。
-    const cols = this.db.prepare('PRAGMA table_info(event)').all() as unknown as Array<{ name: string }>;
+    // 迁移：旧库 event 表可能缺 consolidated 列（增量消化追踪，）。
+    const cols = this.db.prepare('PRAGMA table_info(event)').all() as unknown as Array<{
+      name: string;
+    }>;
     if (!cols.some((c) => c.name === 'consolidated')) {
       this.db.exec('ALTER TABLE event ADD COLUMN consolidated INTEGER NOT NULL DEFAULT 0');
     }
@@ -104,18 +106,19 @@ export class SqliteEventStore implements EventStore {
   }
 
   get(id: string): Event | null {
-    const row = this.db
-      .prepare('SELECT * FROM event WHERE id = ?')
-      .get(id) as unknown as EventRow | undefined;
+    const row = this.db.prepare('SELECT * FROM event WHERE id = ?').get(id) as unknown as
+      EventRow | undefined;
     return row ? fromRow(row) : null;
   }
 
   all(subjectId?: string): Event[] {
-    const rows = (
-      subjectId
-        ? this.db.prepare('SELECT * FROM event WHERE subject_id = ? ORDER BY occurred_at ASC').all(subjectId)
-        : this.db.prepare('SELECT * FROM event ORDER BY occurred_at ASC').all()
-    ) as unknown as EventRow[];
+    const rows = (subjectId
+      ? this.db
+          .prepare('SELECT * FROM event WHERE subject_id = ? ORDER BY occurred_at ASC')
+          .all(subjectId)
+      : this.db
+          .prepare('SELECT * FROM event ORDER BY occurred_at ASC')
+          .all()) as unknown as EventRow[];
     return rows.map(fromRow);
   }
 
@@ -137,7 +140,9 @@ export class SqliteEventStore implements EventStore {
 
   unconsolidated(subjectId: string): Event[] {
     const rows = this.db
-      .prepare('SELECT * FROM event WHERE subject_id = ? AND consolidated = 0 ORDER BY occurred_at ASC')
+      .prepare(
+        'SELECT * FROM event WHERE subject_id = ? AND consolidated = 0 ORDER BY occurred_at ASC',
+      )
       .all(subjectId) as unknown as EventRow[];
     return rows.map(fromRow);
   }
@@ -151,8 +156,17 @@ export class SqliteEventStore implements EventStore {
   insert(event: Event, evidenceIds: string[], opts: { consolidated?: boolean } = {}): void {
     const consolidated = opts.consolidated ? 1 : 0;
     this.db
-      .prepare('INSERT INTO event (id, subject_id, summary, occurred_at, created_at, consolidated) VALUES (?,?,?,?,?,?)')
-      .run(event.id, event.subjectId, event.summary, event.occurredAt, event.createdAt, consolidated);
+      .prepare(
+        'INSERT INTO event (id, subject_id, summary, occurred_at, created_at, consolidated) VALUES (?,?,?,?,?,?)',
+      )
+      .run(
+        event.id,
+        event.subjectId,
+        event.summary,
+        event.occurredAt,
+        event.createdAt,
+        consolidated,
+      );
     const stmt = this.db.prepare('INSERT INTO event_evidence (event_id, evidence_id) VALUES (?,?)');
     for (const eid of evidenceIds) stmt.run(event.id, eid);
   }

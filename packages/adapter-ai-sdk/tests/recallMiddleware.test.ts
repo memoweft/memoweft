@@ -1,6 +1,6 @@
 /**
  * 读适配器离线护栏：不打真模型，直接调 middleware.transformParams。
- * 验收：
+ * Test coverage:
  *  - transformParams 把召回文本真注进了 params.prompt 的最后一条 user 消息；
  *  - 注入文案照 Core knowledgeBlock 中性口径（含 "only guesses" 低置信标注），不含自造人设；
  *  - 空召回 / 无 user 文本 / recall 抛错 → 原样透传不注入（召回失败不挡回话）；
@@ -49,10 +49,22 @@ function paramsWith(userText: string): TransformArg['params'] {
 }
 
 // credStatus 用【真实枚举】(src/cognition/model.ts:29 = candidate|low|limited|stable|conflicted)。
-//   c2 用 'conflicted' 跑通冲突路径(冲突经 credStatus 隐式带出),别把非法形状锁进测试。
+//   c2 使用 'conflicted' 覆盖冲突路径（冲突经 credStatus 隐式表达），避免将非法数据形状固化到测试中。
 const RECALLED = [
-  { id: 'c1', content: 'Prefers concise answers', confidence: 820, credStatus: 'stable', score: 0.9 },
-  { id: 'c2', content: 'Might be learning Rust', confidence: 220, credStatus: 'conflicted', score: 0.7 },
+  {
+    id: 'c1',
+    content: 'Prefers concise answers',
+    confidence: 820,
+    credStatus: 'stable',
+    score: 0.9,
+  },
+  {
+    id: 'c2',
+    content: 'Might be learning Rust',
+    confidence: 220,
+    credStatus: 'conflicted',
+    score: 0.7,
+  },
 ] as unknown as RecalledCognition[];
 
 test('transformParams 把召回注进最后一条 user 消息，且用 Core knowledgeBlock 中性口径', async () => {
@@ -72,7 +84,7 @@ test('transformParams 把召回注进最后一条 user 消息，且用 Core know
   assert.ok(injectedText.includes('Prefers concise answers'), '召回内容进了 prompt');
   assert.ok(injectedText.includes('Might be learning Rust'), '第二条召回也进了');
   assert.ok(injectedText.includes('confidence 820/1000'), '带把握度');
-  // 中性口径 + 低置信标注（照 action.ts）
+  // 中性口径 + 低置信标注（matching action.ts）
   assert.ok(injectedText.includes('only guesses'), '低置信中性标注在');
   // 原用户问题仍在
   assert.ok(injectedText.includes('How should I phrase this?'), '用户原问题保留');
@@ -101,7 +113,9 @@ test('空召回 → 原样透传不注入', async () => {
 test('无 user 文本 → 不调 recall，原样透传', async () => {
   const { core, calls } = fakeCore(RECALLED);
   const mw = createMemoWeftMiddleware(core);
-  const params = { prompt: [{ role: 'system', content: 'sys only' }] } as unknown as TransformArg['params'];
+  const params = {
+    prompt: [{ role: 'system', content: 'sys only' }],
+  } as unknown as TransformArg['params'];
   const out = await mw.transformParams!({ type: 'generate', params, model: MODEL });
   assert.equal(calls.length, 0, '没 user 文本就别召回');
   assert.equal(out, params);
@@ -126,7 +140,13 @@ test('getLastUserMessageText 取最后一条 user、多 text part 换行拼', ()
   const prompt = [
     { role: 'user', content: [{ type: 'text', text: 'first' }] },
     { role: 'assistant', content: [{ type: 'text', text: 'reply' }] },
-    { role: 'user', content: [{ type: 'text', text: 'a' }, { type: 'text', text: 'b' }] },
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'a' },
+        { type: 'text', text: 'b' },
+      ],
+    },
   ];
   assert.equal(getLastUserMessageText(prompt), 'a\nb');
 });

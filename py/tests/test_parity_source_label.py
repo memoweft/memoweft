@@ -1,6 +1,6 @@
 """sourceLabel / aiContextSuffix parity:Python 与 TS(shared/parity/source-label.json)逐例一致。
 
-钉 js-trim(去 BOM 等)+ UTF-16 slice(240)+ 全角括号字节(P2-1b)。
+钉 js-trim(去 BOM 等)+ UTF-16 slice(240)+ 全角括号字节()。
 """
 from __future__ import annotations
 

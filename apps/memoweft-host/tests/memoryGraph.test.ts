@@ -1,5 +1,5 @@
 /**
- * 记忆图谱端点数据冒烟测试（步5-G2）。
+ * 记忆图谱端点数据冒烟测试。
  *
  * 验的是【链路 + payload 形状】而非渲染：
  *   core.graph.buildMemoryGraph（Host 的 /api/memory-graph 就直接转发它）产出的 payload
@@ -42,7 +42,9 @@ test('记忆图谱：includeInvalid / includeArchived 选项（Host query 会传
   try {
     // Host /api/memory-graph 收到 includeInvalid=true&includeArchived=true 时的等价调用
     const g = core.graph.buildMemoryGraph({
-      includeEvidence: true, includeInvalid: true, includeArchived: true,
+      includeEvidence: true,
+      includeInvalid: true,
+      includeArchived: true,
     });
     assert.ok(Array.isArray(g.nodes), 'nodes 是数组');
     assert.ok(Array.isArray(g.edges), 'edges 是数组');

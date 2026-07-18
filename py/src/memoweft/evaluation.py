@@ -1,11 +1,11 @@
-"""§15.3 固化质量评测 harness —— 移植自 bench/eval-consolidation.mjs(P2-10)。
+"""与 bench/eval-consolidation.mjs 兼容的质量评测工具。
 
-三级流程(每场景):run_scenario(真跑写路径)→ check_structural(硬判、程序)→ score_gists(软判、LLM judge)。
-**判定纯函数(check_structural / parse_yes_no)可逐位对拍**(shared/parity/eval-checks.json);
-run_scenario / score_gists 需真 LLM,跨语言只能比 §15.3 分布(非逐位),且最终终审仍是 dogfood。
+三级流程（每场景）：run_scenario（实际执行写路径）→ check_structural（硬判、程序）→ score_gists（软判、LLM judge）。
+判定纯函数 check_structural / parse_yes_no 通过 shared/parity/eval-checks.json 验证跨语言一致性；
+run_scenario / score_gists 依赖真实 LLM，跨语言比较汇总分布而非单次文本输出，并由集成测试验证。
 
-跨语言可比纪律:必须与 TS 用【同一份 corpus、同一 judge 端点、逐字同 JUDGE_PROMPT、同 JUDGE_RUNS、同 GIST_SCORING_VERSION】;
-产出同 schema 的 run JSON 后,直接用 TS 的 `node bench/eval-consolidation.mjs --compare a.json b.json` 对分(纯离线)。
+跨语言可比性要求使用相同 corpus、judge 端点、JUDGE_PROMPT、JUDGE_RUNS 与 GIST_SCORING_VERSION；
+生成相同 schema 的 run JSON 后，可用 `node bench/eval-consolidation.mjs --compare a.json b.json` 离线比较。
 """
 from __future__ import annotations
 
@@ -26,12 +26,12 @@ from .store.semantic_resolution import SqliteSemanticResolutionStore
 from .types import CognitionInput, EvidenceInput, Lang
 from .update_profile import update_profile
 
-#: judge 每个要点跑几次取多数(温度 0,防真模型抖动)。对齐 eval-consolidation.mjs:52。
+#: judge 对每个要点执行的重复次数；温度为 0，并以多数结果降低模型波动影响。
 JUDGE_RUNS = 3
-#: gist 评分【口径】版本(v2:conflict 的 shouldForm 走确定性硬判)。对齐 :60。
+#: gist 评分口径版本；v2 对 conflict 的 shouldForm 使用确定性判定。
 GIST_SCORING_VERSION = "v2"
 
-#: judge 判分提示词(**逐字对齐 TS**,否则软分跨语言不可比)。对齐 :67-87。
+#: judge 判分提示词；文本与 TypeScript 评测器共享稳定契约，避免软评分口径漂移。
 JUDGE_PROMPT_VERSION = "v1"
 _JUDGE_SYSTEM: dict[str, str] = {
     "zh": "你是严格的语义匹配判官。只回答一个词：YES 或 NO。不要解释、不要任何多余文字。",
@@ -64,7 +64,7 @@ _NO_RE = re.compile(r"\bNO\b")
 
 
 def parse_yes_no(ans: Any) -> bool:
-    """解析 judge 的 YES/NO(容错:大小写/标点/夹句中;含糊 → 保守判 NO)。对齐 :99-109。"""
+    """解析 judge 的 YES/NO；兼容大小写、标点与句中答案，含糊时保守返回 NO。"""
     t = js_trim(str(ans)).upper()
     ym = _YES_RE.search(t)
     nm = _NO_RE.search(t)
@@ -89,7 +89,7 @@ class Check:
 
 
 def check_structural(scenario: dict[str, Any], run: dict[str, Any]) -> list[Check]:
-    """结构性断言(程序判、不调 LLM)。逐位对拍 eval-consolidation.mjs:319-394。
+    """执行不调用 LLM 的结构性断言；语义与 eval-consolidation.mjs 保持一致。
 
     run["evidenceIds"] 接受 list 或 set(JSON 夹具里是 list)。
     """
@@ -127,7 +127,7 @@ def check_structural(scenario: dict[str, Any], run: dict[str, Any]) -> list[Chec
         need = [x for x in run["resolutions"] if x["hasAiContext"] and x["sourceKind"] == "spoken"]
         missing = [x for x in need if not x["res"]]
         if len(need) == 0:
-            detail = "语料无带AI上文的spoken原话（CORP-20 本应拦住）"
+            detail = "评测语料缺少带 AI 上文的 spoken 原话"
         elif missing:
             detail = f"{len(missing)}/{len(need)} 条缺解析"
         else:
@@ -172,7 +172,7 @@ def check_structural(scenario: dict[str, Any], run: dict[str, Any]) -> list[Chec
 
 
 def judge_majority(judge: LLMClient, lang: Lang, question: str) -> tuple[list[bool], bool]:
-    """judge 投 JUDGE_RUNS 票(温度 0 由 judge 实例保证),取严格多数。对齐 :131-142。"""
+    """执行 JUDGE_RUNS 次判定并返回严格多数结果；judge 实例负责温度为 0。"""
     votes: list[bool] = []
     for _ in range(JUDGE_RUNS):
         ans = judge.chat(
@@ -195,7 +195,7 @@ class GistScores:
 
 
 def score_gists(scenario: dict[str, Any], run: dict[str, Any], judge: LLMClient) -> GistScores:
-    """shouldForm/shouldNot 逐条判分。conflict 的 shouldForm 走**确定性硬判**(GIST_SCORING_VERSION v2)。对齐 :160-192。"""
+    """评估 shouldForm/shouldNot；GIST_SCORING_VERSION v2 对 conflict 使用确定性判定。"""
     contents = [c["content"] for c in run["active"]]
     lang: Lang = "zh" if scenario.get("lang") == "zh" else "en"
     ex = scenario.get("expect") or {}
@@ -229,9 +229,9 @@ class _NullRetriever:
 
 
 def run_scenario(scenario: dict[str, Any], llm: LLMClient, *, now: Optional[datetime] = None, cfg: Config = CONFIG) -> dict[str, Any]:
-    """建 :memory: 四 store、预置 seed、按序喂 message、真跑 update_profile,收集产出快照。对齐 :204-301。
+    """创建四个内存 store、载入 seed、按序处理消息、执行 update_profile 并收集结果快照。
 
-    证据一律显式 allow_cloud_read=True——被测多为云 tier,否则 observed 会被隐私门静默丢弃、评的就不是固化质量了。
+    证据显式设置 allow_cloud_read=True，确保云 tier 评测关注固化质量而非隐私过滤行为。
     """
     lang: Lang = "zh" if scenario.get("lang") == "zh" else "en"
     base = (now if now is not None else datetime.now(timezone.utc)) - timedelta(hours=1)

@@ -1,0 +1,15 @@
+{
+  "active": [
+    "c3",
+    "c2",
+    "c1"
+  ],
+  "all": [
+    "c3",
+    "c2",
+    "c1",
+    "c5",
+    "c4"
+  ],
+  "note": "insert 固定认知集 → all(全含)/ active(排除 invalid/archived)的 id 序 golden;排序 ORDER BY confidence DESC, created_at ASC"
+}

@@ -1,8 +1,8 @@
 /**
- * dist 冒烟脚本（T6 步2·Node 20 job 专用）。
+ * 构建产物冒烟脚本，供 Node 20 兼容性任务使用。
  *
  * 为什么单独有它：Node 20 没有原生剥 .ts 类型的能力，`node --test tests/**\/*.ts` 物理上跑不起来
- *   （引 tsx 之类新 dev 依赖被 CONTRIBUTING「默认拒绝新依赖」挡下，未经作者拍板不加）。
+ *   （引 tsx 之类新 dev 依赖被 CONTRIBUTING「默认拒绝新依赖」挡下，未经兼容性约束不加）。
  *   所以 Node 20 的验收改走这条：先 `npm run build` 出 dist（纯 JS），再用本脚本走一遍真实开库链，
  *   证明 better-sqlite3 驱动在 Node 20 上把 memoweft 跑通。
  *
@@ -19,13 +19,20 @@ import { join } from 'node:path';
 import assert from 'node:assert/strict';
 
 // 从 build 产物导入（不是 src）——本脚本验的就是"发出去的 dist 在 Node 20 上能跑"。
-import { openStores, getSchemaVersion, LATEST_SCHEMA_VERSION, MEMOWEFT_VERSION } from '../../dist/index.js';
+import {
+  openStores,
+  getSchemaVersion,
+  LATEST_SCHEMA_VERSION,
+  MEMOWEFT_VERSION,
+} from '../../dist/index.js';
 
 const dir = mkdtempSync(join(tmpdir(), 'mw-smoke-'));
 const dbPath = join(dir, 'smoke.db');
 
 function main() {
-  console.log(`[smoke] memoweft ${MEMOWEFT_VERSION} · Node ${process.versions.node} · 驱动=${process.env.MEMOWEFT_TEST_DRIVER ?? '(自动选择)'}`);
+  console.log(
+    `[smoke] memoweft ${MEMOWEFT_VERSION} · Node ${process.versions.node} · 驱动=${process.env.MEMOWEFT_TEST_DRIVER ?? '(自动选择)'}`,
+  );
 
   // 1) 开库：openStores 是同步 API；内部选驱动 + 自动跑迁移（新库直接盖最新版）。
   const s = openStores(dbPath);

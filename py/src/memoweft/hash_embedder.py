@@ -1,6 +1,6 @@
-r"""确定性词袋哈希嵌入器 —— 零网络、同输入恒同输出。移植自 tests/retrieval/hashEmbedder.ts。
+r"""确定性词袋哈希嵌入器：不访问网络，相同输入始终产生相同输出。
 
-parity 硬点:
+跨语言数值契约：
   - fnv1a32 用 Math.imul(32位)+ charCodeAt(UTF-16 **码元**)—— 见 _math.imul / utf16_code_units。
   - tokenize 的汉字切分用 Array.from(**码点**);故 fnv1a32 与 tokenize 的迭代单位【不同】(BMP 下一致)。
   - \p{L}/\p{N}/\p{Han} 用第三方 `regex` 模块(stdlib re 无 \p{Script=...})。
@@ -24,7 +24,7 @@ _HAN_RE = regex.compile(r"\p{Han}")
 
 
 def fnv1a32(s: str) -> int:
-    """FNV-1a 32位;逐 UTF-16 码元(复刻 JS charCodeAt)。返回 uint32。hashEmbedder.ts:26-33。"""
+    """按 UTF-16 码元计算 32 位 FNV-1a，并返回 uint32。"""
     h = _FNV_OFFSET
     for code in utf16_code_units(s):
         h = (h ^ code) & 0xFFFFFFFF
@@ -33,7 +33,7 @@ def fnv1a32(s: str) -> int:
 
 
 def _tokens_from_run(run: str) -> list[str]:
-    """字母/数字连续段 → token:汉字子段发单字+相邻 bigram;非汉字子段整段一个 token。hashEmbedder.ts:42-56。"""
+    """将字母或数字连续段切分为汉字单字与相邻 bigram，非汉字子段保持为单个 token。"""
     out: list[str] = []
     for seg in _SEG_RE.findall(run):
         if _HAN_RE.search(seg):
@@ -47,7 +47,7 @@ def _tokens_from_run(run: str) -> list[str]:
 
 
 def tokenize(text: str) -> list[str]:
-    """lowercase 后按 \\p{L}+|\\p{N}+ 取连续段,再逐段细切。hashEmbedder.ts:59-64。"""
+    """转为小写后按 \\p{L}+|\\p{N}+ 提取连续段，再逐段细分。"""
     out: list[str] = []
     for run in _RUN_RE.findall(text.lower()):
         out.extend(_tokens_from_run(run))
@@ -55,7 +55,7 @@ def tokenize(text: str) -> list[str]:
 
 
 class HashEmbedder:
-    """确定性词袋哈希嵌入器。hashEmbedder.ts:70-107。"""
+    """确定性词袋哈希嵌入器。"""
 
     def __init__(self, dim: int = DEFAULT_DIM) -> None:
         if not isinstance(dim, int) or dim <= 0:

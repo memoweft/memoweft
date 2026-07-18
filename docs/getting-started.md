@@ -27,11 +27,11 @@ import { createMemoWeftCore } from 'memoweft';
 const core = createMemoWeftCore({ dbPath: ':memory:' });
 
 // Store one thing the user said. This makes no model call — it just records raw evidence.
-await core.ingestUserMessage({ subjectId: 'alice', content: 'I am allergic to peanuts.' });
+await core.ingestUserMessage({ subjectId: 'alice', content: 'I own a red bicycle.' });
 
 // Read it back through the controlled API — you never touch the database directly.
 for (const e of core.memory.listEvidence({ subjectId: 'alice' })) {
-  console.log(e.sourceKind, '·', e.rawContent); // → spoken · I am allergic to peanuts.
+  console.log(e.sourceKind, '·', e.rawContent); // → spoken · I own a red bicycle.
 }
 
 core.close();
@@ -54,14 +54,18 @@ MEMOWEFT_EMBED_MODEL=...
 ```
 
 <!-- snippet:skip (needs a live model) -->
+
 ```ts
 const core = createMemoWeftCore({ dbPath: './memory.db' });
 
-await core.ingestUserMessage({ subjectId: 'alice', content: 'I am allergic to peanuts.' });
+await core.ingestUserMessage({ subjectId: 'alice', content: 'I own a red bicycle.' });
 await core.updateProfile({ subjectId: 'alice' }); // distill → consolidate → attribute → index
 
-// The next turn recalls the allergy and injects it into the reply.
-const turn = await core.handleConversationTurn({ subjectId: 'alice', message: 'Any snack ideas?' });
+// The next turn recalls the bicycle fact and injects it into the reply.
+const turn = await core.handleConversationTurn({
+  subjectId: 'alice',
+  message: 'What color is my bicycle?',
+});
 console.log(turn.reply);
 ```
 
@@ -69,7 +73,9 @@ Missing config degrades instead of crashing: no chat model → the profile step 
 
 ## Next
 
+- **[Run offline in 30 seconds](./demo-script.md)** — a deterministic, no-key proof after dependencies are installed.
 - **[Concepts](./concepts/)** — why facts, guesses, conflicts, and stale states are kept apart.
 - **[Recipes](./recipes/)** — drop MemoWeft into the Vercel AI SDK or an MCP server in five minutes.
 - **[API reference](./reference/memory-surface-contract.md)** — every host-facing method and shape.
-- **[Run the demo](./demo-script.md)** — `npm run demo` shows the four differentiators in 90 seconds.
+- **[Reference host](./reference-host.md)** — a local single-user host demo; not a production template.
+- **[Deployment checklist](./deployment.md#production-checklist)** — operations and security work a real host must own.

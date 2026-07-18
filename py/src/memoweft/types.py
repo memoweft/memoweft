@@ -1,11 +1,7 @@
-"""领域枚举与形状 —— 与 TS 的 union 类型逐字对齐(跨语言资产,拼错即数据不兼容)。
+"""领域枚举与数据形状；这些跨语言契约与 TypeScript 模型保持一致。
 
-对齐锚点:
-  ContentType  ← src/cognition/model.ts:15-23
-  FormedBy     ← src/cognition/model.ts:29
-  CredStatus   ← src/cognition/model.ts:32
-  SourceKind   ← src/evidence/model.ts:12
-  ResponseAct / PropositionOrigin ← src/interaction/model.ts:16,20
+契约来源：ContentType、FormedBy 与 CredStatus 来自 cognition/model.ts；
+SourceKind 来自 evidence/model.ts；ResponseAct 与 PropositionOrigin 来自 interaction/model.ts。
 """
 from __future__ import annotations
 
@@ -25,7 +21,7 @@ CarrierFormedBy = Literal["stated", "confirmed", "observed"]
 
 @dataclass(frozen=True, slots=True)
 class ConfidenceInputs:
-    """computeConfidence 的输入(confidence.ts:13-18)。"""
+    """computeConfidence 的输入。"""
 
     content_type: ContentType
     formed_by: FormedBy
@@ -43,15 +39,15 @@ class Resolution:
 
 @dataclass(frozen=True, slots=True)
 class CarrierInput:
-    """deriveFormedBy 的逐条支持证据输入(deriveFormedBy.ts:50-56)。"""
+    """deriveFormedBy 的单条支持证据输入。"""
 
     source_kind: SourceKind
     preceding_ai_context: Optional[str]
     resolution: Optional[Resolution]
 
 
-# ── 证据 / 事件 / 认知的落库形状与写入入参(Phase 2 · P2-1a)──
-#   对齐:evidence/model.ts、event/model.ts、cognition/model.ts。dataclass(slots) 内部形状;
+# ── 证据 / 事件 / 认知的落库形状与写入入参 ──
+#   形状与 evidence/model.ts、event/model.ts、cognition/model.ts 保持一致；dataclass(slots) 用于内部表示；
 #   frozen 用于读结构(不可变),入参/patch 非 frozen(带默认 / 哨兵)。
 
 EvidenceRelation = Literal["support", "contradict"]
@@ -59,8 +55,8 @@ EvidenceRelation = Literal["support", "contradict"]
 
 @dataclass(frozen=True, slots=True)
 class Evidence:
-    """一条证据(落库后的完整形状,evidence/model.ts:15-41)。
-    注:preceding_ai_context 【故意不在读结构里】(D-0033 结构墙)——只经 put/insert 写、
+    """落库后的完整证据形状，与 evidence/model.ts 保持一致。
+    注:preceding_ai_context 【故意不在读结构里】( 结构墙)——只经 put/insert 写、
        经 EvidenceStore.preceding_ai_context_of 专用只读取,永不进 Evidence。"""
 
     id: str
@@ -80,7 +76,7 @@ class Evidence:
 
 @dataclass(slots=True)
 class EvidenceInput:
-    """写入证据的入参(evidence/model.ts:49-73)。id/recorded_at 由存储层生成;
+    """证据写入参数。id/recorded_at 由存储层生成；
     occurred_at/summary/授权位缺省时由 put 按 source_kind 规则补默认。"""
 
     subject_id: str
@@ -94,13 +90,13 @@ class EvidenceInput:
     allow_cloud_read: Optional[bool] = None
     allow_inference: Optional[bool] = None
     corrects_evidence_id: Optional[str] = None
-    #: 上一轮【AI 那句】只读上下文(D-0033):只写入、经 preceding_ai_context_of 取,永不成证据(3a/3d)。
+    #: 上一轮【AI 那句】作为非证据上下文：只写入，经 preceding_ai_context_of 专用读取，永不成为证据。
     preceding_ai_context: Optional[str] = None
 
 
 @dataclass(frozen=True, slots=True)
 class Event:
-    """一个事件(event/model.ts:10-18):对话情境化摘要,挂回覆盖的原话证据。"""
+    """对话情境化事件摘要，并关联其覆盖的原话证据。"""
 
     id: str
     subject_id: str
@@ -111,7 +107,7 @@ class Event:
 
 @dataclass(slots=True)
 class EventInput:
-    """写入事件的入参(event/model.ts:20-26)。"""
+    """事件写入参数。"""
 
     subject_id: str
     summary: str
@@ -121,7 +117,7 @@ class EventInput:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceLink:
-    """溯源链上一条证据与认知的关系(cognition/model.ts:37-40)。"""
+    """溯源链中的证据与认知关系。"""
 
     evidence_id: str
     relation: EvidenceRelation
@@ -129,7 +125,7 @@ class EvidenceLink:
 
 @dataclass(frozen=True, slots=True)
 class Cognition:
-    """一条认知(落库后的完整形状,cognition/model.ts:43-67)。"""
+    """落库后的完整认知形状。"""
 
     id: str
     subject_id: str
@@ -150,7 +146,7 @@ class Cognition:
 
 @dataclass(slots=True)
 class CognitionInput:
-    """写入认知的入参(cognition/model.ts:70-82);id/时间由存储层生成,confidence/cred_status 由 consolidate 算好传入。"""
+    """认知写入参数；id 与时间由存储层生成，confidence/cred_status 由 consolidate 计算。"""
 
     subject_id: str
     content: str
@@ -165,7 +161,7 @@ class CognitionInput:
 
 
 class _Unset:
-    """哨兵:区分「字段没传」(保留原值)与「传了 None」(复位)——复刻 TS CognitionPatch 的 `=== undefined`。"""
+    """区分未提供字段（保留原值）与显式 None（复位），对应 TS CognitionPatch 的 undefined 语义。"""
 
     __slots__ = ()
 
@@ -179,9 +175,8 @@ UNSET = _Unset()
 
 @dataclass(slots=True)
 class CognitionPatch:
-    """cognition.update 的 patch(cognition/model.ts:87-104)。两组语义:
-    content/confidence/cred_status/formed_by:None = 保留原值(复刻 TS `?? cur`);
-    scope/invalid_at/asked_at/archived_at/muted_at:UNSET = 保留、None = 复位(复刻 TS `=== undefined ? cur : patch`)。"""
+    """cognition.update 的 patch。content/confidence/cred_status/formed_by 使用 None 保留原值；
+    scope/invalid_at/asked_at/archived_at/muted_at 使用 UNSET 保留、None 复位，对应 TS patch 语义。"""
 
     content: Optional[str] = None
     confidence: Optional[int] = None
@@ -196,12 +191,12 @@ class CognitionPatch:
 
 # ── 语言 / 模型 tier(跨模块共用)──
 Lang = Literal["zh", "en"]
-#: 模型 tier(隐私读取门用;TS 在 llm/client.ts:21,py 归 types 供 privacy/llm 共用)。
+#: 模型 tier，用于隐私读取边界，并由 privacy 与 llm 模块共享。
 ModelTier = Literal["cloud", "local"]
 
 
-# ── 交互语义模型(v0.6 · D-0034;Phase 2 P2-1b 移植)──
-#   对齐 interaction/model.ts。ResponseAct/PropositionOrigin 已在上(枚举区)。
+# ── 交互语义模型（v0.6，Python 实现） ──
+#   交互形状与 interaction/model.ts 保持一致；ResponseAct/PropositionOrigin 定义在枚举区。
 
 PromptAct = Literal["propose", "ask", "state", "none", "other"]
 AssertionStrength = Literal["explicit", "weak", "none"]
@@ -209,7 +204,7 @@ AssertionStrength = Literal["explicit", "weak", "none"]
 
 @dataclass(frozen=True, slots=True)
 class VisibleTurn:
-    """可见交互轮(interaction/model.ts:25-28):只含用户可见内容。字段序 role,content 用于 hash_context 的 JSON 字节。"""
+    """仅包含用户可见内容的交互轮；role、content 字段顺序参与 hash_context 的 JSON 字节契约。"""
 
     role: Literal["user", "assistant", "tool"]
     content: str
@@ -217,7 +212,7 @@ class VisibleTurn:
 
 @dataclass(frozen=True, slots=True)
 class InteractionContext:
-    """一条交互上下文快照(interaction/model.ts:31-42)。不产 Cognition、永不成证据(3a)。"""
+    """交互上下文快照；该结构不产生 Cognition，也不进入证据存储。"""
 
     id: str
     subject_id: str
@@ -238,7 +233,7 @@ class InteractionContextInput:
 
 @dataclass(frozen=True, slots=True)
 class SemanticResolution:
-    """一条语义解析(interaction/model.ts:52-67)。解释结果、不是证据(3a)。"""
+    """语义解析结果；该结构用于解释，不作为证据。"""
 
     id: str
     evidence_id: str

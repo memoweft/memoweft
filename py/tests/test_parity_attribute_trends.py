@@ -1,7 +1,7 @@
 """attribute + trends parity:Python 建同 setup + stub llm → 与 TS(shared/parity/{attribute,trends}.json)一致。
 
 钉 attribute:现象筛选(min_phenomenon_support/未归因)+ 禁 state→state + 时间窗 + 短标号 + hypothesis_cap 封顶 + 支撑=原因+锚;
-钉 trends:all() 历史口径 + 排除 confirmed + trend_min_count 门 + 短标号 + ruled + 不筛 allow_inference(P2-7)。
+钉 trends:all() 历史口径 + 排除 confirmed + trend_min_count 门 + 短标号 + ruled + 不筛 allow_inference()。
 """
 from __future__ import annotations
 

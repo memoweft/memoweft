@@ -1,12 +1,12 @@
-"""便携包常量与形状。移植自 src/portable/model.ts。"""
+"""与 TypeScript portable model 契约一致的便携包常量与形状。"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Literal
 
-#: 包格式标记。对齐 model.ts:16。
+#: 便携包格式标记。
 BUNDLE_FORMAT = "memoweft-bundle"
-#: 包结构版本(v2:data 增 interactionContexts/semanticResolutions)。对齐 model.ts:20。
+#: 便携包结构版本；v2 新增 interactionContexts 与 semanticResolutions。
 BUNDLE_SCHEMA_VERSION = 2
 
 #: 导入模式:dryRun 只算不写 / merge 实际写入。
