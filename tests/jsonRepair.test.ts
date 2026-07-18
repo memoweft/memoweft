@@ -37,6 +37,28 @@ test('extractJsonObject：无对象 → null', () => {
   assert.equal(extractJsonObject('[1,2,3]'), null); // 数组不是对象
 });
 
+test('extractJsonObject：超长且未闭合的代码围栏不会走回溯型正则', () => {
+  const raw = `解释\n\`\`\`json\n${'x'.repeat(200_000)}`;
+  assert.equal(extractJsonObject(raw), null);
+});
+
+test('extractJsonObject：首个非 JSON 围栏仍按旧语义优先，不跳到后续围栏', () => {
+  const raw = '```text\n{"first":true}\n```\n```json\n{"second":true}\n```';
+  assert.equal(extractJsonObject(raw), '{"first":true}');
+});
+
+test('extractJsonObject：json 标签紧贴对象时仍会消费标签', () => {
+  assert.equal(extractJsonObject('```json{"ok":true}```'), '{"ok":true}');
+});
+
+test('extractJsonObject：jsonish 保持旧正则的 json 前缀消费语义', () => {
+  assert.equal(extractJsonObject('```jsonish{"ok":true}```'), '{"ok":true}');
+});
+
+test('extractJsonObject：纯空白 JSON 围栏不会越过闭围栏读取后续文本', () => {
+  assert.equal(extractJsonObject('```json   ``` 后续解释 {"mustNotParse":true}'), null);
+});
+
 test('parseJsonObject：数组 / 标量 / 非法都算不合法 → null', () => {
   assert.equal(parseJsonObject('[1,2]'), null);
   assert.equal(parseJsonObject('42'), null);

@@ -16,9 +16,18 @@ export function buildEnvResponse(
   body: Record<string, unknown>,
 ): [number, { env: string } | { error: string }] {
   const s = (v: unknown): string => String(v ?? '').trim(); // 统一去空白；不落库、不缓存
-  // dotenv 值转义：含 '#'/空格/引号的值加双引号并转义内部引号——否则 process.loadEnvFile() 会把 '#'
-  //   及其后当行内注释截断（apiKey/base_url 含 '#' 会被悄悄截短 → 加载回来鉴权失败、用户对着"看着完整"的 .env 难自查）。
-  const q = (v: string): string => (/[#\s"]/.test(v) ? '"' + v.replace(/"/g, '\\"') + '"' : v);
+  /**
+   * Node 的 .env 解析器不把 \" / \' 当作引号转义，并会在双引号值中解释 `\\n`。
+   * 因此不能把不可信值简单替换后塞进双引号：反斜杠、换行或引号会被静默改值，甚至提前
+   * 结束该行。所有值都必须加引号，否则值恰好被引号包住时会在加载时被静默剥掉。优先使用
+   * 单引号（可原样保留反斜杠、换行和双引号）；只有没有反斜杠且不含双引号时才安全使用
+   * 双引号。极少数 .env 语法不可无损表示的组合明确拒绝，绝不生成看似成功但加载后被篡改的配置。
+   */
+  const q = (v: string): string | null => {
+    if (!v.includes("'")) return `'${v}'`;
+    if (!v.includes('"') && !v.includes('\\')) return `"${v}"`;
+    return null;
+  };
 
   // 对话大模型（必配三项）
   const llmBase = s(body.llmBaseUrl),
@@ -46,19 +55,45 @@ export function buildEnvResponse(
     return [400, { error: `对话模型必填项缺失：${missing.join('、')}` }];
   }
 
+  const values = {
+    MEMOWEFT_LLM_BASE_URL: llmBase,
+    MEMOWEFT_LLM_API_KEY: llmKey,
+    MEMOWEFT_LLM_MODEL: llmModel,
+    MEMOWEFT_WRITE_LLM_BASE_URL: wBase,
+    MEMOWEFT_WRITE_LLM_API_KEY: wKey,
+    MEMOWEFT_WRITE_LLM_MODEL: wModel,
+    MEMOWEFT_EMBED_BASE_URL: eBase,
+    MEMOWEFT_EMBED_API_KEY: eKey,
+    MEMOWEFT_EMBED_MODEL: eModel,
+  };
+  const encoded = Object.fromEntries(
+    Object.entries(values).map(([name, value]) => [name, q(value)]),
+  ) as Record<keyof typeof values, string | null>;
+  const unrepresentable = Object.entries(encoded)
+    .filter(([, value]) => value === null)
+    .map(([name]) => name);
+  if (unrepresentable.length) {
+    return [
+      400,
+      {
+        error: `以下配置包含当前 .env 格式无法无损保存的字符组合：${unrepresentable.join('、')}`,
+      },
+    ];
+  }
+
   const lines: string[] = [];
   lines.push('# ── 对话大模型（chat · 必配）：回话质量优先 ──────────────');
-  lines.push(`MEMOWEFT_LLM_BASE_URL=${q(llmBase)}`);
-  lines.push(`MEMOWEFT_LLM_API_KEY=${q(llmKey)}`);
-  lines.push(`MEMOWEFT_LLM_MODEL=${q(llmModel)}`);
+  lines.push(`MEMOWEFT_LLM_BASE_URL=${encoded.MEMOWEFT_LLM_BASE_URL}`);
+  lines.push(`MEMOWEFT_LLM_API_KEY=${encoded.MEMOWEFT_LLM_API_KEY}`);
+  lines.push(`MEMOWEFT_LLM_MODEL=${encoded.MEMOWEFT_LLM_MODEL}`);
   lines.push('');
 
   // 写路径小模型：整组任一非空才写 + 声明 tier；整组空 → 省略 + 回退注释 + 隐私提醒。
   if (wBase || wKey || wModel) {
     lines.push('# ── 写路径小快模型（write · 可选）：整理记忆走它，不拖慢整理，也省钱 ──');
-    lines.push(`MEMOWEFT_WRITE_LLM_BASE_URL=${q(wBase)}`);
-    lines.push(`MEMOWEFT_WRITE_LLM_API_KEY=${q(wKey)}`);
-    lines.push(`MEMOWEFT_WRITE_LLM_MODEL=${q(wModel)}`);
+    lines.push(`MEMOWEFT_WRITE_LLM_BASE_URL=${encoded.MEMOWEFT_WRITE_LLM_BASE_URL}`);
+    lines.push(`MEMOWEFT_WRITE_LLM_API_KEY=${encoded.MEMOWEFT_WRITE_LLM_API_KEY}`);
+    lines.push(`MEMOWEFT_WRITE_LLM_MODEL=${encoded.MEMOWEFT_WRITE_LLM_MODEL}`);
     // tier（模型路由）：声明这个写模型是云端还是本地。local = 能私密消化"行为观察"(observed，默认不上云)。
     lines.push(`MEMOWEFT_WRITE_LLM_TIER=${wTier}`);
     if (wTier === 'local') {
@@ -85,9 +120,9 @@ export function buildEnvResponse(
   // 向量嵌入：整组任一非空才写；整组空 → 省略 + 注释说明降级（语义联想降级为空，整理记忆照常）。
   if (eBase || eKey || eModel) {
     lines.push('# ── 嵌入模型（embed · 可选）：让它在对话里更容易想起相关的旧事 ──');
-    lines.push(`MEMOWEFT_EMBED_BASE_URL=${q(eBase)}`);
-    lines.push(`MEMOWEFT_EMBED_API_KEY=${q(eKey)}`);
-    lines.push(`MEMOWEFT_EMBED_MODEL=${q(eModel)}`);
+    lines.push(`MEMOWEFT_EMBED_BASE_URL=${encoded.MEMOWEFT_EMBED_BASE_URL}`);
+    lines.push(`MEMOWEFT_EMBED_API_KEY=${encoded.MEMOWEFT_EMBED_API_KEY}`);
+    lines.push(`MEMOWEFT_EMBED_MODEL=${encoded.MEMOWEFT_EMBED_MODEL}`);
   } else {
     lines.push(
       '# ── 嵌入模型（embed · 可选）：未配 → 暂不启用语义联想（聊天/整理记忆都不受影响）──',
