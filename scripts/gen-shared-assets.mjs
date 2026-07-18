@@ -33,6 +33,7 @@ import { hashContext } from '../src/interaction/interactionContextStore.ts';
 import { expire } from '../src/background/expire.ts';
 import { stripReasoning, readReplyText } from '../src/llm/client.ts';
 import { extractJsonObject, parseJsonObject } from '../src/llm/jsonRepair.ts';
+import { distill } from '../src/distillation/distill.ts';
 import { validateBundle } from '../src/portable/validateBundle.ts';
 import { BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION } from '../src/portable/model.ts';
 
@@ -455,6 +456,56 @@ function parityJsonExtract() {
   };
 }
 
+// ── parity 夹具:distill(证据→事件;真 TS distill + stub llm,dump messages/event/计数)——P2-4 ──
+async function parityDistill() {
+  const build = async (lang) => {
+    const cfg = { ...config, language: lang };
+    const stores = openStores(':memory:', cfg, () => new Date('2026-01-01T00:00:00.000Z'));
+    const put = (sourceKind, rawContent, occurredAt, extra = {}) =>
+      stores.evidenceStore.put({ subjectId: 'owner', sourceKind, hostId: 'local', occurredAt, rawContent, ...extra });
+    // 插入序打乱,验 distill 按 occurredAt 排序;覆盖隐私门各分支。
+    put('spoken', '我最近在学 Rust', '2026-01-01T10:00:00.000Z'); // digestible
+    put('observed', '凌晨3点还在打游戏', '2026-01-01T03:00:00.000Z'); // observed→cloud=false → tier 挡
+    put('spoken', '是的', '2026-01-01T11:00:00.000Z', { precedingAiContext: 'AI:你喜欢爬山吧?' }); // digestible + AI 上文
+    put('spoken', '不想被推断', '2026-01-01T09:00:00.000Z', { allowInference: false }); // readable 但 infer=false → 不 digestible
+    const seen = [];
+    let n = 0;
+    const stubLlm = {
+      get callCount() {
+        return n;
+      },
+      tier: 'cloud',
+      async chat(messages) {
+        seen.push(messages);
+        n++;
+        return '  用户在学 Rust 并确认了偏好。  '; // 带首尾空白验 trim
+      },
+    };
+    const result = await distill('owner', {
+      evidenceStore: stores.evidenceStore,
+      eventStore: stores.eventStore,
+      llm: stubLlm,
+      config: cfg,
+    });
+    const out = {
+      messages: seen[0],
+      eventSummary: result.event ? result.event.summary : null,
+      eventOccurredAt: result.event ? result.event.occurredAt : null,
+      pendingCount: result.pendingCount,
+      tierBlockedCount: result.tierBlockedCount,
+      llmCalls: result.llmCalls,
+      digestibleCount: result.event ? stores.eventStore.evidenceOf(result.event.id).length : 0,
+    };
+    stores.close();
+    return out;
+  };
+  return {
+    note: 'distill 证据→事件:messages 逐字节(system=prompt/user=材料行) + event summary(trim)/occurredAt(时间锚) + pending/tierBlocked/digestible 计数;隐私门(observed cloud挡/infer=false 不消化)',
+    zh: await build('zh'),
+    en: await build('en'),
+  };
+}
+
 // ── parity 夹具:SQLite schema(从 openStores 真建库 dump 权威结构;供 Python 建同构表对拍) ──
 //   dump 逐表列结构(pragma_table_info,驱动无关 → node:sqlite/better-sqlite3 一致)+ user_version。
 function buildSchema() {
@@ -583,6 +634,7 @@ export async function buildSharedAssets() {
   const emb = new HashEmbedder(he.DIM);
   const vecs = await emb.embed(he.embedTexts);
   const embedCases = he.embedTexts.map((text, i) => ({ input: { text, dim: he.DIM }, expected: vecs[i] }));
+  const distillFx = await parityDistill();
 
   return {
     'config-constants.json': buildConfigConstants(),
@@ -604,6 +656,7 @@ export async function buildSharedAssets() {
     'parity/expire.json': parityExpire(),
     'parity/llm-text.json': parityLlmText(),
     'parity/json-extract.json': parityJsonExtract(),
+    'parity/distill.json': distillFx,
     'parity/schema.json': buildSchema(),
     'parity/fts.json': buildFtsGolden(),
     ...(() => { const bf = buildBundleFixtures(); return { 'parity/bundle.json': bf.bundle, 'parity/bundle-validate.json': bf.validate }; })(),
