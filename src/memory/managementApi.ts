@@ -206,7 +206,7 @@ export function createMemoryManagementAPI(
   cfg: MemoWeftConfig = config,
   deps: MemoryManagementDeps = {},
 ): MemoryManagementAPI {
-  const { db, evidenceStore, eventStore, cognitionStore, interactionContextStore, managementLog, transaction } = bundle;
+  const { db, evidenceStore, eventStore, cognitionStore, interactionContextStore, semanticResolutionStore, managementLog, transaction } = bundle;
   const retriever = deps.retriever;
   const clock = deps.clock ?? systemClock; // 可注入时钟（Phase 4）：失效/归档/自检/读时衰减的"现在"
   const subjectOf = (explicit?: string) => explicit ?? cfg.identity.subjectId;
@@ -267,6 +267,9 @@ export function createMemoryManagementAPI(
         // force（或无引用）：清关联链 → 删证据 → 审计，同一事务全成或全滚。
         db.prepare('DELETE FROM event_evidence WHERE evidence_id = ?').run(evidenceId);
         db.prepare('DELETE FROM cognition_evidence WHERE evidence_id = ?').run(evidenceId);
+        // 这条证据的语义解析（用户原话的解开改写）跟着删——必须在删证据之前，删完就找不着关联了。
+        //   漏掉它等于：用户点「删除这条」，界面说删了，而那句话的改写版永久留库、再无入口可删。
+        semanticResolutionStore.removeByEvidenceIds([evidenceId]);
         evidenceStore.remove(evidenceId);
         managementLog.append({
           op: 'remove_evidence',
@@ -472,10 +475,23 @@ export function createMemoryManagementAPI(
       // 库内四张表（三层 + 审计）包进一个事务：全成或全滚。indexAll([]) 是外部异步索引、放事务外。
       const counts = transaction(() => {
         // 证据层无 removeBySubject → all() 按 subject 逐条 remove（单 subject 全清；跨 subject 只清本 subject）。
+        // ⚠ 先把 id 收集下来再删：semantic_resolution 只认 evidence_id（表里没有 subject_id），
+        //   删完证据就没法再问「哪些解析属于本 subject」了。
+        const ownEvidenceIds: string[] = [];
         let evidenceRemoved = 0;
         for (const e of evidenceStore.all()) {
-          if (e.subjectId === subjectId && evidenceStore.remove(e.id)) evidenceRemoved++;
+          if (e.subjectId !== subjectId) continue;
+          ownEvidenceIds.push(e.id);
+          if (evidenceStore.remove(e.id)) evidenceRemoved++;
         }
+        // 语义解析（含用户原话的解开改写，如「不是」→「用户否认是素食者」）：按本 subject 的证据集清。
+        semanticResolutionStore.removeByEvidenceIds(ownEvidenceIds);
+        // 再清孤儿：证据早已删除、解析残留的行。它们的 evidence_id 指向不存在的证据，
+        //   既不属于任何 subject 也没有任何入口能删到——出厂是唯一能收口的地方。
+        //   ⚠ 必须排在删证据之后（上面刚删的那批此刻也已成孤儿，这句是双保险）。
+        //   跨 subject：v1 单人单宿主下可接受，与同事务里 managementLog.clear()／indexAll([]) 的整表口径一致；
+        //   将来多 subject 化时，这句要改成只清本 subject，孤儿交给 checkIntegrity 报告。
+        db.prepare('DELETE FROM semantic_resolution WHERE evidence_id NOT IN (SELECT id FROM evidence)').run();
         const eventRemoved = eventStore.removeBySubject(subjectId); // 连带清 event_evidence
         const cognitionRemoved = cognitionStore.removeBySubject(subjectId); // 连带清 cognition_evidence
         // 交互上下文快照（含【用户原话】+ AI 上一轮原话，明文 JSON）：出厂必须一起清。

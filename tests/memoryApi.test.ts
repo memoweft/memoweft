@@ -468,6 +468,70 @@ test('resetSubject：只清指定 subject，不误伤别的 subject', () => {
   }
 });
 
+test('resetSubject：连 semantic_resolution 一起清（含删证据留下的孤儿解析）', () => {
+  const bundle = openStores(':memory:');
+  const api = createMemoryManagementAPI(bundle);
+  try {
+    // semantic_resolution 存的不是元数据，是「这个人是什么样」的结论句：
+    // 用户只说了「不是」，这里存的是「用户否认是素食者」——按内容属于用户的话。
+    // 它靠 evidence_id 关联（表里没有 subject_id），所以要按本 subject 的证据集来清。
+    const own = bundle.evidenceStore.put({ subjectId: 'owner', sourceKind: 'spoken', hostId: 'test', rawContent: '不是' });
+    bundle.semanticResolutionStore.put({
+      evidenceId: own.id,
+      resolvedContent: '用户否认是素食者',
+      resolverVersion: 'test@1',
+    });
+    // 孤儿：证据已被删、解析还在（removeEvidenceSafely 以前不清它，每删一条就产一条孤儿）。
+    bundle.semanticResolutionStore.put({
+      evidenceId: 'evidence-已删除-不存在',
+      resolvedContent: '用户说自己在协和复查',
+      resolverVersion: 'test@1',
+    });
+    // 别的 subject 的解析：必须不被误伤。
+    const keep = bundle.evidenceStore.put({ subjectId: 'keep', sourceKind: 'spoken', hostId: 'test', rawContent: 'keep 的话' });
+    bundle.semanticResolutionStore.put({
+      evidenceId: keep.id,
+      resolvedContent: 'keep 的结论',
+      resolverVersion: 'test@1',
+    });
+
+    api.resetSubject({ subjectId: 'owner', reason: '恢复出厂' });
+
+    assert.equal(bundle.semanticResolutionStore.ofEvidence(own.id), null, '本 subject 证据的解析必须随出厂清除');
+    assert.equal(
+      bundle.semanticResolutionStore.forEvidenceIds(['evidence-已删除-不存在']).length,
+      0,
+      '孤儿解析（证据已删、解析残留）也必须被清掉，否则它永远没有入口能删到',
+    );
+    assert.equal(bundle.semanticResolutionStore.ofEvidence(keep.id)?.resolvedContent, 'keep 的结论', 'keep 的解析没被误伤');
+  } finally {
+    bundle.close();
+  }
+});
+
+test('removeEvidenceSafely：删证据时连带删它的解析（不再制造孤儿）', () => {
+  const bundle = openStores(':memory:');
+  const api = createMemoryManagementAPI(bundle);
+  try {
+    const ev = bundle.evidenceStore.put({ subjectId: 'owner', sourceKind: 'spoken', hostId: 'test', rawContent: '是啊' });
+    bundle.semanticResolutionStore.put({
+      evidenceId: ev.id,
+      resolvedContent: '用户确认下周三去复查',
+      resolverVersion: 'test@1',
+    });
+
+    const r = api.removeEvidenceSafely({ evidenceId: ev.id, reason: '用户要求删除' });
+    assert.equal(r.removed, true, '无引用的证据可以删');
+    assert.equal(
+      bundle.semanticResolutionStore.ofEvidence(ev.id),
+      null,
+      '证据删了，它的解析必须跟着删——否则用户「删掉这条」的意图被静默忽略，且留下的孤儿再无入口可删',
+    );
+  } finally {
+    bundle.close();
+  }
+});
+
 test('resetSubject：连 interaction_context 一起清（用户原话不该在「清空全部记忆」之后留在库里）', () => {
   const bundle = openStores(':memory:');
   const api = createMemoryManagementAPI(bundle);

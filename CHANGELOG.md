@@ -10,6 +10,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Fixed
+
+- **Deleting an evidence (or doing a factory reset) now also clears its `semantic_resolution` — the sister table of the `interaction_context` fix below** — `semantic_resolution` stores the *resolved* form of what the user said (the user types "no", the row says "the user denies being vegetarian"), which is user content, not metadata. It was reachable from **neither** deletion path: `resetSubject` never touched it, and `removeEvidenceSafely` deleted the evidence while leaving the resolution behind — so **every single-evidence deletion minted a permanent orphan row** whose `evidence_id` pointed at something that no longer existed, unreachable by any entry point forever. Unlike `interaction_context`, this table **does** carry an `evidence_id` column (indexed), so no schema change was needed: `resetSubject` now collects the subject's evidence ids **before** deleting them (they are unrecoverable afterwards — the table has no `subject_id`), clears those resolutions, and then sweeps leftover orphans with a `NOT IN (SELECT id FROM evidence)` pass; `removeEvidenceSafely` clears the row **before** removing the evidence. `removeByEvidenceIds()` had existed since Phase 1 with **no production caller**. The orphan sweep is cross-subject, matching the whole-table posture that `managementLog.clear()` and `indexAll([])` already take in the same transaction — when multi-subject lands, it must narrow to the current subject and let `checkIntegrity` report the rest. Counts are again **not** added to `ResetSubjectResult` (public API shape), so `api:check` still passes. Pinned by two tests that fail on the old code, one of which also locks "another subject's resolutions are untouched".
+
 ## [0.6.0] — 2026-07-18
 
 ### Fixed
