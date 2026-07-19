@@ -54,3 +54,20 @@ site/
 # Benchmark datasets and generated run artifacts
 bench/data/
 bench/runs/
+
+# ── AI 助手的本地工作流：只在本机存在，绝不进仓、绝不上远端 ──
+#   此前这些只靠 .git/info/exclude 挡着，而那个文件是【本机私有】的：不进仓、不随克隆走。
+#   换台机器、重新 clone、或换个 agent 环境，防护就完全消失。规则搬到这里才对所有环境生效。
+.claude/
+.codex/
+.cursor/
+.cursorrules
+.windsurfrules
+.aider*
+.mcp.json
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.local.md
+# 技能/工具默认往【不带点】的 output/ 写产物（文档生成物、个人文件），
+#   一次 git add -A 就会写进 git 历史——推上去很难干净删除。
+output/
