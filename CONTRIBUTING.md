@@ -70,6 +70,12 @@ MemoWeft deliberately separates records from beliefs. Changes to the memory mode
 
 Changes to public APIs, the SQLite schema, portable-bundle formats, authorization behavior, confidence rules, or decay policy need an issue describing compatibility and migration impact before implementation.
 
+### The evaluation corpus is a ratchet
+
+Existing cases under `tests/eval/` encode behavior that was verified against a live model and then frozen. **A failing eval case means the implementation regressed, not that the case is outdated.** Do not edit or delete an existing case to make a change pass — add a new file for new behavior, and if a case genuinely no longer describes intended behavior, say so explicitly in the pull request and change it in a commit that does nothing else.
+
+The same applies to `tests/api/api-surface.snapshot` and `tests/prompts/prompt-hashes.snapshot`: refreshing them is a deliberate act that belongs in the same commit as the change it reflects, with the compatibility impact stated in the pull request. Prompt changes additionally invalidate the published evaluation numbers until a full run is repeated.
+
 ## Dependencies
 
 The core package intentionally has no runtime dependencies. Prefer Node built-ins where they provide the required behavior. A new dependency should be justified in the pull request, including its runtime, security, maintenance, and package-size impact.

@@ -26,7 +26,7 @@ Do not include credentials, private memory databases, or real user data. Use a m
 
 ## What to expect
 
-Maintainers will prioritize security reports, acknowledge receipt when the report can be reproduced, and coordinate disclosure after a fix or mitigation is available. We aim to acknowledge actionable reports within five business days, but response and remediation time depend on severity and complexity.
+MemoWeft is maintained by a single author working alongside AI assistants, on a best-effort basis. **There is no SLA and no guaranteed response time.** What can be committed to: security reports are triaged ahead of feature and other work, receipt is acknowledged once the report can be reproduced, and disclosure is coordinated after a fix or mitigation is available.
 
 Please allow a reasonable remediation window before public disclosure. Credit will be offered when requested unless the report must remain anonymous.
 
