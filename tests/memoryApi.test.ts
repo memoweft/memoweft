@@ -203,6 +203,59 @@ test('removeEvidenceSafely：无引用 → 不用 force 直接删', () => {
   }
 });
 
+test('removeEvidenceSafely：删证据后重算受影响认知的置信（不留旧值撒谎）', () => {
+  // 为什么要这条：删除路径此前只清链、不重算。一条靠多条证据攒到高置信的认知，
+  //   用户删掉其中几条后仍保持删除前的把握度——系统对他的确信程度停留在已被撤回的证据上。
+  //   同文件的 mergeCognition 路径做了重算，注释自称「不留旧值撒谎」；删除路径没做到。
+  const { bundle, api } = setup();
+  try {
+    const e1 = seedEvidence(bundle, '我每天都喝茶');
+    const e2 = seedEvidence(bundle, '又泡了壶龙井');
+    const e3 = seedEvidence(bundle, '买了新茶具');
+    const c = bundle.cognitionStore.put({
+      subjectId: 'owner',
+      content: '用户喜欢喝茶',
+      contentType: 'preference',
+      formedBy: 'stated',
+      confidence: computeConfidence({
+        contentType: 'preference',
+        formedBy: 'stated',
+        supportCount: 3,
+        contradictCount: 0,
+      }),
+      credStatus: 'stable',
+      evidence: [
+        { evidenceId: e1.id, relation: 'support' },
+        { evidenceId: e2.id, relation: 'support' },
+        { evidenceId: e3.id, relation: 'support' },
+      ],
+    });
+    const before = bundle.cognitionStore.get(c.id)!.confidence;
+
+    const r = api.removeEvidenceSafely({ evidenceId: e1.id, reason: '用户要求删除', force: true });
+    assert.equal(r.removed, true, '有引用但 force → 删掉');
+
+    const after = bundle.cognitionStore.get(c.id)!;
+    assert.equal(bundle.cognitionStore.sourcesOf(c.id).length, 2, '溯源链只剩两条');
+    assert.ok(
+      after.confidence < before,
+      `支持证据从 3 条减到 2 条，置信应下调：before=${before} after=${after.confidence}`,
+    );
+    assert.equal(
+      after.confidence,
+      computeConfidence({
+        contentType: 'preference',
+        formedBy: 'stated',
+        supportCount: 2,
+        contradictCount: 0,
+      }),
+      '重算结果应与按剩余链直接计算一致（同 merge 路径口径）',
+    );
+  } finally {
+    bundle.close();
+  }
+});
+
 //  语义约束：删除审计的 detail 不存内容原文、只存元数据——本用例断言随之更新。
 test('removeCognitionSafely：连溯源链删 + 返回影响面 + 审计 detail 只存元数据不存原文', () => {
   const { bundle, api } = setup();

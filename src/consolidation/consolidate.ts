@@ -572,7 +572,23 @@ export async function consolidate(
           cog.id,
           add.map((id) => ({ evidenceId: id, relation: 'contradict' as const })),
         );
-      deps.cognitionStore.update(cog.id, { credStatus: 'conflicted' });
+      // 按最新的支持/反对链重算置信——与 reinforce 分支、managementApi 合并路同口径。
+      //   此前这里只写 credStatus，于是 config.consolidation.contradictPenalty 在整条 conflict 路径上
+      //   永远不生效：一条被反驳的认知，置信度与零反驳时完全相同，仍以原强度通过 recall 的
+      //   minEffectiveConfidence 门控注入回话——用户已经推翻过的偏好照样被翻出来用。
+      //   credStatus 不再写死：deriveCredStatus 在 contradictCount>0 时恒返回 'conflicted'
+      //   （confidence.ts:43），交给它推导既保住「冲突只暴露、不消解」的语义，又不留旧置信值撒谎。
+      const links = deps.cognitionStore.sourcesOf(cog.id);
+      const supportCount = links.filter((l) => l.relation === 'support').length;
+      const contradictCount = links.filter((l) => l.relation === 'contradict').length;
+      const confidence = computeConfidence(
+        { contentType: cog.contentType, formedBy: cog.formedBy, supportCount, contradictCount },
+        deps.config,
+      );
+      deps.cognitionStore.update(cog.id, {
+        confidence,
+        credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config),
+      });
       conflicted++;
     }
 
