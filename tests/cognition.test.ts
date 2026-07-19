@@ -394,6 +394,83 @@ test('consolidate 增量 · reinforce：强化 → 置信升、补挂证据', as
   }
 });
 
+test('consolidate 增量 · conflict：标冲突时按反证重算置信（不只换标签）', async () => {
+  // 为什么要这条：conflict 分支此前只 update({credStatus:'conflicted'})、从不调 computeConfidence，
+  //   于是 config.consolidation.contradictPenalty 在这条路径上永远不生效——一条被反驳的认知，
+  //   置信度与零反驳时完全相同，仍以原强度通过 recall 的 minEffectiveConfidence 门控注入回话。
+  //   同库另外两条路径（reinforce、managementApi 合并）都会带 contradictCount 重算，此处口径不一致。
+  const ev = new SqliteEvidenceStore(':memory:');
+  const evt = new SqliteEventStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  try {
+    const e0 = ev.put({
+      subjectId: 'owner',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: '我喜欢喝茶',
+    });
+    const c0 = cog.put({
+      subjectId: 'owner',
+      content: '用户喜欢喝茶',
+      contentType: 'preference',
+      formedBy: 'stated',
+      confidence: 600,
+      credStatus: 'limited',
+      evidence: [{ evidenceId: e0.id, relation: 'support' }],
+    });
+    // 用 spoken：observed 证据的 allowCloudRead 缺省为 false（config.ts observedDefaults），
+    //   会被 filterReadableByTier 挡在 validEvidence 之外，pickSupport 取不到就直接 continue。
+    const e1 = ev.put({
+      subjectId: 'owner',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: '我最近都喝咖啡了',
+    });
+    evt.put({
+      subjectId: 'owner',
+      summary: '用户改喝咖啡',
+      occurredAt: e1.occurredAt,
+      evidenceIds: [e1.id],
+    });
+
+    const before = cog.get(c0.id)!.confidence;
+    const stub = {
+      callCount: 0,
+      async chat() {
+        this.callCount++;
+        return `{"conflict":[{"cognition_id":"${c0.id}","support_evidence_ids":["${e1.id}"]}]}`;
+      },
+    };
+    const r = await consolidate('owner', {
+      eventStore: evt,
+      evidenceStore: ev,
+      cognitionStore: cog,
+      llm: stub,
+    });
+
+    assert.equal(r.conflicted, 1, '走了 conflict 分支');
+    const after = cog.get(c0.id)!;
+    assert.equal(
+      after.credStatus,
+      'conflicted',
+      '冲突状态仍然暴露（deriveCredStatus 对 contradictCount>0 恒为 conflicted）',
+    );
+    assert.ok(
+      after.confidence < before,
+      `反证应扣分：before=${before} after=${after.confidence}（contradictPenalty 必须在这条路径上生效）`,
+    );
+    assert.equal(
+      cog.sourcesOf(c0.id).filter((s) => s.relation === 'contradict').length,
+      1,
+      '反证挂上 contradict 链',
+    );
+  } finally {
+    ev.close();
+    evt.close();
+    cog.close();
+  }
+});
+
 test('updateProfile：归因自动并进（更新画像顺带对新现象产假设）', async () => {
   const ev = new SqliteEvidenceStore(':memory:');
   const evt = new SqliteEventStore(':memory:');
