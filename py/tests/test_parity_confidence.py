@@ -26,5 +26,8 @@ def test_cred_status_bit_exact() -> None:
     data = parity("cred-status.json")
     for case in data["cases"]:
         i = case["input"]
-        got = derive_cred_status(i["confidence"], i["contradictCount"], i["contentType"])
+        # supportCount 缺省 0：不带该字段的用例正是"省略 → 退回保守 conflicted"的兼容契约。
+        got = derive_cred_status(
+            i["confidence"], i["contradictCount"], i["contentType"], support_count=i.get("supportCount", 0)
+        )
         assert got == case["expected"], f"deriveCredStatus 分叉 @ {i}: got {got}, want {case['expected']}"

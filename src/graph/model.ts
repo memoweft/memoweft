@@ -63,7 +63,12 @@ export interface MemoryGraphStats {
   edgeCount: number;
   hiddenCount: number;
   activeCognitionCount: number;
+  /** credStatus='conflicted' 的条数——语义保持严格：反证与支撑对峙或占优的那些。 */
   conflictedCount: number;
+  /** credStatus='contested' 的条数（支撑多于反证、有争议但仍成立）。
+   *  与 conflictedCount 分开计：这两档的产品含义不同，合并统计会把"仍站得住"的那批
+   *  说成完全冲突。要总争议数就把两者相加。 */
+  contestedCount: number;
   hypothesisCount: number;
   observedEvidenceCount: number;
   /** tool（工具执行结果）证据节点数。 */

@@ -30,10 +30,17 @@ def derive_cred_status(
     contradict_count: int,
     content_type: ContentType,
     cfg: Config = CONFIG,
+    support_count: int = 0,
 ) -> CredStatus:
-    """根据把握度、反对证据和内容类型确定可信状态；语义与 confidence.ts 一致。"""
+    """根据把握度、反对证据和内容类型确定可信状态；语义与 confidence.ts 一致。
+
+    support_count 是中间态判据：支撑条数多于反证 → "contested"（有争议但仍成立），
+    否则 "conflicted"（对峙或反证占优，不消解、原样暴露）。省略 → 退回保守的
+    "conflicted"（不知道支撑数时不能假设支撑压倒反证）。
+    """
     if contradict_count > 0:
-        return "conflicted"  # 保留冲突可见性，不自动消解反对证据。
+        # 保留冲突可见性，不自动消解反对证据；力量对比决定暴露成哪一档。
+        return "contested" if support_count > contradict_count else "conflicted"
     t = cfg.consolidation.cred_thresholds
     if is_transient(content_type, cfg):
         return "low" if confidence >= t.low else "candidate"

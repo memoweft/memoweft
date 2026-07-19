@@ -32,7 +32,7 @@ function createMemoWeftCore: { (options: CreateCoreOptions): MemoWeftCore; }
 function createMemoryManagementAPI: { (bundle: StoreBundle, cfg?: MemoWeftConfig, deps?: MemoryManagementDeps): MemoryManagementAPI; }
 function createRunLogger: { (opts: RunLoggerOptions): RunLogger; }
 function decayFactor: { (halfLifeDays: number, ageMs: number): number; }
-function deriveCredStatus: { (confidence: number, contradictCount: number, contentType: ContentType, cfg?: MemoWeftConfig): CredStatus; }
+function deriveCredStatus: { (confidence: number, contradictCount: number, contentType: ContentType, cfg?: MemoWeftConfig, supportCount?: number): CredStatus; }
 function distill: { (subjectId: string, deps: DistillDeps): Promise<DistillResult>; }
 function effectiveConfidence: { (cog: Pick<Cognition, 'confidence' | 'contentType' | 'updatedAt'>, now?: Date, cfg?: MemoWeftConfig): number; }
 function expire: { (subjectId: string, deps: ExpireDeps, now?: Date): ExpireResult; }
@@ -121,7 +121,7 @@ interface MemoryGraphAPI { buildMemoryGraph: (opts?: BuildGraphOptions & { subje
 interface MemoryGraphEdge { dashed?: boolean | undefined; id: string; kind: MemoryGraphEdgeKind; label?: string | undefined; source: string; target: string; }
 interface MemoryGraphNode { allowCloudRead?: boolean | undefined; allowInference?: boolean | undefined; archivedAt?: string | null | undefined; colorKey?: string | undefined; confidence?: number | undefined; contentType?: ContentType | undefined; createdAt?: string | undefined; credStatus?: CredStatus | undefined; formedBy?: FormedBy | undefined; id: string; invalidAt?: string | null | undefined; kind: MemoryGraphNodeKind; label: string; occurredAt?: string | undefined; sourceKind?: SourceKind | undefined; summary?: string | undefined; updatedAt?: string | undefined; val?: number | undefined; }
 interface MemoryGraphPayload { depth: number; edges: Array<MemoryGraphEdge>; generatedAt: string; nodes: Array<MemoryGraphNode>; scope: 'local' | 'global'; stats: MemoryGraphStats; subjectId: string; }
-interface MemoryGraphStats { activeCognitionCount: number; conflictedCount: number; edgeCount: number; hiddenCount: number; hypothesisCount: number; nodeCount: number; observedEvidenceCount: number; toolEvidenceCount: number; }
+interface MemoryGraphStats { activeCognitionCount: number; conflictedCount: number; contestedCount: number; edgeCount: number; hiddenCount: number; hypothesisCount: number; nodeCount: number; observedEvidenceCount: number; toolEvidenceCount: number; }
 interface MemoryManagementAPI { archiveCognition: (input: ArchiveCognitionInput) => Cognition | null; checkIntegrity: () => IntegrityReport; invalidateCognition: (input: InvalidateCognitionInput) => Cognition | null; listCognitions: (input?: ListMemoryInput) => CognitionWithMeta[]; listEvents: (input?: ListMemoryInput) => EventWithEvidence[]; listEvidence: (input?: ListMemoryInput) => Evidence[]; mergeCognition: (input: MergeCognitionInput) => MergeCognitionResult; muteCognition: (input: MuteCognitionInput) => Cognition | null; removeCognitionSafely: (input: RemoveCognitionSafelyInput) => RemoveCognitionResult; removeEvidenceSafely: (input: RemoveEvidenceSafelyInput) => RemoveEvidenceResult; resetSubject: (input: ResetSubjectInput) => ResetSubjectResult; updateEvidenceAuthorization: (input: UpdateEvidenceAuthorizationInput) => Evidence | null; }
 interface MemoryManagementDeps { clock?: Clock | undefined; retriever?: Retriever | undefined; }
 interface MergeCognitionInput { reason: string; sourceId: string; targetId: string; }

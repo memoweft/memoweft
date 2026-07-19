@@ -33,14 +33,27 @@ export function computeConfidence(i: ConfidenceInputs, cfg: MemoWeftConfig = con
   return result;
 }
 
-/** 由把握度 + 反对证据 + 内容类型定可信状态。cfg 可注入（缺省=全局单例）。 */
+/** 由把握度 + 反对证据 + 内容类型定可信状态。cfg 可注入（缺省=全局单例）。
+ *
+ *  supportCount 是【中间态判据】：支撑条数多于反证 → `contested`（有争议但仍成立），
+ *  否则 `conflicted`（对峙或反证占优，不消解、原样暴露）。此前只要有一条反证就一律
+ *  conflicted，于是 6 支撑 1 反证与 1 支撑 1 反证状态完全相同——computeConfidence 早已
+ *  算出两者差别，是这里把它抹平了，连带让 revisitConflicts 反复拿明明站得住的认知去打扰用户。
+ *
+ *  判据不走置信度阈值：`stated` 类支撑加分封顶 200（base 600 + 200 − penalty 120 = 680），
+ *  6 支撑 1 反证也够不到 stable 的 750——用阈值做判据在结构上就走不通。
+ *
+ *  supportCount 省略 → 退回旧行为（保守判 conflicted）。不知道支撑数时【不能假设】
+ *  支撑压倒反证；库内调用点一律显式传。 */
 export function deriveCredStatus(
   confidence: number,
   contradictCount: number,
   contentType: ContentType,
   cfg: MemoWeftConfig = config,
+  supportCount = 0,
 ): CredStatus {
-  if (contradictCount > 0) return 'conflicted'; // 有反对证据 → 先暴露，不消解
+  // 有反对证据 → 先暴露，不消解；力量对比决定暴露成哪一档。
+  if (contradictCount > 0) return supportCount > contradictCount ? 'contested' : 'conflicted';
   // 临时类永不进"稳定/有限"，最多"低置信"。
   if (isTransient(contentType, cfg)) {
     return confidence >= cfg.consolidation.credThresholds.low ? 'low' : 'candidate';

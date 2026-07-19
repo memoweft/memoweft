@@ -10,7 +10,7 @@ from typing import Literal, Optional
 
 ContentType = Literal["fact", "preference", "goal", "project", "state", "trait", "hypothesis", "trend"]
 FormedBy = Literal["stated", "observed", "ruled", "confirmed", "inferred"]
-CredStatus = Literal["candidate", "low", "limited", "stable", "conflicted"]
+CredStatus = Literal["candidate", "low", "limited", "stable", "conflicted", "contested"]
 SourceKind = Literal["spoken", "inferred", "observed", "tool"]
 ResponseAct = Literal["affirm", "negate", "select", "elaborate", "ask", "none", "other"]
 PropositionOrigin = Literal["user_stated", "assistant_proposed"]
