@@ -205,7 +205,7 @@ export {
   type UsageReport,
 } from './core/index.ts';
 
-// 受控记忆管理 API：7 操作 + 审计表，管理操作带 reason 留痕
+// 受控记忆管理 API：8 操作 + 审计表，管理操作带 reason 留痕
 // [stable] 受控记忆管理 API：MemoryManagementAPI 接口 + 各入出参类型（门面 core.memory 面）。
 export {
   createMemoryManagementAPI,
@@ -217,6 +217,8 @@ export {
   type RemovalBlocker,
   type RemoveCognitionSafelyInput,
   type RemoveCognitionResult,
+  type ReinforceCognitionInput,
+  type ReinforceCognitionResult,
   type MergeCognitionInput,
   type MergeCognitionResult,
   type ArchiveCognitionInput,

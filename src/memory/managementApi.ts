@@ -10,7 +10,7 @@
  */
 import { config, resolveLang, type MemoWeftConfig } from '../config.ts';
 import type { StoreBundle } from '../store/openStores.ts';
-import type { Cognition, EvidenceLink } from '../cognition/model.ts';
+import type { Cognition, EvidenceLink, EvidenceRelation } from '../cognition/model.ts';
 import type { Evidence } from '../evidence/model.ts';
 import type { EventWithEvidence } from '../event/model.ts';
 import type { Retriever } from '../retrieval/retriever.ts';
@@ -89,6 +89,26 @@ export interface MergeCognitionResult {
   source: Cognition;
 }
 
+export interface ReinforceCognitionInput {
+  /** 要补证据的认知。已失效/已归档的拒绝（它们的置信度是历史快照）。 */
+  cognitionId: string;
+  /** 已落库的证据 id（须同 subject）。这里【不】摄入新证据——证据的入口是 ingest*，
+   *  管理面只负责把已有证据挂到认知上，免得开出第二条绕过 perceive 的证据写入路径。 */
+  evidenceId: string;
+  /** 缺省 'support'。确认式 UI 的「不对」要能落成反证，故也允许 'contradict'。 */
+  relation?: EvidenceRelation;
+  reason: string;
+}
+
+export interface ReinforceCognitionResult {
+  /** 真的改动了（加了链并重算）。幂等命中时为 false。 */
+  reinforced: boolean;
+  /** 该 (evidenceId, relation) 已在链上 → 幂等：没加链、没重算、没落审计。 */
+  duplicate: boolean;
+  /** 重算后的认知；幂等命中时是原样。 */
+  cognition: Cognition;
+}
+
 export interface ArchiveCognitionInput {
   cognitionId: string;
   reason: string;
@@ -147,7 +167,7 @@ export interface ResetSubjectResult {
   auditRemoved: number;
 }
 
-/** 受控记忆管理 API（core.memory）。7 个操作 + 独立审计表。 */
+/** 受控记忆管理 API（core.memory）。8 个操作 + 独立审计表。 */
 export interface MemoryManagementAPI {
   /** 标失效（invalidAt=now）+ 审计。召回本就跳过 invalid，无需额外动索引。不存在返回 null（不审计）。 */
   invalidateCognition(input: InvalidateCognitionInput): Cognition | null;
@@ -161,6 +181,10 @@ export interface MemoryManagementAPI {
    *  审计 detail 只存元数据 {contentType, formedBy, credStatus, linkCount}、【不存内容原文】
    *  （删除后不在审计记录中保留被删内容）。 */
   removeCognitionSafely(input: RemoveCognitionSafelyInput): RemoveCognitionResult;
+  /** 给指定认知补一条已有证据并【当场】按新链重算置信度 + 重导出 credStatus（确认式 UI 的落点）。
+   *  同 (evidenceId, relation) 已在链上 → 幂等：不加链、不重算、不落审计
+   *  （否则连点两下会把把握度越推越高）。认知/证据不存在、跨 subject、认知已失效或已归档 → 抛错。 */
+  reinforceCognition(input: ReinforceCognitionInput): ReinforceCognitionResult;
   /** 合并认知：仅同 subjectId；source 的链搬到 target（按 evidenceId+relation 去重）、
    *  target 置信度按合并后链重算（computeConfidence 同 consolidate 强化路径）、source 标失效不硬删。
    *  source/target 不存在、跨 subject、target 已失效/已归档 → 抛错（什么都不改）。 */
@@ -336,6 +360,97 @@ export function createMemoryManagementAPI(
           detail: { force: !!force, blockers }, // blockers 快照：删的时候都断了谁的链，事后可追
         });
         return { removed: true, blockers };
+      });
+    },
+
+    reinforceCognition({ cognitionId, evidenceId, relation = 'support', reason }) {
+      // 这是【第五条】会改动溯源链的路径（前四条：consolidate 的 reinforce/conflict、
+      //   mergeCognition、removeEvidenceSafely）。前面两条曾经只改状态不重算，
+      //   contradictPenalty 因此长期不生效——所以这条从第一天就把重算写死在同一个事务里。
+      const lang = resolveLang(cfg);
+      const cog = cognitionStore.get(cognitionId);
+      if (!cog) {
+        throw new Error(
+          lang === 'zh'
+            ? `补证据失败：认知不存在（${cognitionId}）`
+            : `Reinforce failed: cognition not found (${cognitionId})`,
+        );
+      }
+      if (cog.invalidAt) {
+        throw new Error(
+          lang === 'zh'
+            ? `补证据失败：认知已失效（${cognitionId}）——失效认知的置信度是历史快照，重算会抹掉当时的判断`
+            : `Reinforce failed: cognition is invalidated (${cognitionId}); its confidence is a historical snapshot`,
+        );
+      }
+      if (cog.archivedAt) {
+        throw new Error(
+          lang === 'zh'
+            ? `补证据失败：认知已归档（${cognitionId}），先恢复再补`
+            : `Reinforce failed: cognition is archived (${cognitionId}); restore it first`,
+        );
+      }
+      const ev = evidenceStore.get(evidenceId);
+      if (!ev) {
+        throw new Error(
+          lang === 'zh'
+            ? `补证据失败：证据不存在（${evidenceId}）`
+            : `Reinforce failed: evidence not found (${evidenceId})`,
+        );
+      }
+      if (ev.subjectId !== cog.subjectId) {
+        throw new Error(
+          lang === 'zh'
+            ? `补证据失败：证据与认知不属于同一 subject（${ev.subjectId} ≠ ${cog.subjectId}）`
+            : `Reinforce failed: evidence and cognition belong to different subjects (${ev.subjectId} != ${cog.subjectId})`,
+        );
+      }
+
+      return transaction(() => {
+        // 幂等：同 (证据, 关系) 已在链上就原样返回。不重算是刻意的——重算本身幂等，
+        //   但"点两下把握度涨两次"才是确认式 UI 最容易出的 bug，这里从源头挡掉。
+        if (
+          cognitionStore
+            .sourcesOf(cognitionId)
+            .some((l) => l.evidenceId === evidenceId && l.relation === relation)
+        ) {
+          return { reinforced: false, duplicate: true, cognition: cog };
+        }
+        cognitionStore.addEvidence(cognitionId, [{ evidenceId, relation }]);
+
+        // 按新链重算——与 consolidate 强化路径、mergeCognition、removeEvidenceSafely 同一口径。
+        const links = cognitionStore.sourcesOf(cognitionId);
+        const supportCount = links.filter((l) => l.relation === 'support').length;
+        const contradictCount = links.filter((l) => l.relation === 'contradict').length;
+        let confidence = computeConfidence(
+          {
+            contentType: cog.contentType,
+            formedBy: cog.formedBy,
+            supportCount,
+            contradictCount,
+          },
+          cfg,
+        );
+        if (cog.contentType === 'hypothesis')
+          confidence = Math.min(confidence, cfg.attribution.hypothesisCap); // 同 merge：补证据不能把推断抬成结论
+        const updated = cognitionStore.update(cognitionId, {
+          confidence,
+          credStatus: deriveCredStatus(
+            confidence,
+            contradictCount,
+            cog.contentType,
+            cfg,
+            supportCount,
+          ),
+        })!;
+        managementLog.append({
+          op: 'reinforce',
+          targetKind: 'cognition',
+          targetId: cognitionId,
+          reason,
+          detail: { evidenceId, relation, supportCount, contradictCount, confidence },
+        });
+        return { reinforced: true, duplicate: false, cognition: updated };
       });
     },
 

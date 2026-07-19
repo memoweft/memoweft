@@ -12,6 +12,8 @@ export {
   type RemovalBlocker,
   type RemoveCognitionSafelyInput,
   type RemoveCognitionResult,
+  type ReinforceCognitionInput,
+  type ReinforceCognitionResult,
   type MergeCognitionInput,
   type MergeCognitionResult,
   type ArchiveCognitionInput,

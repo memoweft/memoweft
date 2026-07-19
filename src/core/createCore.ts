@@ -238,7 +238,7 @@ export interface MemoWeftCore {
   dropConversation(conversationId: string): void;
   /** 一键更新画像：distill → consolidate → attribute → 重建召回索引。 */
   updateProfile(input?: UpdateProfileInput): Promise<UpdateProfileResult>;
-  /** 受控记忆管理（7 操作 + 审计表）。 */
+  /** 受控记忆管理（8 操作 + 审计表）。 */
   memory: MemoryManagementAPI;
   /** 便携记忆包（导出/导入/校验）。 */
   portable: PortableAPI;
