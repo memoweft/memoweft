@@ -1,3 +1,10 @@
 # Generated deterministically by scripts/gen-shared-assets.mjs.
 shared/**/*.json
 py/src/memoweft/_shared_data/**/*.json
+
+# AI 助手的本地工作流（同 .gitignore）：这些文件不属于本仓，不该被仓库的格式门禁扫到。
+#   实测症状：本机 `npm run format` 因 .claude/skills/**/*.yaml 变红，而 CI 上这些文件根本不存在
+#   （已被 .gitignore 挡住）→ 本地红、CI 绿，门禁失去意义。
+.claude/
+.codex/
+.cursor/
