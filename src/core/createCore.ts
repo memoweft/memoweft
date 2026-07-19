@@ -19,6 +19,7 @@ import {
   Conversation,
   type TurnOutcome,
   type RecalledCognition,
+  type RecalledEvidence,
 } from '../pipeline/conversation.ts';
 import type { Turn } from '../pipeline/workingMemory.ts';
 import { InteractionSession } from '../pipeline/interactionSession.ts';
@@ -29,7 +30,7 @@ import {
   type UpdateProfileResult,
 } from '../consolidation/updateProfile.ts';
 import { recallCognitions } from '../retrieval/recall.ts';
-import type { ContentType } from '../cognition/model.ts';
+import type { ContentType, CredStatus, FormedBy } from '../cognition/model.ts';
 import { NullRetriever } from '../retrieval/nullRetriever.ts';
 import { VectorRetriever } from '../retrieval/vectorRetriever.ts';
 import { KeywordRetriever, FtsUnavailableError } from '../retrieval/keywordRetriever.ts';
@@ -122,6 +123,34 @@ export interface RecallInput {
   contentTypes?: ContentType[];
 }
 
+export interface ExplainCognitionInput {
+  /** 要解释的认知 id（来自 recall 结果的 `id`、或 memory.listCognitions）。 */
+  cognitionId: string;
+  /** 归属校验：不匹配一律返回 null，不跨 subject 泄露。缺省 config.identity.subjectId。 */
+  subjectId?: string;
+}
+
+/** 一条认知的解释：认知本体 + 完整溯源链。溯源项形状与 recall({ explain }) 的 provenance 一致。 */
+export interface CognitionExplanation {
+  id: string;
+  subjectId: string;
+  content: string;
+  contentType: ContentType;
+  formedBy: FormedBy;
+  confidence: number;
+  credStatus: CredStatus;
+  /** 支撑/反证证据链（带授权位供宿主按 tier 自筛）。证据已不在（悬挂链）则跳过、不凭空造字段。 */
+  provenance: RecalledEvidence[];
+  /** provenance 里 support / contradict 的条数（反证不消解、如实暴露，同 consolidate 的 public contract）。 */
+  supportCount: number;
+  contradictCount: number;
+  /** 生命周期状态：按 id 显式解释【不走召回门控】，失效/归档/静音的照常解释，但如实标出——
+   *  否则用户对着一条被归档的记忆问"为什么记得这条"会拿到 null，正是解释最该回答的场景。 */
+  invalidAt: string | null;
+  archivedAt: string | null;
+  mutedAt: string | null;
+}
+
 export interface ConversationInput {
   /** 用户这轮说的话。 */
   message: string;
@@ -193,6 +222,11 @@ export interface MemoWeftCore {
   ingestToolResult(input: ToolResultInput): Promise<Evidence>;
   /** 召回相关认知（与 Conversation 同一段共享召回语义：invalid/archived/越界/衰减门控全走）。 */
   recall(input: RecallInput): Promise<RecalledCognition[]>;
+  /** 按 id 解释一条认知：认知本体 + 完整溯源链。纯读、不落审计。
+   *  与 `recall({ explain: true })` 的分工：那条靠 query 相似度命中【顺带】带出溯源，
+   *  指定某条认知问"它凭什么成立"拿不到——确认式 UI 与记忆管理页要的正是后者。
+   *  不存在 / 跨 subject → null。 */
+  explainCognition(input: ExplainCognitionInput): CognitionExplanation | null;
   /** 处理一轮对话（存证据 → 召回 → 回话）。同 conversationId 复用实例、窗口连续。 */
   handleConversationTurn(input: ConversationInput): Promise<TurnOutcome>;
   /** 报告一轮 AI 回复（v0.6）：自建 agent 循环的宿主用它把助手回复交给 core 作后续上下文（只进窗口、不落证据）。
@@ -285,6 +319,34 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
   }
 
   const subjectOf = (explicit?: string) => explicit ?? cfg.identity.subjectId;
+
+  /**
+   * 组一条认知的溯源链。`recall({ explain: true })` 与 `explainCognition` 共用这一段——
+   * 两处各写一份必然漂移（隐私加固、悬挂链处理都得改两次，漏一处就是一个泄露口）。
+   *
+   * 隐私边界（D-0021 加固）：provenance 面向宿主、库不自动喂云；但 summary 是证据【原文】
+   * （可能比派生认知更敏感、默认不进入内建云写模型 prompt 的 observed/tool，默认 allowCloudRead=false）
+   * → 随附 allowCloudRead/allowInference 授权位（对齐 buildMemoryGraph），让宿主转发云模型前能按 tier
+   * 自筛；write-path 的 filterReadableByTier 不受影响。
+   * 证据已不在（悬挂链，正常级联删不该发生）则跳过、不凭空造字段。
+   */
+  function buildProvenance(cognitionId: string): RecalledEvidence[] {
+    return cognitionStore.sourcesOf(cognitionId).flatMap((link) => {
+      const e = evidenceStore.get(link.evidenceId);
+      return e
+        ? [
+            {
+              evidenceId: link.evidenceId,
+              relation: link.relation,
+              summary: e.summary || e.rawContent,
+              sourceKind: e.sourceKind,
+              allowCloudRead: e.allowCloudRead,
+              allowInference: e.allowInference,
+            },
+          ]
+        : [];
+    });
+  }
   // 会话缓存：conversationId → Conversation。首次建实例（systemPrompt/seedTurns 此时生效），后续复用不重建。
   const conversations = new Map<string, Conversation>();
   // 交互会话缓存（v0.6）：conversationId → InteractionSession。裸 ingestUserMessage 路的上下文窗口 +
@@ -456,28 +518,32 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       }
       if (!input.explain) return items;
       // 召回解释：门面已有两个 store → 逐条补支撑/反证证据链，不动 recallCognitions/RecallDeps。
-      //   隐私边界：provenance 面向宿主、库不自动喂云；但 summary 是证据【原文】（可能比派生认知更敏感、
-      //   默认不进入内建云写模型 prompt 的 observed/tool，默认 allowCloudRead=false）→ 随附 allowCloudRead/allowInference 授权位（对齐
-      //   buildMemoryGraph L158-159），让宿主转发云模型前能按 tier 自筛；write-path 的 filterReadableByTier 不受影响。
-      //   证据已不在（悬挂链，正常级联删不该发生）则跳过、不凭空造字段。
-      return items.map((it) => ({
-        ...it,
-        provenance: cognitionStore.sourcesOf(it.id).flatMap((link) => {
-          const e = evidenceStore.get(link.evidenceId);
-          return e
-            ? [
-                {
-                  evidenceId: link.evidenceId,
-                  relation: link.relation,
-                  summary: e.summary || e.rawContent,
-                  sourceKind: e.sourceKind,
-                  allowCloudRead: e.allowCloudRead,
-                  allowInference: e.allowInference,
-                },
-              ]
-            : [];
-        }),
-      }));
+      return items.map((it) => ({ ...it, provenance: buildProvenance(it.id) }));
+    },
+
+    explainCognition(input) {
+      // 纯读、不落审计（同 memory 的只读列取那组，不是管理变更）。
+      const cog = cognitionStore.get(input.cognitionId);
+      if (!cog) return null;
+      // 归属校验：跨 subject 一律 null。不做这层，任何拿到 id 的调用方都能读到别人的认知。
+      if (cog.subjectId !== subjectOf(input.subjectId)) return null;
+      const provenance = buildProvenance(cog.id);
+      return {
+        id: cog.id,
+        subjectId: cog.subjectId,
+        content: cog.content,
+        contentType: cog.contentType,
+        formedBy: cog.formedBy,
+        confidence: cog.confidence,
+        credStatus: cog.credStatus,
+        provenance,
+        supportCount: provenance.filter((p) => p.relation === 'support').length,
+        contradictCount: provenance.filter((p) => p.relation === 'contradict').length,
+        // 不走召回的 invalid/archived/muted 门控——按 id 显式解释就该拿得到，状态如实标出交调用方判断。
+        invalidAt: cog.invalidAt,
+        archivedAt: cog.archivedAt ?? null,
+        mutedAt: cog.mutedAt ?? null,
+      };
     },
 
     async handleConversationTurn(input) {

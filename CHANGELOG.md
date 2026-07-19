@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `core.explainCognition({ cognitionId })` returns one cognition together with its full provenance chain, addressed by id rather than by similarity. `recall({ explain: true })` only attaches provenance to whatever a query happens to retrieve, so asking why a _specific_ remembered item is held — what a confirmation prompt or a memory-management page needs — was not expressible. Provenance shape, authorization flags, and dangling-link handling are identical to `recall({ explain: true })`; both paths now share one enrichment routine. Reads only, writes no audit entry, returns `null` for an unknown id or a subject mismatch. Cognitions that are invalidated, archived, or muted are still explained, with their state reported — recall gating would make the API return `null` in precisely the case a user is most likely to ask about.
+
 ### Changed
 
 - Simplified the public repository surface, documentation, contribution flow, and release presentation.

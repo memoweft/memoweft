@@ -10,6 +10,8 @@ export {
   type ObservationInput,
   type ToolResultInput,
   type RecallInput,
+  type ExplainCognitionInput,
+  type CognitionExplanation,
   type ConversationInput,
   type RecordAssistantReplyInput,
   type UpdateProfileInput,
