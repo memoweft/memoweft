@@ -294,6 +294,34 @@ export function createMemoryManagementAPI(
         //   漏掉它等于：用户点「删除这条」，界面说删了，而那句话的改写版永久留库、再无入口可删。
         semanticResolutionStore.removeByEvidenceIds([evidenceId]);
         evidenceStore.remove(evidenceId);
+        // 受影响认知按【剩余】链重算——与 mergeCognition 同口径（那里的注释写着「不留旧值撒谎」）。
+        //   不重算的话：一条靠 5 条证据攒到 stable 的认知，用户删掉其中 4 条后仍然是 stable，
+        //   系统对他的把握度停留在已经被撤回的证据上。credStatus 随之重导出，不留旧值。
+        //   blockers 按 (认知, relation) 逐条列出，同一认知可能出现多次 → 去重后各算一次。
+        for (const cogId of new Set(
+          blockers.filter((b) => b.kind === 'cognition').map((b) => b.id),
+        )) {
+          const cog = cognitionStore.get(cogId);
+          if (!cog || cog.invalidAt) continue; // 已失效的不动：它的置信度是历史快照，重算反而抹掉当时的判断
+          const links = cognitionStore.sourcesOf(cogId);
+          const supportCount = links.filter((l) => l.relation === 'support').length;
+          const contradictCount = links.filter((l) => l.relation === 'contradict').length;
+          let confidence = computeConfidence(
+            {
+              contentType: cog.contentType,
+              formedBy: cog.formedBy,
+              supportCount,
+              contradictCount,
+            },
+            cfg,
+          );
+          if (cog.contentType === 'hypothesis')
+            confidence = Math.min(confidence, cfg.attribution.hypothesisCap); // 同 merge：假设类不因重算被抬成结论
+          cognitionStore.update(cogId, {
+            confidence,
+            credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, cfg),
+          });
+        }
         managementLog.append({
           op: 'remove_evidence',
           targetKind: 'evidence',
