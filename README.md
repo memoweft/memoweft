@@ -152,9 +152,7 @@ The two published integrations are currently `0.1.0`, which install with `memowe
 
 ## Run the reference host locally
 
-The bundled host demonstrates chat with recall, visible memory formation, the evidence graph, memory management, and portable import/export.
-
-![MemoWeft reference host — chat, memory formation, and evidence graph](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/reference-host-demo.gif)
+The bundled host is a **reference implementation, not the product**. It exists so you can run Core end to end — chat with recall, visible memory formation, the evidence graph, memory management, and portable import/export — and read every call site it makes.
 
 Requirements:
 
@@ -189,7 +187,23 @@ Privacy boundary: MemoWeft stores memory in a standard, unencrypted SQLite datab
 
 ## Built with MemoWeft
 
-[WeftMate](https://www.weftmate.com/) uses MemoWeft as its portable memory layer, demonstrating how the library sits beneath a complete desktop experience while keeping product UX outside Core.
+[WeftMate](https://www.weftmate.com/) is a desktop companion built on MemoWeft. It shows what the library's guarantees look like once a real product surfaces them — the screenshots below are its UI, not a mockup, and every label in them maps to a Core concept.
+
+**Stated facts and model guesses are not shown as the same thing.** Each memory carries its type, its confidence tier, and an expandable trail of the utterances it came from — with a permanent-delete control next to it. "The user is a backend developer" (volunteered) and "the user leans introverted" (the assistant guessed, the user said "yeah") end up in different tiers by construction.
+
+![WeftMate memory profile — each memory shows its type, confidence tier, source utterances, and delete control](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-memory-profile.png)
+
+**Short replies are resolved before anything is stored.** Here the assistant guesses, the user answers with two characters, and Core records what that actually asserts — without promoting the assistant's proposal into a user statement.
+
+![WeftMate chat — the assistant guesses and the user confirms with a short reply](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-chat.png)
+
+**Every cognition stays traceable to its evidence.** The graph is the evidence → event → cognition chain, navigable from the subject outward.
+
+![WeftMate memory graph — cognitions linked outward from the subject node](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-memory-graph.png)
+
+**Memory is portable and deletable, in the user's hands.** Export produces the versioned bundle described in the Memory Surface Contract; import previews counts before writing; clearing memory and deleting all local data are separate, explicitly irreversible actions.
+
+![WeftMate data controls — export bundle, restore from bundle, clear memory, delete all local data](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-data-portability.png)
 
 ## Documentation
 
