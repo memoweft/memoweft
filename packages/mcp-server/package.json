@@ -27,7 +27,6 @@
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
-    "dist/**/*.map",
     "README.md",
     "README.zh-CN.md",
     "server.json",
