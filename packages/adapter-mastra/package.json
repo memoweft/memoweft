@@ -23,7 +23,6 @@
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
-    "dist/**/*.map",
     "examples/**/*.ts",
     "README.md",
     "README.zh-CN.md",
