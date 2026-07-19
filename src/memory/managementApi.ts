@@ -319,7 +319,13 @@ export function createMemoryManagementAPI(
             confidence = Math.min(confidence, cfg.attribution.hypothesisCap); // 同 merge：假设类不因重算被抬成结论
           cognitionStore.update(cogId, {
             confidence,
-            credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, cfg),
+            credStatus: deriveCredStatus(
+              confidence,
+              contradictCount,
+              cog.contentType,
+              cfg,
+              supportCount,
+            ),
           });
         }
         managementLog.append({
@@ -434,7 +440,13 @@ export function createMemoryManagementAPI(
         );
         if (target.contentType === 'hypothesis')
           confidence = Math.min(confidence, cfg.attribution.hypothesisCap);
-        const credStatus = deriveCredStatus(confidence, contradictCount, target.contentType, cfg);
+        const credStatus = deriveCredStatus(
+          confidence,
+          contradictCount,
+          target.contentType,
+          cfg,
+          supportCount,
+        );
         const updatedTarget = cognitionStore.update(targetId, { confidence, credStatus })!; // content 不动
 
         // 3) source 标失效不硬删（保留可追溯；链已搬走，来龙去脉靠本审计行的 detail）。

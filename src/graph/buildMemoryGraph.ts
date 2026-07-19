@@ -63,6 +63,7 @@ function truncate(s: string, n: number): string {
 
 function cognitionColorKey(c: Cognition): string {
   if (c.credStatus === 'conflicted') return 'conflicted';
+  if (c.credStatus === 'contested') return 'contested'; // 单独标色：有争议但支撑仍占优，不与完全冲突同色
   if (c.invalidAt != null) return 'invalid';
   if (c.archivedAt != null) return 'archived'; // 仅 includeArchived=true 时可见（默认被过滤）
   return c.contentType;
@@ -103,7 +104,10 @@ export function buildMemoryGraph(
     if (keep && !includeArchived && c.archivedAt != null) keep = false; // 归档默认不进图（invalid 同款待遇）
     if (keep && contentTypes && !contentTypes.includes(c.contentType)) keep = false;
     if (keep && credStatuses && !credStatuses.includes(c.credStatus)) keep = false;
-    if (keep && opts.onlyConflicts && c.credStatus !== 'conflicted') keep = false;
+    // onlyConflicts 收两档：contested 的那些在中间态引入【之前】就是 conflicted、本来会被选中，
+    //   只留 conflicted 会让它们从这个视图里静默消失——那是回归，不是收窄。用户要看的是"有争议的记忆"。
+    if (keep && opts.onlyConflicts && c.credStatus !== 'conflicted' && c.credStatus !== 'contested')
+      keep = false;
     if (keep && opts.onlyHypotheses && c.contentType !== 'hypothesis') keep = false;
     if (keep && q && !c.content.toLowerCase().includes(q)) keep = false;
     if (!keep) hiddenCount++;
@@ -235,6 +239,7 @@ export function buildMemoryGraph(
       hiddenCount,
       activeCognitionCount: cognitions.filter((c) => c.invalidAt == null).length,
       conflictedCount: cognitions.filter((c) => c.credStatus === 'conflicted').length,
+      contestedCount: cognitions.filter((c) => c.credStatus === 'contested').length,
       hypothesisCount: cognitions.filter((c) => c.contentType === 'hypothesis').length,
       observedEvidenceCount: nodes.filter(
         (n) => n.kind === 'evidence' && n.sourceKind === 'observed',

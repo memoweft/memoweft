@@ -173,9 +173,32 @@ function parityCredStatus() {
           input: { confidence, contradictCount, contentType },
           expected: deriveCredStatus(confidence, contradictCount, contentType),
         });
+  // 中间态判据（supportCount vs contradictCount）。上面那批【不带】 supportCount,
+  //   覆盖的正是"省略 → 退回保守 conflicted"的兼容行为；这批显式带，覆盖 contested。
+  for (const [supportCount, contradictCount] of [
+    [2, 1], // 支撑占优 → contested
+    [6, 1], // 压倒性支撑
+    [1, 1], // 一比一对峙 → conflicted
+    [2, 2], // 对峙
+    [1, 2], // 反证占优
+    [0, 1], // 无支撑
+    [3, 2], // 支撑占优（多反证）
+  ])
+    for (const contentType of types)
+      for (const confidence of [0, 300, 500, 750, 1000])
+        cases.push({
+          input: { confidence, contradictCount, contentType, supportCount },
+          expected: deriveCredStatus(
+            confidence,
+            contradictCount,
+            contentType,
+            undefined,
+            supportCount,
+          ),
+        });
   return {
     fn: 'deriveCredStatus',
-    note: '阈值边界 ±1 × contradict(0,1) × {fact,state(transient),preference}',
+    note: '阈值边界 ±1 × contradict(0,1) × {fact,state(transient),preference};另加 support×contradict 力量对比矩阵（中间态 contested 判据）。不带 supportCount 的用例 = 省略时退回保守 conflicted 的兼容行为',
     cases,
   };
 }

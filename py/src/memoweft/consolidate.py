@@ -352,7 +352,7 @@ def consolidate(
                 ConfidenceInputs(content_type=cog.content_type, formed_by=formed_by, support_count=support_count, contradict_count=contradict_count), cfg
             )
             cognition_store.update(
-                cog.id, CognitionPatch(confidence=confidence, cred_status=derive_cred_status(confidence, contradict_count, cog.content_type, cfg))
+                cog.id, CognitionPatch(confidence=confidence, cred_status=derive_cred_status(confidence, contradict_count, cog.content_type, cfg, support_count))
             )
             reinforced += 1
             # 并存新 stated 认知:旧 confirmed + 本次新增(add)载体维派生成 stated → 并存一条(用 add 非 cited)。
@@ -410,7 +410,27 @@ def consolidate(
             add = [i for i in contra if i not in already]
             if add:
                 cognition_store.add_evidence(cog.id, [EvidenceLink(evidence_id=i, relation="contradict") for i in add])
-            cognition_store.update(cog.id, CognitionPatch(cred_status="conflicted"))
+            # 按最新的支持/反对链重算置信——与 reinforce 分支同口径（对齐 consolidate.ts）。
+            #   此前这里只写 cred_status，于是 contradict_penalty 在整条 conflict 路径上永远不生效：
+            #   一条被反驳的认知，置信度与零反驳时完全相同。TS 侧已修，Python 移植此前保留了原缺陷。
+            #   cred_status 不再写死，交 derive_cred_status 推导：既保住"冲突只暴露、不消解"，
+            #   又能在支撑占优时落到中间态 contested，且不留旧置信值撒谎。
+            links = cognition_store.sources_of(cog.id)
+            support_count = sum(1 for l in links if l.relation == "support")
+            contradict_count = sum(1 for l in links if l.relation == "contradict")
+            confidence = compute_confidence(
+                ConfidenceInputs(
+                    content_type=cog.content_type, formed_by=cog.formed_by,
+                    support_count=support_count, contradict_count=contradict_count,
+                ), cfg
+            )
+            cognition_store.update(
+                cog.id,
+                CognitionPatch(
+                    confidence=confidence,
+                    cred_status=derive_cred_status(confidence, contradict_count, cog.content_type, cfg, support_count),
+                ),
+            )
             conflicted += 1
 
         # resolutions 落库(幂等 + resolverVersion 绑 prompt 版本)

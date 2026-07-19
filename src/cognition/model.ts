@@ -21,8 +21,12 @@ export type ContentType =
  *  底分 280、自然封顶 480（<limited 500）→ 纯附和顶天"低置信"；只有用户【主动】说才升级破顶。 */
 export type FormedBy = 'stated' | 'observed' | 'ruled' | 'confirmed' | 'inferred';
 
-/** 认知可信状态。 */
-export type CredStatus = 'candidate' | 'low' | 'limited' | 'stable' | 'conflicted';
+/** 认知可信状态。
+ *  `conflicted` 与 `contested` 都表示"存在反对证据"，区别在力量对比：
+ *    - `contested` 支撑条数【多于】反证 —— 有争议但仍成立；
+ *    - `conflicted` 反证与支撑对峙或占优 —— 不消解、原样暴露（public contract）。
+ *  两者都不是"已被推翻"（那是 invalidAt）。 */
+export type CredStatus = 'candidate' | 'low' | 'limited' | 'stable' | 'conflicted' | 'contested';
 
 /** 溯源链上一条证据与认知的关系。 */
 export type EvidenceRelation = 'support' | 'contradict';

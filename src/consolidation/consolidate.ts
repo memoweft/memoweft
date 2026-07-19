@@ -490,7 +490,13 @@ export async function consolidate(
       );
       deps.cognitionStore.update(cog.id, {
         confidence,
-        credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config),
+        credStatus: deriveCredStatus(
+          confidence,
+          contradictCount,
+          cog.contentType,
+          deps.config,
+          supportCount,
+        ),
       });
       reinforced++;
 
@@ -587,7 +593,13 @@ export async function consolidate(
       );
       deps.cognitionStore.update(cog.id, {
         confidence,
-        credStatus: deriveCredStatus(confidence, contradictCount, cog.contentType, deps.config),
+        credStatus: deriveCredStatus(
+          confidence,
+          contradictCount,
+          cog.contentType,
+          deps.config,
+          supportCount,
+        ),
       });
       conflicted++;
     }
