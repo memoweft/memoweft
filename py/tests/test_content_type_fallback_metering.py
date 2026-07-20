@@ -14,13 +14,13 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 
-from memoweft.consolidate import consolidate
+from memoweft.consolidate import ConsolidateResult, consolidate
 from memoweft.llm.client import ChatMessage, UsageStats
 from memoweft.store import open_db
 from memoweft.store.cognition import SqliteCognitionStore
 from memoweft.store.event import SqliteEventStore
 from memoweft.store.evidence import SqliteEvidenceStore
-from memoweft.types import Event, EvidenceInput, ModelTier
+from memoweft.types import Cognition, Event, EvidenceInput, ModelTier
 
 T = "2026-07-20T10:00:00.000Z"
 
@@ -51,7 +51,7 @@ class _StubLLM:
         return None
 
 
-def _run(new_items: list[dict[str, object]]):
+def _run(new_items: list[dict[str, object]]) -> tuple[ConsolidateResult, list[Cognition]]:
     """用给定的 new[] 跑一轮 consolidate，返回 (result, active 认知)。"""
     db = open_db(":memory:")
     ev = SqliteEvidenceStore(db, clock=_clock)
