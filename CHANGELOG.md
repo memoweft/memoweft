@@ -21,6 +21,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Simplified the public repository surface, documentation, contribution flow, and release presentation.
 - Prepared unreleased `@memoweft/adapter-ai-sdk` and `@memoweft/mcp-server` `0.2.0` packages for Core `^0.5.1 || ^0.6.0`; documented the published `0.1.0` / Core `0.5.1` installation pair and the MCP tool and registry contracts.
 
+### Fixed
+
+- `validateBundle` now rejects cognitions whose `content_type`, `formed_by`, or `cred_status` is not a known enum value, and whose `confidence` is not an integer in 0–1000. It previously validated only structure, ids, and referential integrity, and `importBundle` trusts a `valid` result and inserts rows directly — so a bundle with an out-of-range value passed straight into the database. The `cognition` table has no `CHECK` constraints on those columns and SQLite's type affinity does not stop a string from landing in the `INTEGER` `confidence` column, so the bad value persisted silently. An out-of-range `formed_by` was the worst case: it imported cleanly but became a delayed fault, because the next `computeConfidence` recomputation looks up `baseByFormedBy[formedBy]`, gets `undefined`, produces `NaN`, and then fails the whole recomputation when `NaN` cannot be written back to the `NOT NULL` column. These values come from an external file and never pass through the consolidation write path, which is the only place that falls back to `fact` for an unrecognized type — so this validator is the sole guard. `content_type` accepts all eight values including `hypothesis` and `trend`, which `attribute` and `trends` can produce and persist, rather than only the six that consolidation accepts. Enforced identically in the TypeScript and Python packages against a shared parity fixture.
+
 ## [0.6.0] — 2026-07-18
 
 ### Added

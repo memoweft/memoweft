@@ -15,11 +15,36 @@
 export type ContentType =
   'fact' | 'preference' | 'goal' | 'project' | 'state' | 'trait' | 'hypothesis' | 'trend';
 
+/** ContentType 的运行时全集（供 validateBundle 等需要在运行时枚举校验的地方用）。
+ *  含 `hypothesis`/`trend` —— 它们由 attribute/trends 内部产生、也会落库，
+ *  故凡是校验【已落库认知】的地方必须认这 8 个，不能只认 consolidate 收的那 6 个。
+ *  **不让 ContentType 从本数组派生**：那会使 TS 在 API 快照里把所有引用内联展开成字面量联合，
+ *  把一个小改动搞成大片公开类型的表达形式变更。改为 type 与数组各自手写 + 下方编译期穷尽性检查
+ *  双向锁死（漏一个或多一个都编译不过），既保单一行为真源、又保 type 引用形态不变。 */
+export const CONTENT_TYPES = [
+  'fact',
+  'preference',
+  'goal',
+  'project',
+  'state',
+  'trait',
+  'hypothesis',
+  'trend',
+] as const satisfies readonly ContentType[];
+
 /** 形成方式（亲口 > 观察 > 规则 > 附和 > LLM 推测）。
  *  `confirmed`（附和，）：用户【点头认可 AI 主动提出的猜测】（AI:"你喜欢爬山吧?" 用户:"是的"）——
  *  比 inferred 强（用户确实点了头）、比 observed/stated 弱（附和诱导性猜测有客气/顺着说成分，非主动披露）。
  *  底分 280、自然封顶 480（<limited 500）→ 纯附和顶天"低置信"；只有用户【主动】说才升级破顶。 */
 export type FormedBy = 'stated' | 'observed' | 'ruled' | 'confirmed' | 'inferred';
+/** FormedBy 的运行时全集（顺序对齐 type，见 CONTENT_TYPES 处的「不派生」说明）。 */
+export const FORMED_BY_VALUES = [
+  'stated',
+  'observed',
+  'ruled',
+  'confirmed',
+  'inferred',
+] as const satisfies readonly FormedBy[];
 
 /** 认知可信状态。
  *  `conflicted` 与 `contested` 都表示"存在反对证据"，区别在力量对比：
@@ -27,6 +52,28 @@ export type FormedBy = 'stated' | 'observed' | 'ruled' | 'confirmed' | 'inferred
  *    - `conflicted` 反证与支撑对峙或占优 —— 不消解、原样暴露（public contract）。
  *  两者都不是"已被推翻"（那是 invalidAt）。 */
 export type CredStatus = 'candidate' | 'low' | 'limited' | 'stable' | 'conflicted' | 'contested';
+/** CredStatus 的运行时全集（顺序对齐 type，见 CONTENT_TYPES 处的「不派生」说明）。 */
+export const CRED_STATUSES = [
+  'candidate',
+  'low',
+  'limited',
+  'stable',
+  'conflicted',
+  'contested',
+] as const satisfies readonly CredStatus[];
+
+// 编译期穷尽性锁：`satisfies` 只保证「数组里的都是合法值」，不保证「合法值都在数组里」。
+//   下面这个恒等式在【任一 type 加了新成员但忘了补进数组】时报 TS 错，把漏项也变成编译失败，
+//   于是 type 与运行时数组双向锁死、不会悄悄漂移。（`AssertEqual` 仅用于本文件的编译期检查。）
+type AssertExhaustive<TypeUnion, ArrElem extends TypeUnion> = [TypeUnion] extends [ArrElem]
+  ? true
+  : ['缺成员', Exclude<TypeUnion, ArrElem>];
+const _contentTypesExhaustive: AssertExhaustive<ContentType, (typeof CONTENT_TYPES)[number]> = true;
+const _formedByExhaustive: AssertExhaustive<FormedBy, (typeof FORMED_BY_VALUES)[number]> = true;
+const _credStatusesExhaustive: AssertExhaustive<CredStatus, (typeof CRED_STATUSES)[number]> = true;
+void _contentTypesExhaustive;
+void _formedByExhaustive;
+void _credStatusesExhaustive;
 
 /** 溯源链上一条证据与认知的关系。 */
 export type EvidenceRelation = 'support' | 'contradict';

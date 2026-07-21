@@ -11,6 +11,15 @@ from typing import Any
 
 from .model import BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION
 
+# cognition 字段值校验的运行时全集（与 TS cognition/model.ts 的 CONTENT_TYPES / FORMED_BY_VALUES /
+#   CRED_STATUSES 逐一对齐）。content_type 认【完整 8 值】含 hypothesis/trend——导入的是已落库认知，
+#   可能由 attribute/trends 产出这两类，不能只认 consolidate 收的那 6 个。
+_CONTENT_TYPES = frozenset(
+    ("fact", "preference", "goal", "project", "state", "trait", "hypothesis", "trend")
+)
+_FORMED_BY = frozenset(("stated", "observed", "ruled", "confirmed", "inferred"))
+_CRED_STATUSES = frozenset(("candidate", "low", "limited", "stable", "conflicted", "contested"))
+
 
 @dataclass(slots=True)
 class ValidateResult:
@@ -120,6 +129,31 @@ def validate_bundle(bundle: Any) -> ValidateResult:
             errors.append(f"cognitionEvidence references a non-existent cognition: {link['cognitionId']}")
         if link["evidenceId"] not in evidence_ids:
             errors.append(f"cognitionEvidence references a non-existent evidence: {link['evidenceId']}")
+
+    # cognition 字段值校验（致命）：枚举越界 / confidence 非法。与 validateBundle.ts 逐字符一致。
+    #   为什么在这道守门拦：cognition 表 content_type/formed_by 列无 CHECK、confidence 靠 SQLite 类型
+    #   亲和性也拦不住字符串，import 又完全信任 valid=True 直插。越界 formed_by 会埋成延迟雷
+    #   （下次 compute_confidence 重算得 NaN → 那次重算整体失败）。
+    for c in cog_list:
+        # 消息里的值一律走 _js_stringify（= JS JSON.stringify），与 TS 逐字符对齐：
+        #   非 ASCII 值也不转义（ensure_ascii=False）、缺失键映射 'undefined'。
+        if c.get("contentType", _MISSING) not in _CONTENT_TYPES:
+            errors.append(f"cognition {c['id']} has an invalid content_type: {_js_stringify(c.get('contentType', _MISSING))}")
+        if c.get("formedBy", _MISSING) not in _FORMED_BY:
+            errors.append(f"cognition {c['id']} has an invalid formed_by: {_js_stringify(c.get('formedBy', _MISSING))}")
+        if c.get("credStatus", _MISSING) not in _CRED_STATUSES:
+            errors.append(f"cognition {c['id']} has an invalid cred_status: {_js_stringify(c.get('credStatus', _MISSING))}")
+        conf = c.get("confidence", _MISSING)
+        # 必须是 0~1000 的整数：非数字/NaN/小数/越界一律拒。bool 是 int 子类，须显式排除。
+        if (
+            not isinstance(conf, int)
+            or isinstance(conf, bool)
+            or conf < 0
+            or conf > 1000
+        ):
+            errors.append(
+                f"cognition {c['id']} has an invalid confidence (must be an integer 0-1000): {_js_stringify(conf)}"
+            )
 
     for e in ev_list:
         if e.get("subjectId") != sid:

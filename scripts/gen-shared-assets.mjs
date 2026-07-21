@@ -1762,6 +1762,43 @@ function buildBundleFixtures() {
         b.data.unconsolidatedEventIds = ['ghost'];
       }),
     },
+    // 字段值校验（越界枚举 / 非法 confidence）—— 导入路径唯一守门，跨语言必须逐字段一致。
+    {
+      label: 'invalid-content-type',
+      bundle: clone((b) => {
+        b.data.cognitions[0].contentType = 'locaton';
+      }),
+    },
+    {
+      label: 'invalid-formed-by',
+      bundle: clone((b) => {
+        b.data.cognitions[0].formedBy = 'bogus';
+      }),
+    },
+    {
+      label: 'invalid-cred-status',
+      bundle: clone((b) => {
+        b.data.cognitions[0].credStatus = 'superb';
+      }),
+    },
+    {
+      label: 'confidence-string',
+      bundle: clone((b) => {
+        b.data.cognitions[0].confidence = 'abc';
+      }),
+    },
+    {
+      label: 'confidence-out-of-range',
+      bundle: clone((b) => {
+        b.data.cognitions[0].confidence = 1001;
+      }),
+    },
+    {
+      label: 'hypothesis-content-type-ok',
+      bundle: clone((b) => {
+        b.data.cognitions[0].contentType = 'hypothesis';
+      }),
+    },
   ].map((c) => ({ label: c.label, bundle: c.bundle, expected: validateBundle(c.bundle) }));
 
   return {

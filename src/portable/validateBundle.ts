@@ -5,7 +5,12 @@
  *  - errors（致命，valid=false，绝不导入）：格式/版本/必需字段不对；溯源引用悬空。
  *  - warnings（软提示，可导入）：subject 混入；correctsEvidenceId 指向包外；旧 schemaVersion。
  *
- * V1 只做结构 + 引用完整性校验，不逐字段深校（生产方是自家 exportBundle）。
+ * 结构 + 引用完整性校验，外加 cognition 的字段【值】校验（枚举 + confidence 范围）。
+ *   —— 后者是导入路径的数据完整性护栏：importBundle 完全信任本函数的 valid=true 直接落库，
+ *      而 cognition 表的 content_type/formed_by 列【无 CHECK 约束】、confidence 列靠 SQLite
+ *      类型亲和性也拦不住字符串。越界值不在这里拦，就会静默落库并埋成延迟雷
+ *      （越界 formed_by → 下次 computeConfidence 重算得 NaN → 那次重算整体失败）。
+ *      这些值来自外部文件、与 LLM 无关，且导入路径没有 consolidate 那层「非法值兜底成 fact」的保护。
  */
 import {
   BUNDLE_FORMAT,
@@ -13,7 +18,19 @@ import {
   type MemoryBundle,
   type ValidateResult,
 } from './model.ts';
+import {
+  CONTENT_TYPES,
+  FORMED_BY_VALUES,
+  CRED_STATUSES,
+  type ContentType,
+  type FormedBy,
+  type CredStatus,
+} from '../cognition/model.ts';
 import { resolveLang } from '../config.ts';
+
+const CONTENT_TYPE_SET = new Set<string>(CONTENT_TYPES);
+const FORMED_BY_SET = new Set<string>(FORMED_BY_VALUES);
+const CRED_STATUS_SET = new Set<string>(CRED_STATUSES);
 
 export function validateBundle(bundle: unknown): ValidateResult {
   const errors: string[] = [];
@@ -159,6 +176,44 @@ export function validateBundle(bundle: unknown): ValidateResult {
         lang === 'zh'
           ? `cognitionEvidence 指向不存在的 evidence: ${link.evidenceId}`
           : `cognitionEvidence references a non-existent evidence: ${link.evidenceId}`,
+      );
+  }
+
+  // cognition 字段值校验（致命）：枚举越界 / confidence 非法。
+  //   为什么在这道守门拦：cognition 表 content_type/formed_by 列无 CHECK、confidence 列靠
+  //   SQLite 类型亲和性也拦不住字符串，importBundle 又完全信任 valid=true 直插（见文件头）。
+  //   content_type 认【完整 8 值】(含 hypothesis/trend)——导入的是已落库认知，可能由
+  //   attribute/trends 产出这两类，不能只认 consolidate 收的那 6 个（那会误杀合法认知）。
+  for (const c of data.cognitions) {
+    if (!CONTENT_TYPE_SET.has(c.contentType as ContentType))
+      errors.push(
+        lang === 'zh'
+          ? `cognition ${c.id} 的 content_type 非法: ${JSON.stringify(c.contentType)}`
+          : `cognition ${c.id} has an invalid content_type: ${JSON.stringify(c.contentType)}`,
+      );
+    if (!FORMED_BY_SET.has(c.formedBy as FormedBy))
+      errors.push(
+        lang === 'zh'
+          ? `cognition ${c.id} 的 formed_by 非法: ${JSON.stringify(c.formedBy)}`
+          : `cognition ${c.id} has an invalid formed_by: ${JSON.stringify(c.formedBy)}`,
+      );
+    if (!CRED_STATUS_SET.has(c.credStatus as CredStatus))
+      errors.push(
+        lang === 'zh'
+          ? `cognition ${c.id} 的 cred_status 非法: ${JSON.stringify(c.credStatus)}`
+          : `cognition ${c.id} has an invalid cred_status: ${JSON.stringify(c.credStatus)}`,
+      );
+    // confidence 必须是 0~1000 的整数：非数字/NaN/小数/越界一律拒（否则读时算术全 NaN 或类型污染）。
+    if (
+      typeof c.confidence !== 'number' ||
+      !Number.isInteger(c.confidence) ||
+      c.confidence < 0 ||
+      c.confidence > 1000
+    )
+      errors.push(
+        lang === 'zh'
+          ? `cognition ${c.id} 的 confidence 非法(应为 0~1000 的整数): ${JSON.stringify(c.confidence)}`
+          : `cognition ${c.id} has an invalid confidence (must be an integer 0-1000): ${JSON.stringify(c.confidence)}`,
       );
   }
 
