@@ -87,7 +87,7 @@ export async function aggregateTrends(
   // 收集窗口内的"状态证据"：state 类认知（含已失效，趋势看的是"曾反复出现"）的支撑证据里、发生时间在窗内的。
   // 保持 all()：趋势聚合是【历史口径】——看"曾反复出现"，本就计入已失效，
   // 已归档项同样计入历史；趋势聚合不使用 active() 的当前状态口径。
-  // 排除 confirmed（附和，）：防"AI 诱导性提问风暴 + 用户连答是的"被规则数成一条更可信的 ruled 趋势，
+  // 排除 confirmed（附和）：防"AI 诱导性提问风暴 + 用户连答是的"被规则数成一条更可信的 ruled 趋势，
   //   防止通过重复附和绕过 confirmed 的低置信上限，这是结构性不变量。
   const states = deps.cognitionStore
     .all(subjectId)
