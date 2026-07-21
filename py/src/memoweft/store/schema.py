@@ -79,6 +79,13 @@ SCHEMA_SQL: tuple[str, ...] = (
   relation     TEXT NOT NULL
 )""",
     "CREATE INDEX IF NOT EXISTS ix_cogev_cog ON cognition_evidence(cognition_id)",
+    # ── evidence_retraction(软删撤回台账;Python 侧仅为 schema 平价,不写不读)──
+    """CREATE TABLE IF NOT EXISTS evidence_retraction (
+  cognition_id TEXT NOT NULL,
+  evidence_id  TEXT NOT NULL,
+  retracted_at TEXT NOT NULL
+)""",
+    "CREATE INDEX IF NOT EXISTS ix_evret_cog ON evidence_retraction(cognition_id)",
     # ── management_log(审计,无 PK) ──
     """CREATE TABLE IF NOT EXISTS management_log (
   op          TEXT NOT NULL,

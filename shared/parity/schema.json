@@ -298,6 +298,29 @@
         "type": "TEXT"
       }
     ],
+    "evidence_retraction": [
+      {
+        "dflt": null,
+        "name": "cognition_id",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "evidence_id",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "retracted_at",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      }
+    ],
     "interaction_context": [
       {
         "dflt": null,

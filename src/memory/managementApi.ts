@@ -344,7 +344,15 @@ export function createMemoryManagementAPI(
         if (!evidenceStore.get(evidenceId)) return { removed: false, blockers: [] }; // 不存在（拒绝只发生在有引用时）
         const blockers = blockersOf(evidenceId);
         if (blockers.length > 0 && !force) return { removed: false, blockers }; // 拒绝：影响面摆给调用方，没改就不审计
-        // force（或无引用）：清关联链 → 删证据 → 审计，同一事务全成或全滚。
+        // force（或无引用）：记撤回台账 → 清关联链 → 软删证据 → 审计，同一事务全成或全滚。
+        const affectedCogIds = new Set(
+          blockers.filter((b) => b.kind === 'cognition').map((b) => b.id),
+        );
+        // 记撤回关联（给 explainCognition 的 expiredCount）：必须在清 cognition_evidence 【之前】——
+        //   清完就问不出这条证据挂过哪些认知了。与置信度无关：active 链仍照旧清、置信度照旧下降。
+        const retractedAt = clock().toISOString();
+        for (const cogId of affectedCogIds)
+          cognitionStore.recordRetraction(cogId, evidenceId, retractedAt);
         db.prepare('DELETE FROM event_evidence WHERE evidence_id = ?').run(evidenceId);
         db.prepare('DELETE FROM cognition_evidence WHERE evidence_id = ?').run(evidenceId);
         // 这条证据的语义解析（用户原话的解开改写）跟着删——必须在删证据之前，删完就找不着关联了。
@@ -355,9 +363,7 @@ export function createMemoryManagementAPI(
         //   不重算的话：一条靠 5 条证据攒到 stable 的认知，用户删掉其中 4 条后仍然是 stable，
         //   系统对他的把握度停留在已经被撤回的证据上。credStatus 随之重导出，不留旧值。
         //   blockers 按 (认知, relation) 逐条列出，同一认知可能出现多次 → 去重后各算一次。
-        for (const cogId of new Set(
-          blockers.filter((b) => b.kind === 'cognition').map((b) => b.id),
-        )) {
+        for (const cogId of affectedCogIds) {
           const cog = cognitionStore.get(cogId);
           if (!cog || cog.invalidAt) continue; // 已失效的不动：它的置信度是历史快照，重算反而抹掉当时的判断
           const links = cognitionStore.sourcesOf(cogId);
