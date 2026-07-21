@@ -82,6 +82,21 @@ jobs:
       - name: Core Build
         run: npm run build
 
+      # Assert exactly the intended files ship to npm; nothing more, nothing less.
+      - name: Package manifest assertion
+        run: |
+          files=$(npm pack --dry-run --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);process.stdout.write((j[0].files||[]).map(f=>f.path).join('\n'))})")
+          echo "packed files:"; echo "$files"
+          for must in dist/index.js dist/index.d.ts README.md README.zh-CN.md CHANGELOG.md LICENSE; do
+            echo "$files" | grep -qxF "$must" || { echo "::error::npm tarball is missing $must"; exit 1; }
+          done
+          if echo "$files" | grep -qE '^(src/|tests/|bench/|testbench/|scripts/|examples/|docs/|\.env)'; then
+            echo "::error::npm tarball would ship files it must not:"
+            echo "$files" | grep -E '^(src/|tests/|bench/|testbench/|scripts/|examples/|docs/|\.env)'
+            exit 1
+          fi
+          echo "package manifest OK"
+
       - name: Host Typecheck
         run: npm run typecheck -w @memoweft/host
 

@@ -79,7 +79,7 @@ export interface CreateMemoWeftLlamaIndexOptions {
   /** 每次成功召回后的回调（可选）；透传召回 v2 面（id/contentType/score，explain 时带 provenance）供宿主自筛/透视。
    *  隐私保证：provenance【只】经此回调交宿主，绝不进 memoryBlock 输出文本。 */
   onRecall?: (items: RecalledLike[]) => void;
-  /** recall 超时阈值（毫秒，）。缺省 200ms。超时/抛错 → 召回降级为不注入。 */
+  /** recall 超时阈值（毫秒）。缺省 200ms。超时/抛错 → 召回降级为不注入。 */
   recallTimeoutMs?: number;
   /** ingest 单次尝试超时（毫秒，可选）。传正数则每次尝试套超时；超时按失败计入「重试一次」（超时不重试）。 */
   ingestTimeoutMs?: number;

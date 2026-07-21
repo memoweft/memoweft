@@ -42,12 +42,15 @@ npm run build
 代码改动应通过：
 
 ```bash
+npm run format
 npm run lint
 npm run typecheck
 npm test
 npm run build
 npm run api:check
 ```
+
+运行 `npm run format:write` 可自动套用 Prettier 格式。CI 第一步就是 `npm run format`（仅检查），未格式化的改动会先于其它检查导致 CI 失败。
 
 文档改动还应通过：
 
