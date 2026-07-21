@@ -26,6 +26,10 @@ export interface MemoWeftConfig {
   /** 召回与衰减门控：注入回话的相关认知条数 + 有效置信门槛。 */
   retrieval: {
     topK: number;
+    /** 召回超取倍数：门控【之前】先取 topK×overfetchFactor 条候选，逐条过门后截回 topK。
+     *  修「欠填」——旧实现只取 topK 条再过门，前 K 名被门挡掉就不补位，库里合格认知取不到。
+     *  默认 4；设 1 = 关闭超取（行为同旧）。倍数越大越不易欠填，代价是每轮多几次带索引的读。 */
+    overfetchFactor: number;
     /** 有效置信（衰减后）低于此值的认知不注入对话，避免召回已衰减的情绪或过期假设。 */
     minEffectiveConfidence: number;
     /** 召回相似度门控：query 与认知的余弦分低于此值 → 直接不注入（避免 top-k 返回不相关认知）。
@@ -112,7 +116,7 @@ export const config: MemoWeftConfig = {
   observedDefaults: { allowLocalRead: true, allowCloudRead: false, allowInference: true },
   toolDefaults: { allowLocalRead: true, allowCloudRead: false, allowInference: true },
   workingMemory: { maxTurns: 8 },
-  retrieval: { topK: 5, minEffectiveConfidence: 80, minSimilarity: 0 },
+  retrieval: { topK: 5, overfetchFactor: 4, minEffectiveConfidence: 80, minSimilarity: 0 },
   consolidation: {
     baseByFormedBy: { stated: 600, observed: 350, ruled: 450, confirmed: 280, inferred: 200 }, // confirmed（附和）夹 inferred/observed 之间：自然封顶 280+支持满200=480<limited500 → 纯附和顶天"低置信"
     supportStep: 40,
