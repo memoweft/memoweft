@@ -144,17 +144,17 @@ spoken · 下午三点以后我只喝低因咖啡，咖啡因会让我睡不着�
 
 ## 生态集成
 
-| 生态                                                                                                 | 接入方式                            | 可用状态                                                            |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------- |
-| [Vercel AI SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-ai-sdk)              | 中间件召回与受控持久化              | npm `0.1.0` 配 Core `0.5.1`；源码 `0.2.0` 支持 Core `0.5.1` / `0.6` |
-| [Model Context Protocol](https://github.com/memoweft/memoweft/tree/main/packages/mcp-server)         | stdio：5 读、3 个受控写             | npm `0.1.0` 配 Core `0.5.1`；源码 `0.2.0` 支持 Core `0.5.1` / `0.6` |
-| [Claude Agent SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-claude-agent-sdk) | 用户输入与工具结果 hooks            | 源码预览                                                            |
-| [OpenAI Agents SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-openai-agents)   | Run wrapper 与模型输入过滤          | 源码预览                                                            |
-| [LangChain](https://github.com/memoweft/memoweft/tree/main/packages/adapter-langchain)               | v1 middleware 或 retriever/callback | 源码预览                                                            |
-| [Mastra](https://github.com/memoweft/memoweft/tree/main/packages/adapter-mastra)                     | Processor 读写接入                  | 源码预览                                                            |
-| [LlamaIndex.TS](https://github.com/memoweft/memoweft/tree/main/packages/adapter-llamaindex)          | Memory block 与 stream tap          | 仅维护存量；上游已归档                                              |
+| 生态                                                                                                 | 接入方式                            | 可用状态                              |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------- |
+| [Vercel AI SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-ai-sdk)              | 中间件召回与受控持久化              | npm `0.2.0` 支持 Core `0.5.1` / `0.6` |
+| [Model Context Protocol](https://github.com/memoweft/memoweft/tree/main/packages/mcp-server)         | stdio：5 读、3 个受控写             | npm `0.2.0` 支持 Core `0.5.1` / `0.6` |
+| [Claude Agent SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-claude-agent-sdk) | 用户输入与工具结果 hooks            | 源码预览                              |
+| [OpenAI Agents SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-openai-agents)   | Run wrapper 与模型输入过滤          | 源码预览                              |
+| [LangChain](https://github.com/memoweft/memoweft/tree/main/packages/adapter-langchain)               | v1 middleware 或 retriever/callback | 源码预览                              |
+| [Mastra](https://github.com/memoweft/memoweft/tree/main/packages/adapter-mastra)                     | Processor 读写接入                  | 源码预览                              |
+| [LlamaIndex.TS](https://github.com/memoweft/memoweft/tree/main/packages/adapter-llamaindex)          | Memory block 与 stream tap          | 仅维护存量；上游已归档                |
 
-两个已发布集成当前均为 `0.1.0`，应与 `memoweft@0.5.1` 搭配安装。`main` 上的 `0.2.0` 源码支持 Core `0.5.1` 和 `0.6`，但尚未发布到 npm。尚未发布的集成只作为仓库源码预览，不会被描述成可直接 npm 安装。
+两个已发布集成——`@memoweft/adapter-ai-sdk@0.2.0` 和 `@memoweft/mcp-server@0.2.0`——均支持 Core `0.5.1` 和 `0.6`。尚未发布的集成只作为仓库源码预览，不会被描述成可直接 npm 安装。
 
 ## 在本地运行参考宿主
 
