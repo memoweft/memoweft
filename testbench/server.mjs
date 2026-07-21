@@ -35,6 +35,15 @@ import { loadLLMConfig } from '../src/llm/client.ts';
 import { Conversation } from '../src/pipeline/conversation.ts';
 import { config } from '../src/config.ts';
 import { exportBundle, importBundle } from '../src/portable/index.ts';
+import { resetTestbenchSubject } from './factoryReset.mjs';
+import { portableDeps } from './portableDeps.mjs';
+import {
+  ClientInputError,
+  clientInputRejection,
+  encodeDotenvEntries,
+  requestRejection,
+  setOwnPath,
+} from './serverSecurity.mjs';
 
 // 开发者模式·热调：进程一启动就深拷一份 config 当"出厂默认"（必须在任何请求改动 config 之前拍这张快照）。
 // 之后 /api/config/reset 靠它把 config 恢复原样。structuredClone 是 Node 内置，零依赖。
@@ -274,16 +283,12 @@ function readJson(req) {
         // 请求体显式按 UTF-8 解码，避免不同命令行环境造成乱码写入证据库。
         //   浏览器 fetch 恒为 UTF-8 不受影响；命令行注入请用 UTF-8 编码的请求体。）
         if (body.includes('�')) {
-          reject(
-            new Error(
-              '请求体不是合法 UTF-8（Windows cmd 的 curl 会按 GBK 发中文；请改用测试台界面，或以 UTF-8 编码发送）',
-            ),
-          );
+          reject(new ClientInputError('请求体不是合法 UTF-8。'));
           return;
         }
         resolve(body ? JSON.parse(body) : {});
-      } catch (e) {
-        reject(e);
+      } catch {
+        reject(new ClientInputError('请求 JSON 无效。'));
       }
     });
     req.on('error', reject);
@@ -295,29 +300,18 @@ function sendJson(res, code, data) {
   res.end(JSON.stringify(data));
 }
 
-// 开发者模式·热调：按 'a.b.c' 路径深入 config，走到倒数第二层父对象再赋最后一段的值。
-// 返回 null 表示成功；返回错误字符串表示失败（中途某段不存在就报错、绝不自动建键）。
-// 注意：往【已有的 config 对象】里改字段，src 各模块运行时现读 config 才能即时生效——绝不整体替换引用。
-function setByPath(obj, path, value) {
-  const segs = String(path).split('.');
-  if (segs.length === 0 || segs.some((s) => s === '')) return `非法路径：${path}`;
-  let cur = obj;
-  // 走到倒数第二层：中间每一段都必须是已存在的对象，否则报错不建键。
-  for (let i = 0; i < segs.length - 1; i++) {
-    const k = segs[i];
-    if (cur == null || typeof cur !== 'object' || !(k in cur))
-      return `路径不存在：${segs.slice(0, i + 1).join('.')}`;
-    cur = cur[k];
-  }
-  const last = segs[segs.length - 1];
-  if (cur == null || typeof cur !== 'object' || !(last in cur)) return `路径不存在：${path}`;
-  cur[last] = value; // value 原样写入（类型由前端负责），后端保持薄。
-  return null;
-}
-
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   try {
+    // 每一个请求都先过 loopback Host 边界，避免 DNS rebinding 下的伪 Host 同源读取静态页或
+    // 记忆数据；POST 还必须通过浏览器同源 Origin 校验，任何写库、改配置或重置都不会在跨站
+    // 请求下执行。没有 Origin 的本机脚本仍可用于诊断自动化。
+    const rejection = requestRejection(req.headers, req.method, PORT);
+    if (rejection) {
+      sendJson(res, rejection.statusCode, { error: rejection.message });
+      return;
+    }
+
     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
       const html = await readFile(join(__dirname, 'index.html'), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -647,7 +641,7 @@ const server = createServer(async (req, res) => {
     // 改一个字段：收 { path, value } → 往同一个 config 引用深处赋值 → 即时生效（src 各模块运行时现读 config）。
     if (req.method === 'POST' && url.pathname === '/api/config') {
       const { path, value } = await readJson(req);
-      const err = setByPath(config, String(path), value);
+      const err = setOwnPath(config, String(path), value);
       if (err) {
         sendJson(res, 200, { error: err });
         return;
@@ -670,10 +664,6 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/gen-env') {
       const b = await readJson(req);
       const s = (v) => String(v ?? '').trim(); // 统一去空白；不落库、不缓存
-      // dotenv 值转义：含 '#'/空格/引号的值加双引号并转义内部引号——否则 node --env-file / loadEnvFile
-      //   会把 '#' 及其后当行内注释截断（apiKey/base_url 含 '#' 会被悄悄截短 → 加载回来鉴权失败、
-      //   用户对着"看着完整"的 .env 难自查）。对齐 Host 已修好的 q()（apps/memoweft-host/src/server.ts:191）。
-      const q = (v) => (/[#\s"]/.test(v) ? '"' + v.replace(/"/g, '\\"') + '"' : v);
       // 对话大模型（必填三项）
       const llmBase = s(b.llmBaseUrl),
         llmKey = s(b.llmApiKey),
@@ -698,11 +688,30 @@ const server = createServer(async (req, res) => {
         return;
       }
 
+      const values = {
+        MEMOWEFT_LLM_BASE_URL: llmBase,
+        MEMOWEFT_LLM_API_KEY: llmKey,
+        MEMOWEFT_LLM_MODEL: llmModel,
+        MEMOWEFT_WRITE_LLM_BASE_URL: wBase,
+        MEMOWEFT_WRITE_LLM_API_KEY: wKey,
+        MEMOWEFT_WRITE_LLM_MODEL: wModel,
+        MEMOWEFT_EMBED_BASE_URL: eBase,
+        MEMOWEFT_EMBED_API_KEY: eKey,
+        MEMOWEFT_EMBED_MODEL: eModel,
+      };
+      const { encoded, unrepresentable } = encodeDotenvEntries(values);
+      if (unrepresentable.length) {
+        sendJson(res, 400, {
+          error: `以下配置包含当前 .env 格式无法无损保存的字符组合：${unrepresentable.join('、')}`,
+        });
+        return;
+      }
+
       const lines = [];
       lines.push('# ── 对话大模型（chat · 必配）：质量优先 ──────────────');
-      lines.push(`MEMOWEFT_LLM_BASE_URL=${q(llmBase)}`);
-      lines.push(`MEMOWEFT_LLM_API_KEY=${q(llmKey)}`);
-      lines.push(`MEMOWEFT_LLM_MODEL=${q(llmModel)}`);
+      lines.push(`MEMOWEFT_LLM_BASE_URL=${encoded.MEMOWEFT_LLM_BASE_URL}`);
+      lines.push(`MEMOWEFT_LLM_API_KEY=${encoded.MEMOWEFT_LLM_API_KEY}`);
+      lines.push(`MEMOWEFT_LLM_MODEL=${encoded.MEMOWEFT_LLM_MODEL}`);
       lines.push('');
 
       // 写路径小模型：整组任一非空才写；整组空 → 省略 + 注释说明回退（回退对话大模型，行为同旧）
@@ -710,9 +719,9 @@ const server = createServer(async (req, res) => {
         lines.push(
           '# ── 写路径小快模型（write · 可选）：整理事件/画像/归因走它，不拖慢更新画像 ──',
         );
-        lines.push(`MEMOWEFT_WRITE_LLM_BASE_URL=${q(wBase)}`);
-        lines.push(`MEMOWEFT_WRITE_LLM_API_KEY=${q(wKey)}`);
-        lines.push(`MEMOWEFT_WRITE_LLM_MODEL=${q(wModel)}`);
+        lines.push(`MEMOWEFT_WRITE_LLM_BASE_URL=${encoded.MEMOWEFT_WRITE_LLM_BASE_URL}`);
+        lines.push(`MEMOWEFT_WRITE_LLM_API_KEY=${encoded.MEMOWEFT_WRITE_LLM_API_KEY}`);
+        lines.push(`MEMOWEFT_WRITE_LLM_MODEL=${encoded.MEMOWEFT_WRITE_LLM_MODEL}`);
       } else {
         lines.push(
           '# ── 写路径小快模型（write · 可选）：未配 → 写路径自动回退对话大模型（行为同旧，不崩）──',
@@ -723,9 +732,9 @@ const server = createServer(async (req, res) => {
       // 向量嵌入：整组任一非空才写；整组空 → 省略 + 注释说明降级（召回降级为空，画像照写）
       if (eBase || eKey || eModel) {
         lines.push('# ── 嵌入器（embed · 可选）：语义召回用 ──');
-        lines.push(`MEMOWEFT_EMBED_BASE_URL=${q(eBase)}`);
-        lines.push(`MEMOWEFT_EMBED_API_KEY=${q(eKey)}`);
-        lines.push(`MEMOWEFT_EMBED_MODEL=${q(eModel)}`);
+        lines.push(`MEMOWEFT_EMBED_BASE_URL=${encoded.MEMOWEFT_EMBED_BASE_URL}`);
+        lines.push(`MEMOWEFT_EMBED_API_KEY=${encoded.MEMOWEFT_EMBED_API_KEY}`);
+        lines.push(`MEMOWEFT_EMBED_MODEL=${encoded.MEMOWEFT_EMBED_MODEL}`);
       } else {
         lines.push(
           '# ── 嵌入器（embed · 可选）：未配 → 语义召回降级为空（画像照写，只是回话不注入偏好）──',
@@ -825,15 +834,11 @@ const server = createServer(async (req, res) => {
     }
 
     // ── 导出便携记忆包（备份/迁移）──
-    // 只读三层数据组包（portable/exportBundle 已做好，这里纯接线）；向量索引不入包（派生物，导入后重建）。
+    // 只读完整可移植记忆层组包（portableDeps 集中保活 v0.6 interaction stores）；向量索引不入包（派生物，导入后重建）。
     // 不需要 LLM / .env。前端拿 { bundle } 后用 Blob 下载成文件。
     if (req.method === 'GET' && url.pathname === '/api/export-bundle') {
       const subjectId = url.searchParams.get('subjectId') || config.identity.subjectId;
-      const bundle = exportBundle(subjectId, {
-        evidenceStore: store,
-        eventStore,
-        cognitionStore: cogStore,
-      });
+      const bundle = exportBundle(subjectId, portableDeps(stores));
       sendJson(res, 200, { bundle });
       return;
     }
@@ -844,11 +849,7 @@ const server = createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/import-bundle') {
       const mode = url.searchParams.get('mode') === 'merge' ? 'merge' : 'dryRun';
       const bundle = await readJson(req);
-      const plan = importBundle(
-        bundle,
-        { evidenceStore: store, eventStore, cognitionStore: cogStore, transaction },
-        { mode },
-      );
+      const plan = importBundle(bundle, portableDeps(stores), { mode });
       const body = { plan };
       if (mode === 'merge' && plan.valid) body.needsReindex = true; // 向量索引不入包 → 建议重建召回
       sendJson(res, 200, body);
@@ -856,25 +857,13 @@ const server = createServer(async (req, res) => {
     }
 
     // ── 恢复出厂 · 清空全部数据（不可逆）──
-    // 批量清空【保留 store 直调】——恢复出厂是整库擦除、
-    //   不是逐条管理行为；逐条走受控 API 反而会往正要清掉的审计表里再写一堆行。只用公开方法清数据 + 索引：
-    //   证据 evidence：EvidenceStore 无 removeBySubject，用 all() 逐条 remove(id)（测试台单 subject，全清）。
-    //   事件 event   ：eventStore.removeBySubject(subjectId) → 连带清 event_evidence 关联表。
-    //   画像 cognition：cogStore.removeBySubject(subjectId) → 连带清 cognition_evidence 溯源链。
-    //   检索索引     ：retriever.indexAll([]) → VectorRetriever 会 DELETE FROM vectors（空数组即清空）；
-    //                  NullRetriever 为 no-op（本就无索引）。两种都安全。
-    //   审计 management_log：出厂=无历史 → 连审计表一起清（managementLog.clear()）。
+    // 通过受控管理 API 在一个事务中清证据、事件、画像、审计和 v0.6 的交互/语义层。
+    // 索引是派生数据，在事务成功后再清空；这样「恢复出厂」不会遗漏含用户原话的副本。
     // 清理完成后调用 newSession()，同步清空当前会话窗口，避免旧上下文残留。
     if (req.method === 'POST' && url.pathname === '/api/factory-reset') {
       const subjectId = config.identity.subjectId;
-      let evidenceRemoved = 0;
-      for (const e of store.all()) {
-        if (store.remove(e.id)) evidenceRemoved++;
-      }
-      const eventRemoved = eventStore.removeBySubject(subjectId);
-      const cognitionRemoved = cogStore.removeBySubject(subjectId);
-      const auditRemoved = stores.managementLog.clear(); // 出厂=无历史
-      await retriever.indexAll([]); // 清空向量索引（空召回时无副作用）
+      const { evidenceRemoved, eventRemoved, cognitionRemoved, auditRemoved } =
+        await resetTestbenchSubject({ memoryApi, retriever, subjectId });
       newSession(); // 同步清空当前会话窗口，不保留旧上下文
       sendJson(res, 200, {
         ok: true,
@@ -888,7 +877,14 @@ const server = createServer(async (req, res) => {
 
     sendJson(res, 404, { error: 'not found' });
   } catch (e) {
-    sendJson(res, 400, { error: String(e) });
+    const clientRejection = clientInputRejection(e);
+    if (clientRejection) {
+      sendJson(res, clientRejection.statusCode, { error: clientRejection.message });
+      return;
+    }
+    // 服务器错误只写本地控制台；不要把路径、依赖版本或调用栈带回浏览器。
+    console.error('测试台请求处理失败：', e);
+    sendJson(res, 500, { error: '请求处理失败，请查看本地服务日志。' });
   }
 });
 

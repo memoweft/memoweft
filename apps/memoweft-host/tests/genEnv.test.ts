@@ -4,6 +4,9 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { buildEnvResponse } from '../src/genEnv.ts';
 
 const CHAT = { llmBaseUrl: 'https://api.example.com/v1', llmApiKey: 'k', llmModel: 'chat-m' };
@@ -11,6 +14,31 @@ const envOf = (body: Record<string, unknown>): string => {
   const [, out] = buildEnvResponse(body);
   return 'env' in out ? out.env : '';
 };
+
+function loadGeneratedEnv(env: string): Record<string, string | undefined> {
+  const dir = mkdtempSync(join(tmpdir(), 'memoweft-gen-env-'));
+  const path = join(dir, '.env');
+  const keys = [
+    'MEMOWEFT_LLM_BASE_URL',
+    'MEMOWEFT_LLM_API_KEY',
+    'MEMOWEFT_LLM_MODEL',
+    'MEMOWEFT_WRITE_LLM_API_KEY',
+    'MEMOWEFT_EMBED_API_KEY',
+  ] as const;
+  const previous = new Map(keys.map((key) => [key, process.env[key]]));
+  try {
+    writeFileSync(path, env, 'utf8');
+    process.loadEnvFile(path);
+    return Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  } finally {
+    for (const key of keys) {
+      const value = previous.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 
 test('gen-env：配了本地写模型 + tier=local → 产出 TIER=local 行 + 本地私密消化提示', () => {
   const [code, out] = buildEnvResponse({
@@ -61,4 +89,43 @@ test('gen-env：缺对话模型必填项 → [400, error]', () => {
   const [code, out] = buildEnvResponse({ writeBaseUrl: 'x', writeTier: 'local' });
   assert.equal(code, 400);
   assert.ok('error' in out, '返回 error');
+});
+
+test('gen-env：含反斜杠、换行、空格、# 和双引号的值可由 Node 无损加载', () => {
+  const apiKey = 'line one\\path\nline two # "quoted"';
+  const [code, out] = buildEnvResponse({ ...CHAT, llmApiKey: apiKey });
+  assert.equal(code, 200);
+  assert.ok('env' in out);
+  assert.equal(loadGeneratedEnv(out.env).MEMOWEFT_LLM_API_KEY, apiKey);
+});
+
+test('gen-env：纯双引号包裹和中间双引号值均可由 Node 无损加载', () => {
+  const apiKey = '"abc" and "mid"';
+  const [code, out] = buildEnvResponse({ ...CHAT, llmApiKey: apiKey });
+  assert.equal(code, 200);
+  assert.ok('env' in out);
+  assert.equal(loadGeneratedEnv(out.env).MEMOWEFT_LLM_API_KEY, apiKey);
+});
+
+test('gen-env：纯单引号包裹和中间单引号值均可由 Node 无损加载', () => {
+  const apiKey = "'abc' and 'mid'";
+  const [code, out] = buildEnvResponse({ ...CHAT, llmApiKey: apiKey });
+  assert.equal(code, 200);
+  assert.ok('env' in out);
+  assert.equal(loadGeneratedEnv(out.env).MEMOWEFT_LLM_API_KEY, apiKey);
+});
+
+test('gen-env：可选空值也显式引用，Node 加载后仍为空串', () => {
+  const [code, out] = buildEnvResponse({ ...CHAT, writeBaseUrl: 'http://write.example/v1' });
+  assert.equal(code, 200);
+  assert.ok('env' in out);
+  assert.match(out.env, /^MEMOWEFT_WRITE_LLM_API_KEY=''$/m);
+  assert.equal(loadGeneratedEnv(out.env).MEMOWEFT_WRITE_LLM_API_KEY, '');
+});
+
+test('gen-env：同时含单、双引号的值明确拒绝，避免生成被篡改的 .env', () => {
+  const [code, out] = buildEnvResponse({ ...CHAT, llmApiKey: 'both \' and " quotes' });
+  assert.equal(code, 400);
+  assert.ok('error' in out);
+  assert.match(out.error, /MEMOWEFT_LLM_API_KEY/);
 });
