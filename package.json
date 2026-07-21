@@ -59,6 +59,7 @@
     "test:live": "node scripts/test-live.mjs",
     "lint": "eslint .",
     "format": "prettier --check .",
+    "format:write": "prettier --write .",
     "testbench": "node testbench/server.mjs",
     "collector": "node plugins/collector-active-window/run.mjs",
     "experience": "node testbench/server.mjs",

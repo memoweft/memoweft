@@ -42,12 +42,15 @@ Recommended branch prefixes are `feat/`, `fix/`, `docs/`, and `chore/`. Do not f
 Every code change should pass:
 
 ```bash
+npm run format
 npm run lint
 npm run typecheck
 npm test
 npm run build
 npm run api:check
 ```
+
+Run `npm run format:write` to apply Prettier formatting automatically. CI runs `npm run format` (check-only) as its first step, so an unformatted change fails CI before anything else.
 
 Documentation changes should also pass:
 

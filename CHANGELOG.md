@@ -31,7 +31,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - Interaction context and semantic resolution records for context-dependent replies such as “yes”, “no”, and “the latter”.
 - Code-derived formation modes for user-stated, user-confirmed, observed, and ruled cognitions. `inferred` remains model-reported by design: it encodes distance from the utterance rather than who carried it, and the risks are asymmetric — overstating a confirmed cognition as stated inflates confidence, whereas self-reporting "I inferred this" only under-reports.
-- Conversation-context support in the OpenAI Agents and LangChain integrations.
+- Conversation-context support, enabled by a `conversationId` parameter, in the OpenAI Agents and LangChain integrations.
 - A Mastra processor integration and LangChain v1 middleware.
 - A Python parity package covering confidence, formation mode, decay, storage, FTS, and portable-bundle interoperability.
 - Language-neutral shared fixtures that verify TypeScript and Python behavior against the same source data.
