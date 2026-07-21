@@ -144,6 +144,9 @@ export interface CognitionExplanation {
   /** provenance 里 support / contradict 的条数（反证不消解、如实暴露，同 consolidate 的 public contract）。 */
   supportCount: number;
   contradictCount: number;
+  /** 这条认知被软删（撤回）过几条证据的台账计数。删证据会清 active 溯源链（置信度随之下降），
+   *  本字段单独记录"曾撤回几条"，让宿主/审计看得到删除历史。对齐 BMB expired_count。 */
+  expiredCount: number;
   /** 生命周期状态：按 id 显式解释【不走召回门控】，失效/归档/静音的照常解释，但如实标出——
    *  否则用户对着一条被归档的记忆问"为什么记得这条"会拿到 null，正是解释最该回答的场景。 */
   invalidAt: string | null;
@@ -539,6 +542,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         provenance,
         supportCount: provenance.filter((p) => p.relation === 'support').length,
         contradictCount: provenance.filter((p) => p.relation === 'contradict').length,
+        expiredCount: cognitionStore.retractedCount(cog.id),
         // 不走召回的 invalid/archived/muted 门控——按 id 显式解释就该拿得到，状态如实标出交调用方判断。
         invalidAt: cog.invalidAt,
         archivedAt: cog.archivedAt ?? null,

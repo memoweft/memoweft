@@ -44,6 +44,12 @@ CREATE TABLE IF NOT EXISTS cognition_evidence (
   relation     TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_cogev_cog ON cognition_evidence(cognition_id);
+CREATE TABLE IF NOT EXISTS evidence_retraction (
+  cognition_id TEXT NOT NULL,
+  evidence_id  TEXT NOT NULL,
+  retracted_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_evret_cog ON evidence_retraction(cognition_id);
 `;
 
 interface CognitionRow {
@@ -121,6 +127,11 @@ export interface CognitionStore {
   remove(id: string): boolean;
   /** 删某 subject 全部认知（consolidate 重算替换用）。返回删除条数。 */
   removeBySubject(subjectId: string): number;
+  /** 记一条证据撤回关联（某认知的某条证据被软删）：供 explainCognition 的 expiredCount 计数。
+   *  与置信度无关——active 溯源链仍走 cognition_evidence（删证据照旧清、置信度照旧下降），本表只留撤回台账。 */
+  recordRetraction(cognitionId: string, evidenceId: string, retractedAt: string): void;
+  /** 某认知被撤回过几条证据（软删台账计数）：expiredCount。 */
+  retractedCount(cognitionId: string): number;
   close(): void;
 }
 
@@ -333,6 +344,7 @@ export class SqliteCognitionStore implements CognitionStore {
 
   remove(id: string): boolean {
     this.db.prepare('DELETE FROM cognition_evidence WHERE cognition_id = ?').run(id);
+    this.db.prepare('DELETE FROM evidence_retraction WHERE cognition_id = ?').run(id);
     const r = this.db.prepare('DELETE FROM cognition WHERE id = ?').run(id);
     return Number(r.changes) > 0;
   }
@@ -343,8 +355,28 @@ export class SqliteCognitionStore implements CognitionStore {
         'DELETE FROM cognition_evidence WHERE cognition_id IN (SELECT id FROM cognition WHERE subject_id = ?)',
       )
       .run(subjectId);
+    this.db
+      .prepare(
+        'DELETE FROM evidence_retraction WHERE cognition_id IN (SELECT id FROM cognition WHERE subject_id = ?)',
+      )
+      .run(subjectId);
     const r = this.db.prepare('DELETE FROM cognition WHERE subject_id = ?').run(subjectId);
     return Number(r.changes);
+  }
+
+  recordRetraction(cognitionId: string, evidenceId: string, retractedAt: string): void {
+    this.db
+      .prepare(
+        'INSERT INTO evidence_retraction (cognition_id, evidence_id, retracted_at) VALUES (?,?,?)',
+      )
+      .run(cognitionId, evidenceId, retractedAt);
+  }
+
+  retractedCount(cognitionId: string): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) AS n FROM evidence_retraction WHERE cognition_id = ?')
+      .get(cognitionId) as unknown as { n: number };
+    return Number(row.n);
   }
 
   close(): void {
