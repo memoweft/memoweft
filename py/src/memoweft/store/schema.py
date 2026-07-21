@@ -34,6 +34,7 @@ SCHEMA_SQL: tuple[str, ...] = (
   allow_cloud_read     INTEGER NOT NULL,
   allow_inference      INTEGER NOT NULL,
   corrects_evidence_id TEXT,
+  deleted_at           TEXT,
   preceding_ai_context TEXT
 )""",
     "CREATE UNIQUE INDEX IF NOT EXISTS ux_evidence_origin ON evidence(origin_id) WHERE origin_id IS NOT NULL",

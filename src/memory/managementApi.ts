@@ -772,20 +772,13 @@ export function createMemoryManagementAPI(
         // 证据层无 removeBySubject → all() 按 subject 逐条 remove（单 subject 全清；跨 subject 只清本 subject）。
         // ⚠ 先把 id 收集下来再删：semantic_resolution 只认 evidence_id（表里没有 subject_id），
         //   删完证据就没法再问「哪些解析属于本 subject」了。
-        const ownEvidenceIds: string[] = [];
-        let evidenceRemoved = 0;
-        for (const e of evidenceStore.all()) {
-          if (e.subjectId !== subjectId) continue;
-          ownEvidenceIds.push(e.id);
-          if (evidenceStore.remove(e.id)) evidenceRemoved++;
-        }
-        // 语义解析（含用户原话的解开改写，如「不是」→「用户否认是素食者」）：按本 subject 的证据集清。
-        semanticResolutionStore.removeByEvidenceIds(ownEvidenceIds);
-        // 再清孤儿：证据早已删除、解析残留的行。它们的 evidence_id 指向不存在的证据，
-        //   既不属于任何 subject 也没有任何入口能删到——出厂是唯一能收口的地方。
-        //   ⚠ 必须排在删证据之后（上面刚删的那批此刻也已成孤儿，这句是双保险）。
-        //   跨 subject：v1 单人单宿主下可接受，与同事务里 managementLog.clear()／indexAll([]) 的整表口径一致；
-        //   将来多 subject 化时，这句要改成只清本 subject，孤儿交给 checkIntegrity 报告。
+        // 出厂 = 真抹除（含墓碑）：按 subject 物理删全部证据。软删除（remove）留下的墓碑也一并清掉——
+        //   「清空全部记忆」是本库最强的删除承诺，不能给隐私留残留。（普通 remove 是软删；这里必须 purge。）
+        const evidenceRemoved = evidenceStore.purgeBySubject(subjectId);
+        // 语义解析（含用户原话的解开改写，如「不是」→「用户否认是素食者」）：证据已 purge → 其解析成孤儿，
+        //   由下面的孤儿清扫一并收（无需先收集 id：purge 已物理删，NOT IN 子查询看到的就是删后视图）。
+        //   ⚠ 必须排在删证据之后。跨 subject：v1 单人单宿主下可接受，与同事务里 managementLog.clear()／
+        //   indexAll([]) 的整表口径一致；将来多 subject 化时，这句要改成只清本 subject，孤儿交给 checkIntegrity 报告。
         db.prepare(
           'DELETE FROM semantic_resolution WHERE evidence_id NOT IN (SELECT id FROM evidence)',
         ).run();
