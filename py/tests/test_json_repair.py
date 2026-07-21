@@ -1,10 +1,11 @@
 """parse_json_object_with_repair:重试逻辑 + 首过严格(库不抢救 NaN)+ 日志隐私(不泄原文)。"""
 from __future__ import annotations
 
+import time
 from typing import Optional
 
 from memoweft.llm.client import ChatMessage, UsageStats
-from memoweft.llm.json_repair import parse_json_object_with_repair
+from memoweft.llm.json_repair import extract_json_object, parse_json_object_with_repair
 from memoweft.types import ModelTier
 
 
@@ -72,3 +73,14 @@ def test_nan_forces_retry_library_does_not_rescue() -> None:
     assert llm.call_count == 2  # 首坏必重试(库未抢救)
     # 日志只记结构特征,不泄模型原文(隐私)。
     assert all("NaN" not in m and "still bad" not in m for m in logs)
+
+
+def test_extract_json_object_no_redos_on_unterminated_fence() -> None:
+    # 病理输入:超长「开围栏 + 无闭围栏」。回溯型正则会 O(n^2) 退化(ReDoS);线性扫描毫秒级返回。
+    # 断言正确性(无对象 → None)+ 宽松耗时上界,防未来有人把线性扫描改回正则时无声回归。与 TS 同型。
+    raw = "解释\n```json\n" + "x" * 200_000
+    start = time.perf_counter()
+    result = extract_json_object(raw)
+    elapsed = time.perf_counter() - start
+    assert result is None
+    assert elapsed < 1.0, f"解析耗时 {elapsed:.3f}s,疑似回退到回溯型正则"

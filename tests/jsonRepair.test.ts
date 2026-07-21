@@ -39,7 +39,11 @@ test('extractJsonObject：无对象 → null', () => {
 
 test('extractJsonObject：超长且未闭合的代码围栏不会走回溯型正则', () => {
   const raw = `解释\n\`\`\`json\n${'x'.repeat(200_000)}`;
+  const start = performance.now();
   assert.equal(extractJsonObject(raw), null);
+  const elapsed = performance.now() - start;
+  // 线性扫描应在毫秒级完成；回溯型正则在此病理输入上会退化到秒级。设宽松上界，防未来改回正则时无声回归。
+  assert.ok(elapsed < 1000, `解析耗时 ${elapsed.toFixed(1)}ms，疑似回退到回溯型正则`);
 });
 
 test('extractJsonObject：首个非 JSON 围栏仍按旧语义优先，不跳到后续围栏', () => {
