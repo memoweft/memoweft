@@ -82,6 +82,7 @@ Complete and test these controls in the application that hosts MemoWeft.
 
 - [ ] Schedule `core.updateProfile()` outside the latency-sensitive reply path. Batch by turns, run after idle time, use a periodic job, or expose a user-triggered refresh.
 - [ ] Prevent overlapping profile updates for the same subject.
+- [ ] Schedule `core.expire()` as a periodic maintenance job (for example daily, or after a profile update). It marks transient cognitions (`state`/`hypothesis`/`trend`) that have passed their `expireAfterDays` window as invalid so they stop being recalled. It is idempotent and rule-only (no LLM or embedder), does not delete (it sets `invalidAt`, kept traceable), and is intentionally decoupled from `updateProfile`—without a scheduled call, transient memory never expires.
 - [ ] Treat `core.health()` as a configuration signal. `embedReady: false` means vector recall is unavailable, not necessarily that all recall is unavailable.
 - [ ] Use `core.usage()` deltas only for Core-owned clients whose endpoints return usage; it is not a universal billing meter.
 - [ ] Alert on failed profile updates, repeated model timeouts, database-open errors, backup failures, restore-test failures, and unexpected empty databases—without logging raw evidence.

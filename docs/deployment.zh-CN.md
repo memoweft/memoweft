@@ -70,9 +70,10 @@ MemoWeft 是嵌入式 SQLite 库，不是托管服务。下面每项都应在集
 - [ ] 每次可能影响 schema 的升级前先备份；一次只部署一个兼容版本，并保留已测试的回滚路径。除非已验证兼容性，不要让新旧应用版本并发访问同一 SQLite 文件。
 - [ ] 发布后检查数据库的归属与文件权限；避免因挂载或路径错误悄悄新建一个空库。
 
-### `updateProfile` 调度、health 与 usage
+### `updateProfile` / `expire` 调度、health 与 usage
 
 - [ ] 不要把 `core.updateProfile()` 放在回复延迟关键路径上。应按消息攒批、空闲后、定时任务或用户手动刷新触发；同一 subject 必须防止并发运行。
+- [ ] 把 `core.expire()` 作为周期性维护任务调度（如每日，或画像更新后）。它让超过 `expireAfterDays` 时限的临时类认知（`state`/`hypothesis`/`trend`）标失效、不再被召回；幂等、纯规则（不走 LLM/embedder）、不删除（标 `invalidAt`、保留可溯源），并刻意与 `updateProfile` 解耦——不调度就永不过期。
 - [ ] 用 `core.health()` 监测配置状态（`llmReady`、`embedReady`）。`embedReady: false` 仅代表语义/向量召回不可用；Core 通常会使用本地 FTS5 关键词召回，FTS5 不可用时才为空召回。
 - [ ] 如需按操作归因模型成本，在宿主操作前后读取 `core.usage()` 的增量。它只统计 Core 自持客户端且端点实际返回的 usage，不是通用计费表。
 - [ ] 对写路径任务失败、反复模型超时、数据库打开错误、备份失败、恢复演练失败和意外空数据库告警；不要为了告警方便而记录原始证据。
