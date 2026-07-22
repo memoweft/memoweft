@@ -29,6 +29,7 @@ import {
   updateProfile as runUpdateProfile,
   type UpdateProfileResult,
 } from '../consolidation/updateProfile.ts';
+import { expire as runExpire, type ExpireResult } from '../background/expire.ts';
 import { recallCognitions } from '../retrieval/recall.ts';
 import type { ContentType, CredStatus, FormedBy } from '../cognition/model.ts';
 import { NullRetriever } from '../retrieval/nullRetriever.ts';
@@ -241,6 +242,10 @@ export interface MemoWeftCore {
   dropConversation(conversationId: string): void;
   /** 一键更新画像：distill → consolidate → attribute → 重建召回索引。 */
   updateProfile(input?: UpdateProfileInput): Promise<UpdateProfileResult>;
+  /** 自然过期维护（后台周期算子·宿主主动调）：把临时类（state/hypothesis/trend）久未印证的认知标失效
+   *  （invalidAt、保留可溯源、不再被召回）；稳定类（preference/fact 等）永不自动失效。幂等、纯规则、不碰 LLM/embed。
+   *  按 config.background.expireAfterDays 判龄，节奏由宿主定（每日 / 画像更新后）。subjectId 缺省同其它方法。 */
+  expire(input?: { subjectId?: string }): ExpireResult;
   /** 受控记忆管理（8 操作 + 审计表）。 */
   memory: MemoryManagementAPI;
   /** 便携记忆包（导出/导入/校验）。 */
@@ -611,6 +616,16 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         config: cfg,
         clock: options.clock, // 透传注入时钟（缺省=系统时间）：consolidate/attribute 的显式时间戳走它
       });
+    },
+
+    expire(input = {}) {
+      // 自然过期维护（方案①·独立入口）：宿主主动调，【不】绑进 updateProfile（过期与更新解耦、可幂等重跑）。
+      //   走与 updateProfile 同款 subjectId 归一 + 注入时钟（缺省系统时间）。纯规则、不碰 LLM/embed。
+      return runExpire(
+        subjectOf(input.subjectId),
+        { cognitionStore, config: cfg },
+        (options.clock ?? systemClock)(),
+      );
     },
 
     // 把本 core 的 retriever 传进 memory：resetSubject 清向量索引要它（indexAll([])）。
