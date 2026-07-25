@@ -23,7 +23,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-mastra
 ```
 
-`memoweft` `^0.6.0` and `@mastra/core` are peer dependencies. The adapter uses the 0.6 `recordAssistantReply` surface for assistant-reply and preceding-context handling.
+`memoweft` `^0.6.0 || ^0.7.0` and `@mastra/core` are peer dependencies. The adapter uses the 0.6 `recordAssistantReply` surface for assistant-reply and preceding-context handling.
 
 ## Usage
 

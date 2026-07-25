@@ -34,14 +34,14 @@ The tag workflow publishes only the root package. Publish an adapter or the MCP 
    ```
 
 4. For `@memoweft/mcp-server`, update the official MCP registry only after its npm version is live. Keep `mcpName` and `server.json.name` identical, set `server.json` and its npm package reference to the published version, validate with the registry publisher, then submit the registry update.
-5. Verify the published package in a fresh temporary directory without `--legacy-peer-deps`. For `0.1.0`, the compatible pair is `memoweft@0.5.1` plus the integration at `0.1.0`; for the planned `0.2.0`, verify the declared peer range after publication.
+5. Verify the published package in a fresh temporary directory without `--legacy-peer-deps`. For example, `@memoweft/adapter-ai-sdk@0.2.1` and `@memoweft/mcp-server@0.2.1` declare a `memoweft` peer range of `^0.5.1 || ^0.6.0 || ^0.7.0`, so they resolve cleanly against Core `0.7.0`.
 
    ```bash
    npm init -y
-   npm install memoweft@0.5.1 @memoweft/adapter-ai-sdk@0.1.0
+   npm install memoweft@0.7 @memoweft/adapter-ai-sdk@0.2
    ```
 
-Use a workspace-specific annotated tag if release tracking needs one (for example, `adapter-ai-sdk-v0.2.0`); it does not trigger the root package workflow.
+Use a workspace-specific annotated tag if release tracking needs one (for example, `adapter-ai-sdk-v0.2.1`); it does not trigger the root package workflow.
 
 ## Prepare the release
 

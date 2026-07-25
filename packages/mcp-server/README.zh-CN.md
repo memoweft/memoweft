@@ -6,13 +6,13 @@
 
 ## 安装
 
-npm 已发布的服务器是 `@memoweft/mcp-server@0.1.0`。请与兼容的 Core 版本一起安装：
+`@memoweft/mcp-server@0.2.1` 的 `memoweft` peer 范围是 `^0.5.1 || ^0.6.0 || ^0.7.0`。请与兼容的 Core 版本一起安装：
 
 ```sh
-npm install memoweft@0.5.1 @memoweft/mcp-server@0.1.0
+npm install memoweft@0.7 @memoweft/mcp-server@0.2
 ```
 
-`main` 上的 `0.2.0` 是尚未发布的 workspace 版本。要配合 Core `0.5.1` 或 `0.6` 使用时，请从本检出构建；它的 peer 范围是 `^0.5.1 || ^0.6.0`。不要用 `--legacy-peer-deps` 强行把 npm 上的 `0.1.0` 配到 Core `0.6`。
+它对 Core `0.5.1`、`0.6`、`0.7` 都能被 npm 干净解析，无需 `--legacy-peer-deps`。需要 Node 20+。
 
 ## 工具与数据访问
 
@@ -42,7 +42,7 @@ npm install memoweft@0.5.1 @memoweft/mcp-server@0.1.0
   "mcpServers": {
     "memoweft": {
       "command": "npx",
-      "args": ["-y", "@memoweft/mcp-server@0.1.0"],
+      "args": ["-y", "@memoweft/mcp-server@0.2"],
       "env": { "MEMOWEFT_DB_PATH": "/absolute/path/to/memoweft.db" }
     }
   }
@@ -63,7 +63,7 @@ await server.connect(new StdioServerTransport());
 
 ## Registry（注册表）
 
-`io.github.memoweft/memoweft` 的 `0.1.0` 已在官方 MCP registry 处于 active 状态，并指向已发布的 npm 包。本仓库的 `server.json` 是尚未发布的 `0.2.0` 服务器候选元数据；只有该 npm 包准备发布时才更新并验证它。`package.json` 的 `mcpName` 必须与 `server.json` 的 `name` 完全一致。
+本仓库的 `server.json` 为官方 MCP registry 描述 `0.2.1` 服务器；请让它与已发布的 npm 包保持同步，有新版本时再更新。`package.json` 的 `mcpName` 必须与 `server.json` 的 `name` 完全一致。
 
 ## 许可
 

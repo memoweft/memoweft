@@ -19,7 +19,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-openai-agents
 ```
 
-`@openai/agents` `^0.13` 与 `memoweft` `^0.6.0` 是 peer 依赖。
+`@openai/agents` `^0.13` 与 `memoweft` `^0.6.0 || ^0.7.0` 是 peer 依赖。
 
 ## v0.6 会话上下文（可选）
 

@@ -14,6 +14,7 @@
 import { config, resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
+import type { Retriever } from '../retrieval/retriever.ts';
 import type { Cognition } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
@@ -26,6 +27,9 @@ export interface AggregateTrendsDeps {
   evidenceStore: EvidenceStore;
   cognitionStore: CognitionStore;
   llm: LLMClient;
+  /** 召回器（可选）：传了则产出新趋势后重建召回索引——新趋势是本门面唯一产物，不重建则 recall 检索不到它（同 updateProfile）。
+   *  门面 createMemoWeftCore().aggregateTrends 总会传；直接调算子可省略（省略=不建索引、行为同旧）。 */
+  retriever?: Retriever;
   /** 可注入配置（config 去单例）：不传 = 用全局单例。 */
   config?: MemoWeftConfig;
 }
@@ -168,6 +172,19 @@ export async function aggregateTrends(
         evidence: cited.map((id) => ({ evidenceId: id, relation: 'support' as const })),
       }),
     );
+  }
+  if (trends.length > 0 && deps.retriever) {
+    // 重建召回索引：新趋势要能被 recall 检索到（同 updateProfile：只索引未失效、未静音认知）。
+    //   索引是读路径优化（runtime boundary）——嵌入器挂了不该让已落库的趋势维护失败；
+    //   趋势已落库，最坏这轮 recall 暂缺、下次 updateProfile 会补建。
+    const cogs = deps.cognitionStore.active(subjectId).filter((c) => !c.mutedAt);
+    try {
+      await deps.retriever.indexAll(cogs.map((c) => ({ id: c.id, text: c.content })));
+    } catch (e) {
+      console.warn(
+        `[memoweft/trends] 召回索引重建失败（趋势已落库、下次画像更新会补建）：${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
   return { trends, consideredCount: items.length, llmCalls };
 }
