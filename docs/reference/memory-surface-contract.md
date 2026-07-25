@@ -1,12 +1,12 @@
 # MemoWeft public API contract
 
-Applies to `memoweft` 0.6.x. This document describes the application-facing surface returned by `createMemoWeftCore()` and the behavior callers can rely on.
+Applies to `memoweft` 0.7.x. This document describes the application-facing surface returned by `createMemoWeftCore()` and the behavior callers can rely on.
 
 MemoWeft is pre-1.0. Additive fields and enum values may appear in minor releases. Breaking changes are documented in the [changelog](../../CHANGELOG.md) with migration notes. Low-level symbols exported from the root package remain available for compatibility, but the Core facade below is the supported integration path.
 
 ## Stability labels
 
-- **Stable** — covered by compatibility snapshots and intended for application use throughout the 0.6 line.
+- **Stable** — covered by compatibility snapshots and intended for application use throughout the 0.7 line.
 - **Experimental** — usable, but may change in a pre-1.0 minor release with changelog notice.
 - **Internal** — implementation detail; do not build application contracts around it.
 
@@ -39,16 +39,17 @@ Creating a Core does not require a model configuration. Evidence storage and mem
 createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore
 ```
 
-| Option         | Stability    | Meaning                                                                                                  |
-| -------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
-| `dbPath`       | stable       | Required SQLite path. Use `:memory:` for an ephemeral store.                                             |
-| `llm`          | experimental | An `LLMClient` or `LLMPool`. If omitted, MemoWeft reads its OpenAI-compatible environment configuration. |
-| `embedder`     | experimental | Creates a vector retriever unless `retriever` is also supplied.                                          |
-| `retriever`    | experimental | Highest-priority custom retrieval implementation. Caller-owned; `core.close()` does not close it.        |
-| `config`       | experimental | MemoWeft configuration object. Omitted values use the package defaults.                                  |
-| `vectorDbPath` | experimental | Vector-index database path; defaults to `dbPath`.                                                        |
-| `clock`        | experimental | Injectable `() => Date` used for persistence timestamps and time-dependent rules.                        |
-| `plugins`      | experimental | Plugin contracts and restricted hooks. See the [plugin contract](../plugin-contract.md).                 |
+| Option               | Stability    | Meaning                                                                                                                                                                                                                                                                                      |
+| -------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dbPath`             | stable       | Required SQLite path. Use `:memory:` for an ephemeral store.                                                                                                                                                                                                                                 |
+| `llm`                | experimental | An `LLMClient` or `LLMPool`. If omitted, MemoWeft reads its OpenAI-compatible environment configuration.                                                                                                                                                                                     |
+| `embedder`           | experimental | Creates a vector retriever unless `retriever` is also supplied.                                                                                                                                                                                                                              |
+| `retriever`          | experimental | Highest-priority custom retrieval implementation. Caller-owned; `core.close()` does not close it.                                                                                                                                                                                            |
+| `contradictionGuard` | experimental | A5 contradiction guard (default off). Set `true` or an options object so `updateProfile` routes a near-duplicate, opposite-polarity cognition through the conflict path instead of storing a parallel one. Reuses the Core's embedder; ignored with a warning when no embedder is available. |
+| `config`             | experimental | MemoWeft configuration object. Omitted values use the package defaults.                                                                                                                                                                                                                      |
+| `vectorDbPath`       | experimental | Vector-index database path; defaults to `dbPath`.                                                                                                                                                                                                                                            |
+| `clock`              | experimental | Injectable `() => Date` used for persistence timestamps and time-dependent rules.                                                                                                                                                                                                            |
+| `plugins`            | experimental | Plugin contracts and restricted hooks. See the [plugin contract](../plugin-contract.md).                                                                                                                                                                                                     |
 
 Without a custom retriever, MemoWeft chooses vector retrieval when an embedder is configured, otherwise local FTS5 keyword retrieval. If FTS5 is unavailable, recall degrades to an empty retriever instead of preventing Core creation.
 
@@ -81,6 +82,15 @@ Recall excludes invalid, archived, muted, and below-threshold cognitions. `conte
 - `indexed` and `indexError`;
 - per-stage `timings` in milliseconds;
 - `metrics.profileSize` and `metrics.promptChars`.
+
+### Background maintenance
+
+Optional, host-scheduled maintenance entry points, decoupled from `updateProfile` and idempotent. Both default `subjectId` like the other methods. These entry points are experimental.
+
+| Method                    | Persistent effects                                                                             | Model or network use                    | Notes                                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `expire(input?)`          | Marks stale transient cognitions (`state`/`hypothesis`/`trend`) invalid, retaining provenance. | None; pure rule-based.                  | Stable types (`preference`/`fact`) never auto-expire. Age threshold from `config.background.expireAfterDays`; host owns cadence. |
+| `aggregateTrends(input?)` | Writes `trend` cognitions for `state` patterns that recur within the window.                   | Uses the write model to name the trend. | The only production producer of `trend` cognitions; decoupled from `updateProfile`.                                              |
 
 ### Conversation helpers
 
@@ -145,7 +155,7 @@ A bundle contains evidence, events, cognitions, provenance relationships, pendin
 - `dryRun` validates and reports planned writes without modifying the database.
 - `merge` imports transactionally through the Core facade and deduplicates by id and evidence `originId`.
 - Bundle schema v2 imports schema v1 bundles with missing interaction sections treated as empty.
-- There is no `replace` import mode in 0.6.x.
+- There is no `replace` import mode in 0.7.x.
 
 After an import, call `updateProfile()` when you want the retriever index rebuilt from the imported profile.
 
@@ -155,7 +165,7 @@ After an import, call `updateProfile()` when you want the retriever index rebuil
 core.graph.buildMemoryGraph(options?): MemoryGraphPayload
 ```
 
-The payload contains subject, evidence, event, and cognition nodes plus emitted `belongs_to_subject`, `distilled_into`, `supports`, and `contradicts` edges. `conflicts_with` and `corrects` are reserved edge values but are not emitted in 0.6.x because cognition-to-cognition links are not persisted.
+The payload contains subject, evidence, event, and cognition nodes plus emitted `belongs_to_subject`, `distilled_into`, `supports`, and `contradicts` edges. `conflicts_with` and `corrects` are reserved edge values but are not emitted in 0.7.x because cognition-to-cognition links are not persisted.
 
 ## Behavioral guarantees
 

@@ -27,11 +27,13 @@ The tag workflow publishes only the root package. Publish an adapter or the MCP 
 
    Substitute the target workspace name (for example, `@memoweft/mcp-server`).
 
-3. Publish from the reviewed commit with an npm account authorized for that package:
+3. Publish from the reviewed commit with an npm account authorized for that package. A local manual publish cannot attach npm provenance (provenance is generated only by the CI GitHub OIDC flow), and the registry must be set explicitly because a maintainer's default registry may be a mirror such as npmmirror:
 
    ```bash
-   npm publish --workspace=@memoweft/adapter-ai-sdk --access public --provenance
+   npm publish --workspace=@memoweft/adapter-ai-sdk --access public --registry=https://registry.npmjs.org
    ```
+
+   To attach provenance to a subpackage, give it its own CI publish job (GitHub OIDC); that is not configured yet.
 
 4. For `@memoweft/mcp-server`, update the official MCP registry only after its npm version is live. Keep `mcpName` and `server.json.name` identical, set `server.json` and its npm package reference to the published version, validate with the registry publisher, then submit the registry update.
 5. Verify the published package in a fresh temporary directory without `--legacy-peer-deps`. For example, `@memoweft/adapter-ai-sdk@0.2.1` and `@memoweft/mcp-server@0.2.1` declare a `memoweft` peer range of `^0.5.1 || ^0.6.0 || ^0.7.0`, so they resolve cleanly against Core `0.7.0`.
