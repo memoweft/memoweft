@@ -13,7 +13,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from collections.abc import Sequence
-from typing import Any, Optional, cast
+from typing import Any, Optional, Protocol, cast
 
 from ._jsstr import js_trim, utf16_length
 from .config import CONFIG, Config, resolve_lang
@@ -236,6 +236,70 @@ def _build_messages(
     return messages, tag_to_evidence_id
 
 
+# ── A5 矛盾并存护栏辅助（模块级，镜像 consolidate.ts）──────────────────
+# shortlist 余弦阈值缺省：同主题句常 ≥0.6；只对 vector 余弦有语义。
+GUARD_DEFAULT_SIMILARITY = 0.6
+# 每条候选最多做几次极性判（相似度降序前 N）：把 llm 调用量压到很小。
+GUARD_DEFAULT_TOPK = 3
+
+
+class _GuardEmbedder(Protocol):
+    """护栏相似度所需的最小嵌入器接口（HashEmbedder 及任何 embed(texts)->向量 的实现都满足）。"""
+
+    def embed(self, texts: list[str]) -> list[list[float]]: ...
+
+
+@dataclass(frozen=True)
+class ContradictionGuard:
+    """A5 护栏依赖（可选）：镜像 TS 的 ConsolidateDeps.contradictionGuard。"""
+
+    embedder: _GuardEmbedder
+    min_similarity: float = GUARD_DEFAULT_SIMILARITY
+    top_k: int = GUARD_DEFAULT_TOPK
+
+
+def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
+    """余弦相似度；任一为零向量或维度不齐返回 0（与 TS _cosine 同口径）。"""
+    if len(a) != len(b) or len(a) == 0:
+        return 0.0
+    dot = sum(x * y for x, y in zip(a, b))
+    na = sum(x * x for x in a)
+    nb = sum(y * y for y in b)
+    if na == 0 or nb == 0:
+        return 0.0
+    return float(dot / ((na**0.5) * (nb**0.5)))
+
+
+def _judge_contradiction(llm: LLMClient, lang: Lang, existing_content: str, candidate_content: str) -> bool:
+    """极性判断（护栏第二半，非确定性）：候选是否【直接反驳/反转】某条现有认知（同一主体）。
+    只判「相反」不判「相关」——相似度已把候选压到同主题。保守：拿不准判 False（不拦，避免误伤）。
+    与 consolidate.ts 的 judgeContradiction 同提示词（含跨语言标记，供固件/测试分流）。"""
+    zh = lang == "zh"
+    if zh:
+        sys = (
+            '你判断关于【同一个人】的两条陈述是否【直接矛盾】——即一条断言了另一条的相反面'
+            '（如"爱喝咖啡"vs"不再喝咖啡"、"想考研"vs"放弃考研"）。仅当逻辑互斥时才算矛盾；'
+            '只是不同话题、程度差别、或随时间自然递进（同方向）都【不算】。'
+            '只输出 JSON：{"contradicts": true|false}。拿不准输出 false。'
+        )
+        user = f"现有认知：{existing_content}\n新认知：{candidate_content}\n它们矛盾吗？"
+    else:
+        sys = (
+            "Decide whether two statements about the SAME person DIRECTLY contradict each other — "
+            'i.e. one asserts the opposite of the other (e.g. "loves coffee" vs "no longer drinks coffee"). '
+            "Only logically incompatible = contradiction; different topics, degree differences, or "
+            'same-direction evolution over time do NOT count. Output only JSON: {"contradicts": true|false}. '
+            "If unsure, output false."
+        )
+        user = f"Existing: {existing_content}\nNew: {candidate_content}\nDo they contradict?"
+    parsed = parse_json_object_with_repair(
+        llm,
+        [ChatMessage(role="system", content=sys), ChatMessage(role="user", content=user)],
+        lang=lang,
+    )
+    return bool(parsed and parsed.get("contradicts") is True)
+
+
 def consolidate(
     subject_id: str,
     *,
@@ -248,6 +312,7 @@ def consolidate(
     cfg: Config = CONFIG,
     now_iso: str = "",
     lang: Optional[Lang] = None,
+    contradiction_guard: Optional[ContradictionGuard] = None,
 ) -> ConsolidateResult:
     """执行增量合并；now_iso 是 correct 分支使用的失效时间戳，由调用方或注入时钟提供。"""
     new_events = event_store.unconsolidated(subject_id)
@@ -387,6 +452,43 @@ def consolidate(
             view.append(hit)
         return is_hedged_stated(formed_by, view)
 
+    # ── A5 矛盾并存护栏：事务前预算「哪些 new 候选其实是对某条现有认知的极性反转」。
+    #   相似度筛(嵌入余弦) → 对少量同主题候选做一次极性判(llm)。命中 → {new 候选下标 → 被反转的旧认知 id}。
+    #   下方 new 循环据此把命中候选改走 conflict（挂 contradict）、不新建相反行。
+    #   不接 embedder / 无现有画像 / 无候选 → 空 dict = 行为完全同旧（镜像 consolidate.ts）。
+    guard_hits: dict[int, str] = {}
+    _guard_candidates = out.get("new") or []
+    if contradiction_guard is not None and existing and _guard_candidates:
+        threshold = contradiction_guard.min_similarity
+        top_k = contradiction_guard.top_k
+        # 只对【会真落库】的候选（有内容 + 有可溯源支撑）算，下标与下方 new 循环严格对齐。
+        cands: list[tuple[int, str]] = []
+        for idx, c in enumerate(_guard_candidates):
+            p = _pick_cognition(c)
+            if p is None:
+                continue
+            if len(pick_support(_cited_ids(c))) == 0:
+                continue
+            cands.append((idx, p[0]))  # p[0] = content
+        if cands:
+            cand_vecs: list[list[float]] = []
+            exist_vecs: list[list[float]] = []
+            try:
+                cand_vecs = contradiction_guard.embedder.embed([t for _, t in cands])
+                exist_vecs = contradiction_guard.embedder.embed([ex.content for ex in existing])
+            except Exception as exc:  # noqa: BLE001 - 嵌入失败不该拖垮固化：记日志、退化成本轮不拦。
+                _logger.warning("[memoweft/consolidate] A5 护栏嵌入失败，本轮跳过护栏：%s", exc)
+            if cand_vecs and exist_vecs:
+                for k, (idx, cand_content) in enumerate(cands):
+                    scored = [(ex, _cosine(cand_vecs[k], exist_vecs[j])) for j, ex in enumerate(existing)]
+                    shortlist = [ex for ex, s in sorted(scored, key=lambda t: t[1], reverse=True) if s >= threshold][
+                        :top_k
+                    ]
+                    for ex in shortlist:
+                        if _judge_contradiction(llm, lg, ex.content, cand_content):
+                            guard_hits[idx] = ex.id  # 命中一条即够：这条候选改挂到该旧认知
+                            break
+
     def mutate() -> _Mutation:
         created: list[Cognition] = []
         reinforced = 0
@@ -394,8 +496,45 @@ def consolidate(
         conflicted = 0
         fallback = ContentTypeFallback()
 
+        def attach_contradiction(cog_id: str, contra_ids: Sequence[str]) -> bool:
+            """把反证挂到旧认知并按【全链】重算把握度（conflict 分支与 A5 护栏共用同口径，
+            避免"只翻 cred_status 不重算 → contradict_penalty 空转"回归）。formed_by 继承、
+            不重派载体维；cred_status 交 derive_cred_status 在 contradict_count>0 下判 conflicted/contested。
+            返回是否真挂上。镜像 consolidate.ts 的 attachContradiction。"""
+            cog = cognition_store.get(cog_id)
+            if cog is None or cog.invalid_at:
+                return False
+            if len(contra_ids) == 0:
+                return False
+            already = {s.evidence_id for s in cognition_store.sources_of(cog.id)}
+            add = [i for i in contra_ids if i not in already]
+            if add:
+                cognition_store.add_evidence(cog.id, [EvidenceLink(evidence_id=i, relation="contradict") for i in add])
+            links = cognition_store.sources_of(cog.id)
+            support_ids = [lk.evidence_id for lk in links if lk.relation == "support"]
+            support_count = len(support_ids)
+            contradict_count = sum(1 for lk in links if lk.relation == "contradict")
+            confidence = compute_confidence(
+                ConfidenceInputs(
+                    content_type=cog.content_type,
+                    formed_by=cog.formed_by,
+                    support_count=support_count,
+                    contradict_count=contradict_count,
+                    hedged=resolve_hedged(cog.formed_by, support_ids),
+                ),
+                cfg,
+            )
+            cognition_store.update(
+                cog.id,
+                CognitionPatch(
+                    confidence=confidence,
+                    cred_status=derive_cred_status(confidence, contradict_count, cog.content_type, cfg, support_count),
+                ),
+            )
+            return True
+
         # new
-        for c in out.get("new") or []:
+        for idx, c in enumerate(out.get("new") or []):
             p = _pick_cognition(c)
             if p is None:
                 continue
@@ -403,6 +542,12 @@ def consolidate(
             support = pick_support(_cited_ids(c))
             if len(support) == 0:
                 continue
+            # A5 护栏命中：这条「new」其实是对某条现有认知的极性反转 → 不新建那条相反行，
+            #   改把它的原话当反证挂到旧认知上（走 conflict 语义、把矛盾拉回「冲突可见」）。
+            guard_old_id = guard_hits.get(idx)
+            if guard_old_id is not None and attach_contradiction(guard_old_id, support):
+                conflicted += 1
+                continue  # 不落新行、不计 type_fallback（未落库）
             if type_fallback is not None:  # 计量：只统计实际落库的兜底（与 TS 侧同口径）
                 setattr(fallback, type_fallback, getattr(fallback, type_fallback) + 1)
             formed_by = resolve_formed_by(model_says_inferred, support)
@@ -511,44 +656,14 @@ def consolidate(
 
         # conflict
         for c in out.get("conflict") or []:
+            # 模型显式点名的 conflict：把反证挂到该旧认知、按全链重算（复用 attach_contradiction，
+            #   与 A5 护栏走同一段口径）。"只翻 cred_status→contradict_penalty 空转"的历史缺陷
+            #   （TS 侧 #19 已修、Python 曾原样保留）与 hedged 重算期回表退化边界都收在 attach_contradiction 里。
             cog_id = resolve_cog_id(c.get("cognition_id"), "conflict")
-            cog = cognition_store.get(cog_id) if cog_id else None
-            if cog is None or cog.invalid_at:
+            if cog_id is None:
                 continue
-            contra = pick_support(_cited_ids(c))
-            if len(contra) == 0:
-                continue
-            already = {s.evidence_id for s in cognition_store.sources_of(cog.id)}
-            add = [i for i in contra if i not in already]
-            if add:
-                cognition_store.add_evidence(cog.id, [EvidenceLink(evidence_id=i, relation="contradict") for i in add])
-            # 按最新的支持/反对链重算置信——与 reinforce 分支同口径（对齐 consolidate.ts）。
-            #   此前这里只写 cred_status，于是 contradict_penalty 在整条 conflict 路径上永远不生效：
-            #   一条被反驳的认知，置信度与零反驳时完全相同。TS 侧已修，Python 移植此前保留了原缺陷。
-            #   cred_status 不再写死，交 derive_cred_status 推导：既保住"冲突只暴露、不消解"，
-            #   又能在支撑占优时落到中间态 contested，且不留旧置信值撒谎。
-            links = cognition_store.sources_of(cog.id)
-            support_ids = [l.evidence_id for l in links if l.relation == "support"]
-            support_count = len(support_ids)
-            contradict_count = sum(1 for l in links if l.relation == "contradict")
-            # 接线点 5/5 · conflict(重算期)。本轮新增证据挂 contradict，**support 集合全是历史证据**
-            #   ⇒ 混合读整个落到表上。漏接的后果反直觉：一条已封顶 280 的含糊认知被反驳一次，
-            #   重算得 600−120=480 而非 min(480,280)=280——被反驳之后置信度反而暴涨。
-            confidence = compute_confidence(
-                ConfidenceInputs(
-                    content_type=cog.content_type, formed_by=cog.formed_by,
-                    support_count=support_count, contradict_count=contradict_count,
-                    hedged=resolve_hedged(cog.formed_by, support_ids),
-                ), cfg
-            )
-            cognition_store.update(
-                cog.id,
-                CognitionPatch(
-                    confidence=confidence,
-                    cred_status=derive_cred_status(confidence, contradict_count, cog.content_type, cfg, support_count),
-                ),
-            )
-            conflicted += 1
+            if attach_contradiction(cog_id, pick_support(_cited_ids(c))):
+                conflicted += 1
 
         # resolutions 落库(幂等 + resolverVersion 绑 prompt 版本)
         resolver_version = f"consolidate@{get_prompt('consolidate').version}"
