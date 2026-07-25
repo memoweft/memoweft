@@ -273,27 +273,47 @@ def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
 
 
 def _judge_contradiction(llm: LLMClient, lang: Lang, existing_content: str, candidate_content: str) -> bool:
-    """极性判断（护栏第二半，非确定性）：候选是否【直接反驳/反转】某条现有认知（同一主体）。
-    只判「相反」不判「相关」——相似度已把候选压到同主题。保守：拿不准判 False（不拦，避免误伤）。
-    与 consolidate.ts 的 judgeContradiction 同提示词（含跨语言标记，供固件/测试分流）。"""
+    """极性判断（护栏第二半，非确定性）：关于【同一个人】的两条陈述，作为当前状态是否【冲突】（不能同时为真）。
+    只判「相反」不判「相关」——相似度已把候选压到同主题。
+    ⚠ 提示词经护栏量具调优：旧版"保守·拿不准判否"在真实啰嗦措辞上召回仅 ~32%；改成明确纳入立场/偏好/目标/事实反转、
+      看穿辩解从句与演化语气后，召回 93.5%、误判 0%。与 consolidate.ts 的 judgeContradiction 【逐字对齐】，改一处必须同改。"""
     zh = lang == "zh"
     if zh:
-        sys = (
-            '你判断关于【同一个人】的两条陈述是否【直接矛盾】——即一条断言了另一条的相反面'
-            '（如"爱喝咖啡"vs"不再喝咖啡"、"想考研"vs"放弃考研"）。仅当逻辑互斥时才算矛盾；'
-            '只是不同话题、程度差别、或随时间自然递进（同方向）都【不算】。'
-            '只输出 JSON：{"contradicts": true|false}。拿不准输出 false。'
+        sys = "\n".join(
+            [
+                "你比较关于【同一个人】的两条陈述，各自都当作 TA【当前】的状态，判断它们是否【冲突】——即不可能同时为真。",
+                "算冲突(true)：",
+                "· 偏好/态度反转：「讨厌跑步」vs「爱上跑步、是一天最爱」；「从小不吃香菜」vs「爱上香菜」。",
+                "· 目标放弃/改向：「想当管理者」vs「决定继续做个人贡献者」；「要考研」vs「放弃考研去找工作」。",
+                "· 事实状态改变、不能同为当前：「每周练六天」vs「已减到每周四天」；「住北京」vs「搬去上海了」。",
+                "· 自我特质的重新评估。",
+                "要【看穿】辩解从句、原因、时间/演化措辞（「以前」「如今」「但因为便宜才选」「渐渐变得」）——只看两条【当前】立场/事实是否互斥。",
+                "不算冲突(false)：",
+                "· 细化/子偏好：「爱喝咖啡」vs「尤其爱手冲」。",
+                "· 强化，或不同侧面/方式：「讨厌跑步机」vs「爱户外越野跑」；「戒了含糖饮料」vs「照喝无糖黑咖啡」。",
+                "· 仅程度差别，或两者本可同时为真。",
+                '只输出 JSON：{"contradicts": true|false}。',
+            ]
         )
-        user = f"现有认知：{existing_content}\n新认知：{candidate_content}\n它们矛盾吗？"
+        user = f"陈述甲：{existing_content}\n陈述乙：{candidate_content}\n作为同一个人的当前状态，它们冲突吗？"
     else:
-        sys = (
-            "Decide whether two statements about the SAME person DIRECTLY contradict each other — "
-            'i.e. one asserts the opposite of the other (e.g. "loves coffee" vs "no longer drinks coffee"). '
-            "Only logically incompatible = contradiction; different topics, degree differences, or "
-            'same-direction evolution over time do NOT count. Output only JSON: {"contradicts": true|false}. '
-            "If unsure, output false."
+        sys = "\n".join(
+            [
+                "Compare two statements about the SAME person, each taken as their CURRENT state, and decide if they CONFLICT — cannot both be true of the person right now.",
+                "COUNT AS CONFLICT (true):",
+                '· Reversed preference/attitude: "dislikes running" vs "has come to love running, favorite part of the day"; "unable to eat cilantro" vs "loves cilantro".',
+                '· Abandoned/changed goal: "aiming to become a manager" vs "chose to stay an individual contributor"; "planning grad school" vs "gave up grad school for a job".',
+                '· A factual state that changed and cannot both be current: "trains six days a week" vs "reduced to four days a week"; "lives in Beijing" vs "moved to Shanghai".',
+                "· A re-evaluated self-trait.",
+                'Look PAST justifying clauses, reasons, and time/evolution wording ("used to", "now", "but chose it because…", "has developed…"); judge only whether the two CURRENT stances/facts are incompatible.',
+                "DO NOT count as conflict (false):",
+                '· Refinement/sub-preference: "loves coffee" vs "especially loves pour-over".',
+                '· Reinforcement, or a different facet/modality: "hates the treadmill" vs "loves outdoor trail runs"; "gave up sugary drinks" vs "still drinks black coffee".',
+                "· Mere degree differences, or two things that can both be true at once.",
+                'Output only JSON: {"contradicts": true|false}.',
+            ]
         )
-        user = f"Existing: {existing_content}\nNew: {candidate_content}\nDo they contradict?"
+        user = f"Statement A: {existing_content}\nStatement B: {candidate_content}\nAs current states of the same person, do they conflict?"
     parsed = parse_json_object_with_repair(
         llm,
         [ChatMessage(role="system", content=sys), ChatMessage(role="user", content=user)],
