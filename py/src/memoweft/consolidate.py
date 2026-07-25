@@ -237,8 +237,10 @@ def _build_messages(
 
 
 # ── A5 矛盾并存护栏辅助（模块级，镜像 consolidate.ts）──────────────────
-# shortlist 余弦阈值缺省：同主题句常 ≥0.6；只对 vector 余弦有语义。
-GUARD_DEFAULT_SIMILARITY = 0.6
+# shortlist 余弦阈值缺省：0.5（护栏量具实测：真矛盾对余弦低至 0.571 且相似度分不开矛盾/兼容，
+#   判别全靠极性判、其误判率 0%，故阈值只是"进极性判"的成本闸；0.6 会漏召回，0.5 召回回满且不增误判）。
+#   对齐 consolidate.ts GUARD_DEFAULT_SIMILARITY。
+GUARD_DEFAULT_SIMILARITY = 0.5
 # 每条候选最多做几次极性判（相似度降序前 N）：把 llm 调用量压到很小。
 GUARD_DEFAULT_TOPK = 3
 

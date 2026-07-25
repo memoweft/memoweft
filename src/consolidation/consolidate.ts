@@ -289,8 +289,11 @@ function buildMessages(
 }
 
 // ── A5 矛盾并存护栏辅助（模块级纯函数）──────────────────────────────
-/** shortlist 余弦阈值缺省：bge-m3 CLS 池化下同主题句常 ≥0.6；只对 vector 余弦有语义。 */
-const GUARD_DEFAULT_SIMILARITY = 0.6;
+/** shortlist 余弦阈值缺省：0.5。护栏量具（bge-m3+gpt-4o，95 对带标签配对）实测——真矛盾对余弦
+ *  低至 0.571，且相似度【分不开】矛盾/兼容（兼容对均值 0.73 反比矛盾对 0.706 还高），判别全靠极性判；
+ *  而极性判误判率 0%[0,7.6]，故阈值只是"进极性判"的成本闸、不是判据。0.6 会把 0.571~0.60 的真矛盾挡掉
+ *  （召回 93.8%→85.4%），降到 0.5 召回回到 93.8% 且不增误判。详见 dogfood/guard-metrics-results.json。 */
+const GUARD_DEFAULT_SIMILARITY = 0.5;
 /** 每条候选最多做几次极性判（相似度降序前 N）：把 llm 调用量压到很小。 */
 const GUARD_DEFAULT_TOPK = 3;
 
