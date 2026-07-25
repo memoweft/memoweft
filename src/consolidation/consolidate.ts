@@ -601,19 +601,22 @@ export async function consolidate(
     return isHedgedStated(formedBy, view);
   };
 
-  // ── A5 矛盾并存护栏：进事务【前】(async) 预算「哪些 new 候选其实是对某条现有认知的极性反转」。
-  //   相似度筛(嵌入余弦) → 对少量同主题候选做一次极性判(llm)。命中 → 记 {new 候选下标 → 被反转的旧认知 id}。
+  // ── A5 矛盾并存护栏：进事务【前】(async) 预算「哪些 new 候选其实是对另一条认知的极性反转」。
+  //   相似度筛(嵌入余弦) → 对少量同主题候选做一次极性判(llm)。命中 → 记该候选挂到哪条锚点：
+  //     · { existing, cogId }：与【已入库旧认知】反转 → 挂到该旧认知；
+  //     · { new, anchorIdx }：与【本轮更早、会落库的新候选】反转 → 挂到那条（它先创建、当锚点）。
+  //   第二种补的是「同批盲区」：旧立场与反转在同一次 updateProfile 一起抽出时，光比旧认知会漏。
   //   下方 new 循环据此把命中候选改走 conflict（挂 contradict）、不新建相反行。
-  //   不接 embedder / 无现有画像 / 无候选 → 空 Map = 行为完全同旧。嵌入与极性判都是 async，
-  //   故【必须】在 runTx 同步闭包之前算完（闭包内不含 await 的写约束）。
-  const guardHits = await (async (): Promise<Map<number, string>> => {
-    const hits = new Map<number, string>();
+  //   不接 embedder / 无候选 → 空 Map = 行为完全同旧。嵌入与极性判都是 async，故【必须】在 runTx 之前算完。
+  type GuardHit = { type: 'existing'; cogId: string } | { type: 'new'; anchorIdx: number };
+  const guardHits = await (async (): Promise<Map<number, GuardHit>> => {
+    const hits = new Map<number, GuardHit>();
     const guard = deps.contradictionGuard;
     const candidates = out.new ?? [];
-    if (!guard || existing.length === 0 || candidates.length === 0) return hits;
+    if (!guard || candidates.length === 0) return hits;
     const threshold = guard.minSimilarity ?? GUARD_DEFAULT_SIMILARITY;
     const topK = guard.topK ?? GUARD_DEFAULT_TOPK;
-    // 只对【会真落库】的候选（有内容 + 有可溯源支撑）算，下标与下方 new 循环严格对齐。
+    // 只对【会真落库】的候选（有内容 + 有可溯源支撑）算；cands 与 candVecs 平行、下标与下方 new 循环对齐。
     const cands: Array<{ idx: number; content: string }> = [];
     candidates.forEach((c, idx) => {
       const p = pickCognition(c);
@@ -627,7 +630,9 @@ export async function consolidate(
     try {
       [candVecs, existVecs] = await Promise.all([
         guard.embedder.embed(cands.map((x) => x.content)),
-        guard.embedder.embed(existing.map((e) => e.content)),
+        existing.length
+          ? guard.embedder.embed(existing.map((e) => e.content))
+          : Promise.resolve([]),
       ]);
     } catch (e) {
       // 嵌入端点挂了不该拖垮固化：显式记日志、退化成「本轮不拦」（不静默改数据）。
@@ -637,14 +642,31 @@ export async function consolidate(
       return hits;
     }
     for (let k = 0; k < cands.length; k++) {
-      const shortlist = existing
+      // ① 先比【已入库旧认知】。
+      const exShort = existing
         .map((e, j) => ({ e, score: cosine(candVecs[k] ?? [], existVecs[j] ?? []) }))
         .filter((x) => x.score >= threshold)
         .sort((a, b) => b.score - a.score)
         .slice(0, topK);
-      for (const { e } of shortlist) {
+      let hit = false;
+      for (const { e } of exShort) {
         if (await judgeContradiction(deps.llm, lang, e.content, cands[k]!.content)) {
-          hits.set(cands[k]!.idx, e.id); // 命中一条即够：这条候选改挂到该旧认知
+          hits.set(cands[k]!.idx, { type: 'existing', cogId: e.id });
+          hit = true;
+          break;
+        }
+      }
+      if (hit) continue;
+      // ② 再比【本轮更早、且未被拦（会落库当锚点）的新候选】——补同批盲区。cands[m] 的向量是 candVecs[m]。
+      const newShort = cands
+        .slice(0, k)
+        .map((c, m) => ({ c, score: cosine(candVecs[k] ?? [], candVecs[m] ?? []) }))
+        .filter((x) => x.score >= threshold && !hits.has(x.c.idx))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+      for (const { c } of newShort) {
+        if (await judgeContradiction(deps.llm, lang, c.content, cands[k]!.content)) {
+          hits.set(cands[k]!.idx, { type: 'new', anchorIdx: c.idx });
           break;
         }
       }
@@ -710,19 +732,24 @@ export async function consolidate(
     };
 
     // new
+    /** 本轮已落库的 new 候选：候选下标 → 其认知 id。供护栏「同批 new-vs-new」把后一条挂到先落库的锚点。 */
+    const createdByIdx = new Map<number, string>();
     for (const [idx, c] of (out.new ?? []).entries()) {
       const p = pickCognition(c);
       if (!p) continue;
       const support = pickSupport(citedIds(c));
       if (support.length === 0) continue; // 无可溯源原话 → 跳过（不落无溯源认知，证据完整性规则）
-      // A5 护栏命中：这条「new」其实是对某条现有认知的极性反转 → 不新建那条相反行，
-      //   改把它的原话当反证挂到旧认知上（走 conflict 语义、把矛盾拉回「冲突可见」）。
-      const guardOldId = guardHits.get(idx);
-      if (guardOldId && attachContradiction(guardOldId, support)) {
-        conflicted++;
-        continue; // 不落新行、不计 typeFallback（未落库）
+      // A5 护栏命中：这条「new」其实是对某条认知的极性反转 → 不新建那条相反行，改把它的原话当反证
+      //   挂到锚点上（走 conflict 语义、把矛盾拉回「冲突可见」）。锚点=已入库旧认知，或本轮更早落库的新候选。
+      const gh = guardHits.get(idx);
+      if (gh) {
+        const anchorId = gh.type === 'existing' ? gh.cogId : createdByIdx.get(gh.anchorIdx);
+        if (anchorId && attachContradiction(anchorId, support)) {
+          conflicted++;
+          continue; // 不落新行、不计 typeFallback（未落库）
+        }
+        // 锚点缺失（更早候选未落库/已失效）→ 退回正常新建，别把这条丢了。
       }
-      // 未命中护栏（或挂失败，如旧认知已失效）→ 走正常新建，别把这条丢了。
       if (p.typeFallback) typeFallback[p.typeFallback]++;
       const formedBy = resolveFormedBy(p.modelSaysInferred, support); // 载体维由代码从证据算，不听模型
       // 接线点 1/8 · new（形成期）：`resolutionOf` 就地可用，零查表成本。
@@ -737,17 +764,17 @@ export async function consolidate(
         },
         deps.config,
       );
-      created.push(
-        deps.cognitionStore.put({
-          subjectId,
-          content: p.content,
-          contentType: p.contentType,
-          formedBy,
-          confidence,
-          credStatus: deriveCredStatus(confidence, 0, p.contentType, deps.config),
-          evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
-        }),
-      );
+      const createdCog = deps.cognitionStore.put({
+        subjectId,
+        content: p.content,
+        contentType: p.contentType,
+        formedBy,
+        confidence,
+        credStatus: deriveCredStatus(confidence, 0, p.contentType, deps.config),
+        evidence: support.map((id) => ({ evidenceId: id, relation: 'support' as const })),
+      });
+      created.push(createdCog);
+      createdByIdx.set(idx, createdCog.id); // 记为锚点：本轮后续新候选若与它反转，挂到它
     }
 
     // reinforce

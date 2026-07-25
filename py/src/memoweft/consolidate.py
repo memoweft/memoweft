@@ -474,16 +474,18 @@ def consolidate(
             view.append(hit)
         return is_hedged_stated(formed_by, view)
 
-    # ── A5 矛盾并存护栏：事务前预算「哪些 new 候选其实是对某条现有认知的极性反转」。
-    #   相似度筛(嵌入余弦) → 对少量同主题候选做一次极性判(llm)。命中 → {new 候选下标 → 被反转的旧认知 id}。
-    #   下方 new 循环据此把命中候选改走 conflict（挂 contradict）、不新建相反行。
-    #   不接 embedder / 无现有画像 / 无候选 → 空 dict = 行为完全同旧（镜像 consolidate.ts）。
-    guard_hits: dict[int, str] = {}
+    # ── A5 矛盾并存护栏：事务前预算「哪些 new 候选其实是对另一条认知的极性反转」。命中记两种锚点：
+    #   · guard_hit_existing[候选下标]=旧认知 id：与【已入库旧认知】反转 → 挂到该旧认知；
+    #   · guard_hit_new[候选下标]=更早候选下标：与【本轮更早、会落库的新候选】反转 → 挂到那条（先落库当锚点）。
+    #   第二种补「同批盲区」（旧立场与反转同一轮抽出、光比旧认知会漏）。下方 new 循环据此改走 conflict。
+    #   不接 embedder / 无候选 → 空 = 行为完全同旧（镜像 consolidate.ts）。
+    guard_hit_existing: dict[int, str] = {}
+    guard_hit_new: dict[int, int] = {}
     _guard_candidates = out.get("new") or []
-    if contradiction_guard is not None and existing and _guard_candidates:
+    if contradiction_guard is not None and _guard_candidates:
         threshold = contradiction_guard.min_similarity
         top_k = contradiction_guard.top_k
-        # 只对【会真落库】的候选（有内容 + 有可溯源支撑）算，下标与下方 new 循环严格对齐。
+        # 只对【会真落库】的候选（有内容 + 有可溯源支撑）算；cands 与 cand_vecs 平行，下标与下方 new 循环对齐。
         cands: list[tuple[int, str]] = []
         for idx, c in enumerate(_guard_candidates):
             p = _pick_cognition(c)
@@ -497,18 +499,36 @@ def consolidate(
             exist_vecs: list[list[float]] = []
             try:
                 cand_vecs = contradiction_guard.embedder.embed([t for _, t in cands])
-                exist_vecs = contradiction_guard.embedder.embed([ex.content for ex in existing])
+                exist_vecs = contradiction_guard.embedder.embed([ex.content for ex in existing]) if existing else []
             except Exception as exc:  # noqa: BLE001 - 嵌入失败不该拖垮固化：记日志、退化成本轮不拦。
                 _logger.warning("[memoweft/consolidate] A5 护栏嵌入失败，本轮跳过护栏：%s", exc)
-            if cand_vecs and exist_vecs:
+            if cand_vecs:
                 for k, (idx, cand_content) in enumerate(cands):
-                    scored = [(ex, _cosine(cand_vecs[k], exist_vecs[j])) for j, ex in enumerate(existing)]
-                    shortlist = [ex for ex, s in sorted(scored, key=lambda t: t[1], reverse=True) if s >= threshold][
+                    # ① 先比已入库旧认知。
+                    ex_scored = [(ex, _cosine(cand_vecs[k], exist_vecs[j])) for j, ex in enumerate(existing)]
+                    ex_short = [ex for ex, s in sorted(ex_scored, key=lambda t: t[1], reverse=True) if s >= threshold][
                         :top_k
                     ]
-                    for ex in shortlist:
+                    hit = False
+                    for ex in ex_short:
                         if _judge_contradiction(llm, lg, ex.content, cand_content):
-                            guard_hits[idx] = ex.id  # 命中一条即够：这条候选改挂到该旧认知
+                            guard_hit_existing[idx] = ex.id
+                            hit = True
+                            break
+                    if hit:
+                        continue
+                    # ② 再比本轮更早、且未被拦（会落库当锚点）的新候选——补同批盲区。cands[m] 的向量是 cand_vecs[m]。
+                    new_scored = [
+                        (cands[m][0], cands[m][1], _cosine(cand_vecs[k], cand_vecs[m]))
+                        for m in range(k)
+                        if cands[m][0] not in guard_hit_existing and cands[m][0] not in guard_hit_new
+                    ]
+                    new_short = [
+                        (aidx, ac) for aidx, ac, s in sorted(new_scored, key=lambda t: t[2], reverse=True) if s >= threshold
+                    ][:top_k]
+                    for aidx, ac in new_short:
+                        if _judge_contradiction(llm, lg, ac, cand_content):
+                            guard_hit_new[idx] = aidx
                             break
 
     def mutate() -> _Mutation:
@@ -556,6 +576,8 @@ def consolidate(
             return True
 
         # new
+        # 本轮已落库的 new 候选：候选下标 → 认知 id。供护栏「同批 new-vs-new」把后一条挂到先落库的锚点。
+        created_by_idx: dict[int, str] = {}
         for idx, c in enumerate(out.get("new") or []):
             p = _pick_cognition(c)
             if p is None:
@@ -564,12 +586,17 @@ def consolidate(
             support = pick_support(_cited_ids(c))
             if len(support) == 0:
                 continue
-            # A5 护栏命中：这条「new」其实是对某条现有认知的极性反转 → 不新建那条相反行，
-            #   改把它的原话当反证挂到旧认知上（走 conflict 语义、把矛盾拉回「冲突可见」）。
-            guard_old_id = guard_hits.get(idx)
-            if guard_old_id is not None and attach_contradiction(guard_old_id, support):
+            # A5 护栏命中：这条「new」其实是对某条认知的极性反转 → 不新建那条相反行，改把它的原话当反证
+            #   挂到锚点上（走 conflict 语义）。锚点=已入库旧认知，或本轮更早落库的新候选。
+            anchor_id: Optional[str] = None
+            if idx in guard_hit_existing:
+                anchor_id = guard_hit_existing[idx]
+            elif idx in guard_hit_new:
+                anchor_id = created_by_idx.get(guard_hit_new[idx])
+            if anchor_id is not None and attach_contradiction(anchor_id, support):
                 conflicted += 1
                 continue  # 不落新行、不计 type_fallback（未落库）
+            # 锚点缺失（更早候选未落库/已失效）→ 退回正常新建，别把这条丢了。
             if type_fallback is not None:  # 计量：只统计实际落库的兜底（与 TS 侧同口径）
                 setattr(fallback, type_fallback, getattr(fallback, type_fallback) + 1)
             formed_by = resolve_formed_by(model_says_inferred, support)
@@ -580,15 +607,15 @@ def consolidate(
                     hedged=resolve_hedged(formed_by, support),  # 集合恒同 support_count 用的那一个
                 ), cfg
             )
-            created.append(
-                cognition_store.put(
-                    CognitionInput(
-                        subject_id=subject_id, content=content, content_type=content_type, formed_by=formed_by,
-                        confidence=confidence, cred_status=derive_cred_status(confidence, 0, content_type, cfg),
-                        evidence=[EvidenceLink(evidence_id=i, relation="support") for i in support],
-                    )
+            created_cog = cognition_store.put(
+                CognitionInput(
+                    subject_id=subject_id, content=content, content_type=content_type, formed_by=formed_by,
+                    confidence=confidence, cred_status=derive_cred_status(confidence, 0, content_type, cfg),
+                    evidence=[EvidenceLink(evidence_id=i, relation="support") for i in support],
                 )
             )
+            created.append(created_cog)
+            created_by_idx[idx] = created_cog.id  # 记为锚点：本轮后续新候选若与它反转，挂到它
 
         # reinforce
         for c in out.get("reinforce") or []:

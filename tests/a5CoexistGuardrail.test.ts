@@ -231,6 +231,34 @@ test('极性门：同主题但不矛盾（爱喝咖啡 + 喜欢手冲咖啡）�
   }
 });
 
+test('护栏同批盲区：同一轮两条矛盾 new 候选 → 后者挂到先落库的前者、不并存', async () => {
+  const s = fresh();
+  try {
+    // 两条证据落在【同一轮】待固化事件里 → 两个 new 候选在一次 consolidate 内产出（existing 为空，
+    //   光比旧认知抓不到；靠 new-vs-new 分支）。
+    const e1 = seed(s, '我超爱喝咖啡，每天好几杯', '2026-07-01T10:00:00.000Z');
+    const e2 = seed(s, '我把咖啡戒了，再也不喝了', '2026-07-01T10:05:00.000Z');
+    await consolidate('u', {
+      eventStore: s.evt,
+      evidenceStore: s.ev,
+      cognitionStore: s.cog,
+      llm: guardAwareLlm(
+        `[{"content":"用户爱喝咖啡","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e1}"]},` +
+          `{"content":"用户不再喝咖啡了","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e2}"]}]`,
+        true,
+      ),
+      contradictionGuard: { embedder: topicEmbedder, minSimilarity: 0.5 },
+    });
+    const active = s.cog.active('u');
+    assert.equal(active.length, 1, '同批矛盾 → 只留先落库的一条（后者改挂反证）');
+    assert.match(active[0]!.content, /爱喝咖啡/, '保留先出现的候选作锚点');
+    assert.equal(active[0]!.credStatus, 'conflicted', '锚点被挂反证 → conflicted');
+    assert.ok(!active.some((c) => /不再喝咖啡/.test(c.content)), '后一条不新建相反行');
+  } finally {
+    closeAll(s);
+  }
+});
+
 // ── createCore 接线（宿主入口可开护栏）──────────────────────────────
 test('createCore 接线：请求 contradictionGuard + 有 embedder → 构造与 no-op updateProfile 不崩', async () => {
   // 注入 stub embedder 让 embedderRef 可用（护栏 deps 得以组装）；无事件的 updateProfile 不触 llm。

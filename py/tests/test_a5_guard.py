@@ -194,3 +194,31 @@ def test_guard_polarity_gate_same_topic_not_contradictory() -> None:
     active = cog.active("owner")
     assert len(active) == 2, "同主题不矛盾 → 不拦，两条并存"
     assert all(c.cred_status != "conflicted" for c in active)
+
+
+def test_guard_within_batch_new_vs_new() -> None:
+    """同批盲区：同一轮两条矛盾 new 候选 → 后者挂到先落库的前者、不并存（与 TS 对称）。"""
+    db = open_db(":memory:")
+    ev = SqliteEvidenceStore(db, clock=_clock)
+    evt = SqliteEventStore(db, clock=_clock)
+    cog = SqliteCognitionStore(db, clock=_clock)
+    e1 = _feed(ev, evt, "我超爱喝咖啡，每天好几杯")
+    e2 = _feed(ev, evt, "我把咖啡戒了，再也不喝了")
+    consolidate(
+        "owner",
+        event_store=evt,
+        evidence_store=ev,
+        cognition_store=cog,
+        llm=_GuardAwareLLM(
+            f'[{{"content":"用户爱喝咖啡","content_type":"preference","formed_by":"stated","support_evidence_ids":["{e1}"]}},'
+            f'{{"content":"用户不再喝咖啡了","content_type":"preference","formed_by":"stated","support_evidence_ids":["{e2}"]}}]',
+            True,
+        ),
+        now_iso=T,
+        contradiction_guard=ContradictionGuard(embedder=_TopicEmbedder(), min_similarity=0.5),
+    )
+    active = cog.active("owner")
+    assert len(active) == 1, "同批矛盾 → 只留先落库的一条（后者改挂反证）"
+    assert "爱喝咖啡" in active[0].content
+    assert active[0].cred_status == "conflicted", "锚点被挂反证 → conflicted"
+    assert not any("不再喝咖啡" in c.content for c in active)
