@@ -1249,6 +1249,102 @@
           "把同事的调动当作用户自己的目标或状态"
         ]
       }
+    },
+    {
+      "id": "CC-056",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "世界事件混在用户第一人称叙述里（大盘跌 + 用户情绪）",
+      "messages": [{ "sourceKind": "spoken", "rawContent": "我最近老盯着股市，今天大盘又跌了，唉。" }],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 3 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把『大盘又跌了』这个市场行情当成关于用户本人的稳定特质或事实",
+          "把股市涨跌本身沉淀成用户的属性（而非用户『关注股市』这个偏好）"
+        ]
+      }
+    },
+    {
+      "id": "CC-057",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "Third-party answer to an AI question about the user's sister",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "She just got promoted to manager at her firm.",
+          "precedingAiContext": "How's your sister doing these days?"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 2 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Record 'got promoted to manager' as the user's own job or career change",
+          "Attribute the sister's promotion to the user themselves"
+        ]
+      }
+    },
+    {
+      "id": "CC-058",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "第一人称复数里的他人命题（我们团队业绩 + 老板满意）",
+      "messages": [{ "sourceKind": "spoken", "rawContent": "我们团队这季度业绩翻倍了，老板特别满意。" }],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 3 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把『业绩翻倍』当成用户个人的成就或能力特质",
+          "把老板的满意当成关于用户本人的稳定事实"
+        ]
+      }
+    },
+    {
+      "id": "CC-059",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "World fact mixed with the user's own opinion (economy + belief)",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "The economy's been rough lately — I think we're heading into a recession."
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 2 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Record 'heading into a recession' as a settled fact about the user themselves",
+          "Sink the state of the economy into the user's personal profile as a stable trait"
+        ]
+      }
+    },
+    {
+      "id": "CC-060",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "第三方计划混用户情绪（闺蜜移民 + 我舍不得）",
+      "messages": [{ "sourceKind": "spoken", "rawContent": "我闺蜜要移民加拿大了，我挺舍不得的。" }],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 3 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把『移民加拿大』当成用户本人的计划或目标",
+          "把闺蜜（第三方）的移民当成关于用户自己的事实"
+        ]
+      }
     }
   ]
 }
