@@ -659,7 +659,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       //   这是 `trend` 类认知的唯一生产产出者——不调它，config 里的 trendWindowDays/trendMinCount 是死参数。
       return runAggregateTrends(
         subjectOf(input.subjectId),
-        { evidenceStore, cognitionStore, llm: pool.for('write'), config: cfg },
+        { evidenceStore, cognitionStore, retriever, llm: pool.for('write'), config: cfg },
         (options.clock ?? systemClock)(),
       );
     },

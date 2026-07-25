@@ -56,7 +56,7 @@ function revisitConflicts: { (subjectId: string, deps: RevisitDeps, opts?: { max
 function runMigrations: { (db: DatabaseSync, opts?: RunMigrationsOptions): MigrationResult; }
 function updateProfile: { (subjectId: string, deps: UpdateProfileDeps): Promise<UpdateProfileResult>; }
 function validateBundle: { (bundle: unknown): ValidateResult; }
-interface AggregateTrendsDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm: LLMClient; }
+interface AggregateTrendsDeps { cognitionStore: CognitionStore; config?: MemoWeftConfig | undefined; evidenceStore: EvidenceStore; llm: LLMClient; retriever?: Retriever | undefined; }
 interface ArchiveCognitionInput { cognitionId: string; reason: string; }
 interface AskPolicy { askableStatuses: Array<string>; confidenceBand: { min: number; max: number; }; maxAsks: number; }
 interface AskProposal { cognitionId: string; confidence: number; contradictEvidence?: Array<{ id: string; summary: string; }> | undefined; credStatus: CredStatus; evidence: Array<{ id: string; summary: string; }>; hypothesis: string; kind: 'hypothesis' | 'conflict'; question: string; }

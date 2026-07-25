@@ -471,7 +471,7 @@ export async function consolidate(
       messages,
       lang,
     })) ?? {};
-  const llmCalls = deps.llm.callCount - before;
+  let llmCalls = deps.llm.callCount - before;
 
   /**
    * 本轮 LLM 产的语义解析，规整 + 收窄后按 evidenceId 索引（public contract）。
@@ -616,6 +616,8 @@ export async function consolidate(
     if (!guard || candidates.length === 0) return hits;
     const threshold = guard.minSimilarity ?? GUARD_DEFAULT_SIMILARITY;
     const topK = guard.topK ?? GUARD_DEFAULT_TOPK;
+    // 预算口径：每候选最多 2×topK 次极性判——① 与相似旧认知最多 topK 次、② 与本轮更早候选最多 topK 次
+    //   （① 命中即 break、跳过 ②）。默认 topK=3 → 每候选最坏 6 次极性判；仅在护栏开启时发生。
     // 只对【会真落库】的候选（有内容 + 有可溯源支撑）算；cands 与 candVecs 平行、下标与下方 new 循环对齐。
     const cands: Array<{ idx: number; content: string }> = [];
     candidates.forEach((c, idx) => {
@@ -673,6 +675,10 @@ export async function consolidate(
     }
     return hits;
   })();
+
+  // llmCalls 计入 A5 护栏的极性判调用（及其 JSON 修复重试）——护栏在主固化请求之后才跑，
+  //   沿用上面的快照会漏报 guarded 跑的调用数/成本（testbench 成本仪表据此汇总；护栏默认关时此值不变）。
+  llmCalls = deps.llm.callCount - before;
 
   // 事务化保证写路径一致性：new/correct/conflict/reinforce 与 markConsolidated
   // 要么全部提交、要么全部回滚，避免部分画像写入或事件被重复处理。

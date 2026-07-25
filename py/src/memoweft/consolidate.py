@@ -485,6 +485,8 @@ def consolidate(
     if contradiction_guard is not None and _guard_candidates:
         threshold = contradiction_guard.min_similarity
         top_k = contradiction_guard.top_k
+        # 预算口径：每候选最多 2×top_k 次极性判——① 与相似旧认知最多 top_k 次、② 与本轮更早候选最多 top_k 次
+        #   （① 命中即 break、跳过 ②）。默认 top_k=3 → 每候选最坏 6 次极性判；仅在护栏开启时发生。
         # 只对【会真落库】的候选（有内容 + 有可溯源支撑）算；cands 与 cand_vecs 平行，下标与下方 new 循环对齐。
         cands: list[tuple[int, str]] = []
         for idx, c in enumerate(_guard_candidates):
@@ -530,6 +532,10 @@ def consolidate(
                         if _judge_contradiction(llm, lg, ac, cand_content):
                             guard_hit_new[idx] = aidx
                             break
+
+    # llm_calls 计入 A5 护栏的极性判调用（及其 JSON 修复重试）——护栏在主固化请求之后才跑，
+    #   沿用上面的快照会漏报 guarded 跑的调用数/成本（镜像 consolidate.ts；护栏默认关时此值不变）。
+    llm_calls = llm.call_count - before
 
     def mutate() -> _Mutation:
         created: list[Cognition] = []
