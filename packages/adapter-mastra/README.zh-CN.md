@@ -23,7 +23,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-mastra
 ```
 
-`memoweft` `^0.6.0` 与 `@mastra/core` 是 peer 依赖。适配器使用 0.6 的 `recordAssistantReply` 面处理 AI 回复与前文上下文。
+`memoweft` `^0.6.0 || ^0.7.0` 与 `@mastra/core` 是 peer 依赖。适配器使用 0.6 的 `recordAssistantReply` 面处理 AI 回复与前文上下文。
 
 ## 用法
 

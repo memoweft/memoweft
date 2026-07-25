@@ -27,7 +27,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-llamaindex
 ```
 
-`llamaindex` `^0.12`, `@llamaindex/workflow` `^1.1.24`, and `memoweft` `^0.5.1 || ^0.6.0` are peer dependencies.
+`llamaindex` `^0.12`, `@llamaindex/workflow` `^1.1.24`, and `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0` are peer dependencies.
 
 ## Why recall goes through a memory block, and writes through a stream tap
 

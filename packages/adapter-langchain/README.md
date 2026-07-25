@@ -19,7 +19,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-langchain
 ```
 
-`@langchain/core` `^1` and `memoweft` `^0.6.0` are peer dependencies. `langchain` `^1` (the umbrella that ships the v1 agent middleware API) is an **optional** peer — you only need it if you use the v1 middleware entry below; the retriever + callback path needs only `@langchain/core`.
+`@langchain/core` `^1` and `memoweft` `^0.6.0 || ^0.7.0` are peer dependencies. `langchain` `^1` (the umbrella that ships the v1 agent middleware API) is an **optional** peer — you only need it if you use the v1 middleware entry below; the retriever + callback path needs only `@langchain/core`.
 
 ## LangChain v1 agent middleware (recommended for `createAgent`)
 

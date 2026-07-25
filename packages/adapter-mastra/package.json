@@ -47,7 +47,7 @@
   },
   "peerDependencies": {
     "@mastra/core": "^1.51.0",
-    "memoweft": "^0.6.0"
+    "memoweft": "^0.6.0 || ^0.7.0"
   },
   "devDependencies": {
     "@mastra/core": "^1.51.0",

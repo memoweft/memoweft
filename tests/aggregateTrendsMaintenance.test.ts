@@ -57,7 +57,12 @@ const nullRet = {
 
 test('core.aggregateTrends()：空画像 → 不崩、返回 TrendResult 形状（consideredCount 0、无产出）', async () => {
   const clock: Clock = () => new Date(T0);
-  const core = createMemoWeftCore({ dbPath: ':memory:', llm: stubLLM(), retriever: nullRet, clock });
+  const core = createMemoWeftCore({
+    dbPath: ':memory:',
+    llm: stubLLM(),
+    retriever: nullRet,
+    clock,
+  });
   try {
     const r = await core.aggregateTrends({ subjectId: 'u' });
     assert.equal(r.consideredCount, 0);
@@ -70,18 +75,29 @@ test('core.aggregateTrends()：空画像 → 不崩、返回 TrendResult 形状�
 
 test('core.aggregateTrends()：窗口内够频 state → 聚出 trend；subjectId/写模型/时钟真接进算子', async () => {
   const clock: Clock = () => new Date(T0);
-  const core = createMemoWeftCore({ dbPath: ':memory:', llm: stubLLM(), retriever: nullRet, clock });
+  const core = createMemoWeftCore({
+    dbPath: ':memory:',
+    llm: stubLLM(),
+    retriever: nullRet,
+    clock,
+  });
   try {
     // 三条原话（都在 trendWindowDays=14 窗口内，同一 now）→ 一次 updateProfile 产 3 条 state 认知。
     for (const c of ['我很烦', '又没睡好', '还是提不起劲']) {
       await core.ingestUserMessage({ content: c, subjectId: 'u', occurredAt: T0 });
     }
     await core.updateProfile({ subjectId: 'u' });
-    const states = core.memory.listCognitions({ subjectId: 'u' }).filter((c) => c.contentType === 'state');
+    const states = core.memory
+      .listCognitions({ subjectId: 'u' })
+      .filter((c) => c.contentType === 'state');
     assert.equal(states.length, 3, '产出 3 条 state（趋势聚合的输入）');
 
     const r = await core.aggregateTrends({ subjectId: 'u' });
-    assert.equal(r.consideredCount, 3, '窗口内 3 条 state 证据被考察（证明 subjectId + 算子真接进来）');
+    assert.equal(
+      r.consideredCount,
+      3,
+      '窗口内 3 条 state 证据被考察（证明 subjectId + 算子真接进来）',
+    );
     assert.equal(r.trends.length, 1, '够频 → 聚出 1 条 trend');
     assert.equal(r.trends[0]!.contentType, 'trend');
     assert.equal(r.trends[0]!.formedBy, 'ruled', '规则聚出（基于客观频率）');

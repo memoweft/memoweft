@@ -19,7 +19,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-claude-agent-sdk
 ```
 
-`@anthropic-ai/claude-agent-sdk` `^0.3.207` 与 `memoweft` `^0.5.1 || ^0.6.0` 是 peer 依赖。
+`@anthropic-ai/claude-agent-sdk` `^0.3.207` 与 `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0` 是 peer 依赖。
 
 ## 一个工厂、两个 hook、三条路径
 

@@ -1,6 +1,6 @@
 [project]
 name = "memoweft"
-version = "0.6.0.dev0"
+version = "0.7.0.dev0"
 description = "Experimental Python parity implementation for MemoWeft's memory rules, storage, and portable-data contracts."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -8,13 +8,13 @@
 
 ## 安装
 
-npm 已发布的服务器是 `0.1.0`；请安装这个固定且兼容的组合：
+`@memoweft/mcp-server@0.2.1` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0`；请安装兼容的组合：
 
 ```bash
-npm install memoweft@0.5.1 @memoweft/mcp-server@0.1.0
+npm install memoweft@0.7 @memoweft/mcp-server@0.2
 ```
 
-`main` 上的 `0.2.0` workspace 版本尚未发布。要配合 Core `0.5.1` 或 `0.6` 时，请从本检出构建；它的 peer 范围是 `^0.5.1 || ^0.6.0`。不要用 `--legacy-peer-deps` 强行把已发布的 `0.1.0` 服务器配到 Core `0.6`。需要 Node 20+。
+它对 Core `0.5.1`、`0.6`、`0.7` 都能被 npm 干净解析，无需 `--legacy-peer-deps`。需要 Node 20+。
 
 ## 让客户端连上它
 
@@ -25,7 +25,7 @@ npm install memoweft@0.5.1 @memoweft/mcp-server@0.1.0
   "mcpServers": {
     "memoweft": {
       "command": "npx",
-      "args": ["-y", "@memoweft/mcp-server@0.1.0"],
+      "args": ["-y", "@memoweft/mcp-server@0.2"],
       "env": { "MEMOWEFT_DB_PATH": "/absolute/path/to/memoweft.db" }
     }
   }
