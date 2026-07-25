@@ -11,6 +11,8 @@ from typing import Literal, Optional
 ContentType = Literal["fact", "preference", "goal", "project", "state", "trait", "hypothesis", "trend"]
 FormedBy = Literal["stated", "observed", "ruled", "confirmed", "inferred"]
 CredStatus = Literal["candidate", "low", "limited", "stable", "conflicted", "contested"]
+#: 命题关于谁(与 content_type、subject_id 正交):self=用户本人(默认)、person=第三方(带 about_entity)、world=世界命题(不进画像召回)。
+About = Literal["self", "person", "world"]
 SourceKind = Literal["spoken", "inferred", "observed", "tool"]
 ResponseAct = Literal["affirm", "negate", "select", "elaborate", "ask", "none", "other"]
 PropositionOrigin = Literal["user_stated", "assistant_proposed"]
@@ -161,6 +163,10 @@ class Cognition:
     muted_at: Optional[str]
     created_at: str
     updated_at: str
+    #: 命题关于谁(缺省 self);world 不进画像召回,person 带 about_entity 主体名。
+    #: 有默认以对齐 TS 的 about?/about_entity? 可选语义及旧库回读(null→self)。
+    about: About = "self"
+    about_entity: Optional[str] = None
 
 
 @dataclass(slots=True)
@@ -177,6 +183,8 @@ class CognitionInput:
     valid_at: Optional[str] = None
     invalid_at: Optional[str] = None
     evidence: Optional[list[EvidenceLink]] = None
+    about: Optional[About] = None
+    about_entity: Optional[str] = None
 
 
 class _Unset:

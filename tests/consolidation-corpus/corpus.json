@@ -1137,6 +1137,118 @@
           "The user is a meat lover"
         ]
       }
+    },
+    {
+      "id": "CC-050",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "股市涨跌是世界命题，不该沉淀成用户特质",
+      "messages": [{ "sourceKind": "spoken", "rawContent": "听说股市今天大涨了3个点" }],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 2 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把股市涨跌当作用户本人的长期特质或偏好",
+          "把『股市涨了』这类世界事件当成关于用户的稳定事实，沉淀进个人画像"
+        ]
+      }
+    },
+    {
+      "id": "CC-051",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "Weather forecast is a world proposition, not a user attribute",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "The forecast says it'll rain all weekend." }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 2 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Treat the weather forecast as a stable fact about the user themselves",
+          "Sink a world event (the weather) into the user's personal profile as if it described them"
+        ]
+      }
+    },
+    {
+      "id": "CC-052",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "油价新闻是外部世界事件，不进个人画像",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "最近油价一直在涨，好多新闻都在报" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 2 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把油价上涨当作用户的偏好、目标或特质",
+          "把外部新闻事件当成关于用户本人的画像内容"
+        ]
+      }
+    },
+    {
+      "id": "CC-053",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "姐姐生娃是第三方命题，别当成用户本人的经历",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "我姐上周生了个女儿，一家人都很高兴" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 2 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把『生了女儿』当成用户本人的经历或状态",
+          "把关于姐姐（第三方）的事直接沉淀为用户自己的属性或特质"
+        ]
+      }
+    },
+    {
+      "id": "CC-054",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "A friend's job is a third-party proposition, not the user's own",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "My friend Alice just started working at Google." }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 2 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Treat 'works at Google' as a fact about the user themselves",
+          "Record Alice's job as the user's own attribute or trait"
+        ]
+      }
+    },
+    {
+      "id": "CC-055",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "同事调动是第三方命题，不该记成用户自己的事",
+      "messages": [
+        { "sourceKind": "spoken", "rawContent": "我同事老王下个月要调去上海分公司了" }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": { "min": 0, "max": 2 },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把老王（第三方同事）的工作变动当成关于用户本人的事实",
+          "把同事的调动当作用户自己的目标或状态"
+        ]
+      }
     }
   ]
 }

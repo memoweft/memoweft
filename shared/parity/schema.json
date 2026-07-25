@@ -95,6 +95,20 @@
       },
       {
         "dflt": null,
+        "name": "about",
+        "notnull": 0,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "about_entity",
+        "notnull": 0,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
         "name": "created_at",
         "notnull": 1,
         "pk": 0,

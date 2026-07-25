@@ -28,6 +28,8 @@ def _from_row(r: sqlite3.Row) -> Cognition:
         asked_at=r["asked_at"],
         archived_at=r["archived_at"],
         muted_at=r["muted_at"],
+        about=r["about"] if r["about"] is not None else "self",  # 旧行 about 列为 null → 当 self
+        about_entity=r["about_entity"],
         created_at=r["created_at"],
         updated_at=r["updated_at"],
     )
@@ -56,6 +58,8 @@ class SqliteCognitionStore:
             asked_at=None,  # 新建一律未问过(提问后由 proposeAsk 经 update 写)
             archived_at=None,  # 新建一律未归档
             muted_at=None,  # 新建一律未静音()
+            about=inp.about if inp.about is not None else "self",  # 缺省 self（用户本人）
+            about_entity=inp.about_entity,  # 仅 person 命题带主体名
             created_at=now,
             updated_at=now,
         )
@@ -72,12 +76,12 @@ class SqliteCognitionStore:
             """INSERT INTO cognition (
               id, subject_id, content, content_type, formed_by,
               confidence, cred_status, scope, valid_at, invalid_at,
-              asked_at, archived_at, muted_at, created_at, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+              asked_at, archived_at, muted_at, about, about_entity, created_at, updated_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 cog.id, cog.subject_id, cog.content, cog.content_type, cog.formed_by,
                 cog.confidence, cog.cred_status, cog.scope, cog.valid_at, cog.invalid_at,
-                cog.asked_at, cog.archived_at, cog.muted_at, cog.created_at, cog.updated_at,
+                cog.asked_at, cog.archived_at, cog.muted_at, cog.about, cog.about_entity, cog.created_at, cog.updated_at,
             ),
         )
 

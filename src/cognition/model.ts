@@ -62,6 +62,16 @@ export const CRED_STATUSES = [
   'contested',
 ] as const satisfies readonly CredStatus[];
 
+/** 命题关于谁——与 contentType 正交（判"关于谁" vs "是什么类型"），也与 subjectId 正交
+ *  （subjectId 答"谁的库/画像"，about 答"这条判断关于谁"）：
+ *    - `self`  = 用户本人（默认；照旧进画像）；
+ *    - `person`= 第三方命题（带主体名 aboutEntity，如"Alice"/"我姐"）；
+ *    - `world` = 世界命题（"股市涨了"/"明天下雨"）——存下但不进画像召回，只做上下文。
+ *  作为【可选/缺省 self】字段引入，保 additive、不破 pre-1.0 冻结前的公开面（缺省即 self）。 */
+export type About = 'self' | 'person' | 'world';
+/** About 的运行时全集（顺序对齐 type，见 CONTENT_TYPES 处的「不派生」说明）。 */
+export const ABOUT_VALUES = ['self', 'person', 'world'] as const satisfies readonly About[];
+
 // 编译期穷尽性锁：`satisfies` 只保证「数组里的都是合法值」，不保证「合法值都在数组里」。
 //   下面这个恒等式在【任一 type 加了新成员但忘了补进数组】时报 TS 错，把漏项也变成编译失败，
 //   于是 type 与运行时数组双向锁死、不会悄悄漂移。（`AssertEqual` 仅用于本文件的编译期检查。）
@@ -71,9 +81,11 @@ type AssertExhaustive<TypeUnion, ArrElem extends TypeUnion> = [TypeUnion] extend
 const _contentTypesExhaustive: AssertExhaustive<ContentType, (typeof CONTENT_TYPES)[number]> = true;
 const _formedByExhaustive: AssertExhaustive<FormedBy, (typeof FORMED_BY_VALUES)[number]> = true;
 const _credStatusesExhaustive: AssertExhaustive<CredStatus, (typeof CRED_STATUSES)[number]> = true;
+const _aboutExhaustive: AssertExhaustive<About, (typeof ABOUT_VALUES)[number]> = true;
 void _contentTypesExhaustive;
 void _formedByExhaustive;
 void _credStatusesExhaustive;
+void _aboutExhaustive;
 
 /** 溯源链上一条证据与认知的关系。 */
 export type EvidenceRelation = 'support' | 'contradict';
@@ -106,6 +118,12 @@ export interface Cognition {
    *  （区别于 archive 从全部活动路径排除，以及 invalidate 标记不再为真）。静音只改变召回资格，不改变 confidence。
    *  可选字段以兼容既有构造处（旧代码不填 = 未静音）；经 core.memory.muteCognition 置/清。 */
   mutedAt?: string | null;
+  /** 命题关于谁：self（默认，用户本人）/ person（第三方）/ world（世界命题）。
+   *  可选以兼容旧构造/旧库（缺省即 self）。world 不进画像召回；person 带 aboutEntity 主体名。 */
+  about?: About;
+  /** person 命题的主体名（如 "Alice"、"我姐"）；self/world 为 null/缺省。
+   *  v1 存 LLM 提取的原始主体名，不做跨称呼实体消解（消解为后续优化）。 */
+  aboutEntity?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -121,6 +139,9 @@ export interface CognitionInput {
   scope?: string | null;
   validAt?: string | null;
   invalidAt?: string | null;
+  /** 命题关于谁（缺省 self）；world 存但不进画像召回，person 带 aboutEntity 主体名。 */
+  about?: About;
+  aboutEntity?: string | null;
   /** 溯源链：这条认知靠哪些证据支持 / 反对。 */
   evidence?: EvidenceLink[];
 }
