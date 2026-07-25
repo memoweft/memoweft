@@ -56,8 +56,6 @@ This exercises MemoWeft's public Core API and memory rules; it is not a model-qu
 
 [WeftMate](https://www.weftmate.com/) is a desktop product that uses MemoWeft to form a visible, user-editable profile from conversation threads. MemoWeft provides the portable memory layer; the product experience remains outside Core.
 
-![WeftMate profile interface showing conversation-derived profile details that the user can review and edit]
-
 The same behaviors are covered by offline regression cases and API-surface checks. CI runs the full guardrail suite on Node 24, Core compatibility tests on Node 22, and a built-package SQLite smoke test on Node 20. See the [evaluation protocol](https://github.com/memoweft/memoweft/blob/main/BENCHMARKS.md).
 
 ## Why MemoWeft
