@@ -55,7 +55,7 @@ export interface MemoWeftMiddlewareOptions {
   explain?: boolean;
   /** 每次成功召回后的回调（可选）：透传召回 v2 面（id/contentType/score，explain 时含 provenance）供宿主自筛/透视。 */
   onRecall?: (items: RecalledLike[]) => void;
-  /** recall 超时阈值（毫秒，）。缺省 200ms。超时/出错这次模型调用降级为不注入；读路径不重试。 */
+  /** recall 超时阈值（毫秒）。缺省 200ms。超时/出错这次模型调用降级为不注入；读路径不重试。 */
   recallTimeoutMs?: number;
   /** ingest 单次尝试超时（毫秒，可选，同 writeCallback）。传正数则每次尝试套超时；超时按失败计入「重试一次」（超时不重试）。 */
   ingestTimeoutMs?: number;

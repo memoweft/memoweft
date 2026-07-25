@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from typing import Any, Callable, Optional
 
 from .._jsstr import js_trim, utf16_length
@@ -18,13 +17,28 @@ from .prompts import json_repair_nudge_text
 
 _logger = logging.getLogger("memoweft.jsonRepair")
 
-_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
-
-
 def _strip_code_fences(s: str) -> str:
-    """移除 ```json … ``` 或 ``` … ``` 围栏；没有围栏时返回原文本。"""
-    m = _FENCE_RE.search(s)
-    return m.group(1) if m is not None else s
+    """移除 ```json … ``` 或 ``` … ``` 围栏；没有围栏时返回原文本。
+
+    与 TS stripCodeFences 同口径的线性扫描，不用回溯正则：模型原文不可信，缺闭围栏的
+    大段输入会让回溯型正则做大量重复尝试（ReDoS）。按「首个开围栏 → 其后首个闭围栏」取
+    内容；不识别的语言标签作为围栏内容保留，而不是跳到后续围栏改变解析对象。
+    """
+    opening = s.find("```")
+    if opening == -1:
+        return s
+    content_start = opening + 3
+    closing = s.find("```", content_start)
+    if closing == -1:
+        return s
+    # 模型常把 JSON 紧贴标签后输出（```json{...}）。保持旧正则的贪婪可选标签语义：
+    # 开头四字符是 json（含 ```jsonish）就消费该前缀，再跳空白（js_trim 对齐 JS .trim 口径）。
+    after_label = content_start + 4
+    if s[content_start:after_label].lower() == "json":
+        content_start = after_label
+        while content_start < closing and js_trim(s[content_start]) == "":
+            content_start += 1
+    return s[content_start:closing]
 
 
 def extract_json_object(raw: str) -> Optional[str]:

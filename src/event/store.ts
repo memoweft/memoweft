@@ -77,7 +77,7 @@ export class SqliteEventStore implements EventStore {
     if (this.ownsDb) this.db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
     this.clock = clock;
     this.db.exec(SCHEMA);
-    // 迁移：旧库 event 表可能缺 consolidated 列（增量消化追踪，）。
+    // 迁移：旧库 event 表可能缺 consolidated 列（增量消化追踪）。
     const cols = this.db.prepare('PRAGMA table_info(event)').all() as unknown as Array<{
       name: string;
     }>;

@@ -27,7 +27,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-llamaindex
 ```
 
-`llamaindex` `^0.12`、`@llamaindex/workflow` `^1.1.24` 与 `memoweft` `^0.5.1 || ^0.6.0` 是 peer 依赖。
+`llamaindex` `^0.12`、`@llamaindex/workflow` `^1.1.24` 与 `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0` 是 peer 依赖。
 
 ## 为何召回走 memory-block、写走 stream-tap
 

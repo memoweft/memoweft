@@ -19,7 +19,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-langchain
 ```
 
-`@langchain/core` `^1` 与 `memoweft` `^0.6.0` 是 peer 依赖。`langchain` `^1`（携带 v1 agent middleware API 的伞包）是**可选** peer——只有使用下面的 v1 middleware 入口才需要它；retriever + callback 集成只需 `@langchain/core`。
+`@langchain/core` `^1` 与 `memoweft` `^0.6.0 || ^0.7.0` 是 peer 依赖。`langchain` `^1`（携带 v1 agent middleware API 的伞包）是**可选** peer——只有使用下面的 v1 middleware 入口才需要它；retriever + callback 集成只需 `@langchain/core`。
 
 ## LangChain v1 agent middleware（`createAgent` 首选）
 

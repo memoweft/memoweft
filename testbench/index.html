@@ -3541,7 +3541,36 @@
     <script>
       const $ = (id) => document.getElementById(id);
       function esc(s) {
-        return (s || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+        // 文字节点和 HTML 属性共用的单步编码。动态 UI 优先走 DOM API；这里保留给
+        // 已有的、只插入文本内容的展示模板，属性上下文也必须同时编码引号。
+        return String(s ?? '').replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
+      }
+      // API / bundle 数据一律通过 DOM 文本节点落地。诊断台允许导入可移植数据，不能假定 id、
+      // 枚举值或内容来自可信页面；避免把它们重新解析为 HTML 或内联 JavaScript。
+      function domEl(tag, className, text) {
+        const el = document.createElement(tag);
+        if (className) el.className = className;
+        if (text != null) el.textContent = String(text);
+        return el;
+      }
+      function enumText(labels, value) {
+        const key = String(value ?? '');
+        return Object.hasOwn(labels, key) ? labels[key] : key;
+      }
+      function pill(text, className = '') {
+        return domEl('span', `pill${className ? ` ${className}` : ''}`, text);
+      }
+      function button(text, onClick, className = '') {
+        const el = domEl('button', className, text);
+        el.type = 'button';
+        el.addEventListener('click', onClick);
+        return el;
+      }
+      function emptyNode(text, className = 'empty') {
+        return domEl('span', className, text);
       }
 
       // ══════════════════════════════════════════════════════════════════
@@ -3643,8 +3672,10 @@
           // 密钥显隐
           const eye = e.target.closest('.wiz-eye');
           if (eye) {
-            const inp = $(eye.getAttribute('data-for'));
-            if (inp) {
+            // 按钮与输入框固定为同一个 .wiz-inwrap 的相邻节点；不要把 DOM 属性当
+            // selector 再解析，避免外部 DOM 文本影响目标选择。
+            const inp = eye.previousElementSibling;
+            if (inp instanceof HTMLInputElement) {
               const show = inp.type === 'password';
               inp.type = show ? 'text' : 'password';
               eye.textContent = show ? '隐藏' : '显示';
@@ -4039,28 +4070,24 @@
             '<div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先聊几句，它会慢慢记下你说的、开始拼出对你的了解。</div>';
           return;
         }
-        box.innerHTML = live
-          .map(
-            (c) =>
-              '<div class="ux-item">' +
-              '<div class="txt">' +
-              esc(c.content) +
-              '</div>' +
-              '<div class="foot">' +
-              '<span class="ux-tag">' +
-              esc(TYPE_CN[c.contentType] || c.contentType || '') +
-              '</span>' +
-              '<span class="spacer"></span>' +
-              '<button onclick="softEditCog(\'' +
-              c.id +
-              '\', this)">这条说得不对，改一下</button>' +
-              '<button class="del" onclick="softDelCog(\'' +
-              c.id +
-              '\')">删掉这条</button>' +
-              '</div>' +
-              '</div>',
-          )
-          .join('');
+        const fragment = document.createDocumentFragment();
+        for (const c of live) {
+          const item = domEl('div', 'ux-item');
+          item.appendChild(domEl('div', 'txt', c.content));
+          const foot = domEl('div', 'foot');
+          foot.append(
+            domEl('span', 'ux-tag', enumText(TYPE_CN, c.contentType)),
+            domEl('span', 'spacer'),
+          );
+          const edit = button('这条说得不对，改一下', () => softEditCog(c.id, edit));
+          foot.append(
+            edit,
+            button('删掉这条', () => softDelCog(c.id), 'del'),
+          );
+          item.appendChild(foot);
+          fragment.appendChild(item);
+        }
+        box.replaceChildren(fragment);
       }
 
       // 友好时间：把 ISO 时间戳说成人话（今天 / 昨天 / 月-日 + 时:分）。
@@ -4097,19 +4124,16 @@
             '<div class="ux-empty"><span class="big">🌱</span>还没有片段——聊上几句，这里就会长出内容。</div>';
           return;
         }
-        box.innerHTML = list
-          .map(
-            (e) =>
-              '<div class="ux-evt">' +
-              '<span class="when">' +
-              esc(friendlyTime(e.occurredAt)) +
-              '</span>' +
-              '<span class="sum">' +
-              esc(e.summary) +
-              '</span>' +
-              '</div>',
-          )
-          .join('');
+        const fragment = document.createDocumentFragment();
+        for (const event of list) {
+          const row = domEl('div', 'ux-evt');
+          row.append(
+            domEl('span', 'when', friendlyTime(event.occurredAt)),
+            domEl('span', 'sum', event.summary),
+          );
+          fragment.appendChild(row);
+        }
+        box.replaceChildren(fragment);
       }
 
       // 主动询问自然说进对话：不显示按钮；只挂在「后台画像更新完那一下」这种低频时机（见 pollBg）。
@@ -4239,7 +4263,7 @@
       function addMsg(role, text) {
         const d = document.createElement('div');
         d.className = 'msg ' + role;
-        d.innerHTML = '<div class="bubble">' + esc(text) + '</div>';
+        d.appendChild(domEl('div', 'bubble', text));
         $('chat').appendChild(d);
         $('chat').scrollTop = $('chat').scrollHeight;
       }
@@ -4289,7 +4313,7 @@
               (x) =>
                 '<span class="pill">' +
                 esc(x.summary) +
-                (x.score != null ? ' · ' + x.score : '') +
+                (x.score != null ? ' · ' + esc(x.score) : '') +
                 '</span>',
               '回你这句时，从旧记忆里翻出来的相关内容；后面的数字是相似度（越大越贴题，0–1000）。',
             ),
@@ -4301,7 +4325,7 @@
                 esc(x.text) +
                 '</span>' +
                 '<span class="pill">置信 ' +
-                x.confidence +
+                esc(x.confidence) +
                 '</span><span class="pill">' +
                 esc(x.credStatus) +
                 '</span></div>',
@@ -4323,7 +4347,7 @@
             '<div class="row"><span class="k">模型调用' +
               hintq('这一轮总共请求了几次大模型（回话+整理都算）。次数越多越慢越费。') +
               '</span><span class="v">' +
-              r.llmCalls +
+              esc(r.llmCalls) +
               ' 次</span></div>',
             arr(
               '画像变更',
@@ -4360,9 +4384,9 @@
           '<div class="bubble"><span class="thinking-dots"><span></span><span></span><span></span></span></div>';
         $('chat').appendChild(thinking);
         $('chat').scrollTop = $('chat').scrollHeight;
-        const settle = (html) => {
+        const settle = (text) => {
           thinking.classList.remove('thinking');
-          thinking.innerHTML = '<div class="bubble">' + html + '</div>';
+          thinking.replaceChildren(domEl('div', 'bubble', text));
           $('chat').scrollTop = $('chat').scrollHeight;
         };
         try {
@@ -4373,16 +4397,16 @@
           });
           const d = await res.json();
           if (d.error) {
-            settle(esc('出错：' + d.error));
+            settle('出错：' + d.error);
           } else {
-            settle(esc(d.record.reply));
+            settle(d.record.reply);
             if (d.record && d.record.turn != null) _renderedTurns.add(d.record.turn); // 手动发的记下 turn，避免 pollChat 重复渲染
             renderXray(d.record);
             if (d.logFile) $('logfile').textContent = d.logFile;
             loadSessions(); // 发出首句后本会话才进入列表；刷新轮数与高亮状态
           }
         } catch (e) {
-          settle(esc('没连上，你的话已经存下了，稍后再试试。'));
+          settle('没连上，你的话已经存下了，稍后再试试。');
         } finally {
           el.disabled = false;
           el.focus();
@@ -4431,21 +4455,20 @@
             const item = document.createElement('div');
             item.className = 'sess-item' + (s.current ? ' current' : '');
             const prev = (s.preview || '').trim() || '（空对话）';
-            item.innerHTML =
-              '<div class="sess-prev"></div><div class="sess-meta">' +
-              (s.turnCount || 0) +
-              ' 轮</div>';
-            item.querySelector('.sess-prev').textContent = prev; // textContent 防 XSS（preview 是用户原话）
+            item.append(
+              domEl('div', 'sess-prev', prev),
+              domEl('div', 'sess-meta', `${s.turnCount ?? 0} 轮`),
+            );
             item.title = prev;
-            item.onclick = () => openSessionUI(s.sessionId);
+            item.addEventListener('click', () => openSessionUI(s.sessionId));
             const arch = document.createElement('button');
             arch.className = 'sess-arch';
             arch.textContent = '归档';
             arch.title = '归档这段对话（从列表收起，数据不删、可恢复）';
-            arch.onclick = (e) => {
+            arch.addEventListener('click', (e) => {
               e.stopPropagation();
               archiveSession(s.sessionId);
-            }; // 别触发打开会话
+            }); // 别触发打开会话
             item.appendChild(arch);
             host.appendChild(item);
           }
@@ -4763,10 +4786,10 @@
         const box = $('bundleImportBox');
         if (!box) return;
         box.style.display = 'block';
-        box.innerHTML =
-          '<div class="evjson" style="border-color:var(--danger); color:var(--danger);">✕ ' +
-          esc(msg) +
-          '</div>';
+        const error = domEl('div', 'evjson', `✕ ${msg}`);
+        error.style.borderColor = 'var(--danger)';
+        error.style.color = 'var(--danger)';
+        box.replaceChildren(error);
       }
 
       // 渲染 dryRun 计划 / merge 结果。done=false 时（且合法）给「确认合并导入」按钮。
@@ -4774,81 +4797,51 @@
         const box = $('bundleImportBox');
         if (!box) return;
         box.style.display = 'block';
-        const c = plan.counts,
-          d = plan.duplicates;
-        const rows = [];
-        rows.push(
-          '<div style="font-weight:600; margin-bottom:6px;">' +
-            (done ? '✓ 导入结果' : '导入试算（dryRun · 尚未写入）') +
-            '：' +
-            esc(fileName || '') +
-            '</div>',
+        const c = plan.counts || {},
+          d = plan.duplicates || {};
+        const output = domEl('div', 'evjson');
+        const heading = domEl(
+          'div',
+          '',
+          `${done ? '✓ 导入结果' : '导入试算（dryRun · 尚未写入）'}：${fileName || ''}`,
         );
-        // 合法性
-        if (plan.valid) {
-          rows.push(
-            '<div class="pill" style="border-color:var(--ok); color:var(--ok);">合法：是</div>',
-          );
-        } else {
-          rows.push(
-            '<div class="pill" style="border-color:var(--danger); color:var(--danger);">合法：否（不可导入）</div>',
-          );
-        }
-        // 计数
-        rows.push(
-          '<div style="margin-top:6px; font-size:var(--fs-sm);">' +
-            (done ? '已写入' : '将写入') +
-            '：' +
-            '原话 <b>' +
-            c.evidence +
-            '</b> · 经历 <b>' +
-            c.events +
-            '</b> · 理解 <b>' +
-            c.cognitions +
-            '</b>' +
-            '（关联：事件↔证据 ' +
-            c.eventEvidence +
-            ' / 认知↔证据 ' +
-            c.cognitionEvidence +
-            '）</div>',
+        heading.style.cssText = 'font-weight:600; margin-bottom:6px;';
+        output.appendChild(heading);
+        const validity = pill(plan.valid ? '合法：是' : '合法：否（不可导入）');
+        validity.style.borderColor = plan.valid ? 'var(--ok)' : 'var(--danger)';
+        validity.style.color = plan.valid ? 'var(--ok)' : 'var(--danger)';
+        output.appendChild(validity);
+        const counts = domEl(
+          'div',
+          '',
+          `${done ? '已写入' : '将写入'}：原话 ${c.evidence ?? ''} · 经历 ${c.events ?? ''} · 理解 ${c.cognitions ?? ''}（关联：事件↔证据 ${c.eventEvidence ?? ''} / 认知↔证据 ${c.cognitionEvidence ?? ''}）`,
         );
-        // 重复（已存在、跳过）
-        const dupTotal = (d.evidence || 0) + (d.events || 0) + (d.cognitions || 0);
-        if (dupTotal > 0) {
-          rows.push(
-            '<div style="margin-top:4px; font-size:var(--fs-sm); color:var(--muted);">' +
-              '重复跳过（已存在）：原话 ' +
-              d.evidence +
-              ' · 经历 ' +
-              d.events +
-              ' · 理解 ' +
-              d.cognitions +
-              '</div>',
+        counts.style.cssText = 'margin-top:6px; font-size:var(--fs-sm);';
+        output.appendChild(counts);
+        const duplicateValues = [d.evidence, d.events, d.cognitions].map(
+          (value) => Number(value) || 0,
+        );
+        if (duplicateValues.some((value) => value > 0)) {
+          const duplicates = domEl(
+            'div',
+            '',
+            `重复跳过（已存在）：原话 ${d.evidence ?? ''} · 经历 ${d.events ?? ''} · 理解 ${d.cognitions ?? ''}`,
           );
+          duplicates.style.cssText = 'margin-top:4px; font-size:var(--fs-sm); color:var(--muted);';
+          output.appendChild(duplicates);
         }
-        // 错误
-        if (plan.errors && plan.errors.length) {
-          rows.push(
-            '<div style="margin-top:8px; font-size:var(--fs-sm); color:var(--danger); font-weight:600;">错误：</div>',
-          );
-          rows.push(
-            '<ul style="margin:2px 0 0; padding-left:18px; font-size:var(--fs-xs); color:var(--danger);">' +
-              plan.errors.map((e) => '<li>' + esc(e) + '</li>').join('') +
-              '</ul>',
-          );
-        }
-        // 警告
-        if (plan.warnings && plan.warnings.length) {
-          rows.push(
-            '<div style="margin-top:8px; font-size:var(--fs-sm); color:var(--muted); font-weight:600;">警告：</div>',
-          );
-          rows.push(
-            '<ul style="margin:2px 0 0; padding-left:18px; font-size:var(--fs-xs); color:var(--muted);">' +
-              plan.warnings.map((w) => '<li>' + esc(w) + '</li>').join('') +
-              '</ul>',
-          );
-        }
-        box.innerHTML = '<div class="evjson">' + rows.join('') + '</div>';
+        const appendNotes = (title, items, color) => {
+          if (!Array.isArray(items) || !items.length) return;
+          const label = domEl('div', '', title);
+          label.style.cssText = `margin-top:8px; font-size:var(--fs-sm); color:${color}; font-weight:600;`;
+          const list = document.createElement('ul');
+          list.style.cssText = `margin:2px 0 0; padding-left:18px; font-size:var(--fs-xs); color:${color};`;
+          for (const item of items) list.appendChild(domEl('li', '', item));
+          output.append(label, list);
+        };
+        appendNotes('错误：', plan.errors, 'var(--danger)');
+        appendNotes('警告：', plan.warnings, 'var(--muted)');
+        box.replaceChildren(output);
         // 试算合法且尚未写入 → 给「确认合并导入」按钮；非法则不给（不让走 merge）。
         if (!done && plan.valid) {
           const bar = document.createElement('div');
@@ -4856,15 +4849,13 @@
           const ok = document.createElement('button');
           ok.className = 'primary';
           ok.textContent = '确认合并导入';
-          ok.onclick = () => {
-            bundleMerge(bundle, fileName);
-          };
+          ok.addEventListener('click', () => bundleMerge(bundle, fileName));
           const cancel = document.createElement('button');
           cancel.textContent = '取消';
-          cancel.onclick = () => {
+          cancel.addEventListener('click', () => {
             box.style.display = 'none';
             box.innerHTML = '';
-          };
+          });
           bar.appendChild(ok);
           bar.appendChild(cancel);
           box.appendChild(bar);
@@ -4941,130 +4932,135 @@
           byGroup[g].push(item);
         }
         // 每个 group 包成一个可折叠 <details class="acc">：标题=大白话组名+项数，点开才露出该组旋钮。
-        // 内层仍用原来的 .cfg-group 包（renderCfgRow 不变），设置面板 CSS 把 .cfg-group 的重复标题/边框隐掉。
-        box.innerHTML = groups
-          .map((g) => {
-            const label = _CFG_GROUP_LABEL[g] || g;
-            const open = _CFG_GROUP_DEFAULT_OPEN[g] ? ' open' : '';
-            return (
-              '<details class="acc"' +
-              open +
-              ' data-cfggroup="' +
-              esc(g) +
-              '">' +
-              '<summary><span class="chev">▸</span><span class="acc-ttl">' +
-              esc(label) +
-              '</span>' +
-              '<span class="acc-count">' +
-              byGroup[g].length +
-              ' 项</span></summary>' +
-              '<div class="acc-body">' +
-              '<div class="cfg-group">' +
-              byGroup[g].map(renderCfgRow).join('') +
-              '</div>' +
-              '</div>' +
-              '</details>'
-            );
-          })
-          .join('');
+        // 内层仍用原来的 .cfg-group 包，设置面板 CSS 把 .cfg-group 的重复标题/边框隐掉。
+        // 元数据可能来自异步模块；不要用字符串拼属性或内联事件，全部交给 DOM API 赋值。
+        const fragment = document.createDocumentFragment();
+        for (const g of groups) {
+          const label = _CFG_GROUP_LABEL[g] || g;
+          const details = document.createElement('details');
+          details.className = 'acc';
+          details.open = Boolean(_CFG_GROUP_DEFAULT_OPEN[g]);
+          details.dataset.cfggroup = g;
+
+          const summary = document.createElement('summary');
+          const chev = document.createElement('span');
+          chev.className = 'chev';
+          chev.textContent = '▸';
+          const title = document.createElement('span');
+          title.className = 'acc-ttl';
+          title.textContent = label;
+          const count = document.createElement('span');
+          count.className = 'acc-count';
+          count.textContent = `${byGroup[g].length} 项`;
+          summary.append(chev, title, count);
+
+          const body = document.createElement('div');
+          body.className = 'acc-body';
+          const group = document.createElement('div');
+          group.className = 'cfg-group';
+          for (const item of byGroup[g]) group.appendChild(renderCfgRow(item));
+          body.appendChild(group);
+          details.append(summary, body);
+          fragment.appendChild(details);
+        }
+        box.replaceChildren(fragment);
       }
       window.renderCfgKnobs = renderCfgKnobs;
 
-      // 渲染一行：label + 控件（按 control 类型）+ 灰字 hint。控件 id 用 'cfg::'+path，便于回填"已生效"提示。
+      // 渲染一行：label + 控件（按 control 类型）+ 灰字 hint。
       function renderCfgRow(item) {
-        const path = item.path;
-        const rowId = 'cfgrow::' + path;
+        const path = String(item.path || '');
         const cur = getByPath(window._cfg, path); // readonly 特例（如 _temperature）取不到值也没关系
-        let ctrl = '';
-        const pathAttr = esc(path).replace(/'/g, "\\'"); // 传进内联 onchange 的字符串
+        const row = document.createElement('div');
+        row.className = 'cfg-row';
+        row.dataset.path = path;
+        const line = document.createElement('div');
+        line.className = 'cfg-line';
+        const label = document.createElement('span');
+        label.className = 'cfg-label';
+        label.textContent = item.label || path;
+        const ctrl = document.createElement('span');
+        ctrl.className = 'cfg-ctrl';
+        const saved = document.createElement('span');
+        saved.className = 'cfg-saved';
 
         if (item.control === 'readonly') {
           // 只读灰行（如温度硬编码）：不发任何请求。当前值取不到就显示元数据本身没有值。
-          const shown = cur == null ? '' : esc(String(cur));
-          ctrl = '<span class="cfg-readonly">' + (shown || '（只读）') + '</span>';
+          const shown = document.createElement('span');
+          shown.className = 'cfg-readonly';
+          shown.textContent = cur == null ? '（只读）' : String(cur);
+          ctrl.appendChild(shown);
         } else if (item.control === 'slider') {
           const v = Number(cur);
-          ctrl =
-            '<input type="range" min="' +
-            item.min +
-            '" max="' +
-            item.max +
-            '" step="' +
-            item.step +
-            '" value="' +
-            v +
-            '" ' +
-            'oninput="cfgSlideEcho(this,\'' +
-            pathAttr +
-            '\')" onchange="setCfg(\'' +
-            pathAttr +
-            '\', Number(this.value))" />' +
-            '<span class="cfg-val" id="cfgval::' +
-            esc(path) +
-            '">' +
-            v +
-            '</span>';
+          const input = document.createElement('input');
+          input.type = 'range';
+          input.min = String(item.min);
+          input.max = String(item.max);
+          input.step = String(item.step);
+          input.value = String(v);
+          const value = document.createElement('span');
+          value.className = 'cfg-val';
+          value.textContent = String(v);
+          input.addEventListener('input', () => cfgSlideEcho(input, value));
+          input.addEventListener('change', () => setCfg(path, Number(input.value), row));
+          ctrl.append(input, value);
         } else if (item.control === 'number') {
           const v = Number(cur);
-          ctrl =
-            '<input type="number" ' +
-            (item.min != null ? 'min="' + item.min + '" ' : '') +
-            (item.max != null ? 'max="' + item.max + '" ' : '') +
-            (item.step != null ? 'step="' + item.step + '" ' : '') +
-            'value="' +
-            v +
-            '" ' +
-            'onchange="setCfg(\'' +
-            pathAttr +
-            '\', Number(this.value))" />';
+          const input = document.createElement('input');
+          input.type = 'number';
+          if (item.min != null) input.min = String(item.min);
+          if (item.max != null) input.max = String(item.max);
+          if (item.step != null) input.step = String(item.step);
+          input.value = String(v);
+          input.addEventListener('change', () => setCfg(path, Number(input.value), row));
+          ctrl.appendChild(input);
         } else if (item.control === 'toggle') {
-          ctrl =
-            '<label style="font-size:12px;"><input type="checkbox" ' +
-            (cur ? 'checked' : '') +
-            ' ' +
-            'onchange="setCfg(\'' +
-            pathAttr +
-            '\', this.checked)" /> ' +
-            (cur ? '开' : '关') +
-            '</label>';
+          const toggle = document.createElement('label');
+          toggle.style.fontSize = '12px';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = Boolean(cur);
+          const state = document.createTextNode(cur ? ' 开' : ' 关');
+          input.addEventListener('change', () => {
+            state.data = input.checked ? ' 开' : ' 关';
+            setCfg(path, input.checked, row);
+          });
+          toggle.append(input, state);
+          ctrl.appendChild(toggle);
         } else if (item.control === 'select') {
-          const opts = (item.options || [])
-            .map(
-              (o) =>
-                '<option value="' +
-                esc(String(o)) +
-                '"' +
-                (String(cur) === String(o) ? ' selected' : '') +
-                '>' +
-                esc(String(o)) +
-                '</option>',
-            )
-            .join('');
-          ctrl =
-            '<select onchange="setCfg(\'' + pathAttr + '\', this.value)">' + opts + '</select>';
+          const select = document.createElement('select');
+          for (const optionValue of item.options || []) {
+            const option = document.createElement('option');
+            option.value = String(optionValue);
+            option.textContent = String(optionValue);
+            option.selected = String(cur) === String(optionValue);
+            select.appendChild(option);
+          }
+          select.addEventListener('change', () => setCfg(path, select.value, row));
+          ctrl.appendChild(select);
         } else if (item.control === 'tags') {
           // 一组 checkbox：勾选集合即数组。onchange 时收集本行所有勾选项。
           const curArr = Array.isArray(cur) ? cur.map(String) : [];
-          const boxes = (item.options || [])
-            .map((o) => {
-              const val = esc(String(o));
-              return (
-                '<label><input type="checkbox" value="' +
-                val +
-                '" ' +
-                (curArr.includes(String(o)) ? 'checked' : '') +
-                ' ' +
-                'onchange="setCfgTags(\'' +
-                pathAttr +
-                '\', this)" /> ' +
-                val +
-                '</label>'
-              );
-            })
-            .join('');
-          ctrl = '<div class="cfg-tags" data-tagpath="' + esc(path) + '">' + boxes + '</div>';
+          const tags = document.createElement('div');
+          tags.className = 'cfg-tags';
+          tags.dataset.tagpath = path;
+          for (const optionValue of item.options || []) {
+            const option = String(optionValue);
+            const tag = document.createElement('label');
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.value = option;
+            input.checked = curArr.includes(option);
+            input.addEventListener('change', () => setCfgTags(path, input, row));
+            tag.append(input, document.createTextNode(` ${option}`));
+            tags.appendChild(tag);
+          }
+          ctrl.appendChild(tags);
         } else {
-          ctrl = '<span class="cfg-readonly">（未知控件）</span>';
+          const unknown = document.createElement('span');
+          unknown.className = 'cfg-readonly';
+          unknown.textContent = '（未知控件）';
+          ctrl.appendChild(unknown);
         }
 
         // hint：workingMemory.maxTurns 额外加醒目一句（改这项要点＋新会话才生效）。
@@ -5074,56 +5070,38 @@
           hint = hint + '　⚠ 改这项要点＋新会话才生效（其余即时生效）。';
           hintClass = 'cfg-hint strong';
         }
-
-        return (
-          '<div class="cfg-row" id="' +
-          esc(rowId) +
-          '">' +
-          '<div class="cfg-line">' +
-          '<span class="cfg-label">' +
-          esc(item.label || path) +
-          '</span>' +
-          '<span class="cfg-ctrl">' +
-          ctrl +
-          '</span>' +
-          '<span class="cfg-saved" id="cfgsaved::' +
-          esc(path) +
-          '"></span>' +
-          '</div>' +
-          '<div class="' +
-          hintClass +
-          '">' +
-          esc(hint) +
-          '</div>' +
-          '</div>'
-        );
+        const hintEl = document.createElement('div');
+        hintEl.className = hintClass;
+        hintEl.textContent = hint;
+        line.append(label, ctrl, saved);
+        row.append(line, hintEl);
+        return row;
       }
 
       // 滑块拖动时实时回显数值（只更新旁边数字，不发请求；松手 onchange 才 setCfg）。
-      function cfgSlideEcho(el, path) {
-        const v = $('cfgval::' + path);
-        if (v) v.textContent = el.value;
+      function cfgSlideEcho(el, valueEl) {
+        valueEl.textContent = el.value;
       }
 
       // tags 控件：收集本行所有勾选的 checkbox → 数组 → setCfg。
-      function setCfgTags(path, el) {
+      function setCfgTags(path, el, row) {
         const wrap = el.closest('.cfg-tags');
         const vals = wrap
           ? Array.from(wrap.querySelectorAll('input[type=checkbox]:checked')).map((c) => c.value)
           : [];
-        setCfg(path, vals);
+        setCfg(path, vals, row);
       }
 
       // 改一个字段 → POST /api/config → 成功则同步 _cfg + 给该行"已生效"短提示。
       // value 类型已由各控件 onchange 转好（Number/boolean/数组/字符串），后端原样写入。
-      async function setCfg(path, value) {
+      async function setCfg(path, value, row) {
+        const saved = row ? row.querySelector('.cfg-saved') : null;
         try {
           const r = await fetch('/api/config', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path, value }),
           }).then((x) => x.json());
-          const saved = $('cfgsaved::' + path);
           if (r.error) {
             if (saved) {
               saved.style.color = 'var(--warn)';
@@ -5140,7 +5118,6 @@
             }, 1500);
           }
         } catch (e) {
-          const saved = $('cfgsaved::' + path);
           if (saved) {
             saved.style.color = 'var(--warn)';
             saved.textContent = '失败：' + String(e);
@@ -5180,42 +5157,32 @@
           box.innerHTML = '<span class="empty">（证据库为空）</span>';
           return;
         }
-        box.innerHTML = _ev
-          .map(
-            (e) =>
-              '<div class="evrow">' +
-              '<div><b>' +
-              esc(e.summary) +
-              '</b> <span class="evmeta">' +
-              esc(e.sourceKind) +
-              ' · ' +
-              esc(String(e.occurredAt).slice(0, 16).replace('T', ' ')) +
-              ' · cloud=' +
-              e.allowCloudRead +
-              '</span></div>' +
-              '<div class="evbtns">' +
-              '<button onclick="toggleJson(\'' +
-              e.id +
-              '\')">原始 JSON</button>' +
-              '<button onclick="editEvidence(\'' +
-              e.id +
-              '\')">改 summary</button>' +
-              '<button onclick="delEvidence(\'' +
-              e.id +
-              '\')">删</button>' +
-              '</div>' +
-              '<pre class="evjson" id="json-' +
-              e.id +
-              '" style="display:none">' +
-              esc(JSON.stringify(e, null, 2)) +
-              '</pre>' +
-              '</div>',
-          )
-          .join('');
-      }
-      function toggleJson(id) {
-        const el = document.getElementById('json-' + id);
-        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        const fragment = document.createDocumentFragment();
+        for (const evidence of _ev) {
+          const row = domEl('div', 'evrow');
+          const head = domEl('div');
+          head.append(domEl('b', '', evidence.summary), document.createTextNode(' '));
+          head.appendChild(
+            domEl(
+              'span',
+              'evmeta',
+              `${evidence.sourceKind} · ${String(evidence.occurredAt).slice(0, 16).replace('T', ' ')} · cloud=${evidence.allowCloudRead}`,
+            ),
+          );
+          const actions = domEl('div', 'evbtns');
+          const raw = domEl('pre', 'evjson', JSON.stringify(evidence, null, 2));
+          raw.style.display = 'none';
+          actions.append(
+            button('原始 JSON', () => {
+              raw.style.display = raw.style.display === 'none' ? 'block' : 'none';
+            }),
+            button('改 summary', () => editEvidence(evidence.id)),
+            button('删', () => delEvidence(evidence.id)),
+          );
+          row.append(head, actions, raw);
+          fragment.appendChild(row);
+        }
+        box.replaceChildren(fragment);
       }
       async function editEvidence(id) {
         const e = _ev.find((x) => x.id === id);
@@ -5293,56 +5260,42 @@
           box.innerHTML = '<span class="empty">（画像为空，先聊几句再生成）</span>';
           return;
         }
-        box.innerHTML =
-          COG_LEGEND +
-          _cog
-            .map((c) => {
-              const dead = !!c.invalidAt;
-              return (
-                '<div class="evrow"' +
-                (dead ? ' style="opacity:.5"' : '') +
-                '>' +
-                '<div><b' +
-                (dead ? ' style="text-decoration:line-through"' : '') +
-                '>' +
-                esc(c.content) +
-                '</b>' +
-                (dead ? ' <span class="pill warn">已失效</span>' : '') +
-                '</div>' +
-                '<div style="margin-top:4px;">' +
-                '<span class="pill">' +
-                (TYPE_CN[c.contentType] || c.contentType) +
-                '</span>' +
-                '<span class="pill">' +
-                (FORMED_CN[c.formedBy] || c.formedBy) +
-                '</span>' +
-                '<span class="pill" title="原始置信→时间衰减后的有效置信">置信 ' +
-                c.confidence +
-                (c.effectiveConfidence != null && c.effectiveConfidence < c.confidence
-                  ? ' → ' + c.effectiveConfidence
-                  : '') +
-                '</span>' +
-                '<span class="pill ' +
-                (c.credStatus === 'conflicted' ? 'warn' : c.credStatus === 'stable' ? 'ok' : '') +
-                '">' +
-                (STATUS_CN[c.credStatus] || c.credStatus) +
-                '</span>' +
-                '<span class="evmeta">证据×' +
-                (c.sources ? c.sources.length : 0) +
-                '</span>' +
-                '</div>' +
-                '<div class="evbtns">' +
-                '<button onclick="editCog(\'' +
-                c.id +
-                '\')">改</button>' +
-                '<button onclick="delCog(\'' +
-                c.id +
-                '\')">删</button>' +
-                '</div>' +
-                '</div>'
-              );
-            })
-            .join('');
+        box.innerHTML = COG_LEGEND; // 常量说明文字；下面的 API 数据仅以 DOM 文本节点插入。
+        const fragment = document.createDocumentFragment();
+        for (const cognition of _cog) {
+          const dead = Boolean(cognition.invalidAt);
+          const row = domEl('div', 'evrow');
+          if (dead) row.style.opacity = '.5';
+          const head = domEl('div');
+          const content = domEl('b', '', cognition.content);
+          if (dead) content.style.textDecoration = 'line-through';
+          head.appendChild(content);
+          if (dead) head.append(document.createTextNode(' '), pill('已失效', 'warn'));
+          const meta = domEl('div');
+          meta.style.marginTop = '4px';
+          const confidence = `置信 ${cognition.confidence}${cognition.effectiveConfidence != null && cognition.effectiveConfidence < cognition.confidence ? ` → ${cognition.effectiveConfidence}` : ''}`;
+          const statusClass =
+            cognition.credStatus === 'conflicted'
+              ? 'warn'
+              : cognition.credStatus === 'stable'
+                ? 'ok'
+                : '';
+          meta.append(
+            pill(enumText(TYPE_CN, cognition.contentType)),
+            pill(enumText(FORMED_CN, cognition.formedBy)),
+            pill(confidence),
+            pill(enumText(STATUS_CN, cognition.credStatus), statusClass),
+            domEl('span', 'evmeta', `证据×${cognition.sources ? cognition.sources.length : 0}`),
+          );
+          const actions = domEl('div', 'evbtns');
+          actions.append(
+            button('改', () => editCog(cognition.id)),
+            button('删', () => delCog(cognition.id)),
+          );
+          row.append(head, meta, actions);
+          fragment.appendChild(row);
+        }
+        box.appendChild(fragment);
       }
       async function editCog(id) {
         const c = _cog.find((x) => x.id === id);
@@ -5446,27 +5399,37 @@
             '条（模型' +
             r.llmCalls +
             '次）';
-          $('hypolist').innerHTML =
-            r.hypotheses
-              .map(
-                (h) =>
-                  '<div class="evrow"><div><span class="pill warn">假设</span> <b>' +
-                  esc(h.cognition.content) +
-                  '</b></div>' +
-                  '<div style="margin-top:4px;"><span class="pill">置信 ' +
-                  h.cognition.confidence +
-                  '</span>' +
-                  '<span class="pill">' +
-                  (STATUS_CN[h.cognition.credStatus] || h.cognition.credStatus) +
-                  '</span>' +
-                  '<span class="evmeta">解释：' +
-                  esc(h.phenomenon) +
-                  ' · 依据证据×' +
-                  h.basedOnEvidenceIds.length +
-                  '</span></div></div>',
-              )
-              .join('') ||
-            '<span class="empty">没产出假设（现象之外没有可推断的证据，或已归因过）。</span>';
+          const hypotheses = $('hypolist');
+          if (!r.hypotheses.length) {
+            hypotheses.replaceChildren(
+              emptyNode('没产出假设（现象之外没有可推断的证据，或已归因过）。'),
+            );
+          } else {
+            const fragment = document.createDocumentFragment();
+            for (const hypothesis of r.hypotheses) {
+              const row = domEl('div', 'evrow');
+              const head = domEl('div');
+              head.append(
+                pill('假设', 'warn'),
+                document.createTextNode(' '),
+                domEl('b', '', hypothesis.cognition.content),
+              );
+              const meta = domEl('div');
+              meta.style.marginTop = '4px';
+              meta.append(
+                pill(`置信 ${hypothesis.cognition.confidence}`),
+                pill(enumText(STATUS_CN, hypothesis.cognition.credStatus)),
+                domEl(
+                  'span',
+                  'evmeta',
+                  `解释：${hypothesis.phenomenon} · 依据证据×${hypothesis.basedOnEvidenceIds.length}`,
+                ),
+              );
+              row.append(head, meta);
+              fragment.appendChild(row);
+            }
+            hypotheses.replaceChildren(fragment);
+          }
           loadCognition();
         } catch (e) {
           $('attrstatus').textContent = ' 失败：' + String(e);
@@ -5490,46 +5453,47 @@
               '<span class="empty">当前没有可问的（无将信将疑的假设，也无待复看的冲突）。</span>';
             return;
           }
-          $('asklist').innerHTML = r.proposals
-            .map((p, i) => {
-              const tag =
-                p.kind === 'conflict'
-                  ? '<span class="pill warn">复看冲突</span>'
-                  : '<span class="pill">求证假设</span>';
-              const contra =
-                p.contradictEvidence && p.contradictEvidence.length
-                  ? '<div style="margin-top:3px;"><span class="evmeta">反对：</span>' +
-                    p.contradictEvidence
-                      .map((e) => '<span class="pill warn">' + esc(e.summary) + '</span>')
-                      .join('') +
-                    '</div>'
-                  : '';
-              return (
-                '<div class="evrow"><div>' +
-                tag +
-                ' <b>' +
-                esc(p.question) +
-                '</b></div>' +
-                '<div style="margin-top:4px;"><span class="evmeta">针对：' +
-                esc(p.hypothesis) +
-                ' · 把握度 ' +
-                p.confidence +
-                '/' +
-                (STATUS_CN[p.credStatus] || p.credStatus) +
-                '</span></div>' +
-                '<div style="margin-top:4px;">' +
-                (p.kind === 'conflict' ? '<span class="evmeta">支撑：</span>' : '') +
-                (p.evidence || [])
-                  .map((e) => '<span class="pill">' + esc(e.summary) + '</span>')
-                  .join('') +
-                '</div>' +
-                contra +
-                '<div class="evbtns"><button onclick="askInChat(' +
-                i +
-                ')">替宿主发问 →</button></div></div>'
-              );
-            })
-            .join('');
+          const proposalList = $('asklist');
+          const fragment = document.createDocumentFragment();
+          for (const [index, proposal] of r.proposals.entries()) {
+            const row = domEl('div', 'evrow');
+            const head = domEl('div');
+            head.append(
+              pill(
+                proposal.kind === 'conflict' ? '复看冲突' : '求证假设',
+                proposal.kind === 'conflict' ? 'warn' : '',
+              ),
+              document.createTextNode(' '),
+              domEl('b', '', proposal.question),
+            );
+            const context = domEl('div');
+            context.style.marginTop = '4px';
+            context.appendChild(
+              domEl(
+                'span',
+                'evmeta',
+                `针对：${proposal.hypothesis} · 把握度 ${proposal.confidence}/${enumText(STATUS_CN, proposal.credStatus)}`,
+              ),
+            );
+            const evidence = domEl('div');
+            evidence.style.marginTop = '4px';
+            if (proposal.kind === 'conflict')
+              evidence.appendChild(domEl('span', 'evmeta', '支撑：'));
+            for (const item of proposal.evidence || []) evidence.appendChild(pill(item.summary));
+            if (proposal.contradictEvidence && proposal.contradictEvidence.length) {
+              const contrary = domEl('div');
+              contrary.style.marginTop = '3px';
+              contrary.appendChild(domEl('span', 'evmeta', '反对：'));
+              for (const item of proposal.contradictEvidence)
+                contrary.appendChild(pill(item.summary, 'warn'));
+              row.append(head, context, evidence, contrary);
+            } else row.append(head, context, evidence);
+            const actions = domEl('div', 'evbtns');
+            actions.appendChild(button('替宿主发问 →', () => askInChat(index)));
+            row.appendChild(actions);
+            fragment.appendChild(row);
+          }
+          proposalList.replaceChildren(fragment);
           window._proposals = r.proposals;
         } catch (e) {
           $('askstatus').textContent = ' 失败：' + String(e);
@@ -5564,19 +5528,21 @@
           box.innerHTML = '<span class="empty">（还没有事件，先聊几句再整理）</span>';
           return;
         }
-        box.innerHTML = list
-          .map(
-            (e) =>
-              '<div class="evrow"><div><b>' +
-              esc(e.summary) +
-              '</b></div>' +
-              '<div class="evmeta">' +
-              esc(String(e.occurredAt).slice(0, 16).replace('T', ' ')) +
-              ' · 覆盖原话×' +
-              (e.evidenceIds ? e.evidenceIds.length : 0) +
-              '</div></div>',
-          )
-          .join('');
+        const fragment = document.createDocumentFragment();
+        for (const event of list) {
+          const row = domEl('div', 'evrow');
+          row.append(
+            domEl('div', '', null),
+            domEl(
+              'div',
+              'evmeta',
+              `${String(event.occurredAt).slice(0, 16).replace('T', ' ')} · 覆盖原话×${event.evidenceIds ? event.evidenceIds.length : 0}`,
+            ),
+          );
+          row.firstChild.appendChild(domEl('b', '', event.summary));
+          fragment.appendChild(row);
+        }
+        box.replaceChildren(fragment);
       }
 
       // ══════════════════════════════════════════════════════════════════
@@ -5715,109 +5681,81 @@
         });
       }
 
-      // 中列表：按当前视图渲染认知卡片 / 证据行。invalid 的标灰（.dead）。
+      // 中列表：导入数据（含 id、枚举、数字、时间）全部用 textContent / 事件闭包渲染。
       function mmRenderList() {
         const box = $('mmList'),
           cnt = $('mmCount');
         if (!box) return;
-        if (MM.view === 'cognition') {
-          const rows = mmFilteredCog();
-          if (cnt) cnt.textContent = '认知 ' + rows.length + ' / ' + MM.cog.length + ' 条';
-          if (!rows.length) {
-            box.innerHTML =
-              '<div class="empty" style="padding:14px;">' +
-              (MM.cog.length
-                ? '没有匹配当前筛选的认知。'
-                : '（还没有认知——先聊几句、让后台整理出画像）') +
-              '</div>';
-            return;
-          }
-          box.innerHTML = rows
-            .map((c) => {
-              const dead = !!c.invalidAt;
-              const sel = MM.selKind === 'cog' && MM.selId === c.id;
-              return (
-                '<div class="mm-item' +
-                (dead ? ' dead' : '') +
-                (sel ? ' sel' : '') +
-                "\" onclick=\"mmSelect('cog','" +
-                c.id +
-                '\')">' +
-                '<div class="tt">' +
-                esc(c.content) +
-                '</div>' +
-                '<div class="meta">' +
-                '<span class="pill">' +
-                (TYPE_CN[c.contentType] || c.contentType) +
-                '</span>' +
-                '<span class="pill">' +
-                (FORMED_CN[c.formedBy] || c.formedBy) +
-                '</span>' +
-                '<span class="pill" title="原始置信→时间衰减后的有效置信">置信 ' +
-                c.confidence +
-                (c.effectiveConfidence != null && c.effectiveConfidence < c.confidence
-                  ? ' → ' + c.effectiveConfidence
-                  : '') +
-                '</span>' +
-                '<span class="pill ' +
-                (c.credStatus === 'conflicted' ? 'warn' : c.credStatus === 'stable' ? 'ok' : '') +
-                '">' +
-                (STATUS_CN[c.credStatus] || c.credStatus) +
-                '</span>' +
-                (dead ? '<span class="pill danger">已失效</span>' : '') +
-                '<span class="evmeta">证据×' +
-                ((c.sources && c.sources.length) || 0) +
-                '</span>' +
-                '</div>' +
-                '</div>'
-              );
-            })
-            .join('');
-        } else {
-          const rows = mmFilteredEv();
-          if (cnt) cnt.textContent = '证据 ' + rows.length + ' / ' + MM.ev.length + ' 条';
-          if (!rows.length) {
-            box.innerHTML =
-              '<div class="empty" style="padding:14px;">' +
-              (MM.ev.length ? '没有匹配当前筛选的证据。' : '（证据库为空）') +
-              '</div>';
-            return;
-          }
-          box.innerHTML = rows
-            .map((e) => {
-              const sel = MM.selKind === 'ev' && MM.selId === e.id;
-              return (
-                '<div class="mm-item' +
-                (sel ? ' sel' : '') +
-                "\" onclick=\"mmSelect('ev','" +
-                e.id +
-                '\')">' +
-                '<div class="tt">' +
-                esc(e.summary) +
-                '</div>' +
-                '<div class="meta">' +
-                '<span class="pill">' +
-                (SOURCE_CN[e.sourceKind] || e.sourceKind) +
-                '</span>' +
-                '<span class="pill ' +
-                (e.allowCloudRead ? '' : 'warn') +
-                '">' +
-                (e.allowCloudRead ? '可上云' : '不上云') +
-                '</span>' +
-                '<span class="pill ' +
-                (e.allowInference ? '' : 'warn') +
-                '">' +
-                (e.allowInference ? '可推理' : '禁推理') +
-                '</span>' +
-                '<span class="evmeta">' +
-                esc(String(e.occurredAt).slice(0, 16).replace('T', ' ')) +
-                '</span>' +
-                '</div>' +
-                '</div>'
-              );
-            })
-            .join('');
+        const cognitionView = MM.view === 'cognition';
+        const rows = cognitionView ? mmFilteredCog() : mmFilteredEv();
+        const total = cognitionView ? MM.cog.length : MM.ev.length;
+        if (cnt)
+          cnt.textContent = `${cognitionView ? '认知' : '证据'} ${rows.length} / ${total} 条`;
+        if (!rows.length) {
+          const empty = domEl(
+            'div',
+            'empty',
+            total
+              ? `没有匹配当前筛选的${cognitionView ? '认知' : '证据'}。`
+              : cognitionView
+                ? '（还没有认知——先聊几句、让后台整理出画像）'
+                : '（证据库为空）',
+          );
+          empty.style.padding = '14px';
+          box.replaceChildren(empty);
+          return;
         }
+        const fragment = document.createDocumentFragment();
+        for (const entry of rows) {
+          const isCognition = cognitionView;
+          const selected = MM.selKind === (isCognition ? 'cog' : 'ev') && MM.selId === entry.id;
+          const item = domEl(
+            'div',
+            `mm-item${entry.invalidAt ? ' dead' : ''}${selected ? ' sel' : ''}`,
+          );
+          item.addEventListener('click', () => mmSelect(isCognition ? 'cog' : 'ev', entry.id));
+          item.appendChild(domEl('div', 'tt', isCognition ? entry.content : entry.summary));
+          const meta = domEl('div', 'meta');
+          if (isCognition) {
+            const confidence = `置信 ${entry.confidence}${entry.effectiveConfidence != null && entry.effectiveConfidence < entry.confidence ? ` → ${entry.effectiveConfidence}` : ''}`;
+            const statusClass =
+              entry.credStatus === 'conflicted'
+                ? 'warn'
+                : entry.credStatus === 'stable'
+                  ? 'ok'
+                  : '';
+            meta.append(
+              pill(enumText(TYPE_CN, entry.contentType)),
+              pill(enumText(FORMED_CN, entry.formedBy)),
+              pill(confidence),
+              pill(enumText(STATUS_CN, entry.credStatus), statusClass),
+            );
+            if (entry.invalidAt) meta.appendChild(pill('已失效', 'danger'));
+            meta.appendChild(
+              domEl(
+                'span',
+                'evmeta',
+                `证据×${Array.isArray(entry.sources) ? entry.sources.length : 0}`,
+              ),
+            );
+          } else {
+            meta.append(
+              pill(enumText(SOURCE_CN, entry.sourceKind)),
+              pill(entry.allowCloudRead ? '可上云' : '不上云', entry.allowCloudRead ? '' : 'warn'),
+              pill(entry.allowInference ? '可推理' : '禁推理', entry.allowInference ? '' : 'warn'),
+              domEl(
+                'span',
+                'evmeta',
+                String(entry.occurredAt ?? '')
+                  .slice(0, 16)
+                  .replace('T', ' '),
+              ),
+            );
+          }
+          item.appendChild(meta);
+          fragment.appendChild(item);
+        }
+        box.replaceChildren(fragment);
       }
 
       function mmSelect(kind, id) {
@@ -5828,17 +5766,18 @@
       }
 
       // 详情面板通用行 / 时间格式。
-      function mmRow(k, vHtml) {
-        return (
-          '<div class="row"><span class="k">' +
-          k +
-          '</span><span class="v">' +
-          (vHtml == null || vHtml === '' ? '<span class="empty">—</span>' : vHtml) +
-          '</span></div>'
-        );
+      function mmRow(k, value) {
+        const row = domEl('div', 'row');
+        const content = domEl('span', 'v');
+        row.appendChild(domEl('span', 'k', k));
+        if (value instanceof Node) content.appendChild(value);
+        else if (value == null || value === '') content.appendChild(emptyNode('—'));
+        else content.textContent = String(value);
+        row.appendChild(content);
+        return row;
       }
       function mmTime(iso) {
-        return iso ? esc(String(iso).slice(0, 19).replace('T', ' ')) : '';
+        return iso ? String(iso).slice(0, 19).replace('T', ' ') : '';
       }
 
       // 右详情：认知 → 全字段 + 来源链（evidenceId → 原话；再反查覆盖它的事件）+ 操作；
@@ -5846,10 +5785,17 @@
       function mmRenderDetail() {
         const box = $('mmDetail');
         if (!box) return;
-        const empty =
-          '<div class="empty" style="padding:10px 0;">点中间列表里的一条，这里显示全部字段、来源链和操作。</div>';
+        const empty = () => {
+          const node = domEl(
+            'div',
+            'empty',
+            '点中间列表里的一条，这里显示全部字段、来源链和操作。',
+          );
+          node.style.padding = '10px 0';
+          return node;
+        };
         if (!MM.selId) {
-          box.innerHTML = empty;
+          box.replaceChildren(empty());
           return;
         }
 
@@ -5858,123 +5804,114 @@
           if (!c) {
             MM.selKind = null;
             MM.selId = null;
-            box.innerHTML = empty;
+            box.replaceChildren(empty());
             return;
           }
           const dead = !!c.invalidAt;
           const isHypo = c.contentType === 'hypothesis';
-          // 来源链：每条 evidenceId 解出原话 + 反查覆盖它的事件；点击跳到该证据详情。
-          const srcHtml =
-            (c.sources || [])
-              .map((s) => {
-                const rel =
-                  s.relation === 'contradict'
-                    ? '<span class="pill warn">反对</span>'
-                    : '<span class="pill ok">支持</span>';
-                const e = mmEvById(s.evidenceId);
-                if (!e)
-                  return (
-                    '<div class="mm-src" style="cursor:default;">' +
-                    rel +
-                    ' <span class="evmeta">证据已被删除（' +
-                    esc(String(s.evidenceId).slice(0, 8)) +
-                    '…）</span></div>'
-                  );
-                const evts = MM.evt.filter((v) => (v.evidenceIds || []).includes(e.id));
-                return (
-                  '<div class="mm-src" onclick="mmSelect(\'ev\',\'' +
-                  e.id +
-                  '\')" title="点开这条证据的详情">' +
-                  rel +
-                  ' <span class="pill">' +
-                  (SOURCE_CN[e.sourceKind] || e.sourceKind) +
-                  '</span>' +
-                  (e.allowCloudRead ? '' : '<span class="pill warn">不上云</span>') +
-                  '<div class="raw">' +
-                  esc(e.rawContent) +
-                  '</div>' +
-                  '<div class="evmeta" style="margin-top:3px;">' +
-                  mmTime(e.occurredAt) +
-                  (evts.length
-                    ? ' · 归入事件：' + evts.map((v) => esc(v.summary)).join('；')
-                    : ' · 未归入事件') +
-                  '</div>' +
-                  '</div>'
-                );
-              })
-              .join('') || '<span class="empty">（没有挂证据——无法溯源的认知要多留个心眼）</span>';
-
-          box.innerHTML =
-            '<div style="font-size:var(--fs-body);font-weight:600;line-height:1.6;' +
-            (dead ? 'text-decoration:line-through;opacity:.6;' : '') +
-            '">' +
-            esc(c.content) +
-            '</div>' +
-            (dead
-              ? '<div style="margin-top:4px;"><span class="pill danger">已失效 ' +
-                mmTime(c.invalidAt) +
-                '</span></div>'
-              : '') +
-            '<div class="mm-actions">' +
-            '<button onclick="mmEditCog(\'' +
-            c.id +
-            '\')">改内容</button>' +
-            (!dead
-              ? '<button onclick="mmInvalidateCog(\'' +
-                c.id +
-                '\')">' +
-                (isHypo ? '否定假设（标失效）' : '标失效') +
-                '</button>'
-              : '') +
-            '<button class="danger" onclick="mmDeleteCog(\'' +
-            c.id +
-            '\')">删除</button>' +
-            '</div>' +
-            '<div class="mm-sec-title">全部字段</div>' +
-            mmRow(
-              '类型',
-              '<span class="pill">' +
-                (TYPE_CN[c.contentType] || c.contentType) +
-                '</span> ' +
-                esc(c.contentType),
-            ) +
-            mmRow(
-              '形成方式',
-              '<span class="pill">' +
-                (FORMED_CN[c.formedBy] || c.formedBy) +
-                '</span> ' +
-                esc(c.formedBy),
-            ) +
+          const fragment = document.createDocumentFragment();
+          const title = domEl('div', '', c.content);
+          title.style.cssText = 'font-size:var(--fs-body);font-weight:600;line-height:1.6;';
+          if (dead) title.style.cssText += 'text-decoration:line-through;opacity:.6;';
+          fragment.appendChild(title);
+          if (dead) {
+            const state = domEl('div');
+            state.style.marginTop = '4px';
+            state.appendChild(pill(`已失效 ${mmTime(c.invalidAt)}`, 'danger'));
+            fragment.appendChild(state);
+          }
+          const actions = domEl('div', 'mm-actions');
+          actions.appendChild(button('改内容', () => mmEditCog(c.id)));
+          if (!dead)
+            actions.appendChild(
+              button(isHypo ? '否定假设（标失效）' : '标失效', () => mmInvalidateCog(c.id)),
+            );
+          actions.appendChild(button('删除', () => mmDeleteCog(c.id), 'danger'));
+          fragment.append(actions, domEl('div', 'mm-sec-title', '全部字段'));
+          const type = document.createDocumentFragment();
+          type.append(
+            pill(enumText(TYPE_CN, c.contentType)),
+            document.createTextNode(` ${c.contentType ?? ''}`),
+          );
+          const formed = document.createDocumentFragment();
+          formed.append(
+            pill(enumText(FORMED_CN, c.formedBy)),
+            document.createTextNode(` ${c.formedBy ?? ''}`),
+          );
+          const status = document.createDocumentFragment();
+          status.append(
+            pill(
+              enumText(STATUS_CN, c.credStatus),
+              c.credStatus === 'conflicted' ? 'warn' : c.credStatus === 'stable' ? 'ok' : '',
+            ),
+            document.createTextNode(` ${c.credStatus ?? ''}`),
+          );
+          fragment.append(
+            mmRow('类型', type),
+            mmRow('形成方式', formed),
             mmRow(
               '置信',
-              c.confidence +
-                (c.effectiveConfidence != null
-                  ? '（衰减后有效 ' + c.effectiveConfidence + '）'
-                  : ''),
-            ) +
-            mmRow(
-              '可信状态',
-              '<span class="pill ' +
-                (c.credStatus === 'conflicted' ? 'warn' : c.credStatus === 'stable' ? 'ok' : '') +
-                '">' +
-                (STATUS_CN[c.credStatus] || c.credStatus) +
-                '</span> ' +
-                esc(c.credStatus),
-            ) +
-            mmRow('适用场景', c.scope ? esc(c.scope) : '<span class="empty">通用</span>') +
-            mmRow('生效于', mmTime(c.validAt)) +
+              `${c.confidence ?? ''}${c.effectiveConfidence != null ? `（衰减后有效 ${c.effectiveConfidence}）` : ''}`,
+            ),
+            mmRow('可信状态', status),
+            mmRow('适用场景', c.scope || null),
+            mmRow('生效于', mmTime(c.validAt)),
             mmRow(
               '失效于',
-              c.invalidAt
-                ? '<span class="pill danger">' + mmTime(c.invalidAt) + '</span>'
-                : '<span class="pill ok">仍有效</span>',
-            ) +
-            mmRow('问过用户', mmTime(c.askedAt)) +
-            mmRow('创建', mmTime(c.createdAt)) +
-            mmRow('更新', mmTime(c.updatedAt)) +
-            mmRow('id', '<code style="font-size:10.5px;">' + esc(c.id) + '</code>') +
-            '<div class="mm-sec-title">来源链（这条认知靠什么撑起来）</div>' +
-            srcHtml;
+              c.invalidAt ? pill(mmTime(c.invalidAt), 'danger') : pill('仍有效', 'ok'),
+            ),
+            mmRow('问过用户', mmTime(c.askedAt)),
+            mmRow('创建', mmTime(c.createdAt)),
+            mmRow('更新', mmTime(c.updatedAt)),
+            mmRow('id', domEl('code', '', c.id)),
+            domEl('div', 'mm-sec-title', '来源链（这条认知靠什么撑起来）'),
+          );
+          const sources = Array.isArray(c.sources) ? c.sources : [];
+          if (!sources.length)
+            fragment.appendChild(emptyNode('（没有挂证据——无法溯源的认知要多留个心眼）'));
+          for (const source of sources) {
+            const evidence = mmEvById(source.evidenceId);
+            const sourceRow = domEl('div', 'mm-src');
+            sourceRow.appendChild(
+              pill(
+                source.relation === 'contradict' ? '反对' : '支持',
+                source.relation === 'contradict' ? 'warn' : 'ok',
+              ),
+            );
+            if (!evidence) {
+              sourceRow.style.cursor = 'default';
+              sourceRow.append(
+                document.createTextNode(' '),
+                domEl(
+                  'span',
+                  'evmeta',
+                  `证据已被删除（${String(source.evidenceId ?? '').slice(0, 8)}…）`,
+                ),
+              );
+            } else {
+              sourceRow.title = '点开这条证据的详情';
+              sourceRow.addEventListener('click', () => mmSelect('ev', evidence.id));
+              sourceRow.append(
+                document.createTextNode(' '),
+                pill(enumText(SOURCE_CN, evidence.sourceKind)),
+              );
+              if (!evidence.allowCloudRead) sourceRow.appendChild(pill('不上云', 'warn'));
+              sourceRow.appendChild(domEl('div', 'raw', evidence.rawContent));
+              const events = MM.evt.filter(
+                (event) =>
+                  Array.isArray(event.evidenceIds) && event.evidenceIds.includes(evidence.id),
+              );
+              const meta = domEl(
+                'div',
+                'evmeta',
+                `${mmTime(evidence.occurredAt)}${events.length ? ` · 归入事件：${events.map((event) => String(event.summary ?? '')).join('；')}` : ' · 未归入事件'}`,
+              );
+              meta.style.marginTop = '3px';
+              sourceRow.appendChild(meta);
+            }
+            fragment.appendChild(sourceRow);
+          }
+          box.replaceChildren(fragment);
           return;
         }
 
@@ -5983,92 +5920,88 @@
         if (!e) {
           MM.selKind = null;
           MM.selId = null;
-          box.innerHTML = empty;
+          box.replaceChildren(empty());
           return;
         }
         const evts = MM.evt.filter((v) => (v.evidenceIds || []).includes(e.id));
         const citedBy = MM.cog.filter((c) => (c.sources || []).some((s) => s.evidenceId === e.id));
-        box.innerHTML =
-          '<div style="font-size:var(--fs-body);font-weight:600;line-height:1.6;">' +
-          esc(e.summary) +
-          '</div>' +
-          '<div class="mm-actions">' +
-          '<button onclick="mmEditEvRaw(\'' +
-          e.id +
-          '\')">改原话</button>' +
-          '<button onclick="mmEditEvSummary(\'' +
-          e.id +
-          '\')">改摘要</button>' +
-          '<button class="danger" onclick="mmDeleteEv(\'' +
-          e.id +
-          '\')">删除</button>' +
-          '</div>' +
-          '<div class="mm-sec-title">授权（改了立即保存）</div>' +
-          '<label class="mm-auth"><input type="checkbox" ' +
-          (e.allowCloudRead ? 'checked' : '') +
-          ' onchange="mmToggleAuth(\'' +
-          e.id +
-          '\',\'allowCloudRead\',this.checked)" /><span class="lbl">允许发给云端模型（allowCloudRead）</span></label>' +
-          '<label class="mm-auth"><input type="checkbox" ' +
-          (e.allowInference ? 'checked' : '') +
-          ' onchange="mmToggleAuth(\'' +
-          e.id +
-          '\',\'allowInference\',this.checked)" /><span class="lbl">允许据此推测画像（allowInference）</span></label>' +
-          '<div class="mm-auth" style="color:var(--muted);"><input type="checkbox" ' +
-          (e.allowLocalRead ? 'checked' : '') +
-          ' disabled /><span class="lbl">允许本地 Agent 读（allowLocalRead · 此处只读）</span></div>' +
-          '<div class="mm-sec-title">全部字段</div>' +
-          mmRow('原话', '<span style="white-space:pre-wrap;">' + esc(e.rawContent) + '</span>') +
-          mmRow('摘要', esc(e.summary)) +
-          mmRow(
-            '来源',
-            '<span class="pill">' +
-              (SOURCE_CN[e.sourceKind] || e.sourceKind) +
-              '</span> ' +
-              esc(e.sourceKind),
-          ) +
-          mmRow('发生于', mmTime(e.occurredAt) + ' <span class="evmeta">（事情发生时）</span>') +
-          mmRow(
-            '记录于',
-            mmTime(e.recordedAt) + ' <span class="evmeta">（MemoWeft 存入时）</span>',
-          ) +
-          mmRow('宿主', esc(e.hostId)) +
-          mmRow(
-            '幂等键',
-            e.originId ? '<code style="font-size:10.5px;">' + esc(e.originId) + '</code>' : '',
-          ) +
-          mmRow(
-            '纠正指向',
-            e.correctsEvidenceId
-              ? '<code style="font-size:10.5px;">' + esc(e.correctsEvidenceId) + '</code>'
-              : '',
-          ) +
-          mmRow('id', '<code style="font-size:10.5px;">' + esc(e.id) + '</code>') +
-          '<div class="mm-sec-title">被谁用着</div>' +
-          (evts.length
-            ? evts
-                .map(
-                  (v) =>
-                    '<div class="mm-src" style="cursor:default;"><span class="pill">事件</span><div class="raw">' +
-                    esc(v.summary) +
-                    '</div></div>',
-                )
-                .join('')
-            : '<div class="evmeta" style="margin-bottom:6px;">未归入任何事件</div>') +
-          (citedBy.length
-            ? citedBy
-                .map(
-                  (c) =>
-                    '<div class="mm-src" onclick="mmSelect(\'cog\',\'' +
-                    c.id +
-                    '\')" title="点开这条认知的详情"><span class="pill">认知</span>' +
-                    (c.invalidAt ? '<span class="pill danger">已失效</span>' : '') +
-                    '<div class="raw">' +
-                    esc(c.content) +
-                    '</div></div>',
-                )
-                .join('')
-            : '<div class="evmeta">没有认知引用这条证据</div>');
+        const fragment = document.createDocumentFragment();
+        const title = domEl('div', '', e.summary);
+        title.style.cssText = 'font-size:var(--fs-body);font-weight:600;line-height:1.6;';
+        const actions = domEl('div', 'mm-actions');
+        actions.append(
+          button('改原话', () => mmEditEvRaw(e.id)),
+          button('改摘要', () => mmEditEvSummary(e.id)),
+          button('删除', () => mmDeleteEv(e.id), 'danger'),
+        );
+        fragment.append(title, actions, domEl('div', 'mm-sec-title', '授权（改了立即保存）'));
+        const auth = (field, label, writable) => {
+          const row = domEl(writable ? 'label' : 'div', 'mm-auth');
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = Boolean(e[field]);
+          input.disabled = !writable;
+          if (writable)
+            input.addEventListener('change', () => mmToggleAuth(e.id, field, input.checked));
+          row.append(input, domEl('span', 'lbl', label));
+          return row;
+        };
+        const localAuth = auth(
+          'allowLocalRead',
+          '允许本地 Agent 读（allowLocalRead · 此处只读）',
+          false,
+        );
+        localAuth.style.color = 'var(--muted)';
+        fragment.append(
+          auth('allowCloudRead', '允许发给云端模型（allowCloudRead）', true),
+          auth('allowInference', '允许据此推测画像（allowInference）', true),
+          localAuth,
+          domEl('div', 'mm-sec-title', '全部字段'),
+        );
+        const raw = domEl('span', '', e.rawContent);
+        raw.style.whiteSpace = 'pre-wrap';
+        const source = document.createDocumentFragment();
+        source.append(
+          pill(enumText(SOURCE_CN, e.sourceKind)),
+          document.createTextNode(` ${e.sourceKind ?? ''}`),
+        );
+        fragment.append(
+          mmRow('原话', raw),
+          mmRow('摘要', e.summary),
+          mmRow('来源', source),
+          mmRow('发生于', `${mmTime(e.occurredAt)}（事情发生时）`),
+          mmRow('记录于', `${mmTime(e.recordedAt)}（MemoWeft 存入时）`),
+          mmRow('宿主', e.hostId),
+          mmRow('幂等键', e.originId ? domEl('code', '', e.originId) : null),
+          mmRow('纠正指向', e.correctsEvidenceId ? domEl('code', '', e.correctsEvidenceId) : null),
+          mmRow('id', domEl('code', '', e.id)),
+          domEl('div', 'mm-sec-title', '被谁用着'),
+        );
+        if (!evts.length) {
+          const none = domEl('div', 'evmeta', '未归入任何事件');
+          none.style.marginBottom = '6px';
+          fragment.appendChild(none);
+        } else {
+          for (const event of evts) {
+            const row = domEl('div', 'mm-src');
+            row.style.cursor = 'default';
+            row.append(pill('事件'), domEl('div', 'raw', event.summary));
+            fragment.appendChild(row);
+          }
+        }
+        if (!citedBy.length) fragment.appendChild(domEl('div', 'evmeta', '没有认知引用这条证据'));
+        else {
+          for (const cognition of citedBy) {
+            const row = domEl('div', 'mm-src');
+            row.title = '点开这条认知的详情';
+            row.addEventListener('click', () => mmSelect('cog', cognition.id));
+            row.appendChild(pill('认知'));
+            if (cognition.invalidAt) row.appendChild(pill('已失效', 'danger'));
+            row.appendChild(domEl('div', 'raw', cognition.content));
+            fragment.appendChild(row);
+          }
+        }
+        box.replaceChildren(fragment);
       }
 
       // ── 记忆管理 · 写操作（全部走现有 API；成功后重拉三份数据局部刷新）──
@@ -6266,7 +6199,9 @@
             esc(e.summary) +
             '」<br><br>这是用户主动真删（非系统自动）。' +
             (citedBy.length
-              ? '目前有 <b>' + citedBy.length + '</b> 条认知引用它——删除后那些认知会少一条支撑。'
+              ? '目前有 <b>' +
+                esc(citedBy.length) +
+                '</b> 条认知引用它——删除后那些认知会少一条支撑。'
               : '没有认知引用它。'),
           warnLine: '删除后无法恢复。',
           onOk: async () => {

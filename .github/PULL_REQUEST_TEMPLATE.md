@@ -11,6 +11,7 @@
 <!-- List the exact commands and relevant results. -->
 
 ```text
+npm run format
 npm run lint
 npm run typecheck
 npm test

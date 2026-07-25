@@ -1,5 +1,5 @@
 /**
- * 事务执行器类型（写路径一致性，）。
+ * 事务执行器类型（写路径一致性）。
  *
  * 把一段【同步】写包成一个 SQLite 事务：全成或全滚。实现见 store/openStores.ts（可重入：已在事务里再调只直接跑，不嵌套 BEGIN）。
  * 单列成叶子文件，好让 consolidate / updateProfile 只 `import type` 这个类型，不必牵进整套 store 连接装配。

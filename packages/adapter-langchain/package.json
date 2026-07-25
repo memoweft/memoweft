@@ -49,7 +49,7 @@
   "peerDependencies": {
     "@langchain/core": "^1",
     "langchain": "^1",
-    "memoweft": "^0.6.0"
+    "memoweft": "^0.6.0 || ^0.7.0"
   },
   "peerDependenciesMeta": {
     "langchain": {

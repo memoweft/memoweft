@@ -8,13 +8,13 @@
 
 ## 安装
 
-npm 已发布的是 `@memoweft/adapter-ai-sdk@0.1.0`。可由 npm 正常解析的组合是：
+`@memoweft/adapter-ai-sdk@0.2.1` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0`。可由 npm 正常解析的组合是：
 
 ```bash
-npm i ai memoweft@0.5.1 @memoweft/adapter-ai-sdk@0.1.0
+npm i ai memoweft@0.7 @memoweft/adapter-ai-sdk@0.2
 ```
 
-`main` 上的 `0.2.0` 尚未发布。请通过本仓库的 workspace 试用源码预览：
+若想改从源码构建适配器，请用本仓库的 workspace：
 
 ```bash
 git clone https://github.com/memoweft/memoweft.git
@@ -24,7 +24,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-ai-sdk
 ```
 
-它的 peer 范围为 `ai` `^7` 和 `memoweft` `^0.5.1 || ^0.6.0`。不要用 `--legacy-peer-deps` 将已发布的 `0.1.0` 与 Core `0.6` 强行组合。运行真实模型还需一个 `ai` provider（如 `@ai-sdk/openai`）。
+它的 peer 范围为 `ai` `^7` 和 `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0`；`0.2.1` 对 Core `0.7.0` 能被 npm 干净解析，无需 `--legacy-peer-deps`。运行真实模型还需一个 `ai` provider（如 `@ai-sdk/openai`）。
 
 ## 两条路：读和写
 

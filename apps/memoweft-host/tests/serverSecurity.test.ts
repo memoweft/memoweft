@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { request as httpRequest } from 'node:http';
+import { createServer as createHttpServer, request as httpRequest, type Server } from 'node:http';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -14,10 +14,13 @@ import { spawn, type ChildProcess } from 'node:child_process';
 
 const HOST_DIR = join(import.meta.dirname, '..');
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
+const UPSTREAM_SECRET = 'SENSITIVE_UPSTREAM_ERROR_74A1';
 let port = 0;
 let baseUrl = '';
 let csrfToken = '';
 let child: ChildProcess | undefined;
+let llmServer: Server | undefined;
+let hostStderr = '';
 let testDir = '';
 
 function freePort(): Promise<number> {
@@ -93,13 +96,55 @@ before(async () => {
   testDir = mkdtempSync(join(tmpdir(), 'memoweft-host-security-'));
   port = await freePort();
   baseUrl = `http://127.0.0.1:${port}`;
-  const env = {
+  llmServer = createHttpServer((_req, res) => {
+    // 让 Host 稳定进入 outcome.error 分支，并模拟上游响应中带有不应回显的敏感内容。
+    res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ error: { message: UPSTREAM_SECRET } }));
+  });
+  const llmPort = await new Promise<number>((resolve, reject) => {
+    llmServer!.once('error', reject);
+    llmServer!.listen(0, '127.0.0.1', () => {
+      const address = llmServer!.address();
+      if (!address || typeof address === 'string') {
+        reject(new Error('未能取得模拟 LLM 端口'));
+        return;
+      }
+      resolve(address.port);
+    });
+  });
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     PORT: String(port),
     MEMOWEFT_HOST_DB: join(testDir, 'host.db'),
     MEMOWEFT_HOST_ENV_PATH: join(testDir, '.env'),
     MEMOWEFT_EXPERIENCE_UI: 'on',
   };
+  for (const name of [
+    'MEMOWEFT_LLM_BASE_URL',
+    'MEMOWEFT_LLM_API_KEY',
+    'MEMOWEFT_LLM_MODEL',
+    'MEMOWEFT_LLM_TIMEOUT_MS',
+    'MEMOWEFT_WRITE_LLM_BASE_URL',
+    'MEMOWEFT_WRITE_LLM_API_KEY',
+    'MEMOWEFT_WRITE_LLM_MODEL',
+    'MEMOWEFT_WRITE_LLM_TIMEOUT_MS',
+    'DLA_LLM_BASE_URL',
+    'DLA_LLM_API_KEY',
+    'DLA_LLM_MODEL',
+    'DLA_LLM_TIMEOUT_MS',
+    'DLA_WRITE_LLM_BASE_URL',
+    'DLA_WRITE_LLM_API_KEY',
+    'DLA_WRITE_LLM_MODEL',
+    'DLA_WRITE_LLM_TIMEOUT_MS',
+  ]) {
+    delete env[name];
+  }
+  env.MEMOWEFT_LLM_BASE_URL = `http://127.0.0.1:${llmPort}/v1`;
+  env.MEMOWEFT_LLM_API_KEY = UPSTREAM_SECRET;
+  env.MEMOWEFT_LLM_MODEL = 'security-test-model';
+  env.MEMOWEFT_WRITE_LLM_BASE_URL = env.MEMOWEFT_LLM_BASE_URL;
+  env.MEMOWEFT_WRITE_LLM_API_KEY = UPSTREAM_SECRET;
+  env.MEMOWEFT_WRITE_LLM_MODEL = 'security-test-model';
   child = spawn(process.execPath, ['src/server.ts'], {
     cwd: HOST_DIR,
     env,
@@ -117,7 +162,9 @@ before(async () => {
       }
     });
     child!.stderr!.on('data', (chunk: Buffer) => {
-      output += chunk.toString('utf8');
+      const text = chunk.toString('utf8');
+      output += text;
+      hostStderr += text;
     });
     child!.once('exit', (code) => {
       clearTimeout(timer);
@@ -143,6 +190,11 @@ after(async () => {
     child.kill('SIGTERM');
     await new Promise<void>((resolve) => child!.once('exit', () => resolve()));
   }
+  if (llmServer) {
+    await new Promise<void>((resolve, reject) =>
+      llmServer!.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
   if (testDir) rmSync(testDir, { recursive: true, force: true });
 });
 
@@ -156,6 +208,19 @@ test('拒绝异常 Host 与跨源 Origin', async () => {
     '{}',
   );
   assert.equal(badOrigin.status, 403, '跨源浏览器请求不能改变本机状态');
+});
+
+test('所有 GET 响应也拒绝异常 Host，合法 loopback Host 仍可读取', async () => {
+  const hostileHome = await rawGet('/', { Host: 'attacker.example' });
+  assert.equal(hostileHome.status, 403, '恶意 Host 不能读取内嵌 CSRF token 的首页');
+
+  const hostileExport = await rawGet('/api/export-bundle', { Host: 'attacker.example' });
+  assert.equal(hostileExport.status, 403, '恶意 Host 不能读取本机记忆导出');
+
+  const loopbackHealth = await rawGet('/api/health', { Host: `127.0.0.1:${port}` });
+  assert.equal(loopbackHealth.status, 200);
+  const localhostHealth = await rawGet('/api/health', { Host: `localhost:${port}` });
+  assert.equal(localhostHealth.status, 200);
 });
 
 test('状态更改拒绝 text/plain 与缺失 token', async () => {
@@ -209,6 +274,37 @@ test('在完整缓冲前拒绝超过上限的请求体', async () => {
   );
   assert.equal(response.status, 413);
   assert.match(response.body, /请求体过大/);
+});
+
+test('无效 JSON 仍以安全的 400 合约响应，不回显运行时解析细节', async () => {
+  const response = await fetch(`${baseUrl}/api/save-env`, {
+    method: 'POST',
+    headers: trustedHeaders(),
+    body: '{',
+  });
+  const responseBody = await response.text();
+  assert.equal(response.status, 400);
+  assert.deepEqual(JSON.parse(responseBody), { error: '请求体必须是有效 JSON' });
+  assert.ok(!responseBody.includes('SyntaxError'));
+  assert.ok(!responseBody.includes('server.ts'));
+});
+
+test('聊天失败维持 200 + error 合约，且不把用户秘密或内部错误回显给客户端', async () => {
+  const secret = 'SENSITIVE_CHAT_INPUT_4C3D';
+  const response = await fetch(`${baseUrl}/api/chat`, {
+    method: 'POST',
+    headers: trustedHeaders(),
+    body: JSON.stringify({ message: secret }),
+  });
+  const responseBody = await response.text();
+  const payload = JSON.parse(responseBody) as { error?: string; recall?: unknown[] };
+  assert.equal(response.status, 200, '聊天失败仍维持既有 HTTP 成功响应形状');
+  assert.equal(payload.error, '回话没成功，请稍后重试。');
+  assert.deepEqual(payload.recall, []);
+  assert.ok(!responseBody.includes(secret), '响应不回显可能被上游回显的用户秘密');
+  assert.ok(!responseBody.includes(UPSTREAM_SECRET), '响应不回显上游错误里的秘密');
+  assert.ok(!responseBody.includes('Error:'), '响应不回显内部异常');
+  assert.ok(!hostStderr.includes(UPSTREAM_SECRET), '默认 Host 日志也不记录上游秘密');
 });
 
 test('save-env 成功只确认保存，不泄露完整 env 或绝对路径', async () => {

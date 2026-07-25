@@ -100,17 +100,20 @@ class SqliteEvidenceStore:
         )
 
     def get(self, id: str) -> Optional[Evidence]:
-        r = row_one(self._db, "SELECT * FROM evidence WHERE id = ?", (id,))
+        r = row_one(self._db, "SELECT * FROM evidence WHERE id = ? AND deleted_at IS NULL", (id,))
         return _from_row(r) if r is not None else None
 
     def all(self) -> list[Evidence]:
-        rows = row_all(self._db, "SELECT * FROM evidence ORDER BY recorded_at ASC, rowid ASC")
+        rows = row_all(
+            self._db,
+            "SELECT * FROM evidence WHERE deleted_at IS NULL ORDER BY recorded_at ASC, rowid ASC",
+        )
         return [_from_row(r) for r in rows]
 
     def by_time_range(self, from_iso: str, to_iso: str) -> list[Evidence]:
         rows = row_all(
             self._db,
-            "SELECT * FROM evidence WHERE occurred_at >= ? AND occurred_at <= ? ORDER BY occurred_at ASC, rowid ASC",
+            "SELECT * FROM evidence WHERE occurred_at >= ? AND occurred_at <= ? AND deleted_at IS NULL ORDER BY occurred_at ASC, rowid ASC",
             (from_iso, to_iso),
         )
         return [_from_row(r) for r in rows]
@@ -139,17 +142,37 @@ class SqliteEvidenceStore:
         return self.get(id)
 
     def remove(self, id: str) -> bool:
+        # 软删除:打 deleted_at 墓碑而非物理删——保留原文供审计,读取一律排除(不再进召回/画像)。
+        # 一并清空 origin_id:幂等唯一索引是 (origin_id) WHERE origin_id IS NOT NULL,墓碑保留 origin_id 会让
+        #   同 originId 再摄入撞唯一约束;墓碑不再判重,origin_id 对它无意义。已是墓碑的不再动(守卫)。
+        cur = self._db.cursor()
+        cur.execute(
+            "UPDATE evidence SET deleted_at = ?, origin_id = NULL WHERE id = ? AND deleted_at IS NULL",
+            (to_iso_z(self._clock()), id),
+        )
+        return cur.rowcount > 0
+
+    def purge(self, id: str) -> bool:
+        # 物理删(真抹除,含墓碑):隐私抹除 / 出厂重置用;不可恢复、不留痕。
         cur = self._db.cursor()
         cur.execute("DELETE FROM evidence WHERE id = ?", (id,))
         return cur.rowcount > 0
 
     def find_by_origin(self, origin_id: str) -> Optional[Evidence]:
-        r = row_one(self._db, "SELECT * FROM evidence WHERE origin_id = ?", (origin_id,))
+        r = row_one(
+            self._db,
+            "SELECT * FROM evidence WHERE origin_id = ? AND deleted_at IS NULL",
+            (origin_id,),
+        )
         return _from_row(r) if r is not None else None
 
     def preceding_ai_context_of(self, evidence_id: str) -> Optional[str]:
         # 仅查询该列，确保 AI 上下文不会进入 Evidence 读取结构。
-        r = row_one(self._db, "SELECT preceding_ai_context FROM evidence WHERE id = ?", (evidence_id,))
+        r = row_one(
+            self._db,
+            "SELECT preceding_ai_context FROM evidence WHERE id = ? AND deleted_at IS NULL",
+            (evidence_id,),
+        )
         return r["preceding_ai_context"] if r is not None else None
 
     def insert(self, ev: Evidence) -> None:

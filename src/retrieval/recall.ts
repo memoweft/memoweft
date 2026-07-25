@@ -5,6 +5,9 @@
  * invalid 跳过 → subjectId 硬过滤 → 衰减门控），门槛顺序与判断条件一字不改——语义零变化。
  * 唯一新增：同时跳过 archived_at 非空的认知（归档＝invalid 同款待遇， 受控管理引入）。
  *
+ * 2026-07 变更：召回改「超取再截断」——门控【之前】先取 topK×overfetchFactor 条，逐条过门、凑够
+ * topK 即停。修「欠填」（前 K 名被门挡掉不补位、库里合格认知取不到）。门控本身的顺序与判断条件不变。
+ *
  * 错误不在此吞：Conversation 保留自己的 try/catch（召回失败不挡回话）；
  * core.recall 则如实抛给调用方（调用方是主动要召回结果的，失败要能感知）。
  */
@@ -44,7 +47,9 @@ export async function recallCognitions(
   now: Date = new Date(),
 ): Promise<RecalledCognitionItem[]> {
   const out: RecalledCognitionItem[] = [];
-  const hits = await deps.retriever.search(query, cfg.retrieval.topK);
+  // 超取再截断：门控前先取 topK×overfetchFactor 条候选池（hits 按分降序），逐条过门，凑够 topK 即停。
+  const poolSize = cfg.retrieval.topK * Math.max(1, cfg.retrieval.overfetchFactor);
+  const hits = await deps.retriever.search(query, poolSize);
   for (const h of hits) {
     // 相似度门控：当前问题与认知相似度不足时不注入，避免 top-k 返回不相关内容。
     // 默认阈值 0 = 不筛（行为同旧）；调成非零后，低于阈值的召回直接跳过。
@@ -65,6 +70,7 @@ export async function recallCognitions(
       score: h.score,
       contentType: c.contentType,
     });
+    if (out.length >= cfg.retrieval.topK) break; // 凑够 topK 名合格者即停：超取的候选只用来补被门挡掉的名额
   }
   return out;
 }

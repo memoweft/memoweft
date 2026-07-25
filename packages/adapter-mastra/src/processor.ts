@@ -53,9 +53,9 @@ export interface MemoWeftProcessorOptions {
   /** 每次成功召回后的回调（可选）：透传召回 v2 面（id/contentType/score，explain 时含 provenance）供宿主自筛/透视。
    *  仅在 recall 成功返回后触发（空召回也以空数组触发）；无 user 文本 / recall 降级时不触发。 */
   onRecall?: (items: RecalledLike[]) => void;
-  /** recall 超时阈值（毫秒，）。缺省 200ms。超时即视为召回失败 → 降级为不注入。读路径不重试。 */
+  /** recall 超时阈值（毫秒）。缺省 200ms。超时即视为召回失败 → 降级为不注入。读路径不重试。 */
   recallTimeoutMs?: number;
-  /** 注入式 logger（可选，）：召回超时/抛错、写路径重试后仍失败 → 记一条结构化事件。缺省无 = 静默。
+  /** 注入式 logger（可选）：召回超时/抛错、写路径重试后仍失败 → 记一条结构化事件。缺省无 = 静默。
    *  只记事件/原因，绝不记用户内容 / 原话 / 密钥。 */
   logger?: MemoWeftLogger;
 }

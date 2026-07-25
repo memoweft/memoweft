@@ -16,10 +16,28 @@ import type { LLMClient, ChatMessage } from './client.ts';
 import { resolveLang, type Lang } from '../config.ts';
 import { JSON_REPAIR_NUDGE_PROMPT } from './prompts.ts';
 
-/** 去掉 ```json … ``` / ``` … ``` 代码块围栏，返回里面的内容（没有围栏则原样返回）。 */
+/**
+ * 去掉 ```json … ``` / ``` … ``` 代码块围栏，返回里面的内容（没有围栏则原样返回）。
+ *
+ * 不用「任意字符 + 最近闭围栏」的正则：模型原文不可信，缺闭围栏的大段输入会让回溯型
+ * 正则做大量重复尝试。这里按原先的「首个开围栏到下一个闭围栏」口径线性扫描；不识别的
+ * 语言标签也作为围栏内容保留，而不是跳到后续围栏改变解析对象。
+ */
 function stripCodeFences(s: string): string {
-  const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  return fenced ? fenced[1]! : s;
+  const opening = s.indexOf('```');
+  if (opening === -1) return s;
+  let contentStart = opening + 3;
+  const closing = s.indexOf('```', contentStart);
+  if (closing === -1) return s;
+
+  // 模型常把 JSON 紧贴在标签后输出（```json{...}）。保持旧正则的贪婪可选标签语义：
+  // 只要开头四字符是 json（包括 ```jsonish），就消费这个前缀后再跳过空白。
+  const afterLabel = contentStart + 4;
+  if (s.slice(contentStart, afterLabel).toLowerCase() === 'json') {
+    contentStart = afterLabel;
+    while (contentStart < closing && s[contentStart]!.trim() === '') contentStart++;
+  }
+  return s.slice(contentStart, closing);
 }
 
 /** 从一段可能带解释 / 代码块的文本里抠出最外层 JSON 对象文本；抠不到返回 null。 */

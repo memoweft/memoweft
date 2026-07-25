@@ -1,0 +1,5007 @@
+{
+  "meta": {
+    "commit": "08370d0",
+    "node": "24.15.0",
+    "platform": "win32",
+    "arch": "x64",
+    "generatedAt": "2026-07-21T11:11:38.232Z",
+    "model": "mimo-v2.5-pro",
+    "scenarioCount": 49,
+    "totalScenarios": 49,
+    "judgeCalls": 438,
+    "promptVersions": {
+      "attribute": "v2",
+      "consolidate": "v7",
+      "distill": "v2",
+      "jsonRepairNudge": "v1",
+      "proposeAsk": "v1",
+      "reply": "v1",
+      "revisitConflicts": "v1",
+      "trends": "v2"
+    },
+    "judgePromptVersion": "v1",
+    "gistScoringVersion": "v2",
+    "judgeModel": "mimo-v2.5-pro",
+    "subjectEnv": null,
+    "partial": false,
+    "filter": {
+      "limit": null,
+      "discipline": null
+    }
+  },
+  "agg": {
+    "structPass": 265,
+    "structTotal": 274,
+    "structRate": 0.9671532846715328,
+    "avgGistRecall": 0.7,
+    "avgOverInferRate": 0,
+    "scenariosPassed": 40,
+    "errored": 0,
+    "groups": [
+      {
+        "discipline": "conflict",
+        "n": 7,
+        "structPass": 41,
+        "structTotal": 42,
+        "gistRecall": 0.8571428571428571,
+        "overInferRate": 0
+      },
+      {
+        "discipline": "correct",
+        "n": 7,
+        "structPass": 42,
+        "structTotal": 42,
+        "gistRecall": 0.7142857142857143,
+        "overInferRate": 0
+      },
+      {
+        "discipline": "emotion-cap",
+        "n": 7,
+        "structPass": 34,
+        "structTotal": 35,
+        "gistRecall": 0.5714285714285714,
+        "overInferRate": 0
+      },
+      {
+        "discipline": "fact-vs-belief",
+        "n": 7,
+        "structPass": 34,
+        "structTotal": 35,
+        "gistRecall": 0.5714285714285714,
+        "overInferRate": 0
+      },
+      {
+        "discipline": "no-over-inference",
+        "n": 7,
+        "structPass": 29,
+        "structTotal": 34,
+        "gistRecall": 0.5714285714285714,
+        "overInferRate": 0
+      },
+      {
+        "discipline": "chitchat-negative",
+        "n": 7,
+        "structPass": 35,
+        "structTotal": 35,
+        "gistRecall": null,
+        "overInferRate": 0
+      },
+      {
+        "discipline": "short-reply",
+        "n": 7,
+        "structPass": 50,
+        "structTotal": 51,
+        "gistRecall": 1,
+        "overInferRate": 0
+      }
+    ]
+  },
+  "summaries": [
+    {
+      "id": "CC-001",
+      "discipline": "conflict",
+      "lang": "zh",
+      "title": "早睡偏好 vs 凌晨打游戏（行为矛盾非纠正）",
+      "error": null,
+      "checks": [
+        {
+          "name": "conflicted≥1",
+          "pass": true,
+          "detail": "conflicted=1"
+        },
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "把『凌晨还在玩游戏/熬夜』作为行为观察记录，并作为与『喜欢早睡』矛盾的反证暴露出来",
+          "hit": true,
+          "deterministic": true,
+          "signal": "conflicted-status"
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "直接删除或改写『用户喜欢早睡』这条旧偏好",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "裁决谁对谁错、把矛盾消解成单一结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把一次熬夜定性为『夜猫子性格』这类稳定特质",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 1,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-002",
+      "discipline": "conflict",
+      "lang": "en",
+      "title": "Prefers remote work vs goes to office daily",
+      "error": null,
+      "checks": [
+        {
+          "name": "conflicted≥1",
+          "pass": true,
+          "detail": "conflicted=1"
+        },
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Record the observed behaviour of going to the office daily as evidence that conflicts with the stated remote-work preference",
+          "hit": true,
+          "deterministic": true,
+          "signal": "conflicted-status"
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Overwrite or delete the stated remote-work preference",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Silently merge both into a single 'the user likes the office' conclusion",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Decide the preference has definitively flipped without an explicit statement",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 1,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-003",
+      "discipline": "conflict",
+      "lang": "zh",
+      "title": "喜欢安静 vs 放很吵的音乐",
+      "error": null,
+      "checks": [
+        {
+          "name": "conflicted≥1",
+          "pass": true,
+          "detail": "conflicted=1"
+        },
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录『外放很吵的音乐』这一与『喜欢安静』相矛盾的行为观察",
+          "hit": true,
+          "deterministic": true,
+          "signal": "conflicted-status"
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "撤销或覆盖『喜欢安静』的旧偏好",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "武断判定用户其实喜欢吵闹环境",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 1,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-004",
+      "discipline": "conflict",
+      "lang": "en",
+      "title": "Vegetarian claim vs ordered a beef burger",
+      "error": null,
+      "checks": [
+        {
+          "name": "conflicted≥1",
+          "pass": true,
+          "detail": "conflicted=1"
+        },
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Note the observed beef order as evidence that conflicts with the vegetarian claim, leaving both on the record",
+          "hit": true,
+          "deterministic": true,
+          "signal": "conflicted-status"
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Delete the vegetarian fact outright",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Conclude the user lied and is definitely not vegetarian from one meal",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 1,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-005",
+      "discipline": "conflict",
+      "lang": "zh",
+      "title": "偏好纸质书 vs 连续一周使用电子阅读器（无明确改口）",
+      "error": null,
+      "checks": [
+        {
+          "name": "conflicted≥1",
+          "pass": true,
+          "detail": "conflicted=1"
+        },
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录『最近每天使用电子阅读器』的行为，并把它作为与『偏好纸质书』矛盾的证据暴露出来",
+          "hit": true,
+          "deterministic": true,
+          "signal": "conflicted-status"
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "在用户没有明确改口的情况下，直接把旧的『偏好纸质书』改成『偏好电子书』当作已定论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把行为观察当成显式纠正来裁决偏好已变更",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 1,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-006",
+      "discipline": "conflict",
+      "lang": "en",
+      "title": "Self-described early riser vs 4am logins",
+      "error": null,
+      "checks": [
+        {
+          "name": "conflicted≥1",
+          "pass": false,
+          "detail": "conflicted=0"
+        },
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 6,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Record the late 4am activity as behaviour evidence that conflicts with the 'early riser' self-description",
+          "hit": false,
+          "deterministic": true,
+          "signal": "conflicted-status"
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Erase the early-riser cognition",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Conclude the user is definitely a night owl from three data points",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 1,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-007",
+      "discipline": "conflict",
+      "lang": "zh",
+      "title": "不喜欢辣 vs 点了变态辣",
+      "error": null,
+      "checks": [
+        {
+          "name": "conflicted≥1",
+          "pass": true,
+          "detail": "conflicted=1"
+        },
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录『点了变态辣』这一与『不喜欢吃辣』相矛盾的行为观察",
+          "hit": true,
+          "deterministic": true,
+          "signal": "conflicted-status"
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "删除或覆盖『不喜欢吃辣』的旧偏好",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "断定用户其实无辣不欢",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 1,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-008",
+      "discipline": "correct",
+      "lang": "zh",
+      "title": "明确更正：不再用纸质笔记本，改用平板记录",
+      "error": null,
+      "checks": [
+        {
+          "name": "corrected≥1",
+          "pass": true,
+          "detail": "corrected=1"
+        },
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{preference}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "采纳纠正后的新偏好：用户现在用平板记录，不再用纸质笔记本",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "把这次明确改口当成矛盾冲突挂起（标 conflicted 而不采纳新说法）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "物理删除旧的『喜欢纸质笔记本』——应标失效保留、仍可溯源",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户现在使用平板记录而不是纸质笔记本",
+            "contentType": "preference",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 1,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "negate": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-009",
+      "discipline": "correct",
+      "lang": "en",
+      "title": "Moved from Porto to Valencia",
+      "error": null,
+      "checks": [
+        {
+          "name": "corrected≥1",
+          "pass": true,
+          "detail": "corrected=1"
+        },
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Adopt the corrected fact that the user now lives in Valencia",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Keep 'lives in Porto' as an active current fact",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Hard-delete the old Porto record instead of marking it invalid/superseded",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user now lives in Valencia",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 1,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-010",
+      "discipline": "correct",
+      "lang": "zh",
+      "title": "更正宠物名字：松露其实叫栗子",
+      "error": null,
+      "checks": [
+        {
+          "name": "corrected≥1",
+          "pass": true,
+          "detail": "corrected=1"
+        },
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "采纳更正：用户的兔子叫栗子",
+          "votes": [
+            true,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "把姓名更正当成两条并存的冲突",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "删除旧记录导致无法溯源当初为何写成松露",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户的兔子叫栗子",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 1,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "negate": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-011",
+      "discipline": "correct",
+      "lang": "en",
+      "title": "Correction of occupation: librarian to museum guide",
+      "error": null,
+      "checks": [
+        {
+          "name": "corrected≥1",
+          "pass": true,
+          "detail": "corrected=1"
+        },
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Adopt the corrected occupation: museum guide",
+          "votes": [
+            true,
+            true,
+            false
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Treat an explicit correction as an unresolved conflict",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Retain 'librarian' as still-true rather than superseded",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user works as a museum guide",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 1,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-012",
+      "discipline": "correct",
+      "lang": "zh",
+      "title": "不学陶艺了改学水彩",
+      "error": null,
+      "checks": [
+        {
+          "name": "corrected≥1",
+          "pass": true,
+          "detail": "corrected=1"
+        },
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{project,goal}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "采纳更正：用户现在学水彩，已不再学陶艺",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "把旧的『学陶艺』当作仍在进行",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把明确的改学当成需显式裁决的矛盾并存",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户现在改学水彩，不再学陶艺",
+            "contentType": "project",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 1,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-013",
+      "discipline": "correct",
+      "lang": "en",
+      "title": "Inferred commute, corrected by the user",
+      "error": null,
+      "checks": [
+        {
+          "name": "corrected≥1",
+          "pass": true,
+          "detail": "corrected=1"
+        },
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Adopt the corrected fact that the user walks to work",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Leave the inferred 'commutes by car' cognition active alongside the correction",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Delete the prior inference so the reasoning trail is lost",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user walks to work and does not commute by car",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 1,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-014",
+      "discipline": "correct",
+      "lang": "zh",
+      "title": "更换沟通渠道：别用微信改用邮件",
+      "error": null,
+      "checks": [
+        {
+          "name": "corrected≥1",
+          "pass": true,
+          "detail": "corrected=1"
+        },
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{preference}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 6,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "采纳更正：用户以后偏好用邮件沟通",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "继续把『偏好微信』当作有效偏好",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把明确的渠道更换当成矛盾冲突挂起",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户偏好用邮件沟通",
+            "contentType": "preference",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 1,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-015",
+      "discipline": "emotion-cap",
+      "lang": "zh",
+      "title": "今天好累什么都不想干",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "把『今天很累/疲惫』记为当前临时状态(state)",
+          "votes": [
+            true,
+            true,
+            false
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "把一时的累升级成『用户是个懒散的人』这类稳定特质",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户今天感到很累，什么都不想干",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-016",
+      "discipline": "emotion-cap",
+      "lang": "en",
+      "title": "So stressed about this deadline",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Record the current stress about the deadline as a transient state",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Turn a momentary stress into a trait like 'the user is an anxious person'",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Assign stable/high confidence to a passing mood",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user is stressed about a deadline",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-017",
+      "discipline": "emotion-cap",
+      "lang": "zh",
+      "title": "烦死了这破项目",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录用户当前对项目的烦躁情绪（临时 state）",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "据此把『用户讨厌这个项目』当成长期结论固化",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把一时情绪当成稳定偏好或特质封存",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户表达对当前项目的不满和烦躁",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-018",
+      "discipline": "emotion-cap",
+      "lang": "en",
+      "title": "Feeling really happy today",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Record the user's current upbeat mood as a temporary state",
+          "votes": [
+            false,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Conclude 'the user is a generally cheerful/optimistic person' from one good day",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Mark the mood as stable, high-confidence",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user is feeling really happy and everything is going great",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-019",
+      "discipline": "emotion-cap",
+      "lang": "zh",
+      "title": "两次都说困（反复情绪也不升稳定）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=2"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "2条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "把『没睡好/困』记为当前临时状态，可补挂证据但档位仍受封顶",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "因为反复出现就把疲惫攒成稳定特质/定论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "越攒越高把情绪升成 stable 档",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户昨晚没睡好",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户今天一整天都很困",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 2,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 2,
+        "withResolution": 2,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 2
+        },
+        "propositionOrigin": {
+          "user_stated": 2
+        },
+        "assertionStrength": {
+          "explicit": 2
+        }
+      }
+    },
+    {
+      "id": "CC-020",
+      "discipline": "emotion-cap",
+      "lang": "en",
+      "title": "I hate Mondays (offhand gripe)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": false,
+          "detail": "越界类型: preference"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 5,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Note a passing dislike of Mondays as a transient sentiment",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Build a durable trait 'the user hates their job/life'",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Treat an offhand gripe as a stable preference",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user hates Mondays",
+            "contentType": "preference",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-021",
+      "discipline": "emotion-cap",
+      "lang": "zh",
+      "title": "刚跟同事吵架气死了",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录当前『生气/情绪激动』的临时状态",
+          "votes": [
+            false,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "据此推断『用户脾气暴躁/爱与人冲突』的性格标签",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把一次争执后的愤怒定为稳定特质",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户刚与同事吵了一架，感到非常生气",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-022",
+      "discipline": "fact-vs-belief",
+      "lang": "zh",
+      "title": "亲述职业与年限（还嘴上『非常确定』）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录用户亲述事实：博物馆讲解员、约五年经验",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "因为用户说『非常确定』就把置信度直接顶满——置信应由系统按规则自算，不采信自报",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把亲述职业额外推断成性格/能力结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户是博物馆讲解员，有五年工作经验",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-023",
+      "discipline": "fact-vs-belief",
+      "lang": "en",
+      "title": "Stated name and age",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=2"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "2条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Record the stated facts: name is Mira Vale, age 41",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Boost confidence to maximum just because the user asserted it plainly",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Infer unstated attributes (life stage, seniority) beyond the two stated facts",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user's name is Mira Vale",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "The user is 41 years old",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 2,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-024",
+      "discipline": "fact-vs-belief",
+      "lang": "zh",
+      "title": "亲述物品颜色（嘴上说『一定』）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录亲述事实：用户的雨伞是绿色的",
+          "votes": [
+            false,
+            false,
+            true
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "因用户说『一定』就把置信写成 100%/满分——置信由系统规则算，不采信自报",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "扩展推断到未提及的其它物品或颜色偏好",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户的雨伞是绿色的",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-025",
+      "discipline": "fact-vs-belief",
+      "lang": "en",
+      "title": "Stated preference for feedback with examples",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{preference}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Record the stated preference: the user wants feedback with a concrete example",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Set confidence to the max because the user said 'definitely'",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Generalise to 'the user cannot understand abstract feedback' as a trait",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user definitely prefers feedback that includes a concrete example",
+            "contentType": "preference",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-026",
+      "discipline": "fact-vs-belief",
+      "lang": "zh",
+      "title": "亲述长期使用习惯",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": false,
+          "detail": "越界类型: preference"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录亲述事实：用户从高中起使用纸质日历",
+          "votes": [
+            true,
+            true,
+            false
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "把长期使用这条事实的置信直接拔高成满分（置信按规则算）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "在没有明说的情况下断言用户拒绝所有电子日历",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户从高中起就一直使用纸质日历",
+            "contentType": "preference",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-027",
+      "discipline": "fact-vs-belief",
+      "lang": "en",
+      "title": "'100% sure' about a membership year",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Record the stated fact: the library membership started in 2019",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Copy the user's '100% sure' into the stored confidence value verbatim (confidence must be rule-computed)",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Emit derived assumptions about reading frequency as high-confidence facts the user did not state",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user's library membership started in 2019",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-028",
+      "discipline": "fact-vs-belief",
+      "lang": "zh",
+      "title": "亲述家中朝向",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录亲述事实：用户家的阳台朝东",
+          "votes": [
+            false,
+            false,
+            true
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "把这条事实的置信当作 LLM 自报值原样写入（应系统自算）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "据此推断用户住房面积或房屋价值等未提及的判断",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户家的阳台朝东",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-029",
+      "discipline": "no-over-inference",
+      "lang": "zh",
+      "title": "搜索『阳台香草种植』（防生活方式定性）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": false,
+          "detail": "越界类型: preference"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "至多形成一条低置信、可推翻的临时状态（如『用户可能正在了解香草种植』），并挂在该搜索证据上",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "断定用户已经拥有阳台菜园",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "从一次搜索推断用户长期坚持园艺或某种生活方式",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把这条低置信推测写成高置信事实",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户可能对阳台香草种植感兴趣",
+            "contentType": "preference",
+            "credStatus": "candidate",
+            "confidence": 200,
+            "formedBy": "inferred"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-030",
+      "discipline": "no-over-inference",
+      "lang": "en",
+      "title": "Googled 'symptoms of burnout' once (no self-diagnosis)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "At most a low-confidence, retractable hypothesis that the user may be worried about burnout, tied to that search",
+          "votes": [
+            true,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Diagnose 'the user has burnout' or 'the user is depressed' as a fact",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Conclude the user's job is toxic from a single search",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Escalate a one-off query into a stable trait",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user is researching or concerned about symptoms of burnout, indicating a potential state of stress or burnout concern.",
+            "contentType": "state",
+            "credStatus": "candidate",
+            "confidence": 200,
+            "formedBy": "inferred"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-031",
+      "discipline": "no-over-inference",
+      "lang": "zh",
+      "title": "周六加班到很晚（防工作狂标签）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": false,
+          "detail": "越界类型: fact"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 5,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "把『周六加班到深夜』记为一次性行为观察/临时状态",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "据一次加班断定『用户是工作狂』的稳定特质",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "推断『用户没有生活/家庭关系紧张』等无证据的结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户周六加班到深夜",
+            "contentType": "fact",
+            "credStatus": "low",
+            "confidence": 350,
+            "formedBy": "observed"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-032",
+      "discipline": "no-over-inference",
+      "lang": "en",
+      "title": "Bought a book on stoicism (interest, not personality)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact}",
+          "pass": false,
+          "detail": "越界类型: preference"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Note a narrow interest signal: bought a book on stoicism",
+          "votes": [
+            false,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Conclude 'the user is a stoic person' as a personality trait",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Infer the user is struggling emotionally and self-medicating with philosophy",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Turn one purchase into a durable worldview label",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user is interested in stoicism",
+            "contentType": "preference",
+            "credStatus": "candidate",
+            "confidence": 200,
+            "formedBy": "inferred"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-033",
+      "discipline": "no-over-inference",
+      "lang": "zh",
+      "title": "今天没吃早饭（防生活方式推断）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": false,
+          "detail": "越界类型: fact"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录一次性事实/状态：今天没吃早饭",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "推断『用户长期饮食不规律/不注重健康』",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "从一顿没吃推断经济拮据或情绪低落等结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户今天没有吃早饭",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-034",
+      "discipline": "no-over-inference",
+      "lang": "en",
+      "title": "Listened to sad songs tonight (no diagnosis)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Record a narrow observation about tonight's music choice",
+          "votes": [
+            false,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "Infer 'the user is heartbroken / going through a breakup'",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Diagnose depression from music taste",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Build a stable 'melancholic personality' trait from one evening",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user was observed listening to a sad-songs playlist",
+            "contentType": "state",
+            "credStatus": "candidate",
+            "confidence": 200,
+            "formedBy": "inferred"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-035",
+      "discipline": "no-over-inference",
+      "lang": "zh",
+      "title": "删除了某段聊天记录（防关系揣测）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state}",
+          "pass": false,
+          "detail": "越界类型: fact"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 5,
+      "gistRecall": 0,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "仅记录『删除了某段聊天记录』这一行为本身",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "hit": false
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "推断『用户与某人关系破裂/闹翻』",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "推断用户在隐瞒什么/有不可告人的秘密等主观揣测",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户删除了和某人的聊天记录",
+            "contentType": "fact",
+            "credStatus": "low",
+            "confidence": 350,
+            "formedBy": "observed"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 0,
+        "withResolution": 0,
+        "coverage": null,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
+      }
+    },
+    {
+      "id": "CC-036",
+      "discipline": "chitchat-negative",
+      "lang": "zh",
+      "title": "哈哈哈你说得对（纯附和）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,0]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "chitchat→created===0",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把附和/笑声当成一条关于用户的认知落库",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "从一句『你说得对』推断用户性格随和等结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "affirm": 1
+        },
+        "propositionOrigin": {
+          "assistant_proposed": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-037",
+      "discipline": "chitchat-negative",
+      "lang": "en",
+      "title": "lol ok thanks (acknowledgement)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,0]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "chitchat→created===0",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "Create any cognition from a content-free thanks/acknowledgement",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Infer politeness or personality from 'thanks'",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "affirm": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "none": 1
+        }
+      }
+    },
+    {
+      "id": "CC-038",
+      "discipline": "chitchat-negative",
+      "lang": "zh",
+      "title": "在吗？（招呼）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,0]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "chitchat→created===0",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把『在吗』这类招呼记成认知",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "凭一句招呼推断用户的社交习惯",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "ask": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "none": 1
+        }
+      }
+    },
+    {
+      "id": "CC-039",
+      "discipline": "chitchat-negative",
+      "lang": "en",
+      "title": "Good morning greeting",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,0]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "chitchat→created===0",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "Store a routine greeting as a fact about the user",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Infer the user's mood or timezone from a generic greeting",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "ask": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "none": 1
+        }
+      }
+    },
+    {
+      "id": "CC-040",
+      "discipline": "chitchat-negative",
+      "lang": "zh",
+      "title": "嗯嗯好的收到（确认应答）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,0]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "chitchat→created===0",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把确认收到这类应答记为认知",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "从『收到』推断用户是配合/顺从型人格",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "affirm": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-041",
+      "discipline": "chitchat-negative",
+      "lang": "en",
+      "title": "haha that's hilarious (reaction)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,0]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "chitchat→created===0",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "Extract a cognition from a laugh/reaction",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Infer a durable sense-of-humour trait from one reaction",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-042",
+      "discipline": "chitchat-negative",
+      "lang": "zh",
+      "title": "天气不错哈（闲聊天气）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,0]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "chitchat→created===0",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把闲聊天气记成关于用户的事实/偏好",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "从『天气不错』推断用户喜欢晴天等无据结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-043",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 提『你挺喜欢爬山的吧』、用户只答『是啊』（附和产 confirmed、不产 stated）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{preference}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "created来源⊆{confirmed}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "带AI上文的原话都落了解析",
+          "pass": true,
+          "detail": "1/1 条有解析"
+        },
+        {
+          "name": "resolution.responseAct⊆{affirm}",
+          "pass": true,
+          "detail": "affirm"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 8,
+      "structTotal": 8,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "形成一条『用户喜欢爬山』的偏好认知",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "把一句『是啊』扩写成『用户热爱户外运动／经常去爬山／是个资深户外爱好者』这类它确认不了的结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把 AI 那句提问本身记成认知（如『AI 问过用户喜不喜欢爬山』『用户被问到爬山』）——AI 的话只是只读上下文，不是关于用户的认知",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "从『是啊』两个字推断『用户话少／性格随和／有问必答』这类性格结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户喜欢爬山",
+            "contentType": "preference",
+            "credStatus": "candidate",
+            "confidence": 280,
+            "formedBy": "confirmed"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "affirm": 1
+        },
+        "propositionOrigin": {
+          "assistant_proposed": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-044",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 连环追问、用户四次点头（连声附和不聚合成人格特质）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,4]",
+          "pass": true,
+          "detail": "created=4"
+        },
+        {
+          "name": "created类型⊆{preference}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "created来源⊆{confirmed}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "带AI上文的原话都落了解析",
+          "pass": true,
+          "detail": "4/4 条有解析"
+        },
+        {
+          "name": "resolution.responseAct⊆{affirm}",
+          "pass": true,
+          "detail": "affirm,affirm,affirm,affirm"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "4条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 8,
+      "structTotal": 8,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记下『用户周末更愿意待在家』这条被点头认下的偏好",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        },
+        {
+          "gist": "记下『用户不太爱去人多的酒吧』这条被点头认下的偏好",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "断定『用户性格内向/社恐/不擅社交』这类稳定人格特质",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把几个具体场景的点头并成『用户偏好独处/不喜欢社交』这类笼统概括结论",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户周末更愿意待在家里",
+            "contentType": "preference",
+            "credStatus": "candidate",
+            "confidence": 280,
+            "formedBy": "confirmed"
+          },
+          {
+            "content": "用户喜欢一个人看电影",
+            "contentType": "preference",
+            "credStatus": "candidate",
+            "confidence": 280,
+            "formedBy": "confirmed"
+          },
+          {
+            "content": "用户不太爱去人多的酒吧",
+            "contentType": "preference",
+            "credStatus": "candidate",
+            "confidence": 280,
+            "formedBy": "confirmed"
+          },
+          {
+            "content": "用户特别不爱打电话",
+            "contentType": "preference",
+            "credStatus": "candidate",
+            "confidence": 280,
+            "formedBy": "confirmed"
+          }
+        ],
+        "createdCount": 4,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 4,
+        "withResolution": 4,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "affirm": 4
+        },
+        "propositionOrigin": {
+          "assistant_proposed": 4
+        },
+        "assertionStrength": {
+          "explicit": 4
+        }
+      }
+    },
+    {
+      "id": "CC-045",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 长篇行程 + 一句『行吧』（窄范围负例：指向含糊，不产认知）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,0]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "带AI上文的原话都落了解析",
+          "pass": true,
+          "detail": "1/1 条有解析"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 5,
+      "structTotal": 5,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "从一句含糊的『行吧』里挑出行程中的某个具体条目，当成用户自己的偏好或习惯（如『用户习惯早上六点起床』『用户喜欢吃酸辣的酸菜鱼』『用户出门爱住青旅』『用户喜欢爬山徒步』）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把这份 AI 自己琢磨出来的行程当成用户已确认的计划或目标固化（如『用户国庆要去云南玩六天』『用户已定下苍山、虎跳峡的徒步安排』）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把行程里的预算/交通细节写成用户的偏好或约束（如『用户的旅行预算是人均 4000 以内』『用户偏好硬座和大巴这类省钱交通』）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "从两个字的敷衍回应里推断用户的情绪或性格（如『用户对这趟旅行不上心』『用户随和、别人说什么都答应』）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "affirm": 1
+        },
+        "propositionOrigin": {
+          "assistant_proposed": 1
+        },
+        "assertionStrength": {
+          "weak": 1
+        }
+      }
+    },
+    {
+      "id": "CC-046",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 猜周末打游戏、用户答参加社区剧团三年（对照组：内容出自用户之口 → stated 非 confirmed）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,3]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{preference,fact}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "created来源⊆{stated}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "带AI上文的原话都落了解析",
+          "pass": true,
+          "detail": "1/1 条有解析"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 7,
+      "structTotal": 7,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "记录用户亲述的剧团习惯：周末基本都去排练、挺喜欢",
+          "votes": [
+            true,
+            true,
+            false
+          ],
+          "hit": true
+        },
+        {
+          "gist": "记录用户亲述事实：参加社区剧团已有三年",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "用户喜欢在家打游戏（这是 AI 那句里的猜测，用户从没说过）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "用户不喜欢游戏、讨厌宅在家",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "用户很自律、有毅力、意志坚定",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "用户是专业演员、表演能力很强",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户周末喜欢去社区剧团排练，并已坚持三年",
+            "contentType": "preference",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "elaborate": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-047",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "'The former.' to a window-or-aisle question (must resolve to window, not aisle)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[1,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{preference}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "created来源⊆{confirmed}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "带AI上文的原话都落了解析",
+          "pass": true,
+          "detail": "1/1 条有解析"
+        },
+        {
+          "name": "resolution.responseAct⊆{select}",
+          "pass": true,
+          "detail": "select"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 8,
+      "structTotal": 8,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "Resolve 'the former' against the assistant's window-or-aisle question and record that the user prefers the window seat over the aisle",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "The user prefers the aisle seat",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "The user dislikes or never books window seats",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "The user flies often or travels by plane regularly",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user prefers the window seat when flying.",
+            "contentType": "preference",
+            "credStatus": "candidate",
+            "confidence": 280,
+            "formedBy": "confirmed"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "select": 1
+        },
+        "propositionOrigin": {
+          "assistant_proposed": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-048",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "'Maybe, I guess' to an AI's introvert guess (hedge is not confirmation)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{state,preference,trait}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "created来源⊆{confirmed}",
+          "pass": false,
+          "detail": "越界来源: inferred"
+        },
+        {
+          "name": "带AI上文的原话都落了解析",
+          "pass": true,
+          "detail": "1/1 条有解析"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 6,
+      "structTotal": 7,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "'The user is an introvert' worded as an unhedged, settled personality claim — no 'maybe/possibly/tentatively' qualifier anywhere in it",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "The user said / described himself as an introvert (the AI's guess put into the user's mouth — the user never uttered the word)",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "The user dislikes parties, avoids people, or is socially anxious",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user may be an introvert (hedged acceptance, not explicit)",
+            "contentType": "trait",
+            "credStatus": "candidate",
+            "confidence": 200,
+            "formedBy": "inferred"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "affirm": 1
+        },
+        "propositionOrigin": {
+          "assistant_proposed": 1
+        },
+        "assertionStrength": {
+          "weak": 1
+        }
+      }
+    },
+    {
+      "id": "CC-049",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "Denied the AI's vegetarian guess (a denial must never read as a confirmation)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,1]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "created类型⊆{fact,preference}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "created来源⊆{stated}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "带AI上文的原话都落了解析",
+          "pass": true,
+          "detail": "1/1 条有解析"
+        },
+        {
+          "name": "resolution.responseAct⊆{negate}",
+          "pass": true,
+          "detail": "negate"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 8,
+      "structTotal": 8,
+      "gistRecall": 1,
+      "overInferRate": 0,
+      "formResults": [
+        {
+          "gist": "The user is not a vegetarian",
+          "votes": [
+            true,
+            true,
+            true
+          ],
+          "hit": true
+        }
+      ],
+      "notResults": [
+        {
+          "gist": "The user is a vegetarian (the AI's guess, laundered into a stored fact)",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "The user is a meat lover",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user is not a vegetarian",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "negate": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    }
+  ]
+}

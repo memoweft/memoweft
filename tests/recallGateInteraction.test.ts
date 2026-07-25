@@ -3,14 +3,13 @@
  *
  * 既有测试覆盖的是各道门的机械行为（archived 的不返回、跨 subject 的不返回……），
  * bench/eval-retrieval.mjs 覆盖的是 Retriever 层的排序质量（recall@5 / mrr@10）。
- * 两者之间有一条缝没人测过，而产品每轮对话都走它：
+ * 两者之间有一条缝，产品每轮对话都走它：
  *
- *   topK 是【在门控之前】取的 —— `retriever.search(query, cfg.retrieval.topK)` 先拿回 K 条，
- *   再逐条过六道门。所以门控只会让结果变少，【永远不会往回补】。库里明明还有合格的记忆，
- *   却因为前 K 名里大半被过滤而拿不到。recall.ts 的注释承认"可能欠填"，但没有任何
- *   测试或评测衡量这个欠填。
+ *   召回改「超取再截断」后 —— `search(query, topK×overfetchFactor)` 先拿回一个更大的候选池，
+ *   逐条过六道门、凑够 topK 即停。门控挡掉的名额由池里更靠后的合格认知补上，不再欠填
+ *   （旧实现只取 topK 条再过门，前 K 名被挡就不补位、库里合格认知取不到）。
  *
- * 本文件固定这条缝的当前行为，并量化欠填幅度。全离线、确定性（词序检索器 + 注入 clock）。
+ * 本文件覆盖「超取补位」与六道门的交互。全离线、确定性（词序检索器 + 注入 clock）。
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -60,7 +59,7 @@ function seed(store: SqliteCognitionStore, specs: SeedSpec[]): string[] {
   return ids;
 }
 
-test('欠填：topK 在门控之前取——前 K 名被过滤后不会用库里剩下的合格认知补位', async () => {
+test('超取补位：前 K 名全被门控挡掉时，从库里剩下的合格认知补满 topK', async () => {
   const store = new SqliteCognitionStore(':memory:');
   try {
     const topK = config.retrieval.topK;
@@ -79,16 +78,18 @@ test('欠填：topK 在门控之前取——前 K 名被过滤后不会用库里
       cognitionStore: store,
     });
 
-    // 当前行为：检索器只被问了 topK 条，那 topK 条全被挡 → 返回空。
-    //   库里还有 topK 条完全合格的认知，一条都没被取到。
-    assert.equal(got.length, 0, '前 K 名全被门控挡掉 → 召回为空');
-    assert.equal(store.active('owner').length, topK, '而库里明明还有这么多合格认知没被取到');
+    // 超取后：候选池覆盖到后面的 healthy，前 K 名被挡的名额被补满（旧实现这里会返回空）。
+    assert.equal(got.length, topK, '前 K 名全被挡 → 从库里合格认知补满 topK');
+    assert.ok(
+      got.every((g) => g.content.startsWith('healthy ')),
+      '补进来的都是合格认知',
+    );
   } finally {
     store.close();
   }
 });
 
-test('欠填幅度：门控挡掉几条就少几条，不补位', async () => {
+test('超取补位：门控挡掉几条，就从后面的候选补几条，凑满 topK', async () => {
   const store = new SqliteCognitionStore(':memory:');
   try {
     const topK = config.retrieval.topK;
@@ -104,15 +105,17 @@ test('欠填幅度：门控挡掉几条就少几条，不补位', async () => {
       cognitionStore: store,
     });
 
-    const blockedInHead = head.filter((s) => s.muted).length;
+    // 超取后：head 里被 muted 挡掉的名额，由 tail 的合格认知补上，凑满 topK（旧实现只会返回 head 里合格的那几条）。
+    assert.equal(got.length, topK, 'head 里被挡的名额由 tail 补上 → 凑满 topK');
+    const okFromHead = head.filter((s) => !s.muted).length;
     assert.equal(
-      got.length,
-      topK - blockedInHead,
-      `前 K 名里被挡 ${blockedInHead} 条 → 结果就少 ${blockedInHead} 条（不从 tail 补）`,
+      got.filter((g) => g.content.startsWith('ok ')).length,
+      okFromHead,
+      'head 里合格的都在',
     );
     assert.ok(
-      got.every((g) => g.content.startsWith('ok ')),
-      '返回的都是 head 里合格的那些，tail 一条都没进来',
+      got.some((g) => g.content.startsWith('tail ')),
+      'tail 里的合格认知被用来补位',
     );
   } finally {
     store.close();

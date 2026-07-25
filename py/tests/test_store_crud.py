@@ -136,6 +136,44 @@ def test_evidence_update_and_remove() -> None:
         db.close()
 
 
+def test_evidence_soft_delete_and_purge() -> None:
+    # A7:remove 是软删(墓碑,读取排除、原文保留、清 origin_id);purge 才是真抹除。与 TS 同契约。
+    db = open_db(":memory:")
+    try:
+        store = SqliteEvidenceStore(db, clock=_fixed)
+        e = store.put(
+            EvidenceInput(
+                subject_id="owner", source_kind="spoken", host_id="local",
+                raw_content="素食者", origin_id="msg-1",
+            )
+        )
+        assert store.remove(e.id) is True
+        assert store.get(e.id) is None  # 读取排除墓碑
+        assert store.all() == []
+        row = db.execute(
+            "SELECT raw_content, deleted_at, origin_id FROM evidence WHERE id = ?", (e.id,)
+        ).fetchone()
+        assert row is not None  # 物理行仍在(墓碑)
+        assert row[0] == "素食者"  # 原文保留供审计
+        assert row[1] is not None  # deleted_at 已打墓碑
+        assert row[2] is None  # 软删清空 origin_id(位置索引:兼容 tuple / sqlite3.Row)
+        assert store.remove(e.id) is False  # 重复删返回 False
+        # 同 origin_id 可再摄入(不撞幂等唯一约束)
+        e2 = store.put(
+            EvidenceInput(
+                subject_id="owner", source_kind="spoken", host_id="local",
+                raw_content="重说", origin_id="msg-1",
+            )
+        )
+        assert e2.id != e.id
+        assert len(store.all()) == 1
+        # purge = 真抹除(含墓碑)
+        assert store.purge(e.id) is True
+        assert db.execute("SELECT id FROM evidence WHERE id = ?", (e.id,)).fetchone() is None
+    finally:
+        db.close()
+
+
 # ── event ──
 
 

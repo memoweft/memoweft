@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS evidence (
   allow_cloud_read     INTEGER NOT NULL,
   allow_inference      INTEGER NOT NULL,
   corrects_evidence_id TEXT,
+  deleted_at           TEXT,
   preceding_ai_context TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_evidence_origin
@@ -109,8 +110,13 @@ export interface EvidenceStore {
       allowInference?: boolean;
     },
   ): Evidence | null;
-  /** 用户主动删除一条证据（management contract：条件性真删；非系统自动删）。返回是否删除。 */
+  /** 用户主动删除一条证据（management contract）：软删除——打 deleted_at 墓碑，保留原文供审计，
+   *  读取一律排除（不再进召回/画像）。返回是否新打墓碑（已是墓碑的返回 false）。 */
   remove(id: string): boolean;
+  /** 物理删一条（真抹除，含墓碑）：隐私抹除用；不可恢复、不留痕。返回是否删除。 */
+  purge(id: string): boolean;
+  /** 物理删某 subject 的全部证据（含墓碑）：出厂重置用。返回删除条数。 */
+  purgeBySubject(subjectId: string): number;
   /** 按幂等键 originId 查回一条（摄入层判重用：已存在则跳过、不重复落库）。不存在返回 null。 */
   findByOrigin(originId: string): Evidence | null;
   /** 取某条证据的【上一轮 AI 那句】只读上下文——**唯一读取该列的路径**,专供
@@ -158,8 +164,13 @@ export class SqliteEvidenceStore implements EvidenceStore {
     const cols = this.db
       .prepare("SELECT name FROM pragma_table_info('evidence')")
       .all() as unknown as Array<{ name: string }>;
-    if (!cols.some((c) => c.name === 'preceding_ai_context')) {
+    const names = new Set(cols.map((c) => c.name));
+    if (!names.has('preceding_ai_context')) {
       this.db.exec('ALTER TABLE evidence ADD COLUMN preceding_ai_context TEXT');
+    }
+    if (!names.has('deleted_at')) {
+      // 软删除墓碑列（nullable、无数据变换）：remove() 打 deleted_at 而非物理删，读取一律排除。
+      this.db.exec('ALTER TABLE evidence ADD COLUMN deleted_at TEXT');
     }
   }
 
@@ -227,14 +238,17 @@ export class SqliteEvidenceStore implements EvidenceStore {
   }
 
   get(id: string): Evidence | null {
-    const row = this.db.prepare('SELECT * FROM evidence WHERE id = ?').get(id) as unknown as
-      EvidenceRow | undefined;
+    const row = this.db
+      .prepare('SELECT * FROM evidence WHERE id = ? AND deleted_at IS NULL')
+      .get(id) as unknown as EvidenceRow | undefined;
     return row ? fromRow(row) : null;
   }
 
   all(): Evidence[] {
     const rows = this.db
-      .prepare('SELECT * FROM evidence ORDER BY recorded_at ASC, rowid ASC')
+      .prepare(
+        'SELECT * FROM evidence WHERE deleted_at IS NULL ORDER BY recorded_at ASC, rowid ASC',
+      )
       .all() as unknown as EvidenceRow[];
     return rows.map(fromRow);
   }
@@ -242,7 +256,7 @@ export class SqliteEvidenceStore implements EvidenceStore {
   byTimeRange(fromIso: string, toIso: string): Evidence[] {
     const rows = this.db
       .prepare(
-        'SELECT * FROM evidence WHERE occurred_at >= ? AND occurred_at <= ? ORDER BY occurred_at ASC, rowid ASC',
+        'SELECT * FROM evidence WHERE occurred_at >= ? AND occurred_at <= ? AND deleted_at IS NULL ORDER BY occurred_at ASC, rowid ASC',
       )
       .all(fromIso, toIso) as unknown as EvidenceRow[];
     return rows.map(fromRow);
@@ -273,13 +287,33 @@ export class SqliteEvidenceStore implements EvidenceStore {
   }
 
   remove(id: string): boolean {
+    // 软删除：打 deleted_at 墓碑而非物理删——保留原文供审计，读取一律排除（不再进召回/画像）。
+    // 已是墓碑的不再动（deleted_at IS NULL 守卫），故重复删返回 false。
+    // 一并清空 origin_id：幂等唯一索引是 (origin_id) WHERE origin_id IS NOT NULL；若墓碑保留 origin_id，
+    //   同 originId 的证据再摄入会撞唯一约束。墓碑不再参与判重，origin_id 对它已无意义。
+    const r = this.db
+      .prepare(
+        'UPDATE evidence SET deleted_at = ?, origin_id = NULL WHERE id = ? AND deleted_at IS NULL',
+      )
+      .run(this.clock().toISOString(), id);
+    return Number(r.changes) > 0;
+  }
+
+  purge(id: string): boolean {
+    // 物理删（真抹除，含墓碑）：隐私抹除 / 出厂重置用；不可恢复、不留痕。
     const r = this.db.prepare('DELETE FROM evidence WHERE id = ?').run(id);
     return Number(r.changes) > 0;
   }
 
+  purgeBySubject(subjectId: string): number {
+    // 按 subject 物理删全部证据（含墓碑）：出厂重置用。
+    const r = this.db.prepare('DELETE FROM evidence WHERE subject_id = ?').run(subjectId);
+    return Number(r.changes);
+  }
+
   findByOrigin(originId: string): Evidence | null {
     const row = this.db
-      .prepare('SELECT * FROM evidence WHERE origin_id = ?')
+      .prepare('SELECT * FROM evidence WHERE origin_id = ? AND deleted_at IS NULL')
       .get(originId) as unknown as EvidenceRow | undefined;
     return row ? fromRow(row) : null;
   }
@@ -287,7 +321,7 @@ export class SqliteEvidenceStore implements EvidenceStore {
   precedingAiContextOf(evidenceId: string): string | null {
     // 只 SELECT 这一列(不经 SELECT */fromRow → AI 上文永不进 Evidence 读结构)。
     const row = this.db
-      .prepare('SELECT preceding_ai_context FROM evidence WHERE id = ?')
+      .prepare('SELECT preceding_ai_context FROM evidence WHERE id = ? AND deleted_at IS NULL')
       .get(evidenceId) as unknown as { preceding_ai_context: string | null } | undefined;
     return row?.preceding_ai_context ?? null;
   }

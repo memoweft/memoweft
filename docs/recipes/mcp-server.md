@@ -6,13 +6,13 @@ Expose a MemoWeft database to Claude Desktop, Cursor, or any MCP client through 
 
 ## Install
 
-The npm-published server is `0.1.0`; install this fixed, compatible pair:
+`@memoweft/mcp-server@0.2.1` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0`; install a compatible pair:
 
 ```bash
-npm install memoweft@0.5.1 @memoweft/mcp-server@0.1.0
+npm install memoweft@0.7 @memoweft/mcp-server@0.2
 ```
 
-The `0.2.0` workspace version on `main` is unreleased. Build it from this checkout for Core `0.5.1` or `0.6`; its peer range is `^0.5.1 || ^0.6.0`. Do not use `--legacy-peer-deps` to force the published `0.1.0` server onto Core `0.6`. Needs Node 20+.
+It resolves cleanly against Core `0.5.1`, `0.6`, or `0.7` with no `--legacy-peer-deps`. Needs Node 20+.
 
 ## Point a client at it
 
@@ -23,7 +23,7 @@ The package ships a `memoweft-mcp-server` bin, so you rarely write code. Add thi
   "mcpServers": {
     "memoweft": {
       "command": "npx",
-      "args": ["-y", "@memoweft/mcp-server@0.1.0"],
+      "args": ["-y", "@memoweft/mcp-server@0.2"],
       "env": { "MEMOWEFT_DB_PATH": "/absolute/path/to/memoweft.db" }
     }
   }

@@ -261,15 +261,20 @@ function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
         const body = Buffer.concat(chunks).toString('utf8');
         if (body.includes('�')) {
           reject(
-            new Error(
+            new RequestError(
+              400,
               '请求体不是合法 UTF-8（Windows cmd 的 curl 会按 GBK 发中文；请改用界面，或以 UTF-8 编码发送）',
             ),
           );
           return;
         }
-        resolve(body ? JSON.parse(body) : {});
-      } catch (e) {
-        reject(e);
+        try {
+          resolve(body ? JSON.parse(body) : {});
+        } catch {
+          reject(new RequestError(400, '请求体必须是有效 JSON'));
+        }
+      } catch {
+        reject(new RequestError(400, '请求体无法读取'));
       }
     });
     req.on('error', reject);
@@ -333,6 +338,11 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://127.0.0.1:${PORT}`);
 
   try {
+    // 所有响应（包括首页内嵌的 CSRF token、导出和记忆读取端点）只服务实际 loopback authority，
+    // 防 DNS rebinding 页面用恶意 Host 读到本机单用户数据。POST 下面仍额外执行 Origin/CSRF/JSON 校验。
+    if (!trustedAuthority(req.headers.host)) {
+      throw new RequestError(403, '拒绝非本机 Host 的请求');
+    }
     // 所有 POST 都可能触发 Host 状态变化（或返回敏感的配置生成结果），统一在进入路由前做边界校验，
     // 免得新增端点时漏掉某一个 handler。
     if (req.method === 'POST') assertTrustedStateChange(req);
@@ -430,8 +440,10 @@ const server = createServer(async (req, res) => {
       if (outcome.error) {
         // 回复失败时，Core 将回退文本写入 outcome.reply，并将原始错误保存在 outcome.error。
         //   别把这句失败串当正常回复落 assistant 历史 / 渲染给用户（否则用户分不清系统故障与模型真答，
-        //   还会永久留在历史里）——回一个可识别的失败信号，前端走"出错了/请重试"。
-        sendJson(res, 200, { error: '回话没成功：' + outcome.error, recall: [] });
+        //   还会永久留在历史里）——错误本身可能带上游 URL、响应细节甚至密钥，默认连本机日志也不记录。
+        //   API 保持既有 200 + error 形状，前端继续走"出错了/请重试"，但不回显内部内容。
+        console.error('[memoweft/host] Chat completion failed');
+        sendJson(res, 200, { error: '回话没成功，请稍后重试。', recall: [] });
       } else {
         history.append(convId, {
           role: 'assistant',
@@ -872,9 +884,14 @@ const server = createServer(async (req, res) => {
     res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: 'not found' }));
   } catch (e) {
-    // 兜底：请求级错误保留其语义状态（413/403/415）；其余输入/handler 异常仍返回 400，不崩服务。
-    const statusCode = e instanceof RequestError ? e.statusCode : 400;
-    sendJson(res, statusCode, { error: e instanceof Error ? e.message : String(e) });
+    // 明确、面向用户的请求错误保留既有状态与文案；未知内部异常只写本机日志并返回通用 500，
+    // 避免把堆栈、绝对路径、上游实现细节或意外回显的输入暴露给本地页面。
+    if (e instanceof RequestError) {
+      sendJson(res, e.statusCode, { error: e.message });
+      return;
+    }
+    console.error('[memoweft/host] Unexpected request failure', e);
+    sendJson(res, 500, { error: '服务处理请求时发生内部错误，请查看 Host 日志。' });
   }
 });
 

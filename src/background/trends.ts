@@ -14,6 +14,7 @@
 import { config, resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { CognitionStore } from '../cognition/store.ts';
+import type { Retriever } from '../retrieval/retriever.ts';
 import type { Cognition } from '../cognition/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import { computeConfidence, deriveCredStatus } from '../consolidation/confidence.ts';
@@ -26,6 +27,9 @@ export interface AggregateTrendsDeps {
   evidenceStore: EvidenceStore;
   cognitionStore: CognitionStore;
   llm: LLMClient;
+  /** 召回器（可选）：传了则产出新趋势后重建召回索引——新趋势是本门面唯一产物，不重建则 recall 检索不到它（同 updateProfile）。
+   *  门面 createMemoWeftCore().aggregateTrends 总会传；直接调算子可省略（省略=不建索引、行为同旧）。 */
+  retriever?: Retriever;
   /** 可注入配置（config 去单例）：不传 = 用全局单例。 */
   config?: MemoWeftConfig;
 }
@@ -87,7 +91,7 @@ export async function aggregateTrends(
   // 收集窗口内的"状态证据"：state 类认知（含已失效，趋势看的是"曾反复出现"）的支撑证据里、发生时间在窗内的。
   // 保持 all()：趋势聚合是【历史口径】——看"曾反复出现"，本就计入已失效，
   // 已归档项同样计入历史；趋势聚合不使用 active() 的当前状态口径。
-  // 排除 confirmed（附和，）：防"AI 诱导性提问风暴 + 用户连答是的"被规则数成一条更可信的 ruled 趋势，
+  // 排除 confirmed（附和）：防"AI 诱导性提问风暴 + 用户连答是的"被规则数成一条更可信的 ruled 趋势，
   //   防止通过重复附和绕过 confirmed 的低置信上限，这是结构性不变量。
   const states = deps.cognitionStore
     .all(subjectId)
@@ -168,6 +172,19 @@ export async function aggregateTrends(
         evidence: cited.map((id) => ({ evidenceId: id, relation: 'support' as const })),
       }),
     );
+  }
+  if (trends.length > 0 && deps.retriever) {
+    // 重建召回索引：新趋势要能被 recall 检索到（同 updateProfile：只索引未失效、未静音认知）。
+    //   索引是读路径优化（runtime boundary）——嵌入器挂了不该让已落库的趋势维护失败；
+    //   趋势已落库，最坏这轮 recall 暂缺、下次 updateProfile 会补建。
+    const cogs = deps.cognitionStore.active(subjectId).filter((c) => !c.mutedAt);
+    try {
+      await deps.retriever.indexAll(cogs.map((c) => ({ id: c.id, text: c.content })));
+    } catch (e) {
+      console.warn(
+        `[memoweft/trends] 召回索引重建失败（趋势已落库、下次画像更新会补建）：${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
   return { trends, consideredCount: items.length, llmCalls };
 }
