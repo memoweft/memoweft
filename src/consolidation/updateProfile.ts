@@ -10,7 +10,7 @@
  * 返回各步耗时 `timings`（ms），供宿主和测试台诊断写路径性能。
  */
 import { distill, type DistillResult } from '../distillation/distill.ts';
-import { consolidate, type ConsolidateResult } from './consolidate.ts';
+import { consolidate, type ConsolidateResult, type ConsolidateDeps } from './consolidate.ts';
 import { attribute, type AttributeResult } from '../attribution/attribute.ts';
 import type { EvidenceStore } from '../evidence/store.ts';
 import type { EventStore } from '../event/store.ts';
@@ -37,6 +37,9 @@ export interface UpdateProfileDeps {
   config?: MemoWeftConfig;
   /** 可注入时钟：透传给 consolidate / attribute 作显式时间戳/归因窗口上界；缺省真实系统时间。 */
   clock?: Clock;
+  /** A5 矛盾并存护栏（可选）：原样透传给 consolidate（见 ConsolidateDeps.contradictionGuard）。
+   *  不接 = consolidate 不启用护栏、行为同旧。由 createCore 在配置开启且有可用 embedder 时组装。 */
+  contradictionGuard?: ConsolidateDeps['contradictionGuard'];
 }
 
 /** 各步耗时(ms)，供性能诊断使用。 */
@@ -86,6 +89,7 @@ export async function updateProfile(
     transaction: deps.transaction, // 有共享连接就把 consolidate 的写入原子化；没有则 undefined = 直接跑
     config: deps.config, // 透传注入配置（缺省=单例）
     clock: deps.clock, // 透传注入时钟（缺省=系统时间）
+    contradictionGuard: deps.contradictionGuard, // A5 护栏：createCore 开启时透传，缺省 undefined = 不启用
   });
   const t2 = Date.now();
   // 归因（自动并进）：对刚沉淀出的新现象推可解释假设。内部自带节流，无现象/无原因时不调模型。

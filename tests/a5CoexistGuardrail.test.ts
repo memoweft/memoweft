@@ -20,6 +20,7 @@ import { SqliteEvidenceStore } from '../src/evidence/store.ts';
 import { SqliteEventStore } from '../src/event/store.ts';
 import { SqliteCognitionStore } from '../src/cognition/store.ts';
 import { consolidate } from '../src/consolidation/consolidate.ts';
+import { createMemoWeftCore } from '../src/index.ts';
 
 interface Stores {
   ev: SqliteEvidenceStore;
@@ -227,5 +228,22 @@ test('极性门：同主题但不矛盾（爱喝咖啡 + 喜欢手冲咖啡）�
     );
   } finally {
     closeAll(s);
+  }
+});
+
+// ── createCore 接线（宿主入口可开护栏）──────────────────────────────
+test('createCore 接线：请求 contradictionGuard + 有 embedder → 构造与 no-op updateProfile 不崩', async () => {
+  // 注入 stub embedder 让 embedderRef 可用（护栏 deps 得以组装）；无事件的 updateProfile 不触 llm。
+  const embedder = {
+    async embed(texts: string[]): Promise<number[][]> {
+      return texts.map(() => [1, 0]);
+    },
+  };
+  const core = createMemoWeftCore({ dbPath: ':memory:', embedder, contradictionGuard: true });
+  try {
+    const r = await core.updateProfile({ subjectId: 'u' }); // 无新事件 → 早退空，不调 llm
+    assert.equal(r.consolidated.created.length, 0);
+  } finally {
+    core.close();
   }
 });

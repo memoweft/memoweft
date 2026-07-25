@@ -60,6 +60,11 @@ export interface CreateCoreOptions {
   embedder?: Embedder;
   /** 召回器：注入则最优先；不注入 → loadEmbedConfig() 有配置建 VectorRetriever、无则 KeywordRetriever（FTS5 不可用降 NullRetriever）。 */
   retriever?: Retriever;
+  /** A5「矛盾画像可并存」护栏（**可选**·默认关）：`true` 或给参数对象即启用。启用后 `updateProfile` 的
+   *  consolidate 会在 new 分支入库前查"相似且极性相反"的旧认知、命中改走 conflict（见 ConsolidateDeps.contradictionGuard）。
+   *  **复用本 core 已配的 embedder**（自建 VectorRetriever 那个）；若没有可用 embedder（未配嵌入器 / 注入了自定义
+   *  retriever），启用请求会记一条告警并静默不启用（护栏靠相似度、无 embedder 判不了）。 */
+  contradictionGuard?: boolean | { minSimilarity?: number; topK?: number };
   /** 可注入配置；省略时使用全局单例。 */
   config?: MemoWeftConfig;
   /** 向量库路径；缺省与 dbPath 同库。一个 subject 一个实例的既有契约不变。 */
@@ -325,6 +330,20 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       : keywordOrNull(vectorDbPath);
     ownsRetriever = true;
   }
+
+  // A5 护栏 deps（构造时算一次）：请求启用且有可用 embedder → 复用它；否则告警并不启用（相似度判据必需 embedder）。
+  const contradictionGuardDeps = (() => {
+    const g = options.contradictionGuard;
+    if (!g) return undefined;
+    if (!embedderRef) {
+      console.warn(
+        '[memoweft] 已请求 contradictionGuard 但本 core 无可用 embedder（未配嵌入器或注入了自定义 retriever）——A5 护栏未启用',
+      );
+      return undefined;
+    }
+    const o = g === true ? {} : g;
+    return { embedder: embedderRef, minSimilarity: o.minSimilarity, topK: o.topK };
+  })();
 
   const subjectOf = (explicit?: string) => explicit ?? cfg.identity.subjectId;
 
@@ -615,6 +634,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         transaction,
         config: cfg,
         clock: options.clock, // 透传注入时钟（缺省=系统时间）：consolidate/attribute 的显式时间戳走它
+        contradictionGuard: contradictionGuardDeps, // A5 护栏：构造时按配置+embedder 组装，缺省 undefined = 不启用
       });
     },
 
