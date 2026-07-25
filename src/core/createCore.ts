@@ -30,6 +30,7 @@ import {
   type UpdateProfileResult,
 } from '../consolidation/updateProfile.ts';
 import { expire as runExpire, type ExpireResult } from '../background/expire.ts';
+import { aggregateTrends as runAggregateTrends, type TrendResult } from '../background/trends.ts';
 import { recallCognitions } from '../retrieval/recall.ts';
 import type { ContentType, CredStatus, FormedBy } from '../cognition/model.ts';
 import { NullRetriever } from '../retrieval/nullRetriever.ts';
@@ -251,6 +252,9 @@ export interface MemoWeftCore {
    *  （invalidAt、保留可溯源、不再被召回）；稳定类（preference/fact 等）永不自动失效。幂等、纯规则、不碰 LLM/embed。
    *  按 config.background.expireAfterDays 判龄，节奏由宿主定（每日 / 画像更新后）。subjectId 缺省同其它方法。 */
   expire(input?: { subjectId?: string }): ExpireResult;
+  /** 跨会话趋势聚合（后台维护入口）：规则筛「窗口内同类 state 反复出现」→ 写模型命名成 `trend` 认知。
+   *  是 `trend` 类型的唯一生产产出者；与 `updateProfile` 解耦、宿主自定节奏。subjectId 缺省同其它方法。 */
+  aggregateTrends(input?: { subjectId?: string }): Promise<TrendResult>;
   /** 受控记忆管理（8 操作 + 审计表）。 */
   memory: MemoryManagementAPI;
   /** 便携记忆包（导出/导入/校验）。 */
@@ -644,6 +648,18 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       return runExpire(
         subjectOf(input.subjectId),
         { cognitionStore, config: cfg },
+        (options.clock ?? systemClock)(),
+      );
+    },
+
+    aggregateTrends(input = {}) {
+      // 跨会话趋势聚合（后台维护入口·独立入口）：宿主主动调，【不】绑进 updateProfile（与更新解耦、可幂等）。
+      //   规则先筛「窗口内同类 state 证据出现够多次」，再让写路径模型给这个模式命名（formed_by=ruled）；
+      //   走与 updateProfile 同款 subjectId 归一 + 写路径小快模型 + 注入时钟（缺省系统时间）。
+      //   这是 `trend` 类认知的唯一生产产出者——不调它，config 里的 trendWindowDays/trendMinCount 是死参数。
+      return runAggregateTrends(
+        subjectOf(input.subjectId),
+        { evidenceStore, cognitionStore, llm: pool.for('write'), config: cfg },
         (options.clock ?? systemClock)(),
       );
     },
