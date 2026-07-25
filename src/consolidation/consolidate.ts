@@ -22,6 +22,7 @@ import type {
   AssertionStrength,
 } from '../interaction/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
+import type { Embedder } from '../retrieval/embedder.ts';
 import { computeConfidence, deriveCredStatus, isHedgedStated } from './confidence.ts';
 import { deriveFormedBy } from './deriveFormedBy.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
@@ -55,6 +56,21 @@ export interface ConsolidateDeps {
   config?: MemoWeftConfig;
   /** 可注入时钟：correct/conflict 分支的显式时间戳走它；缺省真实系统时间。 */
   clock?: Clock;
+  /** A5「矛盾画像可并存」护栏（**可选**·混合方案）：接了 `embedder` 才启用。
+   *  new 分支入库【前】，对内存里的现有画像（existing）算嵌入余弦筛出【同主题】候选，
+   *  再对少量候选用 `llm` 做一次聚焦【极性判断】；命中「相似且极性相反」的候选，
+   *  【不新建那条相反行】，改走 conflict 语义（把这条反转证据挂 contradict 到旧认知、
+   *  按全链重算 confidence、由 deriveCredStatus 判 conflicted/contested）——把本会静默并存的
+   *  矛盾拉回「冲突保持可见」。**不接 = 空命中 = 行为完全同旧**（护住 tests/eval 与既有 call site）。
+   *  纯确定性做不到：相似度可确定性化，但「极性相反」余弦判不出（对否定不敏感），必然要一次 llm 判。
+   *  依赖详见 `_workflow-docs/design/a5-guardrail-impact-2026-07-25.md`。 */
+  contradictionGuard?: {
+    embedder: Embedder;
+    /** shortlist 余弦阈值（只对 vector 余弦有语义）；缺省 GUARD_DEFAULT_SIMILARITY。 */
+    minSimilarity?: number;
+    /** 每条候选最多做几次极性判（按相似度降序取前 N）；缺省 GUARD_DEFAULT_TOPK。 */
+    topK?: number;
+  };
 }
 
 export interface ConsolidateResult {
@@ -270,6 +286,55 @@ function buildMessages(
     ],
     tagToEvidenceId,
   };
+}
+
+// ── A5 矛盾并存护栏辅助（模块级纯函数）──────────────────────────────
+/** shortlist 余弦阈值缺省：bge-m3 CLS 池化下同主题句常 ≥0.6；只对 vector 余弦有语义。 */
+const GUARD_DEFAULT_SIMILARITY = 0.6;
+/** 每条候选最多做几次极性判（相似度降序前 N）：把 llm 调用量压到很小。 */
+const GUARD_DEFAULT_TOPK = 3;
+
+/** 余弦相似度；任一为零向量或维度不齐返回 0（与 vectorRetriever 内部同口径）。 */
+function cosine(a: readonly number[], b: readonly number[]): number {
+  if (a.length !== b.length || a.length === 0) return 0;
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i]! * b[i]!;
+    na += a[i]! * a[i]!;
+    nb += b[i]! * b[i]!;
+  }
+  if (na === 0 || nb === 0) return 0;
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
+
+/**
+ * 极性判断（护栏第二半，非确定性）：候选新认知是否【直接反驳/反转】某条现有认知（同一主体）。
+ * 只判「相反」，不判「相关」——相似度已把候选压到同主题，这里专问极性。保守：拿不准判 false（不拦，避免误伤）。
+ */
+async function judgeContradiction(
+  llm: LLMClient,
+  lang: Lang,
+  existingContent: string,
+  candidateContent: string,
+): Promise<boolean> {
+  const zh = lang === 'zh';
+  const sys = zh
+    ? '你判断关于【同一个人】的两条陈述是否【直接矛盾】——即一条断言了另一条的相反面（如"爱喝咖啡"vs"不再喝咖啡"、"想考研"vs"放弃考研"）。仅当逻辑互斥时才算矛盾；只是不同话题、程度差别、或随时间自然递进（同方向）都【不算】。只输出 JSON：{"contradicts": true|false}。拿不准输出 false。'
+    : 'Decide whether two statements about the SAME person DIRECTLY contradict each other — i.e. one asserts the opposite of the other (e.g. "loves coffee" vs "no longer drinks coffee"). Only logically incompatible = contradiction; different topics, degree differences, or same-direction evolution over time do NOT count. Output only JSON: {"contradicts": true|false}. If unsure, output false.';
+  const user = zh
+    ? `现有认知：${existingContent}\n新认知：${candidateContent}\n它们矛盾吗？`
+    : `Existing: ${existingContent}\nNew: ${candidateContent}\nDo they contradict?`;
+  const parsed = await parseJsonObjectWithRepair<{ contradicts?: boolean }>({
+    llm,
+    messages: [
+      { role: 'system', content: sys },
+      { role: 'user', content: user },
+    ],
+    lang,
+  });
+  return parsed?.contradicts === true;
 }
 
 export async function consolidate(
@@ -503,6 +568,57 @@ export async function consolidate(
     return isHedgedStated(formedBy, view);
   };
 
+  // ── A5 矛盾并存护栏：进事务【前】(async) 预算「哪些 new 候选其实是对某条现有认知的极性反转」。
+  //   相似度筛(嵌入余弦) → 对少量同主题候选做一次极性判(llm)。命中 → 记 {new 候选下标 → 被反转的旧认知 id}。
+  //   下方 new 循环据此把命中候选改走 conflict（挂 contradict）、不新建相反行。
+  //   不接 embedder / 无现有画像 / 无候选 → 空 Map = 行为完全同旧。嵌入与极性判都是 async，
+  //   故【必须】在 runTx 同步闭包之前算完（闭包内不含 await 的写约束）。
+  const guardHits = await (async (): Promise<Map<number, string>> => {
+    const hits = new Map<number, string>();
+    const guard = deps.contradictionGuard;
+    const candidates = out.new ?? [];
+    if (!guard || existing.length === 0 || candidates.length === 0) return hits;
+    const threshold = guard.minSimilarity ?? GUARD_DEFAULT_SIMILARITY;
+    const topK = guard.topK ?? GUARD_DEFAULT_TOPK;
+    // 只对【会真落库】的候选（有内容 + 有可溯源支撑）算，下标与下方 new 循环严格对齐。
+    const cands: Array<{ idx: number; content: string }> = [];
+    candidates.forEach((c, idx) => {
+      const p = pickCognition(c);
+      if (!p) return;
+      if (pickSupport(citedIds(c)).length === 0) return;
+      cands.push({ idx, content: p.content });
+    });
+    if (cands.length === 0) return hits;
+    let candVecs: number[][];
+    let existVecs: number[][];
+    try {
+      [candVecs, existVecs] = await Promise.all([
+        guard.embedder.embed(cands.map((x) => x.content)),
+        guard.embedder.embed(existing.map((e) => e.content)),
+      ]);
+    } catch (e) {
+      // 嵌入端点挂了不该拖垮固化：显式记日志、退化成「本轮不拦」（不静默改数据）。
+      console.warn(
+        `[memoweft/consolidate] A5 护栏嵌入失败，本轮跳过护栏：${e instanceof Error ? e.message : String(e)}`,
+      );
+      return hits;
+    }
+    for (let k = 0; k < cands.length; k++) {
+      const shortlist = existing
+        .map((e, j) => ({ e, score: cosine(candVecs[k] ?? [], existVecs[j] ?? []) }))
+        .filter((x) => x.score >= threshold)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK);
+      for (const { e } of shortlist) {
+        if (await judgeContradiction(deps.llm, lang, e.content, cands[k]!.content)) {
+          hits.set(cands[k]!.idx, e.id); // 命中一条即够：这条候选改挂到该旧认知
+          break;
+        }
+      }
+    }
+    return hits;
+  })();
+
   // 事务化保证写路径一致性：new/correct/conflict/reinforce 与 markConsolidated
   // 要么全部提交、要么全部回滚，避免部分画像写入或事件被重复处理。
   // 只包这段【同步】写：LLM 已在上面 await 完，此闭包内不含任何 await（见 store/openStores.ts 的告诫）。
@@ -518,12 +634,62 @@ export async function consolidate(
      *  这样该计数可直接读作「库里有多少条认知的类型是靠兜底定的」。 */
     const typeFallback = { missing: 0, invalid: 0, outOfScope: 0 };
 
+    /** 把「反证原话」挂到旧认知上并按【全链】重算把握度（conflict 分支与 A5 护栏共用同口径，
+     *  避免 #19 的「只翻 credStatus 不重算 → contradictPenalty 空转」回归）。返回是否真挂上。
+     *  formedBy 继承旧认知、不重派载体维（重算期约束）；credStatus 交 deriveCredStatus 在
+     *  contradictCount>0 下判 conflicted/contested（保住「冲突只暴露、不消解」不变量）。 */
+    const attachContradiction = (cogId: string, contraIds: readonly string[]): boolean => {
+      const cog = deps.cognitionStore.get(cogId);
+      if (!cog || cog.invalidAt) return false;
+      if (contraIds.length === 0) return false; // 没引到冲突原话 → 不凭空标冲突（证据完整性规则）
+      const already = new Set(deps.cognitionStore.sourcesOf(cog.id).map((s) => s.evidenceId));
+      const add = contraIds.filter((id) => !already.has(id));
+      if (add.length)
+        deps.cognitionStore.addEvidence(
+          cog.id,
+          add.map((id) => ({ evidenceId: id, relation: 'contradict' as const })),
+        );
+      const links = deps.cognitionStore.sourcesOf(cog.id);
+      const supportIds = links.filter((l) => l.relation === 'support').map((l) => l.evidenceId);
+      const supportCount = supportIds.length;
+      const contradictCount = links.filter((l) => l.relation === 'contradict').length;
+      const confidence = computeConfidence(
+        {
+          contentType: cog.contentType,
+          formedBy: cog.formedBy,
+          supportCount,
+          contradictCount,
+          hedged: resolveHedged(cog.formedBy, supportIds),
+        },
+        deps.config,
+      );
+      deps.cognitionStore.update(cog.id, {
+        confidence,
+        credStatus: deriveCredStatus(
+          confidence,
+          contradictCount,
+          cog.contentType,
+          deps.config,
+          supportCount,
+        ),
+      });
+      return true;
+    };
+
     // new
-    for (const c of out.new ?? []) {
+    for (const [idx, c] of (out.new ?? []).entries()) {
       const p = pickCognition(c);
       if (!p) continue;
       const support = pickSupport(citedIds(c));
       if (support.length === 0) continue; // 无可溯源原话 → 跳过（不落无溯源认知，证据完整性规则）
+      // A5 护栏命中：这条「new」其实是对某条现有认知的极性反转 → 不新建那条相反行，
+      //   改把它的原话当反证挂到旧认知上（走 conflict 语义、把矛盾拉回「冲突可见」）。
+      const guardOldId = guardHits.get(idx);
+      if (guardOldId && attachContradiction(guardOldId, support)) {
+        conflicted++;
+        continue; // 不落新行、不计 typeFallback（未落库）
+      }
+      // 未命中护栏（或挂失败，如旧认知已失效）→ 走正常新建，别把这条丢了。
       if (p.typeFallback) typeFallback[p.typeFallback]++;
       const formedBy = resolveFormedBy(p.modelSaysInferred, support); // 载体维由代码从证据算，不听模型
       // 接线点 1/8 · new（形成期）：`resolutionOf` 就地可用，零查表成本。
@@ -684,54 +850,12 @@ export async function consolidate(
 
     // conflict：标记暴露，不消解
     for (const c of out.conflict ?? []) {
+      // 模型显式点名的 conflict：把反证挂到该旧认知、按全链重算（复用 attachContradiction，
+      //   与 A5 护栏走同一段口径）。#19 的教训（只翻 credStatus→contradictPenalty 空转→被反驳的
+      //   认知仍以原强度通过 recall 注入）与「hedged 重算期回表退化」边界都收在 attachContradiction 里。
       const cogId = resolveCogId(c.cognition_id, 'conflict');
-      const cog = cogId ? deps.cognitionStore.get(cogId) : null;
-      if (!cog || cog.invalidAt) continue;
-      const contra = pickSupport(citedIds(c));
-      if (contra.length === 0) continue; // 没引到冲突原话 → 不凭空标冲突（无操作，证据完整性规则）
-      const already = new Set(deps.cognitionStore.sourcesOf(cog.id).map((s) => s.evidenceId));
-      const add = contra.filter((id) => !already.has(id));
-      if (add.length)
-        deps.cognitionStore.addEvidence(
-          cog.id,
-          add.map((id) => ({ evidenceId: id, relation: 'contradict' as const })),
-        );
-      // 按最新的支持/反对链重算置信——与 reinforce 分支、managementApi 合并路同口径。
-      //   此前这里只写 credStatus，于是 config.consolidation.contradictPenalty 在整条 conflict 路径上
-      //   永远不生效：一条被反驳的认知，置信度与零反驳时完全相同，仍以原强度通过 recall 的
-      //   minEffectiveConfidence 门控注入回话——用户已经推翻过的偏好照样被翻出来用。
-      //   credStatus 不再写死：deriveCredStatus 在 contradictCount>0 时恒返回 'conflicted'
-      //   （confidence.ts:43），交给它推导既保住「冲突只暴露、不消解」的语义，又不留旧置信值撒谎。
-      const links = deps.cognitionStore.sourcesOf(cog.id);
-      const supportIds = links.filter((l) => l.relation === 'support').map((l) => l.evidenceId);
-      const supportCount = supportIds.length;
-      const contradictCount = links.filter((l) => l.relation === 'contradict').length;
-      // 接线点 5/8 · conflict（重算期），理由同 reinforce 分支（hedged 不落库，每次重新派生）。
-      //   本路径的特殊性：本轮新增证据挂的是 contradict，**support 集合全是历史证据** ⇒ 混合读会
-      //   整个落到表上，`semanticResolutionStore` 没接时这里退化最明显（见 resolveHedged 的退化边界）。
-      //   漏接的后果反直觉：一条已封顶 280 的含糊认知被反驳一次，重算得 600−120=480 而非
-      //   min(480,280)=280——**被反驳之后置信度反而暴涨**。
-      const confidence = computeConfidence(
-        {
-          contentType: cog.contentType,
-          formedBy: cog.formedBy,
-          supportCount,
-          contradictCount,
-          hedged: resolveHedged(cog.formedBy, supportIds),
-        },
-        deps.config,
-      );
-      deps.cognitionStore.update(cog.id, {
-        confidence,
-        credStatus: deriveCredStatus(
-          confidence,
-          contradictCount,
-          cog.contentType,
-          deps.config,
-          supportCount,
-        ),
-      });
-      conflicted++;
+      if (!cogId) continue;
+      if (attachContradiction(cogId, pickSupport(citedIds(c)))) conflicted++;
     }
 
     // 语义解析落库（public contract）：对每条【用户真说的】证据落一份 resolution。

@@ -57,14 +57,13 @@ function seed(s: Stores, word: string, at: string): string {
   return e.id;
 }
 
-/** 一个只按当前待固化事件回 new[] 的脚本 LLM；每次 chat 返回队列里的下一段。 */
-function scriptedLlm(newItemsByTurn: Array<(eid: string) => string>) {
-  let turn = 0;
+/** 固定返回一段 {"new":[...]} 的脚本 LLM（带 callCount 满足 LLMClient 契约）。 */
+function fixedNewLlm(newItems: string) {
   return {
-    lastEvidenceId: '',
+    callCount: 0,
     async chat() {
-      const fn = newItemsByTurn[turn++] ?? (() => '[]');
-      return `{"new":${fn(this.lastEvidenceId)}}`;
+      this.callCount++;
+      return `{"new":${newItems}}`;
     },
   };
 }
@@ -74,36 +73,157 @@ test('现状复现：模型把「立场反转」误判成 new → 库里并存�
   try {
     // 第一轮：用户说爱喝咖啡 → 落一条 preference。
     const e1 = seed(s, '我超爱喝咖啡，每天好几杯', '2026-07-01T10:00:00.000Z');
-    const llm = scriptedLlm([
-      () => `[{"content":"用户爱喝咖啡","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e1}"]}]`,
-      () => `[{"content":"用户不再喝咖啡了","content_type":"preference","formed_by":"stated","support_evidence_ids":["${'__E2__'}"]}]`,
-    ]);
-    llm.lastEvidenceId = e1;
-    await consolidate('u', { eventStore: s.evt, evidenceStore: s.ev, cognitionStore: s.cog, llm });
+    await consolidate('u', {
+      eventStore: s.evt,
+      evidenceStore: s.ev,
+      cognitionStore: s.cog,
+      llm: fixedNewLlm(
+        `[{"content":"用户爱喝咖啡","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e1}"]}]`,
+      ),
+    });
     assert.equal(s.cog.active('u').length, 1, '第一轮后应有一条"爱喝咖啡"');
 
     // 第二轮：用户反转说戒了咖啡，但模型把它当成【新认知】（而非 conflict/correct）。
     const e2 = seed(s, '我把咖啡戒了，再也不喝了', '2026-08-01T10:00:00.000Z');
-    // 脚本第二段里把占位符替换成真 e2。
-    llm.lastEvidenceId = e2;
-    const llm2 = {
-      async chat() {
-        return `{"new":[{"content":"用户不再喝咖啡了","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e2}"]}]}`;
-      },
-    };
-    await consolidate('u', { eventStore: s.evt, evidenceStore: s.ev, cognitionStore: s.cog, llm: llm2 });
+    await consolidate('u', {
+      eventStore: s.evt,
+      evidenceStore: s.ev,
+      cognitionStore: s.cog,
+      llm: fixedNewLlm(
+        `[{"content":"用户不再喝咖啡了","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e2}"]}]`,
+      ),
+    });
 
     const active = s.cog.active('u');
     // 缺陷现状：两条极性相反的认知并存，且都不是 conflicted/contested。
     assert.equal(active.length, 2, 'A5 复现：并存两条认知');
     const contents = active.map((c) => c.content).sort();
     assert.ok(
-      active.some((c) => /爱喝咖啡/.test(c.content)) && active.some((c) => /不再喝咖啡/.test(c.content)),
+      active.some((c) => /爱喝咖啡/.test(c.content)) &&
+        active.some((c) => /不再喝咖啡/.test(c.content)),
       `应并存"爱喝咖啡"与"不再喝咖啡"，实际：${JSON.stringify(contents)}`,
     );
     assert.ok(
       active.every((c) => c.credStatus !== 'conflicted' && c.credStatus !== 'contested'),
       '缺陷现状：两条都不带冲突标记，对"冲突可见"隐形',
+    );
+  } finally {
+    closeAll(s);
+  }
+});
+
+// ── 护栏开启（注入 embedder + 极性判 llm）───────────────────────────
+/** 分流：命中极性判提示词特有标记（同一个人/SAME person 等）→ 返回 {"contradicts":bool}；
+ *  其余（consolidate 主调用）→ {"new":[...]}。带 callCount 满足 LLMClient 契约。 */
+function guardAwareLlm(newItems: string, contradicts: boolean) {
+  return {
+    callCount: 0,
+    async chat(messages: Array<{ role: string; content: string }>) {
+      this.callCount++;
+      // 用【只在极性判提示词里、consolidate 提示词里绝对没有】的标记分流
+      //   （consolidate 含 "contradicts/矛盾" 会误判，故不能用它们）。
+      const text = messages.map((m) => m.content).join('\n');
+      if (/同一个人|SAME person|它们矛盾吗|Do they contradict/i.test(text)) {
+        return `{"contradicts": ${contradicts}}`;
+      }
+      return `{"new":${newItems}}`;
+    },
+  };
+}
+/** 玩具嵌入器：含"咖啡/coffee"→[1,0]，含"茶/tea"→[0,1]，其余→[0.5,0.5]。让同主题余弦≈1、跨主题≈0。 */
+const topicEmbedder = {
+  async embed(texts: string[]): Promise<number[][]> {
+    return texts.map((t) =>
+      /咖啡|coffee/i.test(t) ? [1, 0] : /茶|tea/i.test(t) ? [0, 1] : [0.5, 0.5],
+    );
+  },
+};
+
+/** 先建"爱喝咖啡"，返回 stores（供各护栏用例接着喂第二轮）。 */
+async function seedCoffeeLover() {
+  const s = fresh();
+  const e1 = seed(s, '我超爱喝咖啡，每天好几杯', '2026-07-01T10:00:00.000Z');
+  await consolidate('u', {
+    eventStore: s.evt,
+    evidenceStore: s.ev,
+    cognitionStore: s.cog,
+    llm: fixedNewLlm(
+      `[{"content":"用户爱喝咖啡","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e1}"]}]`,
+    ),
+  });
+  return s;
+}
+
+test('护栏命中：反转被误判 new + 相似且极性相反 → 不新建相反行，改把旧认知标 conflicted', async () => {
+  const s = await seedCoffeeLover();
+  try {
+    const e2 = seed(s, '我把咖啡戒了，再也不喝了', '2026-08-01T10:00:00.000Z');
+    await consolidate('u', {
+      eventStore: s.evt,
+      evidenceStore: s.ev,
+      cognitionStore: s.cog,
+      llm: guardAwareLlm(
+        `[{"content":"用户不再喝咖啡了","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e2}"]}]`,
+        true,
+      ),
+      contradictionGuard: { embedder: topicEmbedder, minSimilarity: 0.5 },
+    });
+    const active = s.cog.active('u');
+    assert.equal(active.length, 1, '护栏应阻止并存：只剩旧认知一条');
+    assert.match(active[0]!.content, /爱喝咖啡/, '保留的是旧认知"爱喝咖啡"');
+    assert.equal(active[0]!.credStatus, 'conflicted', '旧认知被挂反证 → conflicted（冲突可见）');
+    assert.ok(!active.some((c) => /不再喝咖啡/.test(c.content)), '不再新建"不再喝咖啡"相反行');
+  } finally {
+    closeAll(s);
+  }
+});
+
+test('相似度门：不同主题（茶 vs 咖啡）→ 护栏不触发、正常并存（不误伤）', async () => {
+  const s = await seedCoffeeLover();
+  try {
+    const e2 = seed(s, '我最近爱上喝茶了', '2026-08-01T10:00:00.000Z');
+    await consolidate('u', {
+      eventStore: s.evt,
+      evidenceStore: s.ev,
+      cognitionStore: s.cog,
+      // 即使极性判会说"矛盾"，茶与咖啡余弦≈0、进不了 shortlist，极性判压根不会被调用。
+      llm: guardAwareLlm(
+        `[{"content":"用户爱喝茶","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e2}"]}]`,
+        true,
+      ),
+      contradictionGuard: { embedder: topicEmbedder, minSimilarity: 0.5 },
+    });
+    const active = s.cog.active('u');
+    assert.equal(active.length, 2, '不同主题 → 不拦，两条并存');
+    assert.ok(
+      active.every((c) => c.credStatus !== 'conflicted'),
+      '没有误挂冲突',
+    );
+  } finally {
+    closeAll(s);
+  }
+});
+
+test('极性门：同主题但不矛盾（爱喝咖啡 + 喜欢手冲咖啡）→ 护栏不触发、正常并存（不误伤）', async () => {
+  const s = await seedCoffeeLover();
+  try {
+    const e2 = seed(s, '我特别喜欢手冲咖啡', '2026-08-01T10:00:00.000Z');
+    await consolidate('u', {
+      eventStore: s.evt,
+      evidenceStore: s.ev,
+      cognitionStore: s.cog,
+      // 同主题（都进 shortlist），但极性判返回 false → 不拦。
+      llm: guardAwareLlm(
+        `[{"content":"用户喜欢手冲咖啡","content_type":"preference","formed_by":"stated","support_evidence_ids":["${e2}"]}]`,
+        false,
+      ),
+      contradictionGuard: { embedder: topicEmbedder, minSimilarity: 0.5 },
+    });
+    const active = s.cog.active('u');
+    assert.equal(active.length, 2, '同主题不矛盾 → 不拦，两条并存');
+    assert.ok(
+      active.every((c) => c.credStatus !== 'conflicted'),
+      '没有误挂冲突',
     );
   } finally {
     closeAll(s);
