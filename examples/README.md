@@ -17,16 +17,22 @@ npm run build
 
 ## Examples
 
-- [`no-key-demo.ts`](./no-key-demo.ts) — **zero-config · no model endpoint · no network.** The fastest way in: an offline stub LLM (defined in the file) runs the full write path so you can see the differentiators in ~30s — a conflict is exposed and the old belief is kept (never silently overwritten), and an inferred item stays a low-confidence guess instead of a fact.
-- [`minimal.ts`](./minimal.ts) — minimal Core setup and conversation flow.
-- [`memory-management.ts`](./memory-management.ts) — controlled memory-management APIs.
-- [`portable-bundle.ts`](./portable-bundle.ts) — export, validate, and import a memory bundle.
-- [`plugin-hook.ts`](./plugin-hook.ts) — plugin hooks and restricted `PluginContext` capabilities.
+**Offline — no API key or network** (run right after `npm run build`):
 
-Run an example from the repository root with Node.js, for example:
+- [`no-key-demo.ts`](./no-key-demo.ts) — **the fastest way in (~30s).** An offline stub LLM (defined in the file) runs the full write path so you can see the differentiators: a conflict is exposed and the old belief is kept (never silently overwritten), and an inferred item stays a low-confidence guess instead of a fact.
+- [`demo.ts`](./demo.ts) — the four-act story: **remember → correct → conflict → time-decay**. Deterministic (offline stub model + injectable clock). Run it with `npm run demo`. Flags: `-- --act N` runs the selected act (acts 2–4 replay act 1 first to seed state), `-- --fast-forward 30d` sets act 4's horizon.
+- [`portable-bundle.ts`](./portable-bundle.ts) — export, validate, and import a memory bundle (evidence only, so it needs no model). Writes `./example-src.db` / `./example-dst.db`; re-running accumulates evidence, so delete them between runs.
+- [`plugin-hook.ts`](./plugin-hook.ts) — plugin hooks and the restricted `PluginContext` capabilities (ships its own stub model).
+
+**Needs a chat model** — set `MEMOWEFT_LLM_*` in a `.env` first (see the [getting-started guide](../docs/getting-started.md)):
+
+- [`minimal.ts`](./minimal.ts) — minimal Core setup and the full write→read loop (`updateProfile` + `handleConversationTurn`).
+- [`memory-management.ts`](./memory-management.ts) — the controlled memory-management path: soft-invalidate a cognition with an audit reason (retained & traceable, not deleted).
+
+Run an offline example from the repository root with Node.js, for example:
 
 ```bash
-node examples/minimal.ts
+node examples/no-key-demo.ts
 ```
 
-The prerequisites for model configuration and temporary database files are documented at the top of each example.
+Model-configuration prerequisites and the temporary database files each example uses are documented at the top of every file.
