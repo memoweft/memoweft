@@ -12,8 +12,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { createMemoWeftCore, type MemoWeftCore } from 'memoweft';
 import { registerTools, type RegisterToolsOptions } from './tools.ts';
 
-/** 本包版本（与 package.json 同步；serverInfo 用）。 */
-export const MCP_SERVER_VERSION = '0.2.0';
+/** 本包版本（与 package.json 同步；serverInfo 用）。tests/version.test.ts 断言与 package.json 一致，防再漂移。 */
+export const MCP_SERVER_VERSION = '0.2.1';
 
 /**
  * 从环境变量建 core。
