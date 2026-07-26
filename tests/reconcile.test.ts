@@ -35,17 +35,35 @@ function seedEvidence(s: Stores, word: string, at: string): string {
     occurredAt: at,
   }).id;
 }
-/** 直接落一条 active 认知（带 support 证据），模拟"第一道漏掉、并存在库"的残留。 */
+/** 直接落一条 active 认知（带 support 证据），模拟"第一道漏掉、并存在库"的残留。
+ *  用递增 createdAt（每次 +1s）+ 稳定自增 id：先落的 createdAt 更早 = 锚点，锚点由不可变量确定，
+ *  不受重跑时 confidence 变化导致的 active 重排影响（见幂等重跑测试）。 */
+let cogClock = Date.parse('2026-07-01T00:00:00.000Z');
+let cogSeq = 0;
 function putCognition(s: Stores, content: string, evidenceId: string) {
-  return s.cog.put({
-    subjectId: 'u',
-    content,
-    contentType: 'preference',
-    formedBy: 'stated',
-    confidence: 600,
-    credStatus: 'limited',
-    evidence: [{ evidenceId, relation: 'support' as const }],
-  });
+  const createdAt = new Date((cogClock += 1000)).toISOString();
+  const id = `cog-${cogSeq++}`;
+  s.cog.insert(
+    {
+      id,
+      subjectId: 'u',
+      content,
+      contentType: 'preference',
+      formedBy: 'stated',
+      confidence: 600,
+      credStatus: 'limited',
+      scope: null,
+      validAt: null,
+      invalidAt: null,
+      askedAt: null,
+      archivedAt: null,
+      mutedAt: null,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    [{ evidenceId, relation: 'support' as const }],
+  );
+  return { id, content };
 }
 
 /** 只回极性判 {"contradicts":bool} 的脚本 LLM（reconcile 只调 judgeContradiction）。 */
@@ -172,5 +190,49 @@ test('facade：有 embedder + 空画像 → 正常空返回、不崩', async () 
     assert.equal(r.scanned, 0, '空画像 scanned 0');
   } finally {
     core.close();
+  }
+});
+
+test('reconcile 幂等重跑：第二遍 no-op（P2#1 锚点不翻转 + P2#2 不虚增）', async () => {
+  const s = fresh();
+  try {
+    const e1 = seedEvidence(s, '我超爱喝咖啡', '2026-07-01T10:00:00.000Z');
+    const e2 = seedEvidence(s, '我把咖啡戒了', '2026-08-01T10:00:00.000Z');
+    const a = putCognition(s, '用户爱喝咖啡', e1); // 先落 = createdAt 较早 = 锚点
+    const b = putCognition(s, '用户不再喝咖啡了', e2);
+    const deps = { cognitionStore: s.cog, llm: polarityLlm(true), embedder: topicEmbedder };
+
+    const r1 = await reconcileContradictions('u', deps);
+    assert.equal(r1.conflictsAttached, 1, '首遍命中挂一次');
+    assert.equal(
+      s.cog.active('u').find((c) => c.id === a.id)!.credStatus,
+      'conflicted',
+      '锚点 conflicted',
+    );
+    assert.notEqual(
+      s.cog.active('u').find((c) => c.id === b.id)!.credStatus,
+      'conflicted',
+      '反证挂锚点、不挂较晚那条',
+    );
+
+    // 第二遍：首遍 attach 已把锚点 updatedAt 推新——用不可变 createdAt 才不翻转；反证已挂 → add 空 → no-op。
+    const r2 = await reconcileContradictions('u', deps);
+    assert.equal(
+      r2.conflictsAttached,
+      0,
+      'P2#2：无新反证 → 不虚增、不 update（transient 不被无限续命）',
+    );
+    assert.equal(
+      s.cog.active('u').find((c) => c.id === a.id)!.credStatus,
+      'conflicted',
+      '锚点仍 conflicted',
+    );
+    assert.notEqual(
+      s.cog.active('u').find((c) => c.id === b.id)!.credStatus,
+      'conflicted',
+      'P2#1：锚点不翻转，较晚那条仍未被挂反证',
+    );
+  } finally {
+    closeAll(s);
   }
 });

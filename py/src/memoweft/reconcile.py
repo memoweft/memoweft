@@ -120,12 +120,17 @@ def reconcile_contradictions(
                 pairs_judged += 1
                 if not judge_contradiction(llm, lg, active[i].content, active[j].content):
                     continue
-                # 锚点 = 较早入库（updated_at 早，视作「旧立场」）；反证 = 较晚那条的 support 证据。
+                # 锚点 = 较早入库（视作「旧立场」）；反证 = 较晚那条的 support 证据。
+                #   ⚠ 用不可变的 (created_at, id) 全序，绝不用 updated_at：updated_at 会被 attach_contradiction /
+                #   reinforce 推新，且 attach 改 confidence 会让 active 重排——两者都会在重跑后翻转锚点、破坏幂等（Codex P2#1）。
+                #   created_at 相同（同轮多条认知可同毫秒）时用不可变 id 兜底 tie-break，使锚点与 active 顺序/confidence 无关。
                 #   与护栏「旧认知当锚点、新反证挂上」同向；不新建相反行、不删（冲突只暴露、不消解）。
-                if parse_iso_ms(active[i].updated_at) <= parse_iso_ms(active[j].updated_at):
-                    anchor, other = active[i], active[j]
+                ci, cj = active[i], active[j]
+                ti, tj = parse_iso_ms(ci.created_at), parse_iso_ms(cj.created_at)
+                if ti < tj or (ti == tj and ci.id < cj.id):
+                    anchor, other = ci, cj
                 else:
-                    anchor, other = active[j], active[i]
+                    anchor, other = cj, ci
                 contra_ids = [
                     s.evidence_id for s in cognition_store.sources_of(other.id) if s.relation == "support"
                 ]

@@ -151,3 +151,25 @@ def test_reconcile_empty_and_single_profile() -> None:
     single = reconcile_contradictions("owner", cognition_store=cog, llm=llm, embedder=_TopicEmbedder())
     assert single.scanned == 1 and single.pairs_judged == 0, "单条 → 无对可判"
     assert llm.call_count == 0, "scanned<2 不进极性判"
+
+
+def test_reconcile_idempotent_rerun() -> None:
+    """幂等重跑：第二遍 no-op（P2#1 锚点用不可变 created_at 不翻转 + P2#2 无新反证不虚增）。"""
+    ev, cog = _stores()
+    e1 = _seed_ev(ev, "我超爱喝咖啡")
+    e2 = _seed_ev(ev, "我把咖啡戒了")
+    # created_at 较早的 cog-a = 锚点
+    cog.insert(_cog("cog-a", "用户爱喝咖啡", T_EARLY), [EvidenceLink(evidence_id=e1, relation="support")])
+    cog.insert(_cog("cog-b", "用户不再喝咖啡了", T_LATE), [EvidenceLink(evidence_id=e2, relation="support")])
+    llm, emb = _PolarityLLM(True), _TopicEmbedder()
+
+    r1 = reconcile_contradictions("owner", cognition_store=cog, llm=llm, embedder=emb)
+    assert r1.conflicts_attached == 1, "首遍命中挂一次"
+    assert next(c for c in cog.active("owner") if c.id == "cog-a").cred_status == "conflicted", "锚点 conflicted"
+    assert next(c for c in cog.active("owner") if c.id == "cog-b").cred_status != "conflicted", "反证挂锚点、不挂较晚那条"
+
+    # 第二遍：首遍 attach 已把锚点 updated_at 推新——用不可变 created_at 才不翻转；反证已挂 → add 空 → no-op。
+    r2 = reconcile_contradictions("owner", cognition_store=cog, llm=llm, embedder=emb)
+    assert r2.conflicts_attached == 0, "P2#2：无新反证 → 不虚增、不刷 updated_at"
+    assert next(c for c in cog.active("owner") if c.id == "cog-a").cred_status == "conflicted", "锚点仍 conflicted"
+    assert next(c for c in cog.active("owner") if c.id == "cog-b").cred_status != "conflicted", "P2#1：锚点不翻转"

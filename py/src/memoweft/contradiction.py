@@ -178,8 +178,11 @@ def attach_contradiction(cog_id: str, contra_ids: Sequence[str], deps: AttachDep
         return False
     already = {s.evidence_id for s in deps.cognition_store.sources_of(cog.id)}
     add = [i for i in contra_ids if i not in already]
-    if add:
-        deps.cognition_store.add_evidence(cog.id, [EvidenceLink(evidence_id=i, relation="contradict") for i in add])
+    # 反证全已挂（add 空）→ 幂等 no-op：不重算、不刷 updated_at（否则定期 reconcile 每轮 update 会让
+    #   transient 认知永不 expire）、不虚增 conflicts_attached（Codex P2#2）。同 reinforce 对重复证据的 no-op。
+    if not add:
+        return False
+    deps.cognition_store.add_evidence(cog.id, [EvidenceLink(evidence_id=i, relation="contradict") for i in add])
     links = deps.cognition_store.sources_of(cog.id)
     support_ids = [lk.evidence_id for lk in links if lk.relation == "support"]
     support_count = len(support_ids)

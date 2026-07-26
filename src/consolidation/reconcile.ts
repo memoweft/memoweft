@@ -114,12 +114,16 @@ export async function reconcileContradictions(
         pairsJudged++;
         if (!(await judgeContradiction(deps.llm, lang, active[i]!.content, active[j]!.content)))
           continue;
-        // 锚点 = 较早入库（updatedAt 早，视作「旧立场」）；反证 = 较晚那条的 support 证据。
+        // 锚点 = 较早入库（视作「旧立场」）；反证 = 较晚那条的 support 证据。
+        //   ⚠ 用不可变的 (createdAt, id) 全序，绝不用 updatedAt：updatedAt 会被 attachContradiction /
+        //   reinforce 推新，且 attach 改 confidence 会让 active 重排——两者都会在重跑后翻转锚点、破坏幂等（Codex P2#1）。
+        //   createdAt 相同（同轮多条认知可同毫秒）时用不可变 id 兜底 tie-break，使锚点与 active 顺序/confidence 无关。
         //   与护栏「旧认知当锚点、新反证挂上」同向；不新建相反行、不删（冲突只暴露、不消解）。
-        const [anchor, other] =
-          new Date(active[i]!.updatedAt).getTime() <= new Date(active[j]!.updatedAt).getTime()
-            ? [active[i]!, active[j]!]
-            : [active[j]!, active[i]!];
+        const ci = active[i]!;
+        const cj = active[j]!;
+        const ti = new Date(ci.createdAt).getTime();
+        const tj = new Date(cj.createdAt).getTime();
+        const [anchor, other] = ti < tj || (ti === tj && ci.id < cj.id) ? [ci, cj] : [cj, ci];
         const contraIds = deps.cognitionStore
           .sourcesOf(other.id)
           .filter((s) => s.relation === 'support')

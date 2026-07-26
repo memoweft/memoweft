@@ -147,11 +147,13 @@ export function attachContradiction(
   if (contraIds.length === 0) return false; // 没引到冲突原话 → 不凭空标冲突（证据完整性规则）
   const already = new Set(deps.cognitionStore.sourcesOf(cog.id).map((s) => s.evidenceId));
   const add = contraIds.filter((id) => !already.has(id));
-  if (add.length)
-    deps.cognitionStore.addEvidence(
-      cog.id,
-      add.map((id) => ({ evidenceId: id, relation: 'contradict' as const })),
-    );
+  // 反证全已挂（add 空）→ 幂等 no-op：不重算、不刷 updatedAt（否则定期 reconcile 每轮 update 会让
+  //   transient 认知永不 expire）、不虚增 conflictsAttached（Codex P2#2）。同 reinforceCognition 对重复证据的 no-op。
+  if (add.length === 0) return false;
+  deps.cognitionStore.addEvidence(
+    cog.id,
+    add.map((id) => ({ evidenceId: id, relation: 'contradict' as const })),
+  );
   const links = deps.cognitionStore.sourcesOf(cog.id);
   const supportIds = links.filter((l) => l.relation === 'support').map((l) => l.evidenceId);
   const supportCount = supportIds.length;
