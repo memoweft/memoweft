@@ -17,17 +17,17 @@ npm run build
 
 ## Examples
 
-**Offline & deterministic** — run right after `npm run build`, no API key or network:
+**Offline — no API key or network** (run right after `npm run build`):
 
 - [`no-key-demo.ts`](./no-key-demo.ts) — **the fastest way in (~30s).** An offline stub LLM (defined in the file) runs the full write path so you can see the differentiators: a conflict is exposed and the old belief is kept (never silently overwritten), and an inferred item stays a low-confidence guess instead of a fact.
-- [`demo.ts`](./demo.ts) — the four-act story: **remember → correct → conflict → time-decay**. Run it with `npm run demo` (offline stub model + injectable clock). Flags: `-- --act N` runs one act, `-- --fast-forward 30d` sets act 4's horizon.
-- [`portable-bundle.ts`](./portable-bundle.ts) — export, validate, and import a memory bundle (evidence only, so it needs no model).
+- [`demo.ts`](./demo.ts) — the four-act story: **remember → correct → conflict → time-decay**. Deterministic (offline stub model + injectable clock). Run it with `npm run demo`. Flags: `-- --act N` runs the selected act (acts 2–4 replay act 1 first to seed state), `-- --fast-forward 30d` sets act 4's horizon.
+- [`portable-bundle.ts`](./portable-bundle.ts) — export, validate, and import a memory bundle (evidence only, so it needs no model). Writes `./example-src.db` / `./example-dst.db`; re-running accumulates evidence, so delete them between runs.
 - [`plugin-hook.ts`](./plugin-hook.ts) — plugin hooks and the restricted `PluginContext` capabilities (ships its own stub model).
 
 **Needs a chat model** — set `MEMOWEFT_LLM_*` in a `.env` first (see the [getting-started guide](../docs/getting-started.md)):
 
 - [`minimal.ts`](./minimal.ts) — minimal Core setup and the full write→read loop (`updateProfile` + `handleConversationTurn`).
-- [`memory-management.ts`](./memory-management.ts) — controlled memory-management APIs (invalidate / merge / safe-remove, each with an audit reason).
+- [`memory-management.ts`](./memory-management.ts) — the controlled memory-management path: soft-invalidate a cognition with an audit reason (retained & traceable, not deleted).
 
 Run an offline example from the repository root with Node.js, for example:
 
