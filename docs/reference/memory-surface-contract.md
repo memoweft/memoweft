@@ -85,12 +85,12 @@ Recall excludes invalid, archived, muted, and below-threshold cognitions. `conte
 
 ### Background maintenance
 
-Optional, host-scheduled maintenance entry points, decoupled from `updateProfile` and idempotent. Both default `subjectId` like the other methods. These entry points are experimental.
+Optional, host-scheduled maintenance entry points, decoupled from `updateProfile`. Both default `subjectId` like the other methods. These entry points are experimental.
 
-| Method                    | Persistent effects                                                                             | Model or network use                    | Notes                                                                                                                            |
-| ------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `expire(input?)`          | Marks stale transient cognitions (`state`/`hypothesis`/`trend`) invalid, retaining provenance. | None; pure rule-based.                  | Stable types (`preference`/`fact`) never auto-expire. Age threshold from `config.background.expireAfterDays`; host owns cadence. |
-| `aggregateTrends(input?)` | Writes `trend` cognitions for `state` patterns that recur within the window.                   | Uses the write model to name the trend. | The only production producer of `trend` cognitions; decoupled from `updateProfile`.                                              |
+| Method                    | Persistent effects                                                           | Model or network use                    | Notes                                                                                                                                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `expire(input?)`          | Marks stale transient cognitions invalid, retaining provenance.              | None; pure rule-based, idempotent.      | Which content types can expire is driven by `config.background.expireAfterDays` (default: `state`/`hypothesis`/`trend`); types not listed there never auto-expire. Host owns cadence. |
+| `aggregateTrends(input?)` | Writes `trend` cognitions for `state` patterns that recur within the window. | Uses the write model to name the trend. | The only production producer of `trend` cognitions. Idempotent only when the model cites the full eligible window; a partial-coverage trend can be re-emitted on a later run.         |
 
 ### Conversation helpers
 
