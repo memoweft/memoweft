@@ -46,8 +46,15 @@ export interface ReconcileResult {
   llmCalls: number;
 }
 
-/** 连通分量聚簇（同题近邻图）：余弦 ≥ 阈值连边，返回 size≥2 的簇（active 下标）。design §3.2。 */
-function clusterByCosine(vecs: readonly (readonly number[])[], threshold: number): number[][] {
+/**
+ * 连通分量聚簇（同题近邻图）：余弦 ≥ 阈值连边，返回 size≥2 的簇（active 下标）。design §3.2。
+ * 纯确定性——export 供 gen-shared-assets 产出 parity/reconcile.json 夹具（Python `_cluster_by_cosine` 逐位比对）；
+ *   不进 index.ts、不上 api-surface。极性判是 LLM、不进夹具（同护栏）。
+ */
+export function clusterByCosine(
+  vecs: readonly (readonly number[])[],
+  threshold: number,
+): number[][] {
   const n = vecs.length;
   const parent = Array.from({ length: n }, (_, i) => i);
   const find = (x: number): number => (parent[x] === x ? x : (parent[x] = find(parent[x]!)));
