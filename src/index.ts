@@ -142,6 +142,14 @@ export {
   type TrendResult,
 } from './background/trends.ts';
 
+// [experimental] A5 全画像矛盾扫描算子（第二道护栏·默认关）：宿主经 core.reconcileContradictions 调；
+//   算子导出供 Python 无 facade 层直接用 + 返回类型标注。pre-1.0 opt-in 能力、签名可能演进。
+export {
+  reconcileContradictions,
+  type ReconcileDeps,
+  type ReconcileResult,
+} from './consolidation/reconcile.ts';
+
 // 召回底座（可替换）+ 嵌入器（云端优先可替换）
 // [experimental] Retriever 扩展点接口 + 内建实现：可替换注入点，接口签名 pre-1.0 可能演进。
 export { type Retriever, type RetrievalHit } from './retrieval/retriever.ts';

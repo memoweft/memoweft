@@ -31,6 +31,10 @@ import {
 } from '../consolidation/updateProfile.ts';
 import { expire as runExpire, type ExpireResult } from '../background/expire.ts';
 import { aggregateTrends as runAggregateTrends, type TrendResult } from '../background/trends.ts';
+import {
+  reconcileContradictions as runReconcile,
+  type ReconcileResult,
+} from '../consolidation/reconcile.ts';
 import { recallCognitions } from '../retrieval/recall.ts';
 import type { ContentType, CredStatus, FormedBy } from '../cognition/model.ts';
 import { NullRetriever } from '../retrieval/nullRetriever.ts';
@@ -255,6 +259,10 @@ export interface MemoWeftCore {
   /** 跨会话趋势聚合（后台维护入口）：规则筛「窗口内同类 state 反复出现」→ 写模型命名成 `trend` 认知。
    *  是 `trend` 类型的唯一生产产出者；与 `updateProfile` 解耦、宿主自定节奏。subjectId 缺省同其它方法。 */
   aggregateTrends(input?: { subjectId?: string }): Promise<TrendResult>;
+  /** A5 全画像矛盾扫描（第二道护栏·维护入口·默认关）：对 active 画像同题聚簇 + 极性判 + 命中挂反证，
+   *  兜底 consolidate 护栏漏的跨轮 / topK 残留矛盾；命中走 attachContradiction 同口径（不新建相反行、不删、不裁决）。
+   *  需 embedder（相似度筛同题）——未配则告警 + 空返回。与 updateProfile 解耦、宿主自定节奏、可幂等重跑。subjectId 缺省同其它方法。 */
+  reconcileContradictions(input?: { subjectId?: string }): Promise<ReconcileResult>;
   /** 受控记忆管理（8 操作 + 审计表）。 */
   memory: MemoryManagementAPI;
   /** 便携记忆包（导出/导入/校验）。 */
@@ -662,6 +670,24 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         { evidenceStore, cognitionStore, retriever, llm: pool.for('write'), config: cfg },
         (options.clock ?? systemClock)(),
       );
+    },
+
+    async reconcileContradictions(input = {}) {
+      // 无可用 embedder（未配嵌入 / 注入了自定义 retriever）→ 相似度判不了同题，告警 + 空返回（同护栏静默不启用）。
+      if (!embedderRef) {
+        console.warn(
+          '[memoweft] 已请求 reconcileContradictions 但本 core 无可用 embedder——未执行（A5 第二道护栏靠相似度、必需 embedder）',
+        );
+        return { scanned: 0, pairsJudged: 0, conflictsAttached: 0, llmCalls: 0 };
+      }
+      // 独立维护入口：宿主主动调、与写路径解耦；写路径小快模型（缺配回退 chat），注入 semanticResolutionStore 供命中重算 hedged。
+      return runReconcile(subjectOf(input.subjectId), {
+        cognitionStore,
+        llm: pool.for('write'),
+        embedder: embedderRef,
+        semanticResolutionStore: stores.semanticResolutionStore,
+        config: cfg,
+      });
     },
 
     // 把本 core 的 retriever 传进 memory：resetSubject 清向量索引要它（indexAll([])）。

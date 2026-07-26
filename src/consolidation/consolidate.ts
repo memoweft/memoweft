@@ -23,7 +23,7 @@ import type {
 } from '../interaction/model.ts';
 import type { LLMClient, ChatMessage } from '../llm/client.ts';
 import type { Embedder } from '../retrieval/embedder.ts';
-import { computeConfidence, deriveCredStatus, isHedgedStated } from './confidence.ts';
+import { computeConfidence, deriveCredStatus } from './confidence.ts';
 import { deriveFormedBy } from './deriveFormedBy.ts';
 import { filterReadableByTier } from '../evidence/privacy.ts';
 import { sourceLabel, aiContextSuffix } from '../evidence/sourceLabel.ts';
@@ -33,6 +33,14 @@ import { noopTransaction, type Transaction } from '../store/transaction.ts';
 import { resolveLang, type Lang, type MemoWeftConfig } from '../config.ts';
 import { systemClock, type Clock } from '../clock.ts';
 import { CONSOLIDATE_PROMPT } from './prompts.ts';
+import {
+  GUARD_DEFAULT_SIMILARITY,
+  GUARD_DEFAULT_TOPK,
+  cosine,
+  judgeContradiction,
+  resolveHedged as sharedResolveHedged,
+  attachContradiction as sharedAttachContradiction,
+} from './contradiction.ts';
 
 export interface ConsolidateDeps {
   eventStore: EventStore;
@@ -288,87 +296,8 @@ function buildMessages(
   };
 }
 
-// ── A5 矛盾并存护栏辅助（模块级纯函数）──────────────────────────────
-/** shortlist 余弦阈值缺省：0.5。护栏量具（bge-m3+gpt-4o，95 对带标签配对）实测——真矛盾对余弦
- *  低至 0.571，且相似度【分不开】矛盾/兼容（兼容对均值 0.73 反比矛盾对 0.706 还高），判别全靠极性判；
- *  而极性判误判率 0%[0,7.6]，故阈值只是"进极性判"的成本闸、不是判据。0.6 会把 0.571~0.60 的真矛盾挡掉
- *  （召回 93.8%→85.4%），降到 0.5 召回回到 93.8% 且不增误判。详见 dogfood/guard-metrics-results.json。 */
-const GUARD_DEFAULT_SIMILARITY = 0.5;
-/** 每条候选最多做几次极性判（相似度降序前 N）：把 llm 调用量压到很小。 */
-const GUARD_DEFAULT_TOPK = 3;
-
-/** 余弦相似度；任一为零向量或维度不齐返回 0（与 vectorRetriever 内部同口径）。 */
-function cosine(a: readonly number[], b: readonly number[]): number {
-  if (a.length !== b.length || a.length === 0) return 0;
-  let dot = 0;
-  let na = 0;
-  let nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    na += a[i]! * a[i]!;
-    nb += b[i]! * b[i]!;
-  }
-  if (na === 0 || nb === 0) return 0;
-  return dot / (Math.sqrt(na) * Math.sqrt(nb));
-}
-
-/**
- * 极性判断（护栏第二半，非确定性）：关于【同一个人】的两条陈述，作为其【当前】状态是否【冲突】（不能同时为真）。
- * 只判「相反」，不判「相关」——相似度已把候选压到同主题，这里专问极性。
- * ⚠ 提示词经护栏量具调优（真实管线措辞的配对）：旧版"保守·拿不准判否"在啰嗦/带辩解从句的真实认知上
- *   召回仅 ~32%；改成明确纳入 立场/偏好/目标/事实反转、并【看穿】辩解从句与演化语气后，召回 93.5%、误判 0%
- *   （见 _workflow-docs/reviews/guard-metrics-2026-07-25.md）。仍排除 细化/强化/不同侧面/程度差以防误伤。
- *   Python 侧 _judge_contradiction 与本段【逐字对齐】；改一处必须同改。
- */
-async function judgeContradiction(
-  llm: LLMClient,
-  lang: Lang,
-  existingContent: string,
-  candidateContent: string,
-): Promise<boolean> {
-  const zh = lang === 'zh';
-  const sys = zh
-    ? [
-        '你比较关于【同一个人】的两条陈述，各自都当作 TA【当前】的状态，判断它们是否【冲突】——即不可能同时为真。',
-        '算冲突(true)：',
-        '· 偏好/态度反转：「讨厌跑步」vs「爱上跑步、是一天最爱」；「从小不吃香菜」vs「爱上香菜」。',
-        '· 目标放弃/改向：「想当管理者」vs「决定继续做个人贡献者」；「要考研」vs「放弃考研去找工作」。',
-        '· 事实状态改变、不能同为当前：「每周练六天」vs「已减到每周四天」；「住北京」vs「搬去上海了」。',
-        '· 自我特质的重新评估。',
-        '要【看穿】辩解从句、原因、时间/演化措辞（「以前」「如今」「但因为便宜才选」「渐渐变得」）——只看两条【当前】立场/事实是否互斥。',
-        '不算冲突(false)：',
-        '· 细化/子偏好：「爱喝咖啡」vs「尤其爱手冲」。',
-        '· 强化，或不同侧面/方式：「讨厌跑步机」vs「爱户外越野跑」；「戒了含糖饮料」vs「照喝无糖黑咖啡」。',
-        '· 仅程度差别，或两者本可同时为真。',
-        '只输出 JSON：{"contradicts": true|false}。',
-      ].join('\n')
-    : [
-        'Compare two statements about the SAME person, each taken as their CURRENT state, and decide if they CONFLICT — cannot both be true of the person right now.',
-        'COUNT AS CONFLICT (true):',
-        '· Reversed preference/attitude: "dislikes running" vs "has come to love running, favorite part of the day"; "unable to eat cilantro" vs "loves cilantro".',
-        '· Abandoned/changed goal: "aiming to become a manager" vs "chose to stay an individual contributor"; "planning grad school" vs "gave up grad school for a job".',
-        '· A factual state that changed and cannot both be current: "trains six days a week" vs "reduced to four days a week"; "lives in Beijing" vs "moved to Shanghai".',
-        '· A re-evaluated self-trait.',
-        'Look PAST justifying clauses, reasons, and time/evolution wording ("used to", "now", "but chose it because…", "has developed…"); judge only whether the two CURRENT stances/facts are incompatible.',
-        'DO NOT count as conflict (false):',
-        '· Refinement/sub-preference: "loves coffee" vs "especially loves pour-over".',
-        '· Reinforcement, or a different facet/modality: "hates the treadmill" vs "loves outdoor trail runs"; "gave up sugary drinks" vs "still drinks black coffee".',
-        '· Mere degree differences, or two things that can both be true at once.',
-        'Output only JSON: {"contradicts": true|false}.',
-      ].join('\n');
-  const user = zh
-    ? `陈述甲：${existingContent}\n陈述乙：${candidateContent}\n作为同一个人的当前状态，它们冲突吗？`
-    : `Statement A: ${existingContent}\nStatement B: ${candidateContent}\nAs current states of the same person, do they conflict?`;
-  const parsed = await parseJsonObjectWithRepair<{ contradicts?: boolean }>({
-    llm,
-    messages: [
-      { role: 'system', content: sys },
-      { role: 'user', content: user },
-    ],
-    lang,
-  });
-  return parsed?.contradicts === true;
-}
+// 矛盾判别/落库口径（GUARD_DEFAULT_* / cosine / judgeContradiction / resolveHedged / attachContradiction）
+// 单一真源见 ./contradiction.ts（护栏 guardHits 与全画像 reconcile 共用；改一处两路同步）。
 
 export async function consolidate(
   subjectId: string,
@@ -584,22 +513,12 @@ export async function consolidate(
    * reinforce 重算传【全链】，并存新认知传【本轮 add】——两处 support 集合定义本就不同（见并存路
    * 的论证）。若在并存路误用全链，链上旧的附和证据会让「没有 explicit」不成立，封顶永不触发。
    */
-  const resolveHedged = (formedBy: FormedBy, supportIds: readonly string[]): boolean => {
-    // 非 stated / 空支持集恒 false（`isHedgedStated` 同判）——提前挡掉，省下重算期那次查表。
-    if (formedBy !== 'stated' || supportIds.length === 0) return false;
-    /** 回查只需这两维：`isHedgedStated` 不看 sourceKind/precedingAiContext（那是载体维才要的），
-     *  所以重算期不必碰 evidenceStore/carrierOf——这正是本方案能落地的结构原因。 */
-    const stored = new Map<
-      string,
-      { propositionOrigin: PropositionOrigin | null; assertionStrength: AssertionStrength | null }
-    >();
-    // 一次批量查（走 ix_semres_evidence），不逐条 ofEvidence。
-    for (const r of deps.semanticResolutionStore?.forEvidenceIds([...supportIds]) ?? [])
-      stored.set(r.evidenceId, r);
-    // 库优先、内存兜底（理由见上：落库幂等 ⇒ 库里那份才是活下来的那份）。
-    const view = supportIds.map((id) => stored.get(id) ?? resolutionOf.get(id) ?? null);
-    return isHedgedStated(formedBy, view);
-  };
+  // 薄包装：委托 contradiction.ts 的单一真源，绑定本轮 deps（库优先、内存兜底见那里）。
+  const resolveHedged = (formedBy: FormedBy, supportIds: readonly string[]): boolean =>
+    sharedResolveHedged(formedBy, supportIds, {
+      semanticResolutionStore: deps.semanticResolutionStore,
+      resolutionOf,
+    });
 
   // ── A5 矛盾并存护栏：进事务【前】(async) 预算「哪些 new 候选其实是对另一条认知的极性反转」。
   //   相似度筛(嵌入余弦) → 对少量同主题候选做一次极性判(llm)。命中 → 记该候选挂到哪条锚点：
@@ -699,43 +618,13 @@ export async function consolidate(
      *  避免 #19 的「只翻 credStatus 不重算 → contradictPenalty 空转」回归）。返回是否真挂上。
      *  formedBy 继承旧认知、不重派载体维（重算期约束）；credStatus 交 deriveCredStatus 在
      *  contradictCount>0 下判 conflicted/contested（保住「冲突只暴露、不消解」不变量）。 */
-    const attachContradiction = (cogId: string, contraIds: readonly string[]): boolean => {
-      const cog = deps.cognitionStore.get(cogId);
-      if (!cog || cog.invalidAt) return false;
-      if (contraIds.length === 0) return false; // 没引到冲突原话 → 不凭空标冲突（证据完整性规则）
-      const already = new Set(deps.cognitionStore.sourcesOf(cog.id).map((s) => s.evidenceId));
-      const add = contraIds.filter((id) => !already.has(id));
-      if (add.length)
-        deps.cognitionStore.addEvidence(
-          cog.id,
-          add.map((id) => ({ evidenceId: id, relation: 'contradict' as const })),
-        );
-      const links = deps.cognitionStore.sourcesOf(cog.id);
-      const supportIds = links.filter((l) => l.relation === 'support').map((l) => l.evidenceId);
-      const supportCount = supportIds.length;
-      const contradictCount = links.filter((l) => l.relation === 'contradict').length;
-      const confidence = computeConfidence(
-        {
-          contentType: cog.contentType,
-          formedBy: cog.formedBy,
-          supportCount,
-          contradictCount,
-          hedged: resolveHedged(cog.formedBy, supportIds),
-        },
-        deps.config,
-      );
-      deps.cognitionStore.update(cog.id, {
-        confidence,
-        credStatus: deriveCredStatus(
-          confidence,
-          contradictCount,
-          cog.contentType,
-          deps.config,
-          supportCount,
-        ),
+    const attachContradiction = (cogId: string, contraIds: readonly string[]): boolean =>
+      sharedAttachContradiction(cogId, contraIds, {
+        cognitionStore: deps.cognitionStore,
+        config: deps.config,
+        semanticResolutionStore: deps.semanticResolutionStore,
+        resolutionOf,
       });
-      return true;
-    };
 
     // new
     /** 本轮已落库的 new 候选：候选下标 → 其认知 id。供护栏「同批 new-vs-new」把后一条挂到先落库的锚点。 */
