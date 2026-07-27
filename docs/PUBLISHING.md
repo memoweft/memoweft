@@ -92,6 +92,10 @@ git push origin vX.Y.Z
 
 The tag must match the package version exactly. The publish job requires repository npm credentials with permission to publish `memoweft`; it runs `npm publish --provenance --access public` only after the aggregate CI gate succeeds.
 
+**Prereleases publish under the `rc` dist-tag, not `latest`.** The workflow derives the tag from the version — anything with a prerelease suffix (`1.0.0-rc.1`) goes to `rc`, and only a final version takes `latest`. This matters because npm defaults to `latest` when `--tag` is omitted, which would hand a candidate to every plain `npm install memoweft`. Installing a candidate is therefore explicit: `npm install memoweft@rc` (or the exact version). After a final release, confirm with `npm dist-tag ls memoweft` that `latest` points where you expect.
+
+Also worth checking rather than assuming: the publish job is gated on `ci-gate`, so if that job fails the publish step is **skipped, not failed** — a pushed tag on its own is not evidence the package shipped. Confirm the tag's workflow run shows the publish job as successful.
+
 Do not publish from a different commit while the tag workflow is running.
 
 ## Verify after publication
