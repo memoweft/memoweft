@@ -794,6 +794,10 @@ function diffRuns(a, b) {
     );
   if (am.model !== bm.model)
     warnings.push(`被测模型变了：${am.model} → ${bm.model}，分数不可直接归因到提示词。`);
+  if (am.judgeModel !== bm.judgeModel)
+    warnings.push(
+      `判官模型变了：${am.judgeModel} → ${bm.judgeModel}，模型判定的指标（gist / chitchat 等）不可直接比。`,
+    );
   if (am.judgePromptVersion !== bm.judgePromptVersion)
     warnings.push(
       `judge 提示词变了：${am.judgePromptVersion} → ${bm.judgePromptVersion}，model-judged metrics（gistRecall/overInferRate）不可比。`,
@@ -1001,7 +1005,7 @@ function runCompare(beforePath, afterPath) {
 // Model-backed execution
 // ══════════════════════════════════════════════════════════════════════════
 
-async function mainReal({ limit, discipline, outPrefix, subjectEnv }) {
+async function mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv }) {
   if (!existsSync(CORPUS_PATH)) {
     console.error(`\n[eval-consolidation] Corpus file not found: ${CORPUS_PATH}`);
     process.exit(1);
@@ -1019,39 +1023,48 @@ async function mainReal({ limit, discipline, outPrefix, subjectEnv }) {
   }
   if (limit) scenarios = scenarios.slice(0, limit);
 
-  // Model-backed runs require explicit credentials.
-  let llmCfg;
+  // Judge model: MEMOWEFT_<PREFIX>_* with --judge-env, else the default MEMOWEFT_LLM_*.
+  let judgeCfg;
   try {
-    llmCfg = loadLLMConfig();
+    judgeCfg = judgeEnv ? loadLLMConfig(judgeEnv) : loadLLMConfig();
   } catch (e) {
-    console.error('\n[eval-consolidation] 完整模型评测需要 LLM 配置，未开始运行。');
+    console.error('\n[eval-consolidation] judge 模型配置缺失，未开始运行。');
     console.error(`  原因: ${e instanceof Error ? e.message : String(e)}`);
-    console.error('  Configure MEMOWEFT_LLM_BASE_URL / _API_KEY / _MODEL in the root .env.');
+    console.error(
+      judgeEnv
+        ? `  Configure MEMOWEFT_${judgeEnv}_BASE_URL / _API_KEY / _MODEL in the root .env.`
+        : '  Configure MEMOWEFT_LLM_BASE_URL / _API_KEY / _MODEL in .env，或传 --judge-env <PREFIX>。',
+    );
     console.error('  （离线自检请跑: node bench/eval-consolidation.mjs --selftest）');
     process.exit(2);
   }
 
-  // Subject model: default chat model, or MEMOWEFT_<PREFIX>_* with --subject-env.
-  // The judge remains the default model at temperature 0 so a model-arm comparison changes one variable.
+  // Subject model: MEMOWEFT_<PREFIX>_* with --subject-env, else the default MEMOWEFT_LLM_*.
+  //   Must NOT fall back to judgeCfg: with --judge-env ALT and no --subject-env, reusing judgeCfg
+  //   would silently run the ALT judge model against itself instead of the documented default subject.
   let subjectCfg;
   try {
-    subjectCfg = subjectEnv ? loadLLMConfig(subjectEnv) : llmCfg;
+    subjectCfg = subjectEnv ? loadLLMConfig(subjectEnv) : loadLLMConfig();
   } catch (e) {
     console.error(
-      `\n[eval-consolidation] --subject-env ${subjectEnv} 所需的被测模型未配置，未开始运行。`,
+      subjectEnv
+        ? `\n[eval-consolidation] --subject-env ${subjectEnv} 所需的被测模型未配置，未开始运行。`
+        : '\n[eval-consolidation] 默认被测模型（MEMOWEFT_LLM_*）未配置，未开始运行。',
     );
     console.error(`  原因: ${e instanceof Error ? e.message : String(e)}`);
     console.error(
-      `  Configure MEMOWEFT_${subjectEnv}_BASE_URL / _API_KEY / _MODEL in the root .env.`,
+      subjectEnv
+        ? `  Configure MEMOWEFT_${subjectEnv}_BASE_URL / _API_KEY / _MODEL in the root .env.`
+        : '  Configure MEMOWEFT_LLM_BASE_URL / _API_KEY / _MODEL in .env（或用 --subject-env <PREFIX> 指定被测模型）。',
     );
     process.exit(2);
   }
 
-  const judge = new OpenAICompatClient({ ...llmCfg, temperature: 0 });
+  const judge = new OpenAICompatClient({ ...judgeCfg, temperature: 0 });
   const meta = collectMeta(
     corpus,
     scenarios,
-    { subjectCfg, judgeCfg: llmCfg, subjectEnv },
+    { subjectCfg, judgeCfg, subjectEnv },
     { limit, discipline },
   );
   console.log(
@@ -1431,6 +1444,7 @@ async function selftest() {
       totalScenarios: 42,
       partial: o.partial ?? false,
       model: o.model ?? 'subject-model',
+      judgeModel: o.judgeModel ?? 'judge-model',
       judgePromptVersion: o.judgePromptVersion ?? 'v1',
       gistScoringVersion: o.gistScoringVersion, // Missing metadata represents scoring version 1.
       promptVersions: o.promptVersions ?? { consolidate: 'v2', distill: 'v1' },
@@ -1532,6 +1546,16 @@ async function selftest() {
   ok(
     diffJudge.warnings.some((w) => /judge 提示词变了/.test(w)),
     'diffRuns judge 版本变更 → 警示「judge 提示词变了」',
+  );
+
+  // 6g) A judge-model change must produce a comparability warning (judge-driven metrics not comparable).
+  const diffJudgeModel = diffRuns(
+    mkRun({ structPass: 200, structTotal: 223 }),
+    mkRun({ structPass: 200, structTotal: 223, judgeModel: 'other-judge' }),
+  );
+  ok(
+    diffJudgeModel.warnings.some((w) => /判官模型变了/.test(w)),
+    'diffRuns judge 模型变更 → 警示「判官模型变了」',
   );
 
   // 6f) A scoring-version change must produce a comparability warning.
@@ -1653,6 +1677,20 @@ if (subjEnvIdx >= 0) {
   subjectEnv = raw;
 }
 
+// `--judge-env` selects MEMOWEFT_<PREFIX>_* for the judge model; without it the
+// judge falls back to the default MEMOWEFT_LLM_*. Lets subject and judge come from
+// distinct named prefixes when no default LLM entry exists.
+const judgeEnvIdx = args.indexOf('--judge-env');
+let judgeEnv = null;
+if (judgeEnvIdx >= 0) {
+  const raw = args[judgeEnvIdx + 1];
+  if (!raw || raw.startsWith('--'))
+    die(
+      `--judge-env 需要一个 env 前缀（如 LUNA，读 MEMOWEFT_<前缀>_BASE_URL/_API_KEY/_MODEL；收到: ${raw ?? '(空)'}）。`,
+    );
+  judgeEnv = raw;
+}
+
 const cmpIdx = args.indexOf('--compare');
 let compare = null;
 if (cmpIdx >= 0) {
@@ -1673,7 +1711,7 @@ async function main() {
     runCompare(compare.before, compare.after);
     return;
   }
-  await mainReal({ limit, discipline, outPrefix, subjectEnv });
+  await mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv });
 }
 
 // Imports expose helpers only; they never read model configuration, call a model, or write a report.
