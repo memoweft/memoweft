@@ -1,6 +1,7 @@
 # MemoWeft API surface (draft)
 
-> **Status: draft toward the 1.0 API freeze.** This document classifies every
+> **Status: 1.0 freeze candidate — dispositions proposed by the API surface review,
+> pending owner sign-off.** This document classifies every
 > public export as **stable**, **experimental**, or **internal**, so 1.0 knows
 > exactly what it is freezing. It is the planning counterpart to two existing
 > artifacts and does not replace them:
@@ -52,8 +53,8 @@ The supported host-facing surface. This is the **candidate set to freeze at 1.0*
   `RecallInput`, `ExplainCognitionInput`, `CognitionExplanation`,
   `ConversationInput`, `RecordAssistantReplyInput`, `UpdateProfileInput`,
   `UpdateProfileResult`, `PortableAPI`, `MemoryGraphAPI`, `HealthReport`, `UsageReport`.
-- **Controlled memory management** (`core.memory`) — `createMemoryManagementAPI`,
-  `MemoryManagementAPI` and its I/O types (`InvalidateCognitionInput`,
+- **Controlled memory management** (`core.memory`) — `MemoryManagementAPI` and its I/O
+  types (`InvalidateCognitionInput`,
   `UpdateEvidenceAuthorizationInput`, `RemoveEvidenceSafelyInput`,
   `RemoveEvidenceResult`, `RemovalBlocker`, `RemoveCognitionSafelyInput`,
   `RemoveCognitionResult`, `ReinforceCognitionInput`, `ReinforceCognitionResult`,
@@ -67,18 +68,23 @@ The supported host-facing surface. This is the **candidate set to freeze at 1.0*
   `SemanticResolution`, `VisibleTurn`, `ResponseAct`, `PromptAct`,
   `PropositionOrigin`, `AssertionStrength`. Conversation: `TurnOutcome`,
   `RecalledCognition`, `RecalledEvidence`.
-- **Cross-layer ingestion contract** — `Observation` (the collector → host →
-  core shape; note `kind`/`meta` openness is called out experimental in the
-  contract).
+- **Cross-layer ingestion contract** — `Observation` (the collector → host → core
+  shape). The frozen part is the fields core consumes (`occurredAt`, `content`,
+  `originId`, the authorization flags); `kind` and `meta` are **experimental-reserved** —
+  the ingest path neither reads nor persists them today and their shape/semantics may
+  still change (see the contract).
 - **Configuration shape** — `MemoWeftConfig`, `cloudReadDefault`, `Lang`, and the
   `@deprecated` alias `DlaConfig` (kept for compatibility; do not remove).
 - **Portable bundle** — `BUNDLE_FORMAT`, `BUNDLE_SCHEMA_VERSION`, `MemoryBundle`,
   `ExportOptions`, `ImportOptions`, `ImportMode`, `ImportPlan`, `ValidateResult`,
   `EventEvidenceLink`, `CognitionEvidenceLink`.
 - **Memory graph** — `MemoryGraphPayload`, `MemoryGraphNode`, `MemoryGraphEdge`,
-  `MemoryGraphNodeKind`, `MemoryGraphEdgeKind`, `MemoryGraphStats` (the
-  `conflicts_with` / `corrects` edge values are reserved-but-unemitted; see the
-  contract).
+  `MemoryGraphNodeKind`, `MemoryGraphEdgeKind`, `MemoryGraphStats`, and
+  `BuildGraphOptions` (the option bag referenced by the stable
+  `core.graph.buildMemoryGraph` signature). `MemoryGraphEdgeKind` freezes only the four
+  emitted edges (`belongs_to_subject` / `distilled_into` / `supports` / `contradicts`);
+  `conflicts_with` / `corrects` are reserved-but-unemitted **experimental** values
+  (cognition-to-cognition links are not persisted; see the contract).
 - **Version** — `MEMOWEFT_VERSION` (and `@deprecated` `DLA_VERSION`).
 
 ### Experimental
@@ -116,12 +122,30 @@ Usable, but the shape may still move before 1.0.
   not construct these; produced by distill/consolidate).
 - **Weakly-typed audit row** — `ManagementLogEntry` (the facade does not expose a
   read-audit path).
+- **`createMemoryManagementAPI` factory** — the low-level assembler behind `core.memory`
+  (already wired by `createMemoWeftCore`). Its signature takes the experimental
+  `StoreBundle` and the internal `MemoryManagementDeps`, so it is not frozen at 1.0 even
+  though the `MemoryManagementAPI` interface and its I/O types (in Stable, above) are.
+- **`UpdateProfileResult` stage payloads** — `UpdateProfileResult` is stable as the
+  `core.updateProfile()` return envelope (the presence of `indexed` / `indexError` /
+  `metrics`), but its `distilled` / `consolidated` / `attributed` fields and `timings`
+  (`UpdateProfileTimings`) are experimental stage-diagnostic payloads whose shapes track
+  the write-path stages; do not build durable contracts on them.
 
 ### Internal (exported, unsupported)
 
 Exported for composition and diagnostics; the facade already wraps them and a
 host has no reason to wire them directly. **Do not build application contracts on
 these.** Grouped by area:
+
+> **1.0 note:** the cleanest internal building blocks were removed from the root
+> re-export at 1.0 to shrink the accidental-dependency surface — the six `Sqlite*` store
+> implementation classes, the JSON-repair helpers (`extractJsonObject`, `parseJsonObject`,
+> `parseJsonObjectWithRepair`, `ParseWithRepairDeps`), and `noopTransaction`. They remain
+> reachable via deep import for advanced composition. The store _interface_ types
+> (`EvidenceStore`, `EventStore`, `CognitionStore`, `CognitionPatch`,
+> `InteractionContextStore`, `SemanticResolutionStore`, `ManagementLog`) and `Transaction`
+> stay root-exported because the experimental `StoreBundle` references them.
 
 - **Store implementations** — `SqliteEvidenceStore`/`EvidenceStore`,
   `SqliteEventStore`/`EventStore`, `SqliteCognitionStore`/`CognitionStore`/
@@ -217,6 +241,8 @@ only".
 
 ## Stability policy
 
+The authoritative policy is [STABILITY.md](../STABILITY.md); the essentials:
+
 - **Pre-1.0** (`0.x`): minor releases may contain **documented breaking changes**
   with migration notes in `CHANGELOG.md`. Stable symbols are held steady within a
   minor line but not across minors.
@@ -229,21 +255,43 @@ only".
   export add/remove. This document adds the human-facing _support tier_ on top of
   that mechanical freeze.
 
-## Toward the 1.0 freeze
+## 1.0 disposition (proposed)
 
-1. **The Stable list above is the freeze candidate.** Owner review confirms the
-   final set before 1.0 tags it.
-2. **Each Experimental symbol needs a 1.0 disposition**: promote to stable, keep
-   experimental (and say so in the 1.0 notes), or drop. A5 (`contradictionGuard`
-   first pass + `reconcileContradictions` second pass) is the headline open one:
-   0.9 chose the "full fix" (D-09) and the second-pass whole-profile reconciler
-   landed; its stable-vs-experimental 1.0 disposition depends on the at-scale
-   side-effect review still in progress.
-3. **Decide the Python 1.0 scope**: ship the rule kernel as the stable Python
-   surface, or hold Python entirely experimental through 1.0.
-4. **Internal exports**: consider whether any should stop being re-exported from
-   the root entry at 1.0 to shrink the accidental-dependency surface.
+The 1.0 API surface review worked through every open item. The outcomes below are
+**proposed and not yet ratified** — they take effect for the freeze once the owner signs
+off on them:
 
-_This is a 0.9 draft. It does not change any code or schema; it records the
-intended support tiers so the 1.0 freeze is a decision, not an archaeology
-exercise._
+1. **Every Experimental symbol stays experimental at 1.0.** None was promoted: the
+   injectable extension points, plugin contract v2, storage/migration, observability, the
+   `config` singleton, the background-operator return types (`ExpireResult`/`TrendResult`),
+   and the internally-produced input shapes (`EventInput`/`CognitionInput`/
+   `ManagementLogEntry`) are all replaceable extension points, diagnostics, or
+   facade-wrapped producer shapes — promoting any would freeze a signature or behaviour that
+   is not settled. The first candidates to promote in a later minor, once their seams
+   settle, are `Clock` (its shape cannot grow) and `UsageStats` (already pinned structurally
+   through the stable `UsageReport`).
+2. **A5 (`contradictionGuard` + `reconcileContradictions`) stays experimental** per decision
+   D-10: its at-scale side effects were never quantified on a real model, so it is not
+   promoted despite the D-09 "full fix" landing. Default off; a documented known residual.
+3. **Python 1.0 scope = hold the whole package experimental.** The rule kernel is bit-exact
+   but classified `internal` on the TypeScript side; promising stability on symbols a future
+   Python Core facade will move behind it would be a self-set trap. Parity is enforced
+   independently of the tier label.
+4. **Internal exports: the cleanest were dropped from the root** — the six `Sqlite*` store
+   implementation classes, the JSON-repair helpers (`extractJsonObject`, `parseJsonObject`,
+   `parseJsonObjectWithRepair`, `ParseWithRepairDeps`), and `noopTransaction` (see the
+   Internal-section note and the changelog). The store interface types and `Transaction` stay
+   because the experimental `StoreBundle` references them; the write-path operators and
+   pipeline internals stay for now.
+5. **Stable-list self-consistency fixes applied** so no stable symbol depends on a
+   non-frozen shape: `BuildGraphOptions` promoted to stable; `createMemoryManagementAPI`
+   demoted to experimental; and `UpdateProfileResult` stage payloads, `Observation`
+   `kind`/`meta`, and the graph `conflicts_with`/`corrects` edges marked experimental within
+   their stable enclosing shapes.
+
+**Follow-up before tagging:** the built-in retriever export set is inconsistent —
+`KeywordRetriever`, the real default no-embedder retriever, is not root-exported while
+`NullRetriever`/`VectorRetriever` are; reconcile that before freezing the built-ins.
+
+_This records the intended support tiers so the 1.0 freeze is a decision, not an archaeology
+exercise. It changes no runtime behaviour or schema._
