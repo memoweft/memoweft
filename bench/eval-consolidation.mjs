@@ -794,6 +794,10 @@ function diffRuns(a, b) {
     );
   if (am.model !== bm.model)
     warnings.push(`被测模型变了：${am.model} → ${bm.model}，分数不可直接归因到提示词。`);
+  if (am.judgeModel !== bm.judgeModel)
+    warnings.push(
+      `判官模型变了：${am.judgeModel} → ${bm.judgeModel}，模型判定的指标（gist / chitchat 等）不可直接比。`,
+    );
   if (am.judgePromptVersion !== bm.judgePromptVersion)
     warnings.push(
       `judge 提示词变了：${am.judgePromptVersion} → ${bm.judgePromptVersion}，model-judged metrics（gistRecall/overInferRate）不可比。`,
@@ -1035,17 +1039,23 @@ async function mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv }) 
     process.exit(2);
   }
 
-  // Subject model: default (= judge) chat model, or MEMOWEFT_<PREFIX>_* with --subject-env.
+  // Subject model: MEMOWEFT_<PREFIX>_* with --subject-env, else the default MEMOWEFT_LLM_*.
+  //   Must NOT fall back to judgeCfg: with --judge-env ALT and no --subject-env, reusing judgeCfg
+  //   would silently run the ALT judge model against itself instead of the documented default subject.
   let subjectCfg;
   try {
-    subjectCfg = subjectEnv ? loadLLMConfig(subjectEnv) : judgeCfg;
+    subjectCfg = subjectEnv ? loadLLMConfig(subjectEnv) : loadLLMConfig();
   } catch (e) {
     console.error(
-      `\n[eval-consolidation] --subject-env ${subjectEnv} 所需的被测模型未配置，未开始运行。`,
+      subjectEnv
+        ? `\n[eval-consolidation] --subject-env ${subjectEnv} 所需的被测模型未配置，未开始运行。`
+        : '\n[eval-consolidation] 默认被测模型（MEMOWEFT_LLM_*）未配置，未开始运行。',
     );
     console.error(`  原因: ${e instanceof Error ? e.message : String(e)}`);
     console.error(
-      `  Configure MEMOWEFT_${subjectEnv}_BASE_URL / _API_KEY / _MODEL in the root .env.`,
+      subjectEnv
+        ? `  Configure MEMOWEFT_${subjectEnv}_BASE_URL / _API_KEY / _MODEL in the root .env.`
+        : '  Configure MEMOWEFT_LLM_BASE_URL / _API_KEY / _MODEL in .env（或用 --subject-env <PREFIX> 指定被测模型）。',
     );
     process.exit(2);
   }
@@ -1434,6 +1444,7 @@ async function selftest() {
       totalScenarios: 42,
       partial: o.partial ?? false,
       model: o.model ?? 'subject-model',
+      judgeModel: o.judgeModel ?? 'judge-model',
       judgePromptVersion: o.judgePromptVersion ?? 'v1',
       gistScoringVersion: o.gistScoringVersion, // Missing metadata represents scoring version 1.
       promptVersions: o.promptVersions ?? { consolidate: 'v2', distill: 'v1' },
@@ -1535,6 +1546,16 @@ async function selftest() {
   ok(
     diffJudge.warnings.some((w) => /judge 提示词变了/.test(w)),
     'diffRuns judge 版本变更 → 警示「judge 提示词变了」',
+  );
+
+  // 6g) A judge-model change must produce a comparability warning (judge-driven metrics not comparable).
+  const diffJudgeModel = diffRuns(
+    mkRun({ structPass: 200, structTotal: 223 }),
+    mkRun({ structPass: 200, structTotal: 223, judgeModel: 'other-judge' }),
+  );
+  ok(
+    diffJudgeModel.warnings.some((w) => /判官模型变了/.test(w)),
+    'diffRuns judge 模型变更 → 警示「判官模型变了」',
   );
 
   // 6f) A scoring-version change must produce a comparability warning.
