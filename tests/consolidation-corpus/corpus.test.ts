@@ -54,6 +54,7 @@ const DISCIPLINES = [
   'no-over-inference',
   'chitchat-negative',
   'short-reply',
+  'world-person',
 ];
 const LANGS = ['zh', 'en', 'mixed'];
 
@@ -103,11 +104,11 @@ const isNonNegInt = (v: unknown): boolean => Number.isInteger(v) && (v as number
 // 覆盖要求
 // ============================================================================
 
-test('顶层结构：scenarios 为数组，场景数 ∈ [30,50]', () => {
+test('顶层结构：scenarios 为数组，场景数 ∈ [30,60]', () => {
   assert.ok(Array.isArray(scenarios), 'scenarios 必须是数组');
   assert.ok(
-    scenarios.length >= 30 && scenarios.length <= 50,
-    `场景数应 ∈[30,50]，实际 ${scenarios.length}`,
+    scenarios.length >= 30 && scenarios.length <= 60,
+    `场景数应 ∈[30,60]，实际 ${scenarios.length}`,
   );
 });
 
@@ -233,6 +234,7 @@ test('非 conflict/correct 纪律：expect.conflict===false 且 correct===false'
     'no-over-inference',
     'chitchat-negative',
     'short-reply',
+    'world-person',
   ];
   for (const s of scenarios.filter((s) => others.includes(s.discipline))) {
     assert.equal(s.expect.conflict, false, `[${s.id}] ${s.discipline} 不该期望 conflict`);
@@ -258,6 +260,17 @@ test('no-over-inference 场景：shouldNotFormGists 非空（防过度推断是�
     assert.ok(
       s.expect.shouldNotFormGists.length >= 1,
       `[${s.id}] no-over-inference 必须给出该防的过度推断`,
+    );
+  }
+});
+
+test('world-person 场景：shouldNotFormGists 非空（重点是别把世界/第三方命题当用户属性）', () => {
+  const wp = scenarios.filter((s) => s.discipline === 'world-person');
+  assert.ok(wp.length >= 4, 'world-person 应 ≥4');
+  for (const s of wp) {
+    assert.ok(
+      s.expect.shouldNotFormGists.length >= 1,
+      `[${s.id}] world-person 必须给出该防的『误当用户属性』`,
     );
   }
 });

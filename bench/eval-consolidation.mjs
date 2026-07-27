@@ -1001,7 +1001,7 @@ function runCompare(beforePath, afterPath) {
 // Model-backed execution
 // ══════════════════════════════════════════════════════════════════════════
 
-async function mainReal({ limit, discipline, outPrefix, subjectEnv }) {
+async function mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv }) {
   if (!existsSync(CORPUS_PATH)) {
     console.error(`\n[eval-consolidation] Corpus file not found: ${CORPUS_PATH}`);
     process.exit(1);
@@ -1019,23 +1019,26 @@ async function mainReal({ limit, discipline, outPrefix, subjectEnv }) {
   }
   if (limit) scenarios = scenarios.slice(0, limit);
 
-  // Model-backed runs require explicit credentials.
-  let llmCfg;
+  // Judge model: MEMOWEFT_<PREFIX>_* with --judge-env, else the default MEMOWEFT_LLM_*.
+  let judgeCfg;
   try {
-    llmCfg = loadLLMConfig();
+    judgeCfg = judgeEnv ? loadLLMConfig(judgeEnv) : loadLLMConfig();
   } catch (e) {
-    console.error('\n[eval-consolidation] 完整模型评测需要 LLM 配置，未开始运行。');
+    console.error('\n[eval-consolidation] judge 模型配置缺失，未开始运行。');
     console.error(`  原因: ${e instanceof Error ? e.message : String(e)}`);
-    console.error('  Configure MEMOWEFT_LLM_BASE_URL / _API_KEY / _MODEL in the root .env.');
+    console.error(
+      judgeEnv
+        ? `  Configure MEMOWEFT_${judgeEnv}_BASE_URL / _API_KEY / _MODEL in the root .env.`
+        : '  Configure MEMOWEFT_LLM_BASE_URL / _API_KEY / _MODEL in .env，或传 --judge-env <PREFIX>。',
+    );
     console.error('  （离线自检请跑: node bench/eval-consolidation.mjs --selftest）');
     process.exit(2);
   }
 
-  // Subject model: default chat model, or MEMOWEFT_<PREFIX>_* with --subject-env.
-  // The judge remains the default model at temperature 0 so a model-arm comparison changes one variable.
+  // Subject model: default (= judge) chat model, or MEMOWEFT_<PREFIX>_* with --subject-env.
   let subjectCfg;
   try {
-    subjectCfg = subjectEnv ? loadLLMConfig(subjectEnv) : llmCfg;
+    subjectCfg = subjectEnv ? loadLLMConfig(subjectEnv) : judgeCfg;
   } catch (e) {
     console.error(
       `\n[eval-consolidation] --subject-env ${subjectEnv} 所需的被测模型未配置，未开始运行。`,
@@ -1047,11 +1050,11 @@ async function mainReal({ limit, discipline, outPrefix, subjectEnv }) {
     process.exit(2);
   }
 
-  const judge = new OpenAICompatClient({ ...llmCfg, temperature: 0 });
+  const judge = new OpenAICompatClient({ ...judgeCfg, temperature: 0 });
   const meta = collectMeta(
     corpus,
     scenarios,
-    { subjectCfg, judgeCfg: llmCfg, subjectEnv },
+    { subjectCfg, judgeCfg, subjectEnv },
     { limit, discipline },
   );
   console.log(
@@ -1653,6 +1656,20 @@ if (subjEnvIdx >= 0) {
   subjectEnv = raw;
 }
 
+// `--judge-env` selects MEMOWEFT_<PREFIX>_* for the judge model; without it the
+// judge falls back to the default MEMOWEFT_LLM_*. Lets subject and judge come from
+// distinct named prefixes when no default LLM entry exists.
+const judgeEnvIdx = args.indexOf('--judge-env');
+let judgeEnv = null;
+if (judgeEnvIdx >= 0) {
+  const raw = args[judgeEnvIdx + 1];
+  if (!raw || raw.startsWith('--'))
+    die(
+      `--judge-env 需要一个 env 前缀（如 LUNA，读 MEMOWEFT_<前缀>_BASE_URL/_API_KEY/_MODEL；收到: ${raw ?? '(空)'}）。`,
+    );
+  judgeEnv = raw;
+}
+
 const cmpIdx = args.indexOf('--compare');
 let compare = null;
 if (cmpIdx >= 0) {
@@ -1673,7 +1690,7 @@ async function main() {
     runCompare(compare.before, compare.after);
     return;
   }
-  await mainReal({ limit, discipline, outPrefix, subjectEnv });
+  await mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv });
 }
 
 // Imports expose helpers only; they never read model configuration, call a model, or write a report.
