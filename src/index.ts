@@ -181,7 +181,8 @@ export {
 } from './plugin/contract.ts';
 
 // [1.0] jsonRepair 散装件（extractJsonObject/parseJsonObject/parseJsonObjectWithRepair/ParseWithRepairDeps）于 1.0 从 root 撤出：
-//   纯内部工具、零消费者、不出现在任何导出签名；算子/LLM 客户端内部经 deep import 使用。
+//   纯内部工具、零消费者、不出现在任何导出签名；算子/LLM 客户端在包内经相对路径直接引用
+//   （包只声明 "." 一个入口，撤出 root 对外即不可达——internal 层级允许，见 docs/STABILITY.md）。
 
 // 统一 Core 入口：Host 优先经它调 Core，不散装拼底层件
 // [stable] 统一 Core 入口：createMemoWeftCore / MemoWeftCore 及各 *Input/返回类型，宿主主入口。

@@ -19,8 +19,11 @@ behavioural contract of the supported facade lives in
   minor release with a changelog notice.
 - **Internal** — an implementation detail, exported only for composition or diagnostics.
   Do not build application contracts on it. It may change in any release, and the cleanest
-  internal building blocks are not re-exported from the package root at all (reach them via
-  deep import if you must).
+  internal building blocks are not re-exported from the package root at all. Note that for
+  an installed package "not re-exported from the root" means _unavailable_: MemoWeft
+  publishes a single `"."` entry point, so there is no supported deep-import path into the
+  package internals. If you need one of these pieces, open an issue rather than reaching
+  around the entry point.
 
 **Exporting a symbol is not a support promise.** The root package re-exports low-level
 building blocks so advanced hosts _can_ compose them, but the supported integration path is
@@ -50,9 +53,20 @@ MemoWeft follows semantic versioning.
     it early.
   - **Internal** symbols may change in any release.
 
-Additive changes — a new optional field, a new enum value, a new method — are not breaking
-and may appear in a minor release at any tier. Consumers must tolerate unknown enum values
-and additional object fields.
+Additive changes — a new optional field, a new enum value, a new method on a type you only
+_call_ — are not breaking and may appear in a minor release at any tier. Consumers must
+tolerate unknown enum values and additional object fields.
+
+**Interfaces you implement are the exception.** Adding a required member to an interface is
+additive for callers but breaking for every existing implementation, which stops
+type-checking the moment the member appears. So a required member may be added to a stable
+interface only in a major release; in a minor it must be optional. This bites the injectable
+extension points (retriever, embedder, LLM client, clock, plugin contract) — the interfaces
+hosts actually implement. All of them are experimental today, so the rule costs nothing yet;
+it is written down now so that promoting one to stable later does not quietly take on a
+major-version obligation. The interfaces MemoWeft constructs and hands back — `MemoWeftCore`,
+`MemoryManagementAPI`, and the other facade surfaces — are meant to be called, not
+implemented or structurally mocked, so gaining a method there is treated as additive.
 
 ## Deprecation process
 

@@ -140,18 +140,27 @@ these.** Grouped by area:
 
 > **1.0 note:** the cleanest internal building blocks were removed from the root
 > re-export at 1.0 to shrink the accidental-dependency surface — the six `Sqlite*` store
-> implementation classes, the JSON-repair helpers (`extractJsonObject`, `parseJsonObject`,
-> `parseJsonObjectWithRepair`, `ParseWithRepairDeps`), and `noopTransaction`. They remain
-> reachable via deep import for advanced composition. The store _interface_ types
-> (`EvidenceStore`, `EventStore`, `CognitionStore`, `CognitionPatch`,
-> `InteractionContextStore`, `SemanticResolutionStore`, `ManagementLog`) and `Transaction`
-> stay root-exported because the experimental `StoreBundle` references them.
+> implementation classes (marked ✗ below), the JSON-repair helpers (`extractJsonObject`,
+> `parseJsonObject`, `parseJsonObjectWithRepair`, `ParseWithRepairDeps`), and
+> `noopTransaction`. **For an installed package this removes them outright, not just from
+> the root**: `package.json` declares a single `"."` export — so any deep subpath fails with
+> `ERR_PACKAGE_PATH_NOT_EXPORTED` — and `src` is not among the published `files`. There is
+> therefore no deep-import escape hatch for them; that is what the internal tier permits, and
+> whether to open one through explicit subpath exports is an open question for the freeze.
+> In-repo callers are unaffected because they import by relative path (for example
+> `bench/eval-consolidation.mjs` → `../src/evidence/store.ts`), which never goes through the
+> package `exports` map. The store _interface_ types (`EvidenceStore`, `EventStore`,
+> `CognitionStore`, `CognitionPatch`, `InteractionContextStore`, `SemanticResolutionStore`,
+> `ManagementLog`) and `Transaction` stay root-exported because the experimental
+> `StoreBundle` references them.
 
-- **Store implementations** — `SqliteEvidenceStore`/`EvidenceStore`,
-  `SqliteEventStore`/`EventStore`, `SqliteCognitionStore`/`CognitionStore`/
-  `CognitionPatch`, `SqliteInteractionContextStore`/`InteractionContextStore`,
-  `SqliteSemanticResolutionStore`/`SemanticResolutionStore`,
-  `SqliteManagementLog`/`ManagementLog`, `MemoryManagementDeps`.
+(✗ = no longer exported from the package root as of 1.0; see the note above.)
+
+- **Store implementations** — `SqliteEvidenceStore`✗/`EvidenceStore`,
+  `SqliteEventStore`✗/`EventStore`, `SqliteCognitionStore`✗/`CognitionStore`/
+  `CognitionPatch`, `SqliteInteractionContextStore`✗/`InteractionContextStore`,
+  `SqliteSemanticResolutionStore`✗/`SemanticResolutionStore`,
+  `SqliteManagementLog`✗/`ManagementLog`, `MemoryManagementDeps`.
 - **Write-path operators** — `distill`, `consolidate`, `updateProfile`,
   `computeConfidence`, `deriveCredStatus`, `isHedgedStated`, `attribute`,
   `proposeAsk`, `revisitConflicts` (plus their `*Deps`/input types and their
@@ -169,9 +178,9 @@ these.** Grouped by area:
 - **Free-function portable/graph** — `exportBundle`, `validateBundle`,
   `importBundle`, `buildMemoryGraph` (plus their `*Deps`/`*Options`); the
   supported path is `core.portable` / `core.graph`.
-- **Transactions & JSON repair** — `noopTransaction`, `Transaction`,
-  `extractJsonObject`, `parseJsonObject`, `parseJsonObjectWithRepair`,
-  `ParseWithRepairDeps`.
+- **Transactions & JSON repair** — `noopTransaction`✗, `Transaction`,
+  `extractJsonObject`✗, `parseJsonObject`✗, `parseJsonObjectWithRepair`✗,
+  `ParseWithRepairDeps`✗.
 
 ---
 
@@ -282,7 +291,11 @@ off on them:
    `parseJsonObjectWithRepair`, `ParseWithRepairDeps`), and `noopTransaction` (see the
    Internal-section note and the changelog). The store interface types and `Transaction` stay
    because the experimental `StoreBundle` references them; the write-path operators and
-   pipeline internals stay for now.
+   pipeline internals stay for now. **Open sub-question:** because the package declares only
+   a `"."` export, dropping them from the root removes them outright for installed consumers
+   — there is no deep-import fallback. Leaving it that way is consistent with the internal
+   tier; adding explicit subpath exports as a supported escape hatch would trade some of the
+   surface reduction back. Decide before tagging.
 5. **Stable-list self-consistency fixes applied** so no stable symbol depends on a
    non-frozen shape: `BuildGraphOptions` promoted to stable; `createMemoryManagementAPI`
    demoted to experimental; and `UpdateProfileResult` stage payloads, `Observation`
