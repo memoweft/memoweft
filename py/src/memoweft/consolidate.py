@@ -13,11 +13,22 @@ import logging
 import re
 from dataclasses import dataclass, field
 from collections.abc import Sequence
-from typing import Any, Optional, Protocol, cast
+from typing import Any, Optional, cast
 
 from ._jsstr import js_trim, utf16_length
 from .config import CONFIG, Config, resolve_lang
-from .confidence import compute_confidence, derive_cred_status, is_hedged_stated
+from .confidence import compute_confidence, derive_cred_status
+from .contradiction import (
+    GUARD_DEFAULT_SIMILARITY,
+    GUARD_DEFAULT_TOPK,
+    AttachDeps,
+    GuardEmbedder,
+    HedgeDeps,
+    attach_contradiction as shared_attach_contradiction,
+    cosine,
+    judge_contradiction,
+    resolve_hedged as shared_resolve_hedged,
+)
 from .formed_by import derive_formed_by
 from .echoed_id import resolve_echoed_id
 from .llm.client import ChatMessage, LLMClient
@@ -40,7 +51,6 @@ from .types import (
     ConfidenceInputs,
     EvidenceLink,
     FormedBy,
-    HedgeInput,
     Lang,
     PromptAct,
     PropositionOrigin,
@@ -236,90 +246,14 @@ def _build_messages(
     return messages, tag_to_evidence_id
 
 
-# ── A5 矛盾并存护栏辅助（模块级，镜像 consolidate.ts）──────────────────
-# shortlist 余弦阈值缺省：0.5（护栏量具实测：真矛盾对余弦低至 0.571 且相似度分不开矛盾/兼容，
-#   判别全靠极性判、其误判率 0%，故阈值只是"进极性判"的成本闸；0.6 会漏召回，0.5 召回回满且不增误判）。
-#   对齐 consolidate.ts GUARD_DEFAULT_SIMILARITY。
-GUARD_DEFAULT_SIMILARITY = 0.5
-# 每条候选最多做几次极性判（相似度降序前 N）：把 llm 调用量压到很小。
-GUARD_DEFAULT_TOPK = 3
-
-
-class _GuardEmbedder(Protocol):
-    """护栏相似度所需的最小嵌入器接口（HashEmbedder 及任何 embed(texts)->向量 的实现都满足）。"""
-
-    def embed(self, texts: list[str]) -> list[list[float]]: ...
-
-
+# ── A5 矛盾并存护栏依赖（矛盾判别/落库单一真源见 contradiction.py：护栏 guard_hit 与 reconcile 共用）──
 @dataclass(frozen=True)
 class ContradictionGuard:
     """A5 护栏依赖（可选）：镜像 TS 的 ConsolidateDeps.contradictionGuard。"""
 
-    embedder: _GuardEmbedder
+    embedder: GuardEmbedder
     min_similarity: float = GUARD_DEFAULT_SIMILARITY
     top_k: int = GUARD_DEFAULT_TOPK
-
-
-def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
-    """余弦相似度；任一为零向量或维度不齐返回 0（与 TS _cosine 同口径）。"""
-    if len(a) != len(b) or len(a) == 0:
-        return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
-    na = sum(x * x for x in a)
-    nb = sum(y * y for y in b)
-    if na == 0 or nb == 0:
-        return 0.0
-    return float(dot / ((na**0.5) * (nb**0.5)))
-
-
-def _judge_contradiction(llm: LLMClient, lang: Lang, existing_content: str, candidate_content: str) -> bool:
-    """极性判断（护栏第二半，非确定性）：关于【同一个人】的两条陈述，作为当前状态是否【冲突】（不能同时为真）。
-    只判「相反」不判「相关」——相似度已把候选压到同主题。
-    ⚠ 提示词经护栏量具调优：旧版"保守·拿不准判否"在真实啰嗦措辞上召回仅 ~32%；改成明确纳入立场/偏好/目标/事实反转、
-      看穿辩解从句与演化语气后，召回 93.5%、误判 0%。与 consolidate.ts 的 judgeContradiction 【逐字对齐】，改一处必须同改。"""
-    zh = lang == "zh"
-    if zh:
-        sys = "\n".join(
-            [
-                "你比较关于【同一个人】的两条陈述，各自都当作 TA【当前】的状态，判断它们是否【冲突】——即不可能同时为真。",
-                "算冲突(true)：",
-                "· 偏好/态度反转：「讨厌跑步」vs「爱上跑步、是一天最爱」；「从小不吃香菜」vs「爱上香菜」。",
-                "· 目标放弃/改向：「想当管理者」vs「决定继续做个人贡献者」；「要考研」vs「放弃考研去找工作」。",
-                "· 事实状态改变、不能同为当前：「每周练六天」vs「已减到每周四天」；「住北京」vs「搬去上海了」。",
-                "· 自我特质的重新评估。",
-                "要【看穿】辩解从句、原因、时间/演化措辞（「以前」「如今」「但因为便宜才选」「渐渐变得」）——只看两条【当前】立场/事实是否互斥。",
-                "不算冲突(false)：",
-                "· 细化/子偏好：「爱喝咖啡」vs「尤其爱手冲」。",
-                "· 强化，或不同侧面/方式：「讨厌跑步机」vs「爱户外越野跑」；「戒了含糖饮料」vs「照喝无糖黑咖啡」。",
-                "· 仅程度差别，或两者本可同时为真。",
-                '只输出 JSON：{"contradicts": true|false}。',
-            ]
-        )
-        user = f"陈述甲：{existing_content}\n陈述乙：{candidate_content}\n作为同一个人的当前状态，它们冲突吗？"
-    else:
-        sys = "\n".join(
-            [
-                "Compare two statements about the SAME person, each taken as their CURRENT state, and decide if they CONFLICT — cannot both be true of the person right now.",
-                "COUNT AS CONFLICT (true):",
-                '· Reversed preference/attitude: "dislikes running" vs "has come to love running, favorite part of the day"; "unable to eat cilantro" vs "loves cilantro".',
-                '· Abandoned/changed goal: "aiming to become a manager" vs "chose to stay an individual contributor"; "planning grad school" vs "gave up grad school for a job".',
-                '· A factual state that changed and cannot both be current: "trains six days a week" vs "reduced to four days a week"; "lives in Beijing" vs "moved to Shanghai".',
-                "· A re-evaluated self-trait.",
-                'Look PAST justifying clauses, reasons, and time/evolution wording ("used to", "now", "but chose it because…", "has developed…"); judge only whether the two CURRENT stances/facts are incompatible.',
-                "DO NOT count as conflict (false):",
-                '· Refinement/sub-preference: "loves coffee" vs "especially loves pour-over".',
-                '· Reinforcement, or a different facet/modality: "hates the treadmill" vs "loves outdoor trail runs"; "gave up sugary drinks" vs "still drinks black coffee".',
-                "· Mere degree differences, or two things that can both be true at once.",
-                'Output only JSON: {"contradicts": true|false}.',
-            ]
-        )
-        user = f"Statement A: {existing_content}\nStatement B: {candidate_content}\nAs current states of the same person, do they conflict?"
-    parsed = parse_json_object_with_repair(
-        llm,
-        [ChatMessage(role="system", content=sys), ChatMessage(role="user", content=user)],
-        lang=lang,
-    )
-    return bool(parsed and parsed.get("contradicts") is True)
 
 
 def consolidate(
@@ -434,45 +368,14 @@ def consolidate(
             )
         return derive_formed_by(inputs) or "inferred"
 
+    # 薄包装：委托 contradiction.py 的单一真源，绑定本轮 deps（库优先、内存兜底、退化边界见那里）。
+    #   不变式：support_ids 恒等于同一调用点传给 support_count 的那一个集合（见各调用点）。
     def resolve_hedged(formed_by: FormedBy, support_ids: Sequence[str]) -> bool:
-        """算一条认知的 hedged(含糊自述封顶的判据)。与 consolidate.ts 的 resolveHedged 逐位一致。
-
-        与载体维【正交】:载体维答"谁的话",hedged 答"这话说得含不含糊"。封顶动作本身在
-        compute_confidence 里(min(hedge_cap)),这里只出判据。
-
-        **为什么是「库优先、内存兜底」而不是反过来**:文末的解析落库循环对"库里已有解析"的证据
-        跳过写入(幂等),所以【库里那份才是会活下来的那份】。若让内存赢,就会出现:本轮按内存
-        那份(马上要被丢弃的)算出 600,而此后每一次重算读到库里那份旧的算出 280 —— 同一条认知
-        在 600/280 之间【永久分叉】。故:库里有就以库为准,内存只补库里还没有的(= 本轮新证据,
-        它们的解析此刻确实还没落库 —— 落库循环在四个写循环之后)。
-
-        semantic_resolution_store 未注入时只退化【历史证据】那一半(本轮证据仍准确),
-        退化方向是 hedged=False(不封顶),与 is_hedged_stated 的"解析不出不臆造惩罚"同向 ——
-        宁可少封,不可错封。
-
-        不变式:support_ids 恒等于同一调用点传给 support_count 的那一个集合。
-        """
-        # 非 stated / 空支持集恒 False(is_hedged_stated 同判)——提前挡掉,省下重算期那次查表。
-        if formed_by != "stated" or len(support_ids) == 0:
-            return False
-        stored: dict[str, HedgeInput] = {}
-        if semantic_resolution_store is not None:
-            for sr in semantic_resolution_store.for_evidence_ids(list(support_ids)):  # 一次批量查,无 N+1
-                stored[sr.evidence_id] = HedgeInput(
-                    proposition_origin=sr.proposition_origin, assertion_strength=sr.assertion_strength
-                )
-        view: list[Optional[HedgeInput]] = []
-        for id_ in support_ids:
-            hit = stored.get(id_)
-            if hit is None:
-                r = resolution_of.get(id_)  # 库里没有 → 回落本轮内存解析
-                hit = (
-                    HedgeInput(proposition_origin=r.proposition_origin, assertion_strength=r.assertion_strength)
-                    if r is not None
-                    else None
-                )
-            view.append(hit)
-        return is_hedged_stated(formed_by, view)
+        return shared_resolve_hedged(
+            formed_by,
+            support_ids,
+            HedgeDeps(semantic_resolution_store=semantic_resolution_store, resolution_of=resolution_of),
+        )
 
     # ── A5 矛盾并存护栏：事务前预算「哪些 new 候选其实是对另一条认知的极性反转」。命中记两种锚点：
     #   · guard_hit_existing[候选下标]=旧认知 id：与【已入库旧认知】反转 → 挂到该旧认知；
@@ -507,13 +410,13 @@ def consolidate(
             if cand_vecs:
                 for k, (idx, cand_content) in enumerate(cands):
                     # ① 先比已入库旧认知。
-                    ex_scored = [(ex, _cosine(cand_vecs[k], exist_vecs[j])) for j, ex in enumerate(existing)]
+                    ex_scored = [(ex, cosine(cand_vecs[k], exist_vecs[j])) for j, ex in enumerate(existing)]
                     ex_short = [ex for ex, s in sorted(ex_scored, key=lambda t: t[1], reverse=True) if s >= threshold][
                         :top_k
                     ]
                     hit = False
                     for ex in ex_short:
-                        if _judge_contradiction(llm, lg, ex.content, cand_content):
+                        if judge_contradiction(llm, lg, ex.content, cand_content):
                             guard_hit_existing[idx] = ex.id
                             hit = True
                             break
@@ -521,7 +424,7 @@ def consolidate(
                         continue
                     # ② 再比本轮更早、且未被拦（会落库当锚点）的新候选——补同批盲区。cands[m] 的向量是 cand_vecs[m]。
                     new_scored = [
-                        (cands[m][0], cands[m][1], _cosine(cand_vecs[k], cand_vecs[m]))
+                        (cands[m][0], cands[m][1], cosine(cand_vecs[k], cand_vecs[m]))
                         for m in range(k)
                         if cands[m][0] not in guard_hit_existing and cands[m][0] not in guard_hit_new
                     ]
@@ -529,7 +432,7 @@ def consolidate(
                         (aidx, ac) for aidx, ac, s in sorted(new_scored, key=lambda t: t[2], reverse=True) if s >= threshold
                     ][:top_k]
                     for aidx, ac in new_short:
-                        if _judge_contradiction(llm, lg, ac, cand_content):
+                        if judge_contradiction(llm, lg, ac, cand_content):
                             guard_hit_new[idx] = aidx
                             break
 
@@ -545,41 +448,17 @@ def consolidate(
         fallback = ContentTypeFallback()
 
         def attach_contradiction(cog_id: str, contra_ids: Sequence[str]) -> bool:
-            """把反证挂到旧认知并按【全链】重算把握度（conflict 分支与 A5 护栏共用同口径，
-            避免"只翻 cred_status 不重算 → contradict_penalty 空转"回归）。formed_by 继承、
-            不重派载体维；cred_status 交 derive_cred_status 在 contradict_count>0 下判 conflicted/contested。
-            返回是否真挂上。镜像 consolidate.ts 的 attachContradiction。"""
-            cog = cognition_store.get(cog_id)
-            if cog is None or cog.invalid_at:
-                return False
-            if len(contra_ids) == 0:
-                return False
-            already = {s.evidence_id for s in cognition_store.sources_of(cog.id)}
-            add = [i for i in contra_ids if i not in already]
-            if add:
-                cognition_store.add_evidence(cog.id, [EvidenceLink(evidence_id=i, relation="contradict") for i in add])
-            links = cognition_store.sources_of(cog.id)
-            support_ids = [lk.evidence_id for lk in links if lk.relation == "support"]
-            support_count = len(support_ids)
-            contradict_count = sum(1 for lk in links if lk.relation == "contradict")
-            confidence = compute_confidence(
-                ConfidenceInputs(
-                    content_type=cog.content_type,
-                    formed_by=cog.formed_by,
-                    support_count=support_count,
-                    contradict_count=contradict_count,
-                    hedged=resolve_hedged(cog.formed_by, support_ids),
-                ),
-                cfg,
-            )
-            cognition_store.update(
-                cog.id,
-                CognitionPatch(
-                    confidence=confidence,
-                    cred_status=derive_cred_status(confidence, contradict_count, cog.content_type, cfg, support_count),
+            """薄包装：委托 contradiction.py 的单一真源（挂反证 + 全链重算 + conflicted/contested 同口径）。"""
+            return shared_attach_contradiction(
+                cog_id,
+                contra_ids,
+                AttachDeps(
+                    cognition_store=cognition_store,
+                    config=cfg,
+                    semantic_resolution_store=semantic_resolution_store,
+                    resolution_of=resolution_of,
                 ),
             )
-            return True
 
         # new
         # 本轮已落库的 new 候选：候选下标 → 认知 id。供护栏「同批 new-vs-new」把后一条挂到先落库的锚点。

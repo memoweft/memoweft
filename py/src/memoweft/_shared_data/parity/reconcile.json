@@ -1,0 +1,183 @@
+{
+  "cases": [
+    {
+      "expected": [],
+      "input": {
+        "threshold": 0.5,
+        "vecs": []
+      }
+    },
+    {
+      "expected": [],
+      "input": {
+        "threshold": 0.5,
+        "vecs": [
+          [
+            1,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "expected": [
+        [
+          0,
+          1
+        ]
+      ],
+      "input": {
+        "threshold": 0.5,
+        "vecs": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "expected": [],
+      "input": {
+        "threshold": 0.5,
+        "vecs": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "expected": [
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "input": {
+        "threshold": 0.5,
+        "vecs": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "expected": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "input": {
+        "threshold": 0.5,
+        "vecs": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "expected": [
+        [
+          0,
+          1
+        ]
+      ],
+      "input": {
+        "threshold": 0.5,
+        "vecs": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "expected": [],
+      "input": {
+        "threshold": 0.9,
+        "vecs": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "expected": [
+        [
+          0,
+          1
+        ]
+      ],
+      "input": {
+        "threshold": 0.5,
+        "vecs": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ]
+      }
+    }
+  ],
+  "fn": "clusterByCosine",
+  "note": "reconcile 同题聚簇(连通分量·并查集)：余弦≥阈值连边、返回 size≥2 簇的 active 下标数组;含传递闭包(A-C断经B连)/多簇/孤立点排除/阈值门。极性判是 LLM、不进夹具。"
+}

@@ -20,6 +20,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 
 import { config } from '../src/config.ts';
 import { computeConfidence, deriveCredStatus } from '../src/consolidation/confidence.ts';
+import { clusterByCosine } from '../src/consolidation/reconcile.ts';
 import { deriveFormedBy } from '../src/consolidation/deriveFormedBy.ts';
 import { decayFactor, halfLifeOf, effectiveConfidence } from '../src/background/decay.ts';
 import { resolveEchoedId, MIN_ID_PREFIX } from '../src/llm/echoedId.ts';
@@ -570,6 +571,78 @@ function parityExpire() {
     now: now.toISOString(),
     expired: result.expired,
     invalidIds,
+  };
+}
+
+// ── parity 夹具:reconcile 同题聚簇（clusterByCosine 连通分量·并查集的确定性部分）──
+//   极性判(judgeContradiction)是 LLM、不进夹具(同护栏)；这里只钉确定性的簇划分与下标序跨语言逐位一致。
+function parityReconcile() {
+  // vecs 刻意选 cosine 明确远离阈值的整齐向量(回避 1 ULP 浮点边界)：cosine 只用于 ≥threshold 的布尔判定，
+  //   输出是整数下标数组，逐字比对不吃浮点容差。cos([1,1],[1,0])=1/√2≈0.707、cos([1,0],[0,1])=0。
+  const inputs = [
+    { vecs: [], threshold: 0.5 }, // 空 → []
+    { vecs: [[1, 0]], threshold: 0.5 }, // 单条 → []（无对可连）
+    {
+      vecs: [
+        [1, 0],
+        [1, 0],
+      ],
+      threshold: 0.5,
+    }, // 两条同向 → [[0,1]]
+    {
+      vecs: [
+        [1, 0],
+        [0, 1],
+      ],
+      threshold: 0.5,
+    }, // 两条正交(cos=0) → []
+    {
+      vecs: [
+        [1, 0],
+        [1, 1],
+        [0, 1],
+      ],
+      threshold: 0.5,
+    }, // 传递闭包：0-1 连、1-2 连、0-2 断(cos=0)，经 1 连通 → [[0,1,2]]
+    {
+      vecs: [
+        [1, 0],
+        [1, 0],
+        [0, 1],
+        [0, 1],
+      ],
+      threshold: 0.5,
+    }, // 两不相连簇 → [[0,1],[2,3]]
+    {
+      vecs: [
+        [1, 0],
+        [1, 0],
+        [0, 1],
+      ],
+      threshold: 0.5,
+    }, // 簇 + 孤立点(第三条)：size<2 排除 → [[0,1]]
+    {
+      vecs: [
+        [1, 1],
+        [1, 0],
+      ],
+      threshold: 0.9,
+    }, // 阈值门：cos≈0.707 < 0.9 → 不连 → []
+    {
+      vecs: [
+        [1, 1],
+        [1, 0],
+      ],
+      threshold: 0.5,
+    }, // 同 vecs 放宽阈值：cos≈0.707 ≥ 0.5 → [[0,1]]
+  ];
+  return {
+    fn: 'clusterByCosine',
+    note: 'reconcile 同题聚簇(连通分量·并查集)：余弦≥阈值连边、返回 size≥2 簇的 active 下标数组;含传递闭包(A-C断经B连)/多簇/孤立点排除/阈值门。极性判是 LLM、不进夹具。',
+    cases: inputs.map(({ vecs, threshold }) => ({
+      input: { vecs, threshold },
+      expected: clusterByCosine(vecs, threshold),
+    })),
   };
 }
 
@@ -1857,6 +1930,7 @@ export async function buildSharedAssets() {
     'parity/source-label.json': paritySourceLabel(),
     'parity/context-hash.json': parityContextHash(),
     'parity/expire.json': parityExpire(),
+    'parity/reconcile.json': parityReconcile(),
     'parity/llm-text.json': parityLlmText(),
     'parity/json-extract.json': parityJsonExtract(),
     'parity/distill.json': distillFx,
