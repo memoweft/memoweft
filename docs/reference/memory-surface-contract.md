@@ -193,4 +193,5 @@ The payload contains subject, evidence, event, and cognition nodes plus emitted 
 - [Plugin contract](../plugin-contract.md)
 - [Deployment and privacy](../deployment.md)
 - [Changelog](../../CHANGELOG.md)
+- [API surface & stability tiers](./api-surface.md)
 - [Type declarations](../../src/index.ts)
