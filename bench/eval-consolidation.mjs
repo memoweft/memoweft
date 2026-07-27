@@ -47,10 +47,23 @@ import { promptVersions } from '../src/prompts/registry.ts';
  * callCount/tier/usage pass through so cost accounting still reads the real totals.
  */
 function withChatRetry(inner, { tries = 3, baseMs = 1500 } = {}) {
-  const isTransient = (e) =>
-    /fetch failed|network|socket|ECONNRESET|ETIMEDOUT|EAI_AGAIN|429|rate.?limit|timed out|timeout/i.test(
-      String((e && e.message) || e),
-    );
+  const isTransient = (e) => {
+    const msg = String((e && e.message) || e);
+    // Network-layer failures (Node fetch native — language-independent).
+    if (
+      /fetch failed|network|socket|ECONNRESET|ETIMEDOUT|EAI_AGAIN|timed out|timeout|超时/i.test(msg)
+    )
+      return true;
+    // Classify HTTP failures by the status number, not the localized message text:
+    // OpenAICompatClient formats them as `... failed <status>` / `... 请求失败 <status>`
+    // (zh vs en). Retry 429 + 5xx; other 4xx are deterministic and surface immediately.
+    const status = msg.match(/(?:failed|请求失败)\s+(\d{3})/i);
+    if (status) {
+      const code = Number(status[1]);
+      return code === 429 || (code >= 500 && code < 600);
+    }
+    return /\b429\b|rate.?limit/i.test(msg);
+  };
   return {
     get callCount() {
       return inner.callCount;
@@ -1703,6 +1716,36 @@ async function selftest() {
       threw && hardCalls === 1,
       `withChatRetry 非 transient 错误立即抛、不重试（调用 ${hardCalls} 次）`,
     );
+
+    // 语言无关分类 + 5xx（Codex P2）：mock 首次抛 message、二次成功 → 若判为 transient 则重试拿到结果。
+    const retryCase = async (label, message, expectRetry) => {
+      let n = 0;
+      const c = {
+        get callCount() {
+          return n;
+        },
+        async chat() {
+          n++;
+          if (n < 2) throw new Error(message);
+          return '{"ok":true}';
+        },
+      };
+      let succeeded = false;
+      try {
+        await withChatRetry(c, { tries: 2, baseMs: 0 }).chat([]);
+        succeeded = true;
+      } catch {
+        succeeded = false;
+      }
+      ok(
+        succeeded === expectRetry && n === (expectRetry ? 2 : 1),
+        `withChatRetry ${label}（期望重试=${expectRetry}，实际调用 ${n} 次）`,
+      );
+    };
+    await retryCase('zh 超时', 'LLM 请求超时（超过 120000ms）', true);
+    await retryCase('en 5xx (503)', 'LLM request failed 503: upstream', true);
+    await retryCase('zh 5xx (502)', 'LLM 请求失败 502: 网关错误', true);
+    await retryCase('4xx (400) 不重试', 'LLM request failed 400: bad request', false);
   }
 
   if (failures === 0) {
