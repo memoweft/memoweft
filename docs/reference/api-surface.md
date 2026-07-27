@@ -51,7 +51,7 @@ The supported host-facing surface. This is the **candidate set to freeze at 1.0*
   and its I/O types: `UserMessageInput`, `ObservationInput`, `ToolResultInput`,
   `RecallInput`, `ExplainCognitionInput`, `CognitionExplanation`,
   `ConversationInput`, `RecordAssistantReplyInput`, `UpdateProfileInput`,
-  `PortableAPI`, `MemoryGraphAPI`, `HealthReport`, `UsageReport`.
+  `UpdateProfileResult`, `PortableAPI`, `MemoryGraphAPI`, `HealthReport`, `UsageReport`.
 - **Controlled memory management** (`core.memory`) — `createMemoryManagementAPI`,
   `MemoryManagementAPI` and its I/O types (`InvalidateCognitionInput`,
   `UpdateEvidenceAuthorizationInput`, `RemoveEvidenceSafelyInput`,
@@ -93,6 +93,10 @@ Usable, but the shape may still move before 1.0.
   same family as `core.expire()` / `core.aggregateTrends()`, default off. Whether
   A5 (both passes) is promoted to stable or kept experimental at 1.0 is an open
   decision (see below).
+- **Background-operator facade return types** — `ExpireResult`, `TrendResult`
+  (returned by the experimental `core.expire()` / `core.aggregateTrends()`;
+  `ReconcileResult` is covered by the entry above). Their free-function operators
+  and `*Deps` stay internal.
 - **Injectable extension points** — Retrieval: `Retriever`, `RetrievalHit`,
   `NullRetriever`, `VectorRetriever`. Embedding: `Embedder`, `EmbedConfig`,
   `OpenAICompatEmbedder`, `loadEmbedConfig`. LLM: `LLMClient`, `ChatMessage`,
@@ -126,12 +130,15 @@ these.** Grouped by area:
   `SqliteManagementLog`/`ManagementLog`, `MemoryManagementDeps`.
 - **Write-path operators** — `distill`, `consolidate`, `updateProfile`,
   `computeConfidence`, `deriveCredStatus`, `isHedgedStated`, `attribute`,
-  `proposeAsk`, `revisitConflicts` (plus their `*Deps`/`*Result`/input types).
+  `proposeAsk`, `revisitConflicts` (plus their `*Deps`/input types and their
+  `*Result` types — **except `UpdateProfileResult`**, which is stable, returned by
+  the `core.updateProfile()` facade above).
 - **Background operators** — `decayFactor`, `halfLifeOf`, `effectiveConfidence`,
-  `expire`, `aggregateTrends` (plus `ExpireDeps`/`ExpireResult`/
-  `AggregateTrendsDeps`/`TrendResult`). Note: `expire`/`aggregateTrends` are also
-  reachable through the facade as `core.expire()`/`core.aggregateTrends()`, which
-  are the supported (experimental) entry points — see the contract.
+  `expire`, `aggregateTrends` (plus `ExpireDeps`/`AggregateTrendsDeps`). Note:
+  `expire`/`aggregateTrends` are also reachable through the facade as
+  `core.expire()`/`core.aggregateTrends()`, the supported (experimental) entry
+  points — see the contract. Their return types `ExpireResult`/`TrendResult` are
+  therefore experimental (listed above), not internal.
 - **Pipeline & shared recall** — `Conversation`, `ConversationDeps`, `perceive`,
   `PerceiveOptions`, `WorkingMemory`, `Turn`, `recallCognitions`, `RecallDeps`,
   `RecalledCognitionItem`, `ingestObservations`, `IngestDeps`, `IngestResult`.
