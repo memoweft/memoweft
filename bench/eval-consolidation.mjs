@@ -38,6 +38,45 @@ import { OpenAICompatClient, loadLLMConfig } from '../src/llm/client.ts';
 import { config } from '../src/config.ts';
 import { promptVersions } from '../src/prompts/registry.ts';
 
+/**
+ * Wrap an LLM client so transient network failures retry with linear backoff.
+ * Bench-only: a full-corpus run makes hundreds of subject/judge calls, and a single
+ * flaky `fetch failed` / 429 / connection reset would otherwise drop a scenario
+ * (errored) or a judge verdict from the baseline. Retries ONLY transient errors;
+ * deterministic failures (malformed JSON, 4xx other than 429) still surface immediately.
+ * callCount/tier/usage pass through so cost accounting still reads the real totals.
+ */
+function withChatRetry(inner, { tries = 3, baseMs = 1500 } = {}) {
+  const isTransient = (e) =>
+    /fetch failed|network|socket|ECONNRESET|ETIMEDOUT|EAI_AGAIN|429|rate.?limit|timed out|timeout/i.test(
+      String((e && e.message) || e),
+    );
+  return {
+    get callCount() {
+      return inner.callCount;
+    },
+    get tier() {
+      return inner.tier;
+    },
+    get usage() {
+      return inner.usage;
+    },
+    async chat(messages) {
+      let lastErr;
+      for (let attempt = 1; attempt <= tries; attempt++) {
+        try {
+          return await inner.chat(messages);
+        } catch (e) {
+          lastErr = e;
+          if (attempt === tries || !isTransient(e)) throw e;
+          await new Promise((r) => setTimeout(r, baseMs * attempt));
+        }
+      }
+      throw lastErr;
+    },
+  };
+}
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CORPUS_PATH = resolve(HERE, '../tests/consolidation-corpus/corpus.json');
 const RUNS_DIR = resolve(HERE, 'runs');
@@ -625,7 +664,9 @@ function buildReport(summaries, agg, meta) {
   L.push(`| 平台 | ${meta.platform}/${meta.arch} |`);
   L.push(`| 生成时间 | ${meta.generatedAt} |`);
   L.push(`| Subject model | ${meta.model} |`);
-  L.push(`| judge model | ${meta.judgeModel}（复用同端点，温度 0 覆写） |`);
+  L.push(
+    `| judge model | ${meta.judgeModel}（温度 0 覆写；缺省用默认 LLM，--judge-env 时为独立端点） |`,
+  );
   L.push(`| judge 提示词版本 | ${meta.judgePromptVersion}（每要点 ${JUDGE_RUNS} 次取多数） |`);
   L.push(
     `| gist 评分口径版本 | ${meta.gistScoringVersion ?? 'v1'}（v2: conflict shouldForm uses persisted status; cross-version gistRecall is not comparable） |`,
@@ -1060,7 +1101,7 @@ async function mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv }) 
     process.exit(2);
   }
 
-  const judge = new OpenAICompatClient({ ...judgeCfg, temperature: 0 });
+  const judge = withChatRetry(new OpenAICompatClient({ ...judgeCfg, temperature: 0 }));
   const meta = collectMeta(
     corpus,
     scenarios,
@@ -1075,7 +1116,7 @@ async function mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv }) 
   for (const sc of scenarios) {
     const t0 = Date.now();
     console.log(`[eval-consolidation] Evaluating ${sc.id} (${sc.discipline}/${sc.lang})…`);
-    const llm = new OpenAICompatClient(subjectCfg); // One subject-model client per scenario keeps usage accounting isolated.
+    const llm = withChatRetry(new OpenAICompatClient(subjectCfg)); // One subject-model client per scenario keeps usage accounting isolated; retry wraps transient network errors.
     const run = await runScenario(sc, llm);
     const checks = checkStructural(sc, run);
     let gist = { formResults: [], notResults: [], gistRecall: null, overInferRate: null };
@@ -1616,6 +1657,53 @@ async function selftest() {
       /consolidation-full\.json$/.test(resolveOutputPaths(metaBase, null).json),
     '默认完整运行写入 commit-stamped runs 产物',
   );
+
+  // 8) withChatRetry：transient 网络错重试后成功、deterministic 错误立即抛、callCount 透传（含重试）
+  console.log('[selftest] 8) withChatRetry 网络重试');
+  {
+    let flakyCalls = 0;
+    const flaky = {
+      get callCount() {
+        return flakyCalls;
+      },
+      async chat() {
+        flakyCalls++;
+        if (flakyCalls < 3) throw new Error('fetch failed');
+        return '{"ok":true}';
+      },
+    };
+    const wrappedFlaky = withChatRetry(flaky, { tries: 3, baseMs: 0 });
+    const flakyOut = await wrappedFlaky.chat([]);
+    ok(
+      flakyOut === '{"ok":true}',
+      `withChatRetry 前两次 fetch failed→第三次成功（实际 ${flakyOut}）`,
+    );
+    ok(
+      wrappedFlaky.callCount === 3,
+      `withChatRetry callCount 透传含重试（实际 ${wrappedFlaky.callCount}）`,
+    );
+
+    let hardCalls = 0;
+    const deterministic = {
+      get callCount() {
+        return hardCalls;
+      },
+      async chat() {
+        hardCalls++;
+        throw new Error('Unexpected LLM response format');
+      },
+    };
+    let threw = false;
+    try {
+      await withChatRetry(deterministic, { tries: 3, baseMs: 0 }).chat([]);
+    } catch {
+      threw = true;
+    }
+    ok(
+      threw && hardCalls === 1,
+      `withChatRetry 非 transient 错误立即抛、不重试（调用 ${hardCalls} 次）`,
+    );
+  }
 
   if (failures === 0) {
     console.log('\n[selftest] ✓ 全部通过（结构断言、judge 投票、gist 判分、run 对比与输出路由）');
