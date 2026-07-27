@@ -1,14 +1,14 @@
 {
   "meta": {
-    "commit": "08370d0",
+    "commit": "6c001b5",
     "node": "24.15.0",
     "platform": "win32",
     "arch": "x64",
-    "generatedAt": "2026-07-21T11:11:38.232Z",
-    "model": "mimo-v2.5-pro",
-    "scenarioCount": 49,
-    "totalScenarios": 49,
-    "judgeCalls": 438,
+    "generatedAt": "2026-07-27T06:14:51.488Z",
+    "model": "gpt-4o-2024-11-20",
+    "scenarioCount": 60,
+    "totalScenarios": 60,
+    "judgeCalls": 504,
     "promptVersions": {
       "attribute": "v2",
       "consolidate": "v7",
@@ -21,8 +21,8 @@
     },
     "judgePromptVersion": "v1",
     "gistScoringVersion": "v2",
-    "judgeModel": "mimo-v2.5-pro",
-    "subjectEnv": null,
+    "judgeModel": "gpt-5.6-luna",
+    "subjectEnv": "GPT4O",
     "partial": false,
     "filter": {
       "limit": null,
@@ -30,12 +30,12 @@
     }
   },
   "agg": {
-    "structPass": 265,
-    "structTotal": 274,
-    "structRate": 0.9671532846715328,
-    "avgGistRecall": 0.7,
-    "avgOverInferRate": 0,
-    "scenariosPassed": 40,
+    "structPass": 309,
+    "structTotal": 318,
+    "structRate": 0.9716981132075472,
+    "avgGistRecall": 0.8125,
+    "avgOverInferRate": 0.008333333333333333,
+    "scenariosPassed": 51,
     "errored": 0,
     "groups": [
       {
@@ -49,9 +49,9 @@
       {
         "discipline": "correct",
         "n": 7,
-        "structPass": 42,
+        "structPass": 41,
         "structTotal": 42,
-        "gistRecall": 0.7142857142857143,
+        "gistRecall": 0.8571428571428571,
         "overInferRate": 0
       },
       {
@@ -59,23 +59,23 @@
         "n": 7,
         "structPass": 34,
         "structTotal": 35,
-        "gistRecall": 0.5714285714285714,
-        "overInferRate": 0
+        "gistRecall": 0.7142857142857143,
+        "overInferRate": 0.07142857142857142
       },
       {
         "discipline": "fact-vs-belief",
         "n": 7,
-        "structPass": 34,
+        "structPass": 35,
         "structTotal": 35,
-        "gistRecall": 0.5714285714285714,
+        "gistRecall": 0.8571428571428571,
         "overInferRate": 0
       },
       {
         "discipline": "no-over-inference",
         "n": 7,
-        "structPass": 29,
+        "structPass": 30,
         "structTotal": 34,
-        "gistRecall": 0.5714285714285714,
+        "gistRecall": 0.7142857142857143,
         "overInferRate": 0
       },
       {
@@ -91,7 +91,15 @@
         "n": 7,
         "structPass": 50,
         "structTotal": 51,
-        "gistRecall": 1,
+        "gistRecall": 0.9,
+        "overInferRate": 0
+      },
+      {
+        "discipline": "world-person",
+        "n": 11,
+        "structPass": 43,
+        "structTotal": 44,
+        "gistRecall": null,
         "overInferRate": 0
       }
     ]
@@ -807,7 +815,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户现在使用平板记录而不是纸质笔记本",
+            "content": "用户现在不用纸质笔记本了，改用平板记录",
             "contentType": "preference",
             "credStatus": "limited",
             "confidence": 600,
@@ -826,7 +834,7 @@
         "coverage": 1,
         "nonSpokenWithResolution": 0,
         "responseAct": {
-          "negate": 1
+          "none": 1
         },
         "propositionOrigin": {
           "user_stated": 1
@@ -851,7 +859,7 @@
         {
           "name": "created∈[1,2]",
           "pass": true,
-          "detail": "created=1"
+          "detail": "created=2"
         },
         {
           "name": "created类型⊆{fact}",
@@ -861,7 +869,7 @@
         {
           "name": "不变量·confidence∈(0,1000]",
           "pass": true,
-          "detail": "1条active合规"
+          "detail": "2条active合规"
         },
         {
           "name": "不变量·state封顶∈{candidate,low}",
@@ -912,6 +920,13 @@
       "consolidated": {
         "created": [
           {
+            "content": "The user moved to Valencia last month",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
             "content": "The user now lives in Valencia",
             "contentType": "fact",
             "credStatus": "limited",
@@ -919,7 +934,7 @@
             "formedBy": "stated"
           }
         ],
-        "createdCount": 1,
+        "createdCount": 2,
         "reinforced": 0,
         "corrected": 1,
         "conflicted": 0,
@@ -931,7 +946,7 @@
         "coverage": 1,
         "nonSpokenWithResolution": 0,
         "responseAct": {
-          "none": 1
+          "elaborate": 1
         },
         "propositionOrigin": {
           "user_stated": 1
@@ -981,17 +996,17 @@
       ],
       "structPass": 6,
       "structTotal": 6,
-      "gistRecall": 0,
+      "gistRecall": 1,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "采纳更正：用户的兔子叫栗子",
           "votes": [
             true,
-            false,
-            false
+            true,
+            true
           ],
-          "hit": false
+          "hit": true
         }
       ],
       "notResults": [
@@ -1036,7 +1051,7 @@
         "coverage": 1,
         "nonSpokenWithResolution": 0,
         "responseAct": {
-          "negate": 1
+          "none": 1
         },
         "propositionOrigin": {
           "user_stated": 1
@@ -1094,7 +1109,7 @@
           "votes": [
             true,
             true,
-            false
+            true
           ],
           "hit": true
         }
@@ -1141,7 +1156,7 @@
         "coverage": 1,
         "nonSpokenWithResolution": 0,
         "responseAct": {
-          "none": 1
+          "negate": 1
         },
         "propositionOrigin": {
           "user_stated": 1
@@ -1166,17 +1181,17 @@
         {
           "name": "created∈[1,2]",
           "pass": true,
-          "detail": "created=1"
+          "detail": "created=2"
         },
         {
           "name": "created类型⊆{project,goal}",
-          "pass": true,
-          "detail": "ok"
+          "pass": false,
+          "detail": "越界类型: fact"
         },
         {
           "name": "不变量·confidence∈(0,1000]",
           "pass": true,
-          "detail": "1条active合规"
+          "detail": "2条active合规"
         },
         {
           "name": "不变量·state封顶∈{candidate,low}",
@@ -1189,19 +1204,19 @@
           "detail": "ok"
         }
       ],
-      "structPass": 6,
+      "structPass": 5,
       "structTotal": 6,
-      "gistRecall": 1,
+      "gistRecall": 0,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "采纳更正：用户现在学水彩，已不再学陶艺",
           "votes": [
-            true,
-            true,
-            true
+            false,
+            false,
+            false
           ],
-          "hit": true
+          "hit": false
         }
       ],
       "notResults": [
@@ -1227,14 +1242,21 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户现在改学水彩，不再学陶艺",
+            "content": "用户在学水彩",
             "contentType": "project",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户早已不学陶艺了",
+            "contentType": "fact",
             "credStatus": "limited",
             "confidence": 600,
             "formedBy": "stated"
           }
         ],
-        "createdCount": 1,
+        "createdCount": 2,
         "reinforced": 0,
         "corrected": 1,
         "conflicted": 0,
@@ -1351,7 +1373,7 @@
         "coverage": 1,
         "nonSpokenWithResolution": 0,
         "responseAct": {
-          "none": 1
+          "elaborate": 1
         },
         "propositionOrigin": {
           "user_stated": 1
@@ -1401,17 +1423,17 @@
       ],
       "structPass": 6,
       "structTotal": 6,
-      "gistRecall": 0,
+      "gistRecall": 1,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "采纳更正：用户以后偏好用邮件沟通",
           "votes": [
-            false,
-            false,
-            false
+            true,
+            true,
+            true
           ],
-          "hit": false
+          "hit": true
         }
       ],
       "notResults": [
@@ -1437,7 +1459,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户偏好用邮件沟通",
+            "content": "用户现在偏好用邮件沟通",
             "contentType": "preference",
             "credStatus": "limited",
             "confidence": 600,
@@ -1456,7 +1478,7 @@
         "coverage": 1,
         "nonSpokenWithResolution": 0,
         "responseAct": {
-          "none": 1
+          "elaborate": 1
         },
         "propositionOrigin": {
           "user_stated": 1
@@ -1509,7 +1531,7 @@
           "votes": [
             true,
             true,
-            false
+            true
           ],
           "hit": true
         }
@@ -1537,7 +1559,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户今天感到很累，什么都不想干",
+            "content": "用户今天感到很累，什么都不想做",
             "contentType": "state",
             "credStatus": "low",
             "confidence": 300,
@@ -1601,17 +1623,17 @@
       ],
       "structPass": 5,
       "structTotal": 5,
-      "gistRecall": 0,
+      "gistRecall": 1,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "Record the current stress about the deadline as a transient state",
           "votes": [
-            false,
-            false,
-            false
+            true,
+            true,
+            true
           ],
-          "hit": false
+          "hit": true
         }
       ],
       "notResults": [
@@ -1637,7 +1659,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "The user is stressed about a deadline",
+            "content": "The user is feeling stressed about an upcoming deadline",
             "contentType": "state",
             "credStatus": "low",
             "confidence": 300,
@@ -1737,7 +1759,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户表达对当前项目的不满和烦躁",
+            "content": "用户对当前的项目感到烦躁",
             "contentType": "state",
             "credStatus": "low",
             "confidence": 300,
@@ -1807,7 +1829,7 @@
         {
           "gist": "Record the user's current upbeat mood as a temporary state",
           "votes": [
-            false,
+            true,
             true,
             true
           ],
@@ -1837,7 +1859,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "The user is feeling really happy and everything is going great",
+            "content": "The user is feeling really happy today and everything is going great",
             "contentType": "state",
             "credStatus": "low",
             "confidence": 300,
@@ -2009,7 +2031,7 @@
       "structPass": 4,
       "structTotal": 5,
       "gistRecall": 0,
-      "overInferRate": 0,
+      "overInferRate": 0.5,
       "formResults": [
         {
           "gist": "Note a passing dislike of Mondays as a transient sentiment",
@@ -2034,17 +2056,17 @@
         {
           "gist": "Treat an offhand gripe as a stable preference",
           "votes": [
-            false,
-            false,
-            false
+            true,
+            true,
+            true
           ],
-          "overInferred": false
+          "overInferred": true
         }
       ],
       "consolidated": {
         "created": [
           {
-            "content": "The user hates Mondays",
+            "content": "The user dislikes Mondays",
             "contentType": "preference",
             "credStatus": "limited",
             "confidence": 600,
@@ -2114,7 +2136,7 @@
         {
           "gist": "记录当前『生气/情绪激动』的临时状态",
           "votes": [
-            false,
+            true,
             true,
             true
           ],
@@ -2144,7 +2166,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户刚与同事吵了一架，感到非常生气",
+            "content": "用户刚跟同事吵了一架，感到非常生气",
             "contentType": "state",
             "credStatus": "low",
             "confidence": 300,
@@ -2163,7 +2185,7 @@
         "coverage": 1,
         "nonSpokenWithResolution": 0,
         "responseAct": {
-          "none": 1
+          "elaborate": 1
         },
         "propositionOrigin": {
           "user_stated": 1
@@ -2183,7 +2205,7 @@
         {
           "name": "created∈[1,2]",
           "pass": true,
-          "detail": "created=1"
+          "detail": "created=2"
         },
         {
           "name": "created类型⊆{fact}",
@@ -2193,7 +2215,7 @@
         {
           "name": "不变量·confidence∈(0,1000]",
           "pass": true,
-          "detail": "1条active合规"
+          "detail": "2条active合规"
         },
         {
           "name": "不变量·state封顶∈{candidate,low}",
@@ -2244,14 +2266,21 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户是博物馆讲解员，有五年工作经验",
+            "content": "用户是一名博物馆讲解员",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户已经从事博物馆讲解员工作五年",
             "contentType": "fact",
             "credStatus": "limited",
             "confidence": 600,
             "formedBy": "stated"
           }
         ],
-        "createdCount": 1,
+        "createdCount": 2,
         "reinforced": 0,
         "corrected": 0,
         "conflicted": 0,
@@ -2415,17 +2444,17 @@
       ],
       "structPass": 5,
       "structTotal": 5,
-      "gistRecall": 0,
+      "gistRecall": 1,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "记录亲述事实：用户的雨伞是绿色的",
           "votes": [
-            false,
-            false,
+            true,
+            true,
             true
           ],
-          "hit": false
+          "hit": true
         }
       ],
       "notResults": [
@@ -2551,7 +2580,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "The user definitely prefers feedback that includes a concrete example",
+            "content": "The user prefers feedback that includes a concrete example",
             "contentType": "preference",
             "credStatus": "limited",
             "confidence": 600,
@@ -2594,8 +2623,8 @@
         },
         {
           "name": "created类型⊆{fact}",
-          "pass": false,
-          "detail": "越界类型: preference"
+          "pass": true,
+          "detail": "ok"
         },
         {
           "name": "不变量·confidence∈(0,1000]",
@@ -2613,7 +2642,7 @@
           "detail": "ok"
         }
       ],
-      "structPass": 4,
+      "structPass": 5,
       "structTotal": 5,
       "gistRecall": 1,
       "overInferRate": 0,
@@ -2623,7 +2652,7 @@
           "votes": [
             true,
             true,
-            false
+            true
           ],
           "hit": true
         }
@@ -2652,7 +2681,7 @@
         "created": [
           {
             "content": "用户从高中起就一直使用纸质日历",
-            "contentType": "preference",
+            "contentType": "fact",
             "credStatus": "limited",
             "confidence": 600,
             "formedBy": "stated"
@@ -2815,17 +2844,17 @@
       ],
       "structPass": 5,
       "structTotal": 5,
-      "gistRecall": 0,
+      "gistRecall": 1,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "记录亲述事实：用户家的阳台朝东",
           "votes": [
-            false,
-            false,
+            true,
+            true,
             true
           ],
-          "hit": false
+          "hit": true
         }
       ],
       "notResults": [
@@ -2915,17 +2944,17 @@
       ],
       "structPass": 4,
       "structTotal": 5,
-      "gistRecall": 1,
+      "gistRecall": 0,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "至多形成一条低置信、可推翻的临时状态（如『用户可能正在了解香草种植』），并挂在该搜索证据上",
           "votes": [
-            true,
-            true,
-            true
+            false,
+            false,
+            false
           ],
-          "hit": true
+          "hit": false
         }
       ],
       "notResults": [
@@ -2960,7 +2989,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户可能对阳台香草种植感兴趣",
+            "content": "用户对阳台香草种植感兴趣",
             "contentType": "preference",
             "credStatus": "candidate",
             "confidence": 200,
@@ -3013,17 +3042,17 @@
       ],
       "structPass": 4,
       "structTotal": 4,
-      "gistRecall": 0,
+      "gistRecall": 1,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "At most a low-confidence, retractable hypothesis that the user may be worried about burnout, tied to that search",
           "votes": [
             true,
-            false,
-            false
+            true,
+            true
           ],
-          "hit": false
+          "hit": true
         }
       ],
       "notResults": [
@@ -3058,7 +3087,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "The user is researching or concerned about symptoms of burnout, indicating a potential state of stress or burnout concern.",
+            "content": "The user may be experiencing or concerned about burnout",
             "contentType": "state",
             "credStatus": "candidate",
             "confidence": 200,
@@ -3116,17 +3145,17 @@
       ],
       "structPass": 4,
       "structTotal": 5,
-      "gistRecall": 0,
+      "gistRecall": 1,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "把『周六加班到深夜』记为一次性行为观察/临时状态",
           "votes": [
-            false,
-            false,
-            false
+            true,
+            true,
+            true
           ],
-          "hit": false
+          "hit": true
         }
       ],
       "notResults": [
@@ -3216,7 +3245,7 @@
         {
           "gist": "Note a narrow interest signal: bought a book on stoicism",
           "votes": [
-            false,
+            true,
             true,
             true
           ],
@@ -3255,7 +3284,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "The user is interested in stoicism",
+            "content": "The user has an interest in stoicism",
             "contentType": "preference",
             "credStatus": "candidate",
             "confidence": 200,
@@ -3349,7 +3378,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户今天没有吃早饭",
+            "content": "用户今天没吃早饭",
             "contentType": "fact",
             "credStatus": "limited",
             "confidence": 600,
@@ -3419,7 +3448,7 @@
         {
           "gist": "Record a narrow observation about tonight's music choice",
           "votes": [
-            false,
+            true,
             true,
             true
           ],
@@ -3458,7 +3487,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "The user was observed listening to a sad-songs playlist",
+            "content": "The user listened to a sad-songs playlist tonight",
             "contentType": "state",
             "credStatus": "candidate",
             "confidence": 200,
@@ -3491,17 +3520,17 @@
         {
           "name": "created∈[0,1]",
           "pass": true,
-          "detail": "created=1"
+          "detail": "created=0"
         },
         {
           "name": "created类型⊆{state}",
-          "pass": false,
-          "detail": "越界类型: fact"
+          "pass": true,
+          "detail": "ok"
         },
         {
           "name": "不变量·confidence∈(0,1000]",
           "pass": true,
-          "detail": "1条active合规"
+          "detail": "0条active合规"
         },
         {
           "name": "不变量·state封顶∈{candidate,low}",
@@ -3514,7 +3543,7 @@
           "detail": "ok"
         }
       ],
-      "structPass": 4,
+      "structPass": 5,
       "structTotal": 5,
       "gistRecall": 0,
       "overInferRate": 0,
@@ -3550,16 +3579,8 @@
         }
       ],
       "consolidated": {
-        "created": [
-          {
-            "content": "用户删除了和某人的聊天记录",
-            "contentType": "fact",
-            "credStatus": "low",
-            "confidence": 350,
-            "formedBy": "observed"
-          }
-        ],
-        "createdCount": 1,
+        "created": [],
+        "createdCount": 0,
         "reinforced": 0,
         "corrected": 0,
         "conflicted": 0,
@@ -3643,18 +3664,12 @@
       },
       "resolutionProbe": {
         "spokenCount": 1,
-        "withResolution": 1,
-        "coverage": 1,
+        "withResolution": 0,
+        "coverage": 0,
         "nonSpokenWithResolution": 0,
-        "responseAct": {
-          "affirm": 1
-        },
-        "propositionOrigin": {
-          "assistant_proposed": 1
-        },
-        "assertionStrength": {
-          "explicit": 1
-        }
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
       }
     },
     {
@@ -3725,18 +3740,12 @@
       },
       "resolutionProbe": {
         "spokenCount": 1,
-        "withResolution": 1,
-        "coverage": 1,
+        "withResolution": 0,
+        "coverage": 0,
         "nonSpokenWithResolution": 0,
-        "responseAct": {
-          "affirm": 1
-        },
-        "propositionOrigin": {
-          "user_stated": 1
-        },
-        "assertionStrength": {
-          "none": 1
-        }
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
       }
     },
     {
@@ -3807,18 +3816,12 @@
       },
       "resolutionProbe": {
         "spokenCount": 1,
-        "withResolution": 1,
-        "coverage": 1,
+        "withResolution": 0,
+        "coverage": 0,
         "nonSpokenWithResolution": 0,
-        "responseAct": {
-          "ask": 1
-        },
-        "propositionOrigin": {
-          "user_stated": 1
-        },
-        "assertionStrength": {
-          "none": 1
-        }
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
       }
     },
     {
@@ -3889,18 +3892,12 @@
       },
       "resolutionProbe": {
         "spokenCount": 1,
-        "withResolution": 1,
-        "coverage": 1,
+        "withResolution": 0,
+        "coverage": 0,
         "nonSpokenWithResolution": 0,
-        "responseAct": {
-          "ask": 1
-        },
-        "propositionOrigin": {
-          "user_stated": 1
-        },
-        "assertionStrength": {
-          "none": 1
-        }
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
       }
     },
     {
@@ -3971,18 +3968,12 @@
       },
       "resolutionProbe": {
         "spokenCount": 1,
-        "withResolution": 1,
-        "coverage": 1,
+        "withResolution": 0,
+        "coverage": 0,
         "nonSpokenWithResolution": 0,
-        "responseAct": {
-          "affirm": 1
-        },
-        "propositionOrigin": {
-          "user_stated": 1
-        },
-        "assertionStrength": {
-          "explicit": 1
-        }
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
       }
     },
     {
@@ -4053,18 +4044,12 @@
       },
       "resolutionProbe": {
         "spokenCount": 1,
-        "withResolution": 1,
-        "coverage": 1,
+        "withResolution": 0,
+        "coverage": 0,
         "nonSpokenWithResolution": 0,
-        "responseAct": {
-          "none": 1
-        },
-        "propositionOrigin": {
-          "user_stated": 1
-        },
-        "assertionStrength": {
-          "explicit": 1
-        }
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
       }
     },
     {
@@ -4135,18 +4120,12 @@
       },
       "resolutionProbe": {
         "spokenCount": 1,
-        "withResolution": 1,
-        "coverage": 1,
+        "withResolution": 0,
+        "coverage": 0,
         "nonSpokenWithResolution": 0,
-        "responseAct": {
-          "none": 1
-        },
-        "propositionOrigin": {
-          "user_stated": 1
-        },
-        "assertionStrength": {
-          "explicit": 1
-        }
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
       }
     },
     {
@@ -4368,21 +4347,21 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户周末更愿意待在家里",
+            "content": "用户更愿意周末待在家里",
             "contentType": "preference",
             "credStatus": "candidate",
             "confidence": 280,
             "formedBy": "confirmed"
           },
           {
-            "content": "用户喜欢一个人看电影",
+            "content": "用户喜欢一个人去看电影",
             "contentType": "preference",
             "credStatus": "candidate",
             "confidence": 280,
             "formedBy": "confirmed"
           },
           {
-            "content": "用户不太爱去人多的酒吧",
+            "content": "用户不太喜欢去人多的酒吧",
             "contentType": "preference",
             "credStatus": "candidate",
             "confidence": 280,
@@ -4432,8 +4411,8 @@
         },
         {
           "name": "带AI上文的原话都落了解析",
-          "pass": true,
-          "detail": "1/1 条有解析"
+          "pass": false,
+          "detail": "1/1 条缺解析"
         },
         {
           "name": "不变量·confidence∈(0,1000]",
@@ -4451,7 +4430,7 @@
           "detail": "ok"
         }
       ],
-      "structPass": 5,
+      "structPass": 4,
       "structTotal": 5,
       "gistRecall": null,
       "overInferRate": 0,
@@ -4504,18 +4483,12 @@
       },
       "resolutionProbe": {
         "spokenCount": 1,
-        "withResolution": 1,
-        "coverage": 1,
+        "withResolution": 0,
+        "coverage": 0,
         "nonSpokenWithResolution": 0,
-        "responseAct": {
-          "affirm": 1
-        },
-        "propositionOrigin": {
-          "assistant_proposed": 1
-        },
-        "assertionStrength": {
-          "weak": 1
-        }
+        "responseAct": {},
+        "propositionOrigin": {},
+        "assertionStrength": {}
       }
     },
     {
@@ -4528,7 +4501,7 @@
         {
           "name": "created∈[1,3]",
           "pass": true,
-          "detail": "created=1"
+          "detail": "created=3"
         },
         {
           "name": "created类型⊆{preference,fact}",
@@ -4548,7 +4521,7 @@
         {
           "name": "不变量·confidence∈(0,1000]",
           "pass": true,
-          "detail": "1条active合规"
+          "detail": "3条active合规"
         },
         {
           "name": "不变量·state封顶∈{candidate,low}",
@@ -4563,17 +4536,17 @@
       ],
       "structPass": 7,
       "structTotal": 7,
-      "gistRecall": 1,
+      "gistRecall": 0.5,
       "overInferRate": 0,
       "formResults": [
         {
           "gist": "记录用户亲述的剧团习惯：周末基本都去排练、挺喜欢",
           "votes": [
-            true,
-            true,
+            false,
+            false,
             false
           ],
-          "hit": true
+          "hit": false
         },
         {
           "gist": "记录用户亲述事实：参加社区剧团已有三年",
@@ -4626,14 +4599,28 @@
       "consolidated": {
         "created": [
           {
-            "content": "用户周末喜欢去社区剧团排练，并已坚持三年",
+            "content": "用户周末基本都会去社区剧团排练",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户喜欢社区剧团排练",
             "contentType": "preference",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户已经坚持社区剧团排练三年",
+            "contentType": "fact",
             "credStatus": "limited",
             "confidence": 600,
             "formedBy": "stated"
           }
         ],
-        "createdCount": 1,
+        "createdCount": 3,
         "reinforced": 0,
         "corrected": 0,
         "conflicted": 0,
@@ -4750,7 +4737,7 @@
       "consolidated": {
         "created": [
           {
-            "content": "The user prefers the window seat when flying.",
+            "content": "The user prefers the window seat over the aisle while flying",
             "contentType": "preference",
             "credStatus": "candidate",
             "confidence": 280,
@@ -4789,7 +4776,7 @@
         {
           "name": "created∈[0,1]",
           "pass": true,
-          "detail": "created=1"
+          "detail": "created=0"
         },
         {
           "name": "created类型⊆{state,preference,trait}",
@@ -4798,8 +4785,8 @@
         },
         {
           "name": "created来源⊆{confirmed}",
-          "pass": false,
-          "detail": "越界来源: inferred"
+          "pass": true,
+          "detail": "ok"
         },
         {
           "name": "带AI上文的原话都落了解析",
@@ -4809,7 +4796,7 @@
         {
           "name": "不变量·confidence∈(0,1000]",
           "pass": true,
-          "detail": "1条active合规"
+          "detail": "0条active合规"
         },
         {
           "name": "不变量·state封顶∈{candidate,low}",
@@ -4822,7 +4809,7 @@
           "detail": "ok"
         }
       ],
-      "structPass": 6,
+      "structPass": 7,
       "structTotal": 7,
       "gistRecall": null,
       "overInferRate": 0,
@@ -4857,16 +4844,8 @@
         }
       ],
       "consolidated": {
-        "created": [
-          {
-            "content": "The user may be an introvert (hedged acceptance, not explicit)",
-            "contentType": "trait",
-            "credStatus": "candidate",
-            "confidence": 200,
-            "formedBy": "inferred"
-          }
-        ],
-        "createdCount": 1,
+        "created": [],
+        "createdCount": 0,
         "reinforced": 0,
         "corrected": 0,
         "conflicted": 0,
@@ -4994,6 +4973,952 @@
         "nonSpokenWithResolution": 0,
         "responseAct": {
           "negate": 1
+        },
+        "propositionOrigin": {
+          "assistant_proposed": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-050",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "股市涨跌是世界命题，不该沉淀成用户特质",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把股市涨跌当作用户本人的长期特质或偏好",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把『股市涨了』这类世界事件当成关于用户的稳定事实，沉淀进个人画像",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-051",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "Weather forecast is a world proposition, not a user attribute",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "Treat the weather forecast as a stable fact about the user themselves",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Sink a world event (the weather) into the user's personal profile as if it described them",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-052",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "油价新闻是外部世界事件，不进个人画像",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把油价上涨当作用户的偏好、目标或特质",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把外部新闻事件当成关于用户本人的画像内容",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户关注油价变动及相关新闻",
+            "contentType": "trait",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-053",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "姐姐生娃是第三方命题，别当成用户本人的经历",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": false,
+          "detail": "created=3"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "3条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 3,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把『生了女儿』当成用户本人的经历或状态",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把关于姐姐（第三方）的事直接沉淀为用户自己的属性或特质",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户有一个姐姐",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户的姐姐在上周生了一个女儿",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户的全家对他姐姐生了女儿感到非常高兴",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 3,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-054",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "A friend's job is a third-party proposition, not the user's own",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "Treat 'works at Google' as a fact about the user themselves",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Record Alice's job as the user's own attribute or trait",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user's friend Alice has started working at Google",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-055",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "同事调动是第三方命题，不该记成用户自己的事",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=0"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "0条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把老王（第三方同事）的工作变动当成关于用户本人的事实",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把同事的调动当作用户自己的目标或状态",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [],
+        "createdCount": 0,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-056",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "世界事件混在用户第一人称叙述里（大盘跌 + 用户情绪）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,3]",
+          "pass": true,
+          "detail": "created=2"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "2条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把『大盘又跌了』这个市场行情当成关于用户本人的稳定特质或事实",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把股市涨跌本身沉淀成用户的属性（而非用户『关注股市』这个偏好）",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户最近一直关注股市",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户对股市大盘的下跌感到叹息",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 2,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-057",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "Third-party answer to an AI question about the user's sister",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "Record 'got promoted to manager' as the user's own job or career change",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Attribute the sister's promotion to the user themselves",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user's sister has been promoted to manager at her firm",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "elaborate": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-058",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "第一人称复数里的他人命题（我们团队业绩 + 老板满意）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,3]",
+          "pass": true,
+          "detail": "created=2"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "2条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把『业绩翻倍』当成用户个人的成就或能力特质",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把老板的满意当成关于用户本人的稳定事实",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户的团队这季度业绩翻倍了",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户的老板对他们团队的业绩特别满意",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 2,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "none": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-059",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "World fact mixed with the user's own opinion (economy + belief)",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,2]",
+          "pass": true,
+          "detail": "created=1"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "1条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "Record 'heading into a recession' as a settled fact about the user themselves",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "Sink the state of the economy into the user's personal profile as a stable trait",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "The user believes a recession is approaching",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 1,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "elaborate": 1
+        },
+        "propositionOrigin": {
+          "user_stated": 1
+        },
+        "assertionStrength": {
+          "explicit": 1
+        }
+      }
+    },
+    {
+      "id": "CC-060",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "第三方计划混用户情绪（闺蜜移民 + 我舍不得）",
+      "error": null,
+      "checks": [
+        {
+          "name": "created∈[0,3]",
+          "pass": true,
+          "detail": "created=2"
+        },
+        {
+          "name": "不变量·confidence∈(0,1000]",
+          "pass": true,
+          "detail": "2条active合规"
+        },
+        {
+          "name": "不变量·state封顶∈{candidate,low}",
+          "pass": true,
+          "detail": "ok"
+        },
+        {
+          "name": "不变量·证据链引用真实存在",
+          "pass": true,
+          "detail": "ok"
+        }
+      ],
+      "structPass": 4,
+      "structTotal": 4,
+      "gistRecall": null,
+      "overInferRate": 0,
+      "formResults": [],
+      "notResults": [
+        {
+          "gist": "把『移民加拿大』当成用户本人的计划或目标",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        },
+        {
+          "gist": "把闺蜜（第三方）的移民当成关于用户自己的事实",
+          "votes": [
+            false,
+            false,
+            false
+          ],
+          "overInferred": false
+        }
+      ],
+      "consolidated": {
+        "created": [
+          {
+            "content": "用户的闺蜜要移民加拿大",
+            "contentType": "fact",
+            "credStatus": "limited",
+            "confidence": 600,
+            "formedBy": "stated"
+          },
+          {
+            "content": "用户对闺蜜要移民加拿大感到舍不得",
+            "contentType": "state",
+            "credStatus": "low",
+            "confidence": 300,
+            "formedBy": "stated"
+          }
+        ],
+        "createdCount": 2,
+        "reinforced": 0,
+        "corrected": 0,
+        "conflicted": 0,
+        "processedEvents": 1
+      },
+      "resolutionProbe": {
+        "spokenCount": 1,
+        "withResolution": 1,
+        "coverage": 1,
+        "nonSpokenWithResolution": 0,
+        "responseAct": {
+          "elaborate": 1
         },
         "propositionOrigin": {
           "user_stated": 1
