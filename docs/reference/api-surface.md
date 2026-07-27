@@ -85,9 +85,14 @@ The supported host-facing surface. This is the **candidate set to freeze at 1.0*
 
 Usable, but the shape may still move before 1.0.
 
-- **`CreateCoreOptions.contradictionGuard`** — A5 contradiction guard, default
-  off (see the contract). Whether A5 stays experimental or is promoted is a 1.0
-  open decision.
+- **`CreateCoreOptions.contradictionGuard`** — A5 first-pass contradiction guard
+  (inline, during consolidate), default off (see the contract).
+- **`reconcileContradictions`, `ReconcileDeps`, `ReconcileResult`** — A5
+  second-pass whole-profile reconciler (the D-09 "full fix"), reached through the
+  facade as `core.reconcileContradictions()`; an opt-in background operator in the
+  same family as `core.expire()` / `core.aggregateTrends()`, default off. Whether
+  A5 (both passes) is promoted to stable or kept experimental at 1.0 is an open
+  decision (see below).
 - **Injectable extension points** — Retrieval: `Retriever`, `RetrievalHit`,
   `NullRetriever`, `VectorRetriever`. Embedding: `Embedder`, `EmbedConfig`,
   `OpenAICompatEmbedder`, `loadEmbedConfig`. LLM: `LLMClient`, `ChatMessage`,
@@ -222,8 +227,11 @@ only".
 1. **The Stable list above is the freeze candidate.** Owner review confirms the
    final set before 1.0 tags it.
 2. **Each Experimental symbol needs a 1.0 disposition**: promote to stable, keep
-   experimental (and say so in the 1.0 notes), or drop. A5 (`contradictionGuard`)
-   is the headline open one (its 1.0 disposition is deferred to 0.9).
+   experimental (and say so in the 1.0 notes), or drop. A5 (`contradictionGuard`
+   first pass + `reconcileContradictions` second pass) is the headline open one:
+   0.9 chose the "full fix" (D-09) and the second-pass whole-profile reconciler
+   landed; its stable-vs-experimental 1.0 disposition depends on the at-scale
+   side-effect review still in progress.
 3. **Decide the Python 1.0 scope**: ship the rule kernel as the stable Python
    surface, or hold Python entirely experimental through 1.0.
 4. **Internal exports**: consider whether any should stop being re-exported from
