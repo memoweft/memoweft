@@ -2,9 +2,17 @@
 
 All notable changes to MemoWeft are documented here.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses semantic versioning while public APIs remain pre-1.0.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and semantic versioning. The public API surface is frozen as of the 1.0 release candidate — see [docs/STABILITY.md](docs/STABILITY.md) for the support tiers, the versioning rules, and the deprecation process.
 
 ## [Unreleased]
+
+## [1.0.0-rc.1] — 2026-07-28
+
+First release candidate for 1.0. Nothing new is added here beyond the surface work below: 0.9 was the last feature version, and this candidate exists so the frozen API can be exercised before 1.0 is tagged. The supported integration path — `createMemoWeftCore()` and the facade around it — is unchanged from 0.7.0, and no schema migration is involved.
+
+What "frozen" means concretely: every public export now carries a documented support tier ([api-surface.md](docs/reference/api-surface.md)), the policy governing those tiers is written down ([STABILITY.md](docs/STABILITY.md)), and `tests/api/api-surface.snapshot` fails CI on any unreviewed change to the export set. Experimental symbols stay experimental at 1.0 — including both A5 contradiction passes — because promoting one later is additive and non-breaking, while freezing it early is a commitment that can only be undone in a major.
+
+Please report anything that looks like it still needs to change before 1.0; that is what the candidate period is for.
 
 ### Added
 
@@ -138,6 +146,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Cloud-read filtering for model-facing write paths.
 - A local reference host and active-window collector plugin.
 
+[1.0.0-rc.1]: https://github.com/memoweft/memoweft/compare/v0.7.0...v1.0.0-rc.1
 [0.7.0]: https://github.com/memoweft/memoweft/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/memoweft/memoweft/tree/v0.6.0
 [0.5.1]: https://github.com/memoweft/memoweft/compare/v0.5.0...v0.5.1

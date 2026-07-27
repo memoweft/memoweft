@@ -48,7 +48,7 @@ Use a workspace-specific annotated tag if release tracking needs one (for exampl
 ## Prepare the release
 
 1. Confirm the target commit is on `main` and the worktree is clean.
-2. Choose the next version according to the compatibility impact. MemoWeft is pre-1.0, so minor releases may still contain documented breaking changes.
+2. Choose the next version according to the compatibility impact. From 1.0 on, breaking a **stable** symbol requires a major release preceded by a deprecation notice; **experimental** symbols may change in a minor with a changelog notice. See [STABILITY.md](./STABILITY.md) for the full policy.
 3. Keep these values identical:
    - `package.json`
    - the root package entry in `package-lock.json`

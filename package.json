@@ -1,6 +1,6 @@
 {
   "name": "memoweft",
-  "version": "0.7.0",
+  "version": "1.0.0-rc.1",
   "description": "Portable, traceable long-term memory for AI applications that keeps evidence, inference, and conflicts distinct.",
   "keywords": [
     "llm",

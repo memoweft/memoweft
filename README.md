@@ -222,7 +222,7 @@ Privacy boundary: MemoWeft stores memory in a standard, unencrypted SQLite datab
 
 ## Project status
 
-MemoWeft is pre-1.0 and library-first. Core is implemented and tested, but experimental interfaces may change between minor releases.
+MemoWeft is library-first and at the 1.0 release-candidate stage. The public API surface is frozen: every export carries a documented support tier, and breaking a stable symbol now requires a major version. Experimental interfaces — the injectable extension points, the plugin contract, and the background maintenance operators — may still change in a minor release. See [STABILITY.md](docs/STABILITY.md).
 
 [Changelog](https://github.com/memoweft/memoweft/blob/main/CHANGELOG.md) · [Roadmap](https://github.com/memoweft/memoweft/blob/main/ROADMAP.md) · [Contributing](https://github.com/memoweft/memoweft/blob/main/CONTRIBUTING.md) · [Support](https://github.com/memoweft/memoweft/blob/main/SUPPORT.md) · [Security](https://github.com/memoweft/memoweft/blob/main/.github/SECURITY.md)
 
