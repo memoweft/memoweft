@@ -302,9 +302,22 @@ off on them:
    `kind`/`meta`, and the graph `conflicts_with`/`corrects` edges marked experimental within
    their stable enclosing shapes.
 
-**Follow-up before tagging:** the built-in retriever export set is inconsistent —
-`KeywordRetriever`, the real default no-embedder retriever, is not root-exported while
-`NullRetriever`/`VectorRetriever` are; reconcile that before freezing the built-ins.
+**Built-in retrievers — asymmetric on purpose, not an oversight.** Two of the four built-in
+`Retriever` implementations are root-exported (`NullRetriever`, `VectorRetriever`) and two
+are not: `KeywordRetriever` (the FTS5 fallback `createMemoWeftCore` selects when no embedder
+is configured — so, the real default for a key-less setup) and `HybridRetriever` (the RRF
+fusion wrapper). Both unexported classes carry an explicit note at the top of their source
+saying they are kept out of `src/index.ts` to leave the frozen public API untouched, so the
+asymmetry is a decision that was already made, not a slip. Hosts do not need them on the
+default path — the facade picks the fallback chain itself (`VectorRetriever` →
+`KeywordRetriever` → `NullRetriever`) — and a host wanting different behaviour injects its
+own `Retriever`.
+
+**1.0 disposition: leave them unexported.** Exporting a built-in later is additive and can
+land in any minor; un-exporting one after 1.0 would take a major. The uses that would argue
+for opening them up — picking the FTS5 tokenizer explicitly through
+`KeywordRetrieverOptions`, or composing RRF channels with `HybridRetriever` — have no
+reported demand. Revisit when a host asks for one.
 
 _This records the intended support tiers so the 1.0 freeze is a decision, not an archaeology
 exercise. It changes no runtime behaviour or schema._
