@@ -2083,7 +2083,7 @@
           "max": 2,
           "types": ["fact"]
         },
-        "shouldFormGists": ["把职位更正为「资深工程师」，并让旧的「研发主管」失效而不是并存"],
+        "shouldFormGists": ["采纳更正：用户的职位是资深工程师"],
         "shouldNotFormGists": [
           "把「主管」与「资深工程师」两条并存、标成互相矛盾",
           "物理删除旧记录、不留任何更正痕迹",
@@ -2119,9 +2119,7 @@
           "max": 2,
           "types": ["fact"]
         },
-        "shouldFormGists": [
-          "Record Hamburg as the current city and invalidate the earlier Berlin fact rather than keeping both"
-        ],
+        "shouldFormGists": ["Adopt the correction: the user lives in Hamburg"],
         "shouldNotFormGists": [
           "Keep Berlin and Hamburg side by side as a contradiction",
           "Hard-delete the earlier record so the correction leaves no trace",
@@ -2157,7 +2155,7 @@
           "max": 2,
           "types": ["fact"]
         },
-        "shouldFormGists": ["把猫的数量更正为一只，并让「两只猫」失效"],
+        "shouldFormGists": ["采纳更正：用户养了一只猫"],
         "shouldNotFormGists": [
           "让「两只猫」和「一只猫」并存为矛盾",
           "删除旧记录且不保留更正来源",
@@ -2193,9 +2191,7 @@
           "max": 2,
           "types": ["fact"]
         },
-        "shouldFormGists": [
-          "Record lactose intolerance and invalidate the earlier vegan fact rather than holding both"
-        ],
+        "shouldFormGists": ["Adopt the correction: the user is lactose intolerant"],
         "shouldNotFormGists": [
           "Keep \"vegan\" alongside \"lactose intolerant\" as coexisting claims",
           "Remove the earlier record without preserving the correction",
@@ -2231,7 +2227,7 @@
           "max": 2,
           "types": ["goal"]
         },
-        "shouldFormGists": ["把目标更正为「准备考公」，并让「准备考研」失效"],
+        "shouldFormGists": ["采纳更正：用户准备考公"],
         "shouldNotFormGists": [
           "把考研与考公两个目标并存为矛盾",
           "抹掉旧目标且不留更正痕迹",
@@ -2267,7 +2263,7 @@
           "max": 2,
           "types": ["project"]
         },
-        "shouldFormGists": ["Record the Q3 launch date and invalidate the earlier Q2 date"],
+        "shouldFormGists": ["Adopt the correction: the launch is scheduled for Q3"],
         "shouldNotFormGists": [
           "Keep both Q2 and Q3 as competing launch dates",
           "Drop the earlier date with no record that it was corrected",
@@ -2303,7 +2299,7 @@
           "max": 2,
           "types": ["preference"]
         },
-        "shouldFormGists": ["把偏好更正为「不喝浓缩咖啡」，并让旧的「喜欢浓缩」失效"],
+        "shouldFormGists": ["采纳更正：用户不喝浓缩咖啡"],
         "shouldNotFormGists": [
           "两条相反的咖啡偏好并存挂冲突",
           "删除旧偏好且不保留更正来源",
@@ -2339,9 +2335,7 @@
           "max": 2,
           "types": ["state"]
         },
-        "shouldFormGists": [
-          "Record that the knee has healed and running has resumed, and retire the earlier injury state instead of keeping it active"
-        ],
+        "shouldFormGists": ["Adopt the correction: the knee has healed and the user runs again"],
         "shouldNotFormGists": [
           "Keep the injury state active alongside the recovery as a contradiction",
           "Erase the injury history so the recovery has nothing to correct",
