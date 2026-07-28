@@ -552,6 +552,115 @@ function buildSummary(sc, run, checks, gist) {
 
 const mean = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
 
+/** 95% 用的 z（双侧 0.975 分位）。 */
+const Z_95 = 1.959963984540054;
+
+/**
+ * 二项比例的 Wilson score 区间。
+ *
+ * 用 Wilson 而不是教科书 Wald：样本小、或比例贴近 0/1 时 Wald 会给出越界区间
+ * （overInfer 恰恰贴着 0，structRate 贴着 1），Wilson 不会。
+ * 只对**计数比率**用（分子分母都是个数）——均值类指标（每场景一个 0~1 的值再平均）
+ * 不是二项，必须走 bootstrapMeanCI，套这个就是错量具。
+ */
+function wilsonInterval(successes, total, z = Z_95) {
+  if (!Number.isFinite(total) || total <= 0) return null;
+  const p = successes / total;
+  const z2 = z * z;
+  const denom = 1 + z2 / total;
+  const center = (p + z2 / (2 * total)) / denom;
+  const half = (z / denom) * Math.sqrt((p * (1 - p)) / total + z2 / (4 * total * total));
+  return { lo: Math.max(0, center - half), hi: Math.min(1, center + half) };
+}
+
+/**
+ * xorshift32 确定性伪随机。
+ *
+ * bootstrap 必须可复现——同一批分数任何时候重算都要给出同一个区间，
+ * 否则「区间变了」分不清是数据变了还是抽样变了。故不用 Math.random。
+ */
+function makeRng(seed) {
+  let x = seed >>> 0 || 1;
+  return () => {
+    x ^= x << 13;
+    x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    x >>>= 0;
+    return x / 4294967296;
+  };
+}
+
+/**
+ * 均值的 bootstrap 百分位区间（默认 10000 次重抽、固定种子）。
+ *
+ * 给 avgGistRecall / avgOverInferRate 这类「每场景一个 0~1 的值，再取平均」的指标用：
+ * 它们不是二项比例，Wilson 不适用。
+ */
+/**
+ * 聚类（cluster）bootstrap：以**场景**为重抽单位算一个比率的区间。
+ *
+ * 为什么结构断言通过率不能用 Wilson：Wilson 假设每次试验独立，而同一场景的 4~8 条断言
+ * 是对**同一次模型输出**的相关观测（一次执行错误还会让整个场景一起塌），60 个场景根本
+ * 提供不了 318 份独立信息。对合并计数套 Wilson 会算出**虚假变窄**的区间——正是评测纪律
+ * 里禁止的那种「看着精确其实没有」。
+ *
+ * 故按场景重抽整条 (pass,total) 向量再求合并比率，场景内相关性被原样保留。
+ * 场景**之间**才是独立的，所以「场景全过率」那类一场景一观测的指标仍走 Wilson。
+ */
+function clusterBootstrapRateCI(clusters, { iterations = 10000, seed = 20260728 } = {}) {
+  const n = clusters.length;
+  if (!n) return null;
+  const totalAll = clusters.reduce((a, c) => a + c.total, 0);
+  if (totalAll <= 0) return null;
+  const rng = makeRng(seed);
+  const rates = [];
+  for (let i = 0; i < iterations; i += 1) {
+    let pass = 0;
+    let total = 0;
+    for (let j = 0; j < n; j += 1) {
+      const c = clusters[(rng() * n) | 0];
+      pass += c.pass;
+      total += c.total;
+    }
+    if (total > 0) rates.push(pass / total);
+  }
+  if (!rates.length) return null;
+  rates.sort((a, b) => a - b);
+  const at = (q) =>
+    rates[Math.min(rates.length - 1, Math.max(0, Math.round(q * (rates.length - 1))))];
+  const lo = at(0.025);
+  const hi = at(0.975);
+
+  // bootstrap 的经典缺陷：重抽只能产生样本里出现过的值。所有场景都满分时区间会退化成
+  // [1,1]——读起来像「确定就是 100%」，其实只是样本太小、还没见过失败（7 个场景全过
+  // 完全可能出自一个真实通过率 85% 的系统）。这种同质情形退回**场景级** Wilson
+  // （n = 场景数，一场景一观测），把不确定性如实留住。
+  if (lo === hi) {
+    const usable = clusters.filter((c) => c.total > 0);
+    const allPass = usable.filter((c) => c.pass === c.total).length;
+    const w = wilsonInterval(allPass, usable.length);
+    if (w) return w;
+  }
+  return { lo, hi };
+}
+
+function bootstrapMeanCI(values, { iterations = 10000, seed = 20260728 } = {}) {
+  const n = values.length;
+  if (!n) return null;
+  if (n === 1) return { lo: values[0], hi: values[0] };
+  const rng = makeRng(seed);
+  const means = new Float64Array(iterations);
+  for (let i = 0; i < iterations; i += 1) {
+    let sum = 0;
+    for (let j = 0; j < n; j += 1) sum += values[(rng() * n) | 0];
+    means[i] = sum / n;
+  }
+  means.sort();
+  const at = (q) => means[Math.min(iterations - 1, Math.max(0, Math.round(q * (iterations - 1))))];
+  return { lo: at(0.025), hi: at(0.975) };
+}
+
 function aggregate(summaries) {
   const structPass = summaries.reduce((a, s) => a + s.structPass, 0);
   const structTotal = summaries.reduce((a, s) => a + s.structTotal, 0);
@@ -565,17 +674,34 @@ function aggregate(summaries) {
     n: arr.length,
     structPass: arr.reduce((a, s) => a + s.structPass, 0),
     structTotal: arr.reduce((a, s) => a + s.structTotal, 0),
+    // 按场景聚类重抽（同 aggregate 顶层的理由）：组内断言同样是相关观测。
+    structRateCI: clusterBootstrapRateCI(
+      arr.map((s) => ({ pass: s.structPass, total: s.structTotal })),
+    ),
     gistRecall: mean(arr.map((s) => s.gistRecall).filter((v) => v !== null)),
     overInferRate: mean(arr.map((s) => s.overInferRate).filter((v) => v !== null)),
   }));
+
+  const scenariosPassed = summaries.filter(
+    (s) => !s.error && s.structPass === s.structTotal,
+  ).length;
 
   return {
     structPass,
     structTotal,
     structRate: structTotal ? structPass / structTotal : null,
+    // 结构断言率 → 按场景聚类 bootstrap（断言不独立，Wilson 会虚假变窄）；
+    // 一场景一观测的比率（场景全过率）→ Wilson；均值类 → 普通 bootstrap。三者不可互换。
+    structRateCI: clusterBootstrapRateCI(
+      summaries.map((s) => ({ pass: s.structPass, total: s.structTotal })),
+    ),
     avgGistRecall: mean(recalls),
+    avgGistRecallCI: bootstrapMeanCI(recalls),
     avgOverInferRate: mean(overs),
-    scenariosPassed: summaries.filter((s) => !s.error && s.structPass === s.structTotal).length,
+    avgOverInferRateCI: bootstrapMeanCI(overs),
+    scenariosPassed,
+    scenarioPassRate: summaries.length ? scenariosPassed / summaries.length : null,
+    scenarioPassRateCI: wilsonInterval(scenariosPassed, summaries.length),
     errored: summaries.filter((s) => s.error).length,
     groups,
   };
@@ -621,6 +747,9 @@ function collectMeta(corpus, scenarios, cfgs, filter) {
 // Report formatting
 const pct = (n) => (n === null ? 'n/a' : (n * 100).toFixed(1) + '%');
 const f2 = (n) => (n === null ? 'n/a' : n.toFixed(2));
+/** 区间渲染：比率类按百分比，均值类按两位小数；没有区间（样本为 0）显式写 n/a，不留空。 */
+const ciPct = (ci) => (ci ? `[${pct(ci.lo)}, ${pct(ci.hi)}]` : 'n/a');
+const ciF2 = (ci) => (ci ? `[${f2(ci.lo)}, ${f2(ci.hi)}]` : 'n/a');
 const checksInline = (checks) => checks.map((c) => `${c.pass ? '✓' : '✗'}${c.name}`).join(' · ');
 /** Formats prompt versions in stable identifier order. */
 const formatPromptVersions = (pv) =>
@@ -691,25 +820,41 @@ function buildReport(summaries, agg, meta) {
   L.push('');
   L.push('## 总分');
   L.push('');
-  L.push('| 指标 | 值 |');
-  L.push('| --- | --- |');
-  L.push(`| 结构断言通过率 | ${agg.structPass}/${agg.structTotal} = ${pct(agg.structRate)} |`);
+  L.push('| 指标 | 值 | 95% CI | 区间口径 |');
+  L.push('| --- | --- | --- | --- |');
   L.push(
-    `| 场景全部通过（结构断言通过且无执行错误） | ${agg.scenariosPassed}/${meta.scenarioCount} |`,
+    `| 结构断言通过率 | ${agg.structPass}/${agg.structTotal} = ${pct(agg.structRate)} | ${ciPct(agg.structRateCI)} | cluster bootstrap（按场景） |`,
   );
-  L.push(`| 平均 gistRecall（越高越好） | ${f2(agg.avgGistRecall)} |`);
-  L.push(`| 平均 overInferRate（越低越好） | ${f2(agg.avgOverInferRate)} |`);
-  L.push(`| 执行失败场景（LLM/网络错误） | ${agg.errored} |`);
+  L.push(
+    `| 场景全部通过（结构断言通过且无执行错误） | ${agg.scenariosPassed}/${meta.scenarioCount} = ${pct(agg.scenarioPassRate)} | ${ciPct(agg.scenarioPassRateCI)} | Wilson |`,
+  );
+  L.push(
+    `| 平均 gistRecall（越高越好） | ${f2(agg.avgGistRecall)} | ${ciF2(agg.avgGistRecallCI)} | bootstrap |`,
+  );
+  L.push(
+    `| 平均 overInferRate（越低越好） | ${f2(agg.avgOverInferRate)} | ${ciF2(agg.avgOverInferRateCI)} | bootstrap |`,
+  );
+  L.push(`| 执行失败场景（LLM/网络错误） | ${agg.errored} | — | — |`);
+  L.push('');
+  L.push(
+    '> 三种口径按数据结构选，不可互换：**结构断言通过率**走**按场景聚类的 bootstrap**——同一场景的多条断言是对同一次模型输出的相关观测（执行错误还会让整场景一起塌），把它们当独立试验套 Wilson 会算出**虚假变窄**的区间；**场景全过率**是一场景一观测、场景间独立，用 Wilson score 区间；**均值类**（各场景 gistRecall / overInferRate 再平均）用普通 bootstrap 百分位。全部 10000 次重抽 + 固定种子，故同一批分数恒得同一区间。**单轮点估计不足以下结论**——比较两次跑分先看区间是否重叠。',
+  );
   L.push('');
   L.push('## 按 discipline 分组');
   L.push('');
-  L.push('| discipline | 场景数 | 结构通过率 | 平均 gistRecall | 平均 overInferRate |');
-  L.push('| --- | --- | --- | --- | --- |');
+  L.push(
+    '| discipline | 场景数 | 结构通过率 | 结构 95% CI | 平均 gistRecall | 平均 overInferRate |',
+  );
+  L.push('| --- | --- | --- | --- | --- | --- |');
   for (const g of agg.groups) {
     L.push(
-      `| ${g.discipline} | ${g.n} | ${g.structPass}/${g.structTotal} = ${pct(g.structTotal ? g.structPass / g.structTotal : null)} | ${f2(g.gistRecall)} | ${f2(g.overInferRate)} |`,
+      `| ${g.discipline} | ${g.n} | ${g.structPass}/${g.structTotal} = ${pct(g.structTotal ? g.structPass / g.structTotal : null)} | ${ciPct(g.structRateCI)} | ${f2(g.gistRecall)} | ${f2(g.overInferRate)} |`,
     );
   }
+  L.push('');
+  L.push(
+    '> 分组样本很小（每组约 7 个场景），分组区间会宽到几乎不可用——那正是它要告诉你的：**单个 discipline 的分数差异多半是噪声，别据此下结论**。',
+  );
   L.push('');
   L.push('## 逐场景明细');
   L.push('');
@@ -778,12 +923,18 @@ function printConsole(summaries, agg, meta) {
   );
   console.log(`语料：${meta.scenarioCount}/${meta.totalScenarios} 场景`);
   console.log('');
-  console.log(`结构断言通过率  ${agg.structPass}/${agg.structTotal} = ${pct(agg.structRate)}`);
   console.log(
-    `场景全部通过    ${agg.scenariosPassed}/${meta.scenarioCount}（执行失败 ${agg.errored}）`,
+    `结构断言通过率  ${agg.structPass}/${agg.structTotal} = ${pct(agg.structRate)}  95%CI ${ciPct(agg.structRateCI)}（按场景聚类）`,
   );
-  console.log(`平均 gistRecall     ${f2(agg.avgGistRecall)}`);
-  console.log(`平均 overInferRate  ${f2(agg.avgOverInferRate)}`);
+  console.log(
+    `场景全部通过    ${agg.scenariosPassed}/${meta.scenarioCount} = ${pct(agg.scenarioPassRate)}  95%CI ${ciPct(agg.scenarioPassRateCI)}（执行失败 ${agg.errored}）`,
+  );
+  console.log(
+    `平均 gistRecall     ${f2(agg.avgGistRecall)}  95%CI ${ciF2(agg.avgGistRecallCI)}（bootstrap）`,
+  );
+  console.log(
+    `平均 overInferRate  ${f2(agg.avgOverInferRate)}  95%CI ${ciF2(agg.avgOverInferRateCI)}（bootstrap）`,
+  );
   console.log('── 按 discipline ──');
   for (const g of agg.groups) {
     console.log(
@@ -1748,8 +1899,143 @@ async function selftest() {
     await retryCase('4xx (400) 不重试', 'LLM request failed 400: bad request', false);
   }
 
+  // ── 9) 置信区间量具（Wilson / bootstrap）──
+  // 期望值是**独立手算**的教科书值，不是拿本实现的输出回填——否则等于用实现验证自己。
+  console.log('[selftest] 9) 置信区间量具（Wilson / bootstrap）');
+  {
+    const near = (a, b, tol = 5e-4) => Math.abs(a - b) <= tol;
+
+    // Wilson, 5/10, z=1.96 → 中心 0.5，半宽 ≈0.26341 → [0.23659, 0.76341]
+    const w5 = wilsonInterval(5, 10);
+    ok(
+      near(w5.lo, 0.23659) && near(w5.hi, 0.76341),
+      `Wilson 5/10 = [${w5.lo.toFixed(5)}, ${w5.hi.toFixed(5)}]（期望 [0.23659, 0.76341]）`,
+    );
+
+    // Wilson 的关键性质：比例贴边时**不越界**（Wald 在这里会给出负下界）。
+    const w0 = wilsonInterval(0, 10);
+    ok(
+      w0.lo === 0 && near(w0.hi, 0.27753),
+      `Wilson 0/10 = [${w0.lo}, ${w0.hi.toFixed(5)}]（下界须为 0、不得为负）`,
+    );
+    // p=1 时上界数学上恰为 1（center+half 化简得 (1+z²/n)/denom = 1），但浮点会差几个 ULP，
+    // 所以用容差 + 不越界断言，别拿逐位相等去卡浮点（本仓库为此红过 CI）。
+    const wAll = wilsonInterval(10, 10);
+    ok(
+      near(wAll.hi, 1) && wAll.hi <= 1 && near(wAll.lo, 0.72247),
+      `Wilson 10/10 = [${wAll.lo.toFixed(5)}, ${wAll.hi.toFixed(5)}]（期望 ≈[0.72247, 1]、上界不得越 1）`,
+    );
+
+    ok(wilsonInterval(0, 0) === null, 'Wilson 分母为 0 → null（不造假区间）');
+
+    // 区间随样本量收窄：同比例、10 倍样本 → 明显更窄。
+    const wSmall = wilsonInterval(50, 100);
+    const wBig = wilsonInterval(500, 1000);
+    ok(wBig.hi - wBig.lo < (wSmall.hi - wSmall.lo) / 2, '同比例下样本 ×10 → 区间宽度显著收窄');
+
+    // 聚类 bootstrap：断言不独立时，区间必须比「把断言当独立试验」的 Wilson 宽。
+    // 这正是本量具存在的理由——对合并计数套 Wilson 会谎报精度。
+    // 构造 20 个场景 ×5 断言、场景内全对或全错（最强的场景内相关）。
+    const clustered = Array.from({ length: 20 }, (_, i) => ({ pass: i < 16 ? 5 : 0, total: 5 }));
+    const cbCI = clusterBootstrapRateCI(clustered);
+    const naiveCI = wilsonInterval(80, 100); // 同是 80/100，但假装 100 次独立试验
+    ok(
+      cbCI.hi - cbCI.lo > (naiveCI.hi - naiveCI.lo) * 1.5,
+      `聚类区间须显著宽于朴素 Wilson（聚类 ${(cbCI.hi - cbCI.lo).toFixed(3)} vs Wilson ${(naiveCI.hi - naiveCI.lo).toFixed(3)}）`,
+    );
+    ok(
+      cbCI.lo < 0.8 && cbCI.hi > 0.8,
+      `聚类区间须含真实比率 0.8（得 [${cbCI.lo.toFixed(3)}, ${cbCI.hi.toFixed(3)}]）`,
+    );
+
+    const cb2 = clusterBootstrapRateCI(clustered);
+    ok(cbCI.lo === cb2.lo && cbCI.hi === cb2.hi, '聚类 bootstrap 同输入同种子 → 逐位一致');
+    ok(clusterBootstrapRateCI([]) === null, '聚类 bootstrap 空输入 → null');
+    ok(
+      clusterBootstrapRateCI([{ pass: 0, total: 0 }]) === null,
+      '聚类 bootstrap 全零分母 → null（不造假区间）',
+    );
+    // 全通过时 bootstrap 会退化成 [1,1]（重抽产生不出没见过的失败），那是「样本太小」
+    // 被误读成「确定 100%」。此时须退回场景级 Wilson，保留不确定性。
+    const cbPerfect = clusterBootstrapRateCI([
+      { pass: 5, total: 5 },
+      { pass: 4, total: 4 },
+      { pass: 6, total: 6 },
+      { pass: 5, total: 5 },
+      { pass: 5, total: 5 },
+      { pass: 4, total: 4 },
+      { pass: 5, total: 5 },
+    ]);
+    const w7 = wilsonInterval(7, 7);
+    ok(
+      cbPerfect.hi === 1 && cbPerfect.lo < 1 && near(cbPerfect.lo, w7.lo),
+      `7 场景全通过 → 退回场景级 Wilson [${cbPerfect.lo.toFixed(3)}, ${cbPerfect.hi.toFixed(3)}]，不得谎报 [1,1]`,
+    );
+
+    // bootstrap：确定性（同输入同种子恒同输出），否则区间变化分不清是数据还是抽样。
+    const vals = [0.2, 0.4, 0.6, 0.8, 1.0, 0.5, 0.3, 0.9];
+    const b1 = bootstrapMeanCI(vals);
+    const b2 = bootstrapMeanCI(vals);
+    ok(b1.lo === b2.lo && b1.hi === b2.hi, 'bootstrap 同输入同种子 → 逐位一致（可复现）');
+    ok(
+      b1.lo < mean(vals) && mean(vals) < b1.hi,
+      `bootstrap 区间须含样本均值（均值 ${mean(vals).toFixed(3)}，区间 [${b1.lo.toFixed(3)}, ${b1.hi.toFixed(3)}]）`,
+    );
+
+    // 常数样本无离散度 → 区间退化为该常数。
+    const bConst = bootstrapMeanCI([0.7, 0.7, 0.7, 0.7]);
+    ok(bConst.lo === 0.7 && bConst.hi === 0.7, '常数样本 → bootstrap 区间退化为该常数');
+
+    ok(bootstrapMeanCI([]) === null, 'bootstrap 空样本 → null');
+    const bOne = bootstrapMeanCI([0.42]);
+    ok(bOne.lo === 0.42 && bOne.hi === 0.42, '单样本 → 区间即该点（不谎称有不确定性范围）');
+
+    // aggregate 出口接线：区间真的挂上去了，且类型选对（比率走 Wilson、均值走 bootstrap）。
+    const mkS = (id, pass, total, gist, over) => ({
+      id,
+      discipline: 'd',
+      lang: 'zh',
+      structPass: pass,
+      structTotal: total,
+      gistRecall: gist,
+      overInferRate: over,
+      error: null,
+    });
+    const aggCI = aggregate([mkS('a', 5, 5, 1.0, 0.0), mkS('b', 3, 5, 0.5, 0.2)]);
+    const expectCluster = clusterBootstrapRateCI([
+      { pass: 5, total: 5 },
+      { pass: 3, total: 5 },
+    ]);
+    ok(
+      aggCI.structRateCI &&
+        aggCI.structRateCI.lo === expectCluster.lo &&
+        aggCI.structRateCI.hi === expectCluster.hi,
+      'aggregate.structRateCI 走按场景聚类 bootstrap',
+    );
+    // 并且确实**不是**朴素 Wilson——防止哪天改回合并计数而无人察觉。
+    const naive8of10 = wilsonInterval(8, 10);
+    ok(
+      !(near(aggCI.structRateCI.lo, naive8of10.lo) && near(aggCI.structRateCI.hi, naive8of10.hi)),
+      'aggregate.structRateCI 不得退回对合并计数套 Wilson',
+    );
+    ok(
+      aggCI.scenarioPassRate === 0.5 && aggCI.scenarioPassRateCI !== null,
+      'aggregate 暴露 scenarioPassRate 及其 Wilson 区间',
+    );
+    ok(
+      aggCI.avgGistRecallCI !== null && aggCI.avgOverInferRateCI !== null,
+      'aggregate 给均值类指标挂 bootstrap 区间',
+    );
+    ok(
+      aggCI.groups[0].structRateCI !== null,
+      '分组也带结构通过率区间（小样本下宽区间本身就是结论）',
+    );
+  }
+
   if (failures === 0) {
-    console.log('\n[selftest] ✓ 全部通过（结构断言、judge 投票、gist 判分、run 对比与输出路由）');
+    console.log(
+      '\n[selftest] ✓ 全部通过（结构断言、judge 投票、gist 判分、run 对比、输出路由、置信区间量具）',
+    );
     process.exit(0);
   }
   console.error(`\n[selftest] ✗ ${failures} 项失败`);
