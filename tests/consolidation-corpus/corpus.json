@@ -2986,7 +2986,7 @@
         "newCognitions": {
           "min": 1,
           "max": 1,
-          "types": ["preference"],
+          "types": ["preference", "fact"],
           "formedBy": ["confirmed"]
         },
         "resolutions": {
@@ -3017,7 +3017,7 @@
         "newCognitions": {
           "min": 1,
           "max": 1,
-          "types": ["preference", "state"],
+          "types": ["preference", "state", "fact"],
           "formedBy": ["confirmed"]
         },
         "resolutions": {
@@ -3064,7 +3064,7 @@
       "id": "CC-104",
       "discipline": "short-reply",
       "lang": "en",
-      "title": "AI offers two options, user picks \"the latter\"",
+      "title": "Assistant offers two options, user picks \"the latter\" (resolution-only; nothing should persist as a cognition)",
       "messages": [
         {
           "sourceKind": "spoken",
@@ -3082,9 +3082,7 @@
         "resolutions": {
           "responseAct": ["select"]
         },
-        "shouldFormGists": [
-          "Resolve \"the latter\" to Thursday using the assistant turn as read-only context"
-        ],
+        "shouldFormGists": [],
         "shouldNotFormGists": [
           "Record a standing preference for Thursday meetings from one scheduling choice",
           "Store the assistant question as an independent cognition or evidence item"
@@ -3138,7 +3136,7 @@
         "newCognitions": {
           "min": 1,
           "max": 2,
-          "types": ["preference", "state"]
+          "types": ["preference", "state", "fact"]
         },
         "resolutions": {
           "responseAct": ["elaborate", "affirm"]
@@ -3194,7 +3192,7 @@
         "newCognitions": {
           "min": 1,
           "max": 1,
-          "types": ["project", "state"],
+          "types": ["project", "state", "fact"],
           "formedBy": ["confirmed"]
         },
         "resolutions": {
