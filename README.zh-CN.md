@@ -226,6 +226,8 @@ npm start -w @memoweft/host
 
 MemoWeft 是 library-first 的库，目前处于 1.0 release candidate 阶段。公共 API 接口面已冻结：每个导出都标注了支持层级，破坏 stable 符号需要发布主版本。实验性接口——可注入的扩展点、插件契约、后台维护算子——仍可能在 minor 版本之间变化。详见 [STABILITY.md](docs/STABILITY.md)。
 
+真实模型评测的质量数字（含 95% 置信区间，以及「这些数字不覆盖什么」的明确说明）见 [BENCHMARKS.md](docs/BENCHMARKS.md)。
+
 [更新日志](https://github.com/memoweft/memoweft/blob/main/CHANGELOG.md) · [路线图](https://github.com/memoweft/memoweft/blob/main/ROADMAP.md) · [参与贡献](https://github.com/memoweft/memoweft/blob/main/CONTRIBUTING.zh-CN.md) · [支持](https://github.com/memoweft/memoweft/blob/main/SUPPORT.md) · [安全](https://github.com/memoweft/memoweft/blob/main/.github/SECURITY.md)
 
 如果 MemoWeft 的记忆模型对你的工作有帮助，欢迎 Star 仓库，或把离线演示分享给另一位开发者。
