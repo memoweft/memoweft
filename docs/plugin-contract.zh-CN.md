@@ -4,7 +4,7 @@
 
 > 本文档**以英文版为准**；中文为尽力同步，如有出入以 [英文版](./plugin-contract.md) 为准。
 
-> 稳定性：**experimental**（pre-1.0，签名可能演进——尤其 hook 参数以后可能增字段，插件作者留扩展余地）。
+> 稳定性：**experimental**——插件契约在 1.0 仍保持 experimental，签名可能在 minor 版本中调整；尤其 hook 参数以后可能增字段，插件作者请留扩展余地。注意：插件作者是这份契约的**实现方**，因此新增**必需**成员属于破坏性变更、只能在主版本中落地（见 [STABILITY.md](./STABILITY.md)）。
 > 类型定义：`src/plugin/contract.ts`，从包主入口 `memoweft` 导出。配套：[记忆面契约](./reference/memory-surface-contract.zh-CN.md)。
 
 ## 一句话

@@ -2,13 +2,26 @@
 
 All notable changes to MemoWeft are documented here.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses semantic versioning while public APIs remain pre-1.0.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and semantic versioning. The public API surface is frozen as of the 1.0 release candidate — see [docs/STABILITY.md](docs/STABILITY.md) for the support tiers, the versioning rules, and the deprecation process.
 
 ## [Unreleased]
+
+## [1.0.0-rc.1] — 2026-07-28
+
+First release candidate for 1.0. Nothing new is added here beyond the surface work below: 0.9 was the last feature version, and this candidate exists so the frozen API can be exercised before 1.0 is tagged. The supported integration path — `createMemoWeftCore()` and the facade around it — is unchanged from 0.7.0, and no schema migration is involved.
+
+What "frozen" means concretely: every public export now carries a documented support tier ([api-surface.md](docs/reference/api-surface.md)), the policy governing those tiers is written down ([STABILITY.md](docs/STABILITY.md)), and `tests/api/api-surface.snapshot` fails CI on any unreviewed change to the export set. Experimental symbols stay experimental at 1.0 — including both A5 contradiction passes — because promoting one later is additive and non-breaking, while freezing it early is a commitment that can only be undone in a major.
+
+Please report anything that looks like it still needs to change before 1.0; that is what the candidate period is for.
 
 ### Added
 
 - `core.reconcileContradictions({ subjectId })` (experimental, default off) adds a second-pass A5 backstop that scans the whole stored profile for contradictory cognitions that coexist, complementing the first-pass `contradictionGuard` in consolidation. The first-pass guard only inspects the `new` candidates the model emits in a single `updateProfile` round, so a stance reversal that arrives across rounds — or is squeezed out of a candidate's top-`K` shortlist once the profile grows — still lands two opposite active cognitions in the store, invisible to every "conflict stays visible" surface (`credStatus`, the memory graph, `revisitConflicts`). `reconcileContradictions` takes the already-stored `active` cognitions, clusters same-topic ones by embedding cosine (connected components at or above `minSimilarity`, default `0.5`), runs the same polarity judge on each within-cluster pair, and on a hit attaches the later cognition's support evidence as `contradict` to the earlier one (the anchor = the earlier `updatedAt`, treated as the prior stance), recomputing confidence and deriving `credStatus` to `conflicted`/`contested` — the exact `attachContradiction` landing the first-pass guard and a model-flagged `conflict` already take, now shared through one `contradiction` single-source-of-truth module per language so the two paths cannot drift. It never creates an opposite row, never deletes, and never picks a winner; conflict is surfaced, not resolved. Like `expire`/`aggregateTrends` it is a deliberate standalone maintenance entry decoupled from the write path — a host calls it on its own cadence — and returns `{ scanned, pairsJudged, conflictsAttached, llmCalls }` for cost observability. It needs an embedder to judge same-topic similarity; the facade logs a warning and no-ops when none is available. The mechanism was validated on gpt-4o across 33 bilingual scenarios over three rounds: residual coexisting contradictions dropped from 35% to under 1.7%, with a real net-misjudgement rate of ~1.5% (the polarity judge's floor, not a structural gap). Purely additive to the public API with no behavior change on any existing path, so existing evaluations are unaffected, and it does not touch the schema. Implemented identically in the TypeScript and Python packages, sharing one `contradiction` module and `attachContradiction` helper per language; the current pass is a full-profile scan, with incremental change-set scanning left as a later cost optimization. The deterministic clustering (`clusterByCosine`, connected components) is pinned byte-exact across the two languages by a shared parity fixture (`shared/parity/reconcile.json`); the polarity judge is an LLM call and stays out of the fixture, same as the first-pass guard.
+
+### Changed
+
+- **Root export surface narrowed toward the 1.0 freeze (breaking only for code importing internals from the package root).** The 1.0 API surface review kept every experimental symbol experimental and left the supported facade untouched, but removed a set of purely-internal building blocks from the root re-export to shrink the accidental-dependency surface: the six SQLite store implementation classes (`SqliteEvidenceStore`, `SqliteEventStore`, `SqliteCognitionStore`, `SqliteInteractionContextStore`, `SqliteSemanticResolutionStore`, `SqliteManagementLog`), the JSON-repair helpers (`extractJsonObject`, `parseJsonObject`, `parseJsonObjectWithRepair`, `ParseWithRepairDeps`), and `noopTransaction`. These had no external consumers, appear in no exported stable/experimental signature, and were always documented as unsupported ("export ≠ support"); the facade (`createMemoWeftCore`) and every supported path are unchanged. Note that because the package declares a single `"."` entry point, this removes them outright for installed consumers rather than demoting them to a deep-import path — permitted by the internal tier, but stated plainly here rather than left to be discovered. The store interface _types_ (`EvidenceStore`, `EventStore`, `CognitionStore`, `CognitionPatch`, `InteractionContextStore`, `SemanticResolutionStore`, `ManagementLog`) and `Transaction` stay root-exported because the experimental `StoreBundle` references them.
+- Clarified the stable API surface for the 1.0 freeze so no stable symbol depends on a non-frozen shape (documentation/classification only — no runtime behavior or schema change): `BuildGraphOptions` is now stable (it is part of the stable `core.graph.buildMemoryGraph` signature); `createMemoryManagementAPI` is now experimental (its signature takes the experimental `StoreBundle` and internal deps — hosts use `core.memory`); and `UpdateProfileResult`'s stage payloads (`distilled`/`consolidated`/`attributed`/`timings`), `Observation`'s `kind`/`meta`, and the graph's reserved `conflicts_with`/`corrects` edges are now documented as experimental within their otherwise-stable enclosing shapes.
 
 ## [0.7.0] — 2026-07-25
 
@@ -133,6 +146,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Cloud-read filtering for model-facing write paths.
 - A local reference host and active-window collector plugin.
 
+[1.0.0-rc.1]: https://github.com/memoweft/memoweft/compare/v0.7.0...v1.0.0-rc.1
 [0.7.0]: https://github.com/memoweft/memoweft/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/memoweft/memoweft/tree/v0.6.0
 [0.5.1]: https://github.com/memoweft/memoweft/compare/v0.5.0...v0.5.1

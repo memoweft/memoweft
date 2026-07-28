@@ -1,13 +1,13 @@
 # MemoWeft 公共 API 契约
 
-适用于 `memoweft` 0.6.x。本页描述 `createMemoWeftCore()` 返回的应用层接口，以及调用方可以依赖的可观察行为。
+适用于 `memoweft` 1.0.x（自 1.0 release candidate 起）。本页描述 `createMemoWeftCore()` 返回的应用层接口，以及调用方可以依赖的可观察行为。
 
-MemoWeft 尚未到 1.0。次版本可能增加字段或枚举值；破坏性变更会在[变更日志](../../CHANGELOG.md)中给出迁移说明。根包导出的底层符号会为兼容性继续保留，但下面的 Core facade 才是推荐并受支持的集成入口。
+公共接口面自 1.0 起冻结：破坏 **stable** 符号需要发布主版本并提前给出弃用通知；次版本仍可能新增字段或枚举值，并在[变更日志](../../CHANGELOG.md)中说明。根包仍然导出的底层符号可供组合，但**不是受支持的契约**——最纯粹的内部件已在 1.0 从根导出中移除。下面的 Core facade 才是推荐并受支持的集成入口。完整政策见 [STABILITY.md](../STABILITY.md)。
 
 ## 稳定性标签
 
-- **stable**：有兼容性快照保护，计划在 0.6 版本线内保持兼容。
-- **experimental**：可以使用，但可能在 1.0 前的次版本中调整，并在变更日志说明。
+- **stable**：有兼容性快照保护，在 1.x 版本线内保持兼容。
+- **experimental**：可以使用，但可能在次版本中调整，并在变更日志说明。
 - **internal**：实现细节，不应成为宿主应用的契约。
 
 除非特别标注，本文方法均为 stable。`clock`、插件以及底层模型/检索实现属于 experimental 扩展点。
@@ -75,12 +75,14 @@ Core 会关闭自己创建的 SQLite store、向量检索器或关键词检索�
 
 召回会排除已失效、归档、静音以及有效置信低于门槛的 cognition。`contentTypes` 在 top-K 之后过滤，因此返回数可能小于 top-K。`explain: true` 时，结果可附带 evidence 提示词资格标记。召回不会因为某条来源证据不适合云端写模型提示词，就自动隐藏派生 cognition；宿主必须在转发整个结果前执行自己的披露策略。
 
-`UpdateProfileResult` 包含：
+`UpdateProfileResult` 作为 `core.updateProfile()` 的返回信封是 stable 的；稳定保证覆盖 `indexed`、`indexError`、`metrics` 的存在。它包含：
 
-- `distilled`、`consolidated`、`attributed` 三阶段结果；
 - `indexed` 与 `indexError`；
-- 毫秒级 `timings`；
-- `metrics.profileSize` 与 `metrics.promptChars`。
+- `metrics.profileSize` 与 `metrics.promptChars`；
+- `distilled`、`consolidated`、`attributed` 三阶段结果——**experimental** 阶段诊断负载，形状随内部写路径各 stage 演进；
+- 毫秒级 `timings`（`UpdateProfileTimings`）——同为 **experimental**。
+
+不要在这些阶段负载或 `timings` 上构建长期契约；它们可能随管线在 minor 版本变化。
 
 ### 会话辅助方法
 
@@ -155,7 +157,7 @@ core.portable.importBundle(bundle, { mode: 'dryRun' | 'merge' })
 core.graph.buildMemoryGraph(options?): MemoryGraphPayload
 ```
 
-payload 包含 subject、evidence、event、cognition 节点，以及实际生成的 `belongs_to_subject`、`distilled_into`、`supports`、`contradicts` 边。`conflicts_with` 与 `corrects` 是预留枚举值，但 0.6.x 不会生成，因为当前没有持久化 cognition-to-cognition 关系。
+payload 包含 subject、evidence、event、cognition 节点，以及实际生成的 `belongs_to_subject`、`distilled_into`、`supports`、`contradicts` 边。`conflicts_with` 与 `corrects` 是预留的 **experimental** 枚举值，但 0.7.x 不会生成，因为当前没有持久化 cognition-to-cognition 关系；1.0 只冻结上述四种实际生成的边。
 
 ## 行为保证
 

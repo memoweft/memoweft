@@ -19,16 +19,16 @@ export {
 // 证据层（真相）
 // [stable] 证据领域形状：门面 recall/list*/storedEvidence 回吐给宿主，形状定型。
 export { type Evidence, type EvidenceInput, type SourceKind } from './evidence/model.ts';
-// [internal] 证据 store 实现件：门面已收口，宿主没理由直接拼。
-export { SqliteEvidenceStore, type EvidenceStore } from './evidence/store.ts';
+// [internal] 证据 store 接口类型（被 experimental StoreBundle 引用而保留可达）：实现类 SqliteEvidenceStore 于 1.0 从 root 撤出。
+export { type EvidenceStore } from './evidence/store.ts';
 
 // 事件层（情境化沉淀：原料 → 事件 → 判断）
 // [stable] 事件领域形状：Event / EventWithEvidence 由 listEvents 回吐宿主。
 export { type Event, type EventWithEvidence } from './event/model.ts';
 // [experimental] EventInput：宿主不直接构造（由 distill 内部产），不列入宿主主面。
 export { type EventInput } from './event/model.ts';
-// [internal] 事件 store 实现 + 蒸馏算子（写路径）：门面已收口。
-export { SqliteEventStore, type EventStore } from './event/store.ts';
+// [internal] 事件 store 接口类型（被 experimental StoreBundle 引用而保留可达）：实现类 SqliteEventStore 于 1.0 从 root 撤出。
+export { type EventStore } from './event/store.ts';
 export { distill, type DistillDeps, type DistillResult } from './distillation/distill.ts';
 
 // 认知层（判断·多维用户模型）
@@ -44,12 +44,8 @@ export {
 } from './cognition/model.ts';
 // [experimental] CognitionInput：宿主不直接构造（由 consolidate 内部产）。
 export { type CognitionInput } from './cognition/model.ts';
-// [internal] 认知 store 实现件：门面已收口。
-export {
-  SqliteCognitionStore,
-  type CognitionStore,
-  type CognitionPatch,
-} from './cognition/store.ts';
+// [internal] 认知 store 接口类型（被 experimental StoreBundle 引用而保留可达）：实现类 SqliteCognitionStore 于 1.0 从 root 撤出。
+export { type CognitionStore, type CognitionPatch } from './cognition/store.ts';
 
 // 交互语义层（v0.6）：交互上下文 + 语义解析——理解人机对话（短回答/附和/否定/选择），
 //   只提供语义环境，不生成 Cognition，也不作为证据摄入。
@@ -63,21 +59,15 @@ export {
   type PropositionOrigin,
   type AssertionStrength,
 } from './interaction/model.ts';
-// [internal] 交互层 store 实现件：门面已收口（ingestUserMessage/recordAssistantReply），宿主没理由直接拼。
-export {
-  SqliteInteractionContextStore,
-  type InteractionContextStore,
-} from './interaction/interactionContextStore.ts';
-export {
-  SqliteSemanticResolutionStore,
-  type SemanticResolutionStore,
-} from './interaction/semanticResolutionStore.ts';
+// [internal] 交互层 store 接口类型（被 experimental StoreBundle 引用而保留可达）：实现类 SqliteInteractionContextStore / SqliteSemanticResolutionStore 于 1.0 从 root 撤出。
+export { type InteractionContextStore } from './interaction/interactionContextStore.ts';
+export { type SemanticResolutionStore } from './interaction/semanticResolutionStore.ts';
 
 // 存储装配：一条共享连接 + 三个 store + 事务器（让写路径多步、多表写能原子化）
 // [experimental] openStores/StoreBundle：装配底座，取用形态 pre-1.0 可能变。
 export { openStores, type StoreBundle } from './store/openStores.ts';
-// [internal] 事务器：门面写路径内部用，宿主没理由直接拼。
-export { noopTransaction, type Transaction } from './store/transaction.ts';
+// [internal] 事务器类型（被 experimental StoreBundle 引用而保留可达）：noopTransaction 实现于 1.0 从 root 撤出。
+export { type Transaction } from './store/transaction.ts';
 // Schema 版本化 / 迁移器（0.2.0）：openStores 自动跑；这里导出供诊断、dry-run 预检、迁移工具用。
 // [experimental] LATEST_SCHEMA_VERSION 及迁移器：供诊断/迁移工具，形态 pre-1.0 可能变。
 export {
@@ -96,6 +86,10 @@ export {
   type ConsolidateDeps,
   type ConsolidateResult,
 } from './consolidation/consolidate.ts';
+// updateProfile 函数 + UpdateProfileDeps 为 [internal]（门面 core.updateProfile 已收口）。
+// [stable] UpdateProfileResult 是 stable 的 core.updateProfile() 返回信封——稳定保证覆盖 indexed / indexError / metrics 的存在；
+//   而 distilled / consolidated / attributed 及 timings(UpdateProfileTimings) 为 experimental stage 诊断负载：
+//   形状随写路径各 stage 演进，宿主不应在其上建长期契约（见 api-surface.md 与 memory-surface-contract.md）。
 export {
   updateProfile,
   type UpdateProfileDeps,
@@ -186,13 +180,9 @@ export {
   type PluginUserMessage,
 } from './plugin/contract.ts';
 
-// [internal] jsonRepair 散装函数：门面/算子内部用，宿主没理由直接拼。
-export {
-  extractJsonObject,
-  parseJsonObject,
-  parseJsonObjectWithRepair,
-  type ParseWithRepairDeps,
-} from './llm/jsonRepair.ts';
+// [1.0] jsonRepair 散装件（extractJsonObject/parseJsonObject/parseJsonObjectWithRepair/ParseWithRepairDeps）于 1.0 从 root 撤出：
+//   纯内部工具、零消费者、不出现在任何导出签名；算子/LLM 客户端在包内经相对路径直接引用
+//   （包只声明 "." 一个入口，撤出 root 对外即不可达——internal 层级允许，见 docs/STABILITY.md）。
 
 // 统一 Core 入口：Host 优先经它调 Core，不散装拼底层件
 // [stable] 统一 Core 入口：createMemoWeftCore / MemoWeftCore 及各 *Input/返回类型，宿主主入口。
@@ -216,9 +206,12 @@ export {
 } from './core/index.ts';
 
 // 受控记忆管理 API：8 操作 + 审计表，管理操作带 reason 留痕
+// [experimental] createMemoryManagementAPI 低层工厂：宿主主路径是 core.memory（createCore 已装配好）；
+//   此工厂签名引用 experimental 的 StoreBundle + internal 的 MemoryManagementDeps，故 1.0 不纳入 stable 冻结
+//   （否则 stable 入口会引用非冻结类型，见 api-surface.md）。MemoryManagementAPI 接口 + 各 I/O 类型仍是 stable。
+export { createMemoryManagementAPI } from './memory/index.ts';
 // [stable] 受控记忆管理 API：MemoryManagementAPI 接口 + 各入出参类型（门面 core.memory 面）。
 export {
-  createMemoryManagementAPI,
   type MemoryManagementAPI,
   type InvalidateCognitionInput,
   type UpdateEvidenceAuthorizationInput,
@@ -242,12 +235,8 @@ export {
 } from './memory/index.ts';
 // [experimental] ManagementLogEntry：弱类型审计条目（op/targetKind 为 string），门面不暴露读审计路径。
 export { type ManagementLogEntry } from './memory/index.ts';
-// [internal] 管理 API 依赖装配 + 审计表实现：门面已收口，宿主没理由直接拼。
-export {
-  type MemoryManagementDeps,
-  SqliteManagementLog,
-  type ManagementLog,
-} from './memory/index.ts';
+// [internal] 管理 API 依赖装配 + 审计表接口类型（被 experimental StoreBundle / createMemoryManagementAPI 引用而保留可达）：实现类 SqliteManagementLog 于 1.0 从 root 撤出。
+export { type MemoryManagementDeps, type ManagementLog } from './memory/index.ts';
 
 // 共享召回：Conversation 与 core.recall 使用相同的召回语义
 // [internal] recallCognitions 散装函数：门面 recall/Conversation 内部共用，已被门面收口。

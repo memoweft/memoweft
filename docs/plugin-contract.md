@@ -2,7 +2,7 @@
 
 **English** | [简体中文](./plugin-contract.zh-CN.md)
 
-> Stability: **experimental** (pre-1.0, signatures may evolve — especially hook parameters may gain fields later, so plugin authors should leave room for extension).
+> Stability: **experimental** — the plugin contract stays experimental at 1.0, so signatures may still change in a minor release; hook parameters in particular may gain fields, so plugin authors should leave room for extension. Note that because plugin authors _implement_ this contract, a new **required** member would be a breaking change and can only land in a major (see [STABILITY.md](./STABILITY.md)).
 > Type definitions: `src/plugin/contract.ts`, exported from the package main entry `memoweft`. Companion: [memory surface contract](./reference/memory-surface-contract.md).
 
 ## In one sentence

@@ -1,13 +1,13 @@
 # MemoWeft public API contract
 
-Applies to `memoweft` 0.7.x. This document describes the application-facing surface returned by `createMemoWeftCore()` and the behavior callers can rely on.
+Applies to `memoweft` 1.0.x, starting with the 1.0 release candidate. This document describes the application-facing surface returned by `createMemoWeftCore()` and the behavior callers can rely on.
 
-MemoWeft is pre-1.0. Additive fields and enum values may appear in minor releases. Breaking changes are documented in the [changelog](../../CHANGELOG.md) with migration notes. Low-level symbols exported from the root package remain available for compatibility, but the Core facade below is the supported integration path.
+The public surface is frozen as of 1.0: breaking a **stable** symbol requires a major version and a prior deprecation notice, while additive fields and enum values may still appear in minor releases, documented in the [changelog](../../CHANGELOG.md). Low-level symbols still exported from the root package are available for composition but are not supported contracts — the cleanest internals were dropped from the root at 1.0. The Core facade below is the supported integration path. The full policy is in [STABILITY.md](../STABILITY.md).
 
 ## Stability labels
 
-- **Stable** — covered by compatibility snapshots and intended for application use throughout the 0.7 line.
-- **Experimental** — usable, but may change in a pre-1.0 minor release with changelog notice.
+- **Stable** — covered by compatibility snapshots and intended for application use across the 1.x line.
+- **Experimental** — usable, but may change in a minor release with a changelog notice.
 - **Internal** — implementation detail; do not build application contracts around it.
 
 Unless marked otherwise, the methods in this document are stable. `clock`, plugins, and low-level model/retrieval implementations are experimental extension points.
@@ -76,12 +76,17 @@ Core owns and closes the SQLite stores and any vector or keyword retriever it cr
 
 Recall excludes invalid, archived, muted, and below-threshold cognitions. `contentTypes` is a post-filter over the retrieved top-K, so a filtered response may contain fewer than top-K items. With `explain: true`, each result may include provenance with evidence prompt-eligibility flags. Recall does not automatically suppress a derived cognition because one of its sources is ineligible for a cloud write prompt; the host must apply its own disclosure policy before forwarding the result.
 
-`UpdateProfileResult` contains:
+`UpdateProfileResult` is stable as the envelope returned by `core.updateProfile()`; the
+stable guarantee covers the presence of `indexed`, `indexError`, and `metrics`. It contains:
 
-- `distilled`, `consolidated`, and `attributed` stage results;
 - `indexed` and `indexError`;
-- per-stage `timings` in milliseconds;
-- `metrics.profileSize` and `metrics.promptChars`.
+- `metrics.profileSize` and `metrics.promptChars`;
+- `distilled`, `consolidated`, and `attributed` stage results — **experimental**
+  stage-diagnostic payloads whose shapes track the internal write-path stages;
+- per-stage `timings` in milliseconds (`UpdateProfileTimings`) — likewise **experimental**.
+
+Do not build durable contracts on the stage payloads or `timings`; they may change with the
+pipeline in a minor release.
 
 ### Background maintenance
 
@@ -166,7 +171,7 @@ After an import, call `updateProfile()` when you want the retriever index rebuil
 core.graph.buildMemoryGraph(options?): MemoryGraphPayload
 ```
 
-The payload contains subject, evidence, event, and cognition nodes plus emitted `belongs_to_subject`, `distilled_into`, `supports`, and `contradicts` edges. `conflicts_with` and `corrects` are reserved edge values but are not emitted in 0.7.x because cognition-to-cognition links are not persisted.
+The payload contains subject, evidence, event, and cognition nodes plus emitted `belongs_to_subject`, `distilled_into`, `supports`, and `contradicts` edges. `conflicts_with` and `corrects` are reserved **experimental** edge values but are not emitted in 0.7.x because cognition-to-cognition links are not persisted; only the four emitted kinds are frozen at 1.0.
 
 ## Behavioral guarantees
 
