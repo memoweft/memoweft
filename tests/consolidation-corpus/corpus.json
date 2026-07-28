@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "corpusVersion": "2026-07-28-b1-120",
+    "corpusVersion": "2026-07-28-b1-120r2",
     "corpusVersionNote": "Bump whenever scenarios are added, removed, or their expectations change. Aggregate scores are NOT comparable across corpus versions - a changed corpus is a changed measuring instrument, not just a changed score. The 0.7.x baselines were produced on the 60-scenario corpus (pre-2026-07-28).",
     "purpose": "Fully synthetic consolidation scenarios. No text is copied or paraphrased from production logs or user data. Expectations are defined independently of the model under test.",
     "consumedBy": "The deterministic corpus runner seeds prior cognitions, ingests messages in order, calls updateProfile(), and compares the resulting created, corrected, and conflicted cognitions with these fixed expectations.",
