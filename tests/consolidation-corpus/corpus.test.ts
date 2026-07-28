@@ -104,11 +104,15 @@ const isNonNegInt = (v: unknown): boolean => Number.isInteger(v) && (v as number
 // 覆盖要求
 // ============================================================================
 
-test('顶层结构：scenarios 为数组，场景数 ∈ [30,60]', () => {
+// 上限是「防误增」的闸门，不是容量目标：每次扩语料都应是一次有意识的抬闸 + 评审。
+// 2026-07-28 由 60 抬到 130（第一批扩充目标 120）——起因是 95%CI 量具显示
+// per-scenario 指标（gistRecall n=40、场景全过率 n=60）区间过宽、撑不起 1.0 质量背书。
+// 若续扩到 ~230（把 gistRecall 区间宽度压到 ~0.10），须再抬一次并同样留下理由。
+test('顶层结构：scenarios 为数组，场景数 ∈ [30,130]', () => {
   assert.ok(Array.isArray(scenarios), 'scenarios 必须是数组');
   assert.ok(
-    scenarios.length >= 30 && scenarios.length <= 60,
-    `场景数应 ∈[30,60]，实际 ${scenarios.length}`,
+    scenarios.length >= 30 && scenarios.length <= 130,
+    `场景数应 ∈[30,130]，实际 ${scenarios.length}`,
   );
 });
 
