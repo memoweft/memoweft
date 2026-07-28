@@ -1,7 +1,6 @@
 # MemoWeft API surface (draft)
 
-> **Status: 1.0 freeze candidate — dispositions proposed by the API surface review,
-> pending owner sign-off.** This document classifies every
+> **Status: 1.0 freeze — dispositions decided and signed off.** This document classifies every
 > public export as **stable**, **experimental**, or **internal**, so 1.0 knows
 > exactly what it is freezing. It is the planning counterpart to two existing
 > artifacts and does not replace them:
@@ -145,8 +144,9 @@ these.** Grouped by area:
 > `noopTransaction`. **For an installed package this removes them outright, not just from
 > the root**: `package.json` declares a single `"."` export — so any deep subpath fails with
 > `ERR_PACKAGE_PATH_NOT_EXPORTED` — and `src` is not among the published `files`. There is
-> therefore no deep-import escape hatch for them; that is what the internal tier permits, and
-> whether to open one through explicit subpath exports is an open question for the freeze.
+> therefore no deep-import escape hatch for them, and 1.0 deliberately does not add one —
+> that is exactly what the internal tier permits. Adding a supported subpath export later is
+> additive and can land in any minor if a real consumer turns up.
 > In-repo callers are unaffected because they import by relative path (for example
 > `bench/eval-consolidation.mjs` → `../src/evidence/store.ts`), which never goes through the
 > package `exports` map. The store _interface_ types (`EvidenceStore`, `EventStore`,
@@ -264,11 +264,10 @@ The authoritative policy is [STABILITY.md](../STABILITY.md); the essentials:
   export add/remove. This document adds the human-facing _support tier_ on top of
   that mechanical freeze.
 
-## 1.0 disposition (proposed)
+## 1.0 disposition (decided)
 
-The 1.0 API surface review worked through every open item. The outcomes below are
-**proposed and not yet ratified** — they take effect for the freeze once the owner signs
-off on them:
+The 1.0 API surface review worked through every open item. These outcomes are **decided**
+and govern the freeze:
 
 1. **Every Experimental symbol stays experimental at 1.0.** None was promoted: the
    injectable extension points, plugin contract v2, storage/migration, observability, the
@@ -291,11 +290,13 @@ off on them:
    `parseJsonObjectWithRepair`, `ParseWithRepairDeps`), and `noopTransaction` (see the
    Internal-section note and the changelog). The store interface types and `Transaction` stay
    because the experimental `StoreBundle` references them; the write-path operators and
-   pipeline internals stay for now. **Open sub-question:** because the package declares only
-   a `"."` export, dropping them from the root removes them outright for installed consumers
-   — there is no deep-import fallback. Leaving it that way is consistent with the internal
-   tier; adding explicit subpath exports as a supported escape hatch would trade some of the
-   surface reduction back. Decide before tagging.
+   pipeline internals stay for now. **No escape hatch, decided:** because the package declares
+   only a `"."` export, dropping these from the root removes them outright for installed
+   consumers — there is no deep-import fallback, and none will be added. Subpath exports were
+   considered and rejected: they would trade back part of the surface reduction, and the
+   asymmetry favours waiting — adding a subpath export later is additive and can land in any
+   minor, whereas withdrawing one after 1.0 would take a major. These eleven symbols have no
+   measured consumers; if a real one appears, the door is open to add a supported path then.
 5. **Stable-list self-consistency fixes applied** so no stable symbol depends on a
    non-frozen shape: `BuildGraphOptions` promoted to stable; `createMemoryManagementAPI`
    demoted to experimental; and `UpdateProfileResult` stage payloads, `Observation`
