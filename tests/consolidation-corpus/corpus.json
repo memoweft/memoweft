@@ -1,5 +1,7 @@
 {
   "_meta": {
+    "corpusVersion": "2026-07-28-b1-120",
+    "corpusVersionNote": "Bump whenever scenarios are added, removed, or their expectations change. Aggregate scores are NOT comparable across corpus versions - a changed corpus is a changed measuring instrument, not just a changed score. The 0.7.x baselines were produced on the 60-scenario corpus (pre-2026-07-28).",
     "purpose": "Fully synthetic consolidation scenarios. No text is copied or paraphrased from production logs or user data. Expectations are defined independently of the model under test.",
     "consumedBy": "The deterministic corpus runner seeds prior cognitions, ingests messages in order, calls updateProfile(), and compares the resulting created, corrected, and conflicted cognitions with these fixed expectations.",
     "sourceKindNote": "Source kinds follow src/evidence/model.ts. These scenarios currently exercise spoken, inferred, and observed evidence; tool evidence is covered by separate adapter and ingestion tests.",
@@ -2344,6 +2346,1157 @@
           "Keep the injury state active alongside the recovery as a contradiction",
           "Erase the injury history so the recovery has nothing to correct",
           "Infer an athletic identity or training plan from a recovery note"
+        ]
+      }
+    },
+    {
+      "id": "CC-077",
+      "discipline": "emotion-cap",
+      "lang": "zh",
+      "title": "这周压力大到睡不着",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "这周压力大到睡不着"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["state"]
+        },
+        "shouldFormGists": ["把「本周压力大、睡眠受影响」记为当前临时状态(state)"],
+        "shouldNotFormGists": [
+          "把一段时间的压力升级成「用户是焦虑型人格」这类稳定特质",
+          "推断用户有睡眠障碍或需要就医",
+          "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）"
+        ]
+      }
+    },
+    {
+      "id": "CC-078",
+      "discipline": "emotion-cap",
+      "lang": "en",
+      "title": "Frustrated with the current sprint",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "I am so frustrated with this sprint, nothing works"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["state"]
+        },
+        "shouldFormGists": ["Record the current frustration with the sprint as a temporary state"],
+        "shouldNotFormGists": [
+          "Promote one frustrated moment into a trait such as \"the user is short-tempered\"",
+          "Infer that the user dislikes their job or wants to quit",
+          "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）"
+        ]
+      }
+    },
+    {
+      "id": "CC-079",
+      "discipline": "emotion-cap",
+      "lang": "zh",
+      "title": "刚拿到 offer 开心到飞起",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "刚拿到 offer，开心到飞起！"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["state"]
+        },
+        "shouldFormGists": ["把「刚拿到 offer、情绪高涨」记为当前临时状态(state)"],
+        "shouldNotFormGists": [
+          "把一时的兴奋推断成「用户性格外向乐观」这类稳定特质",
+          "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）"
+        ]
+      }
+    },
+    {
+      "id": "CC-080",
+      "discipline": "emotion-cap",
+      "lang": "en",
+      "title": "Feeling lonely since the move",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "Been feeling pretty lonely since I moved here"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["state"]
+        },
+        "shouldFormGists": [
+          "Record the current feeling of loneliness after the move as a temporary state"
+        ],
+        "shouldNotFormGists": [
+          "Promote a passing feeling into a trait such as \"the user is socially withdrawn\"",
+          "Infer a mental-health condition from one statement of loneliness",
+          "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）"
+        ]
+      }
+    },
+    {
+      "id": "CC-081",
+      "discipline": "emotion-cap",
+      "lang": "zh",
+      "title": "今天被夸了心情特别好",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "今天被领导当众夸了，心情特别好"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["state"]
+        },
+        "shouldFormGists": ["把「今天受表扬、心情好」记为当前临时状态(state)"],
+        "shouldNotFormGists": [
+          "推断用户渴望认可或很在意他人评价这类性格结论",
+          "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）"
+        ]
+      }
+    },
+    {
+      "id": "CC-082",
+      "discipline": "emotion-cap",
+      "lang": "en",
+      "title": "Nervous before tomorrow presentation",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "Really nervous about tomorrow presentation"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["state"]
+        },
+        "shouldFormGists": [
+          "Record the nervousness ahead of tomorrow presentation as a temporary state"
+        ],
+        "shouldNotFormGists": [
+          "Promote pre-presentation nerves into a trait such as \"the user fears public speaking\"",
+          "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）"
+        ]
+      }
+    },
+    {
+      "id": "CC-083",
+      "discipline": "emotion-cap",
+      "lang": "zh",
+      "title": "最近有点提不起劲",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "最近做什么都有点提不起劲"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["state"]
+        },
+        "shouldFormGists": ["把「近期提不起劲」记为当前临时状态(state)"],
+        "shouldNotFormGists": [
+          "把状态描述升格成「用户缺乏进取心」这类评价性特质",
+          "推断用户处于抑郁状态",
+          "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）"
+        ]
+      }
+    },
+    {
+      "id": "CC-084",
+      "discipline": "emotion-cap",
+      "lang": "en",
+      "title": "Relieved the audit is over",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "Such a relief, the audit finally wrapped up"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["state"]
+        },
+        "shouldFormGists": ["Record the relief after the audit concluded as a temporary state"],
+        "shouldNotFormGists": [
+          "Infer a lasting attitude toward audits or compliance work from one moment of relief",
+          "给这条情绪高置信/稳定档（临时类应封顶在 low 及以下）"
+        ]
+      }
+    },
+    {
+      "id": "CC-085",
+      "discipline": "fact-vs-belief",
+      "lang": "zh",
+      "title": "亲述学历（无自报确定性修饰）",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "我本科念的是materials science，2019 年毕业"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 2,
+          "types": ["fact"]
+        },
+        "shouldFormGists": ["记录用户亲述事实：材料科学本科、2019 年毕业"],
+        "shouldNotFormGists": [
+          "把学历推断成能力水平或职业方向等结论",
+          "把亲述事实记成用户的信念或偏好"
+        ]
+      }
+    },
+    {
+      "id": "CC-086",
+      "discipline": "fact-vs-belief",
+      "lang": "en",
+      "title": "Belief about remote work stated as opinion",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "I think remote work makes teams more productive overall"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["preference", "trait"]
+        },
+        "shouldFormGists": [
+          "Record that the user holds the opinion that remote work improves team productivity"
+        ],
+        "shouldNotFormGists": [
+          "Record the opinion as an established fact about remote work",
+          "Infer the user works remotely, or wants to, from the opinion alone"
+        ]
+      }
+    },
+    {
+      "id": "CC-087",
+      "discipline": "fact-vs-belief",
+      "lang": "zh",
+      "title": "亲述过敏史（带「我确定」自报确定性）",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "我对花生过敏，这个我百分百确定"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 2,
+          "types": ["fact"]
+        },
+        "shouldFormGists": ["记录用户亲述事实：对花生过敏"],
+        "shouldNotFormGists": [
+          "因为用户说「百分百确定」就把置信度顶满——置信由系统按规则自算，不采信自报",
+          "据一条过敏史推断整体健康状况或饮食习惯"
+        ]
+      }
+    },
+    {
+      "id": "CC-088",
+      "discipline": "fact-vs-belief",
+      "lang": "en",
+      "title": "Speculation about a colleague framed as maybe",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "Maybe Dana is leaving the team, that is just my hunch"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 1
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Record \"Dana is leaving the team\" as a fact about the world",
+          "Store a hunch about a third party as an attribute of the user",
+          "Raise confidence because the user volunteered the guess directly"
+        ]
+      }
+    },
+    {
+      "id": "CC-089",
+      "discipline": "fact-vs-belief",
+      "lang": "zh",
+      "title": "亲述在用工具（事实）而非评价",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "我们团队现在用 PostgreSQL，去年从 MySQL 迁过来的"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 2,
+          "types": ["fact", "project"]
+        },
+        "shouldFormGists": ["记录用户亲述事实：团队现用 PostgreSQL、去年自 MySQL 迁移"],
+        "shouldNotFormGists": [
+          "推断用户偏好 PostgreSQL 或不喜欢 MySQL——迁移原因未被陈述",
+          "把团队的技术选型记成用户个人的技术偏好"
+        ]
+      }
+    },
+    {
+      "id": "CC-090",
+      "discipline": "fact-vs-belief",
+      "lang": "en",
+      "title": "Value judgement about a framework",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "Honestly I believe that framework is overengineered"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2,
+          "types": ["preference"]
+        },
+        "shouldFormGists": ["Record that the user holds a negative opinion of that framework"],
+        "shouldNotFormGists": [
+          "Record \"the framework is overengineered\" as an established fact",
+          "Infer the user refuses to work with it, or has used it at all"
+        ]
+      }
+    },
+    {
+      "id": "CC-091",
+      "discipline": "fact-vs-belief",
+      "lang": "zh",
+      "title": "亲述作息事实 vs 顺带的自我评价",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "我每天六点起床，我觉得自己算是很自律的人"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 3,
+          "types": ["fact", "trait"]
+        },
+        "shouldFormGists": ["记录用户亲述事实：每天六点起床"],
+        "shouldNotFormGists": [
+          "把用户的自我评价「很自律」当成系统认定的稳定特质、给高置信",
+          "因为自评自律就推断工作效率或产出水平"
+        ]
+      }
+    },
+    {
+      "id": "CC-092",
+      "discipline": "fact-vs-belief",
+      "lang": "en",
+      "title": "Reports a measurement, not a self-assessment",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "My resting heart rate has been around 58 for the past month"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 2,
+          "types": ["fact", "state"]
+        },
+        "shouldFormGists": [
+          "Record the reported resting heart rate of about 58 over the past month"
+        ],
+        "shouldNotFormGists": [
+          "Infer a fitness level, training habit, or health condition from the number",
+          "Treat the reported measurement as a claim about the user being healthy"
+        ]
+      }
+    },
+    {
+      "id": "CC-093",
+      "discipline": "no-over-inference",
+      "lang": "zh",
+      "title": "买了一本编程书 ≠ 转行",
+      "messages": [
+        {
+          "sourceKind": "observed",
+          "rawContent": "今天买了本 Rust 入门书"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "推断用户要转行做 Rust 开发或已在学 Rust",
+          "把一次购书行为记成长期学习目标或职业规划"
+        ]
+      }
+    },
+    {
+      "id": "CC-094",
+      "discipline": "no-over-inference",
+      "lang": "en",
+      "title": "One late night at the office is not a work habit",
+      "messages": [
+        {
+          "sourceKind": "observed",
+          "rawContent": "Left the office at 11pm last night"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Infer that the user regularly works late or is overworked",
+          "Promote a single evening into a trait about work ethic"
+        ]
+      }
+    },
+    {
+      "id": "CC-095",
+      "discipline": "no-over-inference",
+      "lang": "zh",
+      "title": "搜索过某疾病 ≠ 患病",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "刚才搜了下偏头痛怎么缓解"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": ["推断用户患有偏头痛或有慢性病", "把一次搜索记成健康状况事实"]
+      }
+    },
+    {
+      "id": "CC-096",
+      "discipline": "no-over-inference",
+      "lang": "en",
+      "title": "Asked about visa rules is not a relocation plan",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "Do you know how the work visa rules changed?"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Infer that the user is planning to relocate or change jobs",
+          "Record an intention to emigrate from a single question"
+        ]
+      }
+    },
+    {
+      "id": "CC-097",
+      "discipline": "no-over-inference",
+      "lang": "zh",
+      "title": "一次点外卖 ≠ 不下厨",
+      "messages": [
+        {
+          "sourceKind": "observed",
+          "rawContent": "今晚点了外卖"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": ["推断用户不会做饭或不喜欢下厨", "把一次点餐升格成饮食习惯"]
+      }
+    },
+    {
+      "id": "CC-098",
+      "discipline": "no-over-inference",
+      "lang": "en",
+      "title": "Watching one documentary is not an interest",
+      "messages": [
+        {
+          "sourceKind": "observed",
+          "rawContent": "Watched a documentary about deep sea life"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Infer a standing interest in marine biology or documentaries",
+          "Record a hobby from a single viewing"
+        ]
+      }
+    },
+    {
+      "id": "CC-099",
+      "discipline": "no-over-inference",
+      "lang": "zh",
+      "title": "提到某品牌 ≠ 品牌偏好",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "我表弟送了我一个某牌的保温杯"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": ["推断用户偏好该品牌", "把收到的礼物记成用户的购买偏好"]
+      }
+    },
+    {
+      "id": "CC-100",
+      "discipline": "no-over-inference",
+      "lang": "en",
+      "title": "One missed reply is not a communication style",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "Sorry, missed your message yesterday"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Infer that the user is unresponsive or a poor communicator",
+          "Promote a single missed message into a behavioural pattern"
+        ]
+      }
+    },
+    {
+      "id": "CC-101",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 问「你是不是更习惯用命令行」、用户答「对」",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "对",
+          "precedingAiContext": "你是不是更习惯用命令行工作？"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 1,
+          "types": ["preference"],
+          "formedBy": ["confirmed"]
+        },
+        "resolutions": {
+          "responseAct": ["affirm"]
+        },
+        "shouldFormGists": ["形成一条「用户更习惯用命令行」的偏好认知"],
+        "shouldNotFormGists": [
+          "把一个「对」扩写成「用户是资深工程师／讨厌图形界面」这类它确认不了的结论",
+          "把 AI 的提问本身记成认知——AI 的话只是只读上下文"
+        ]
+      }
+    },
+    {
+      "id": "CC-102",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "AI asks about morning workouts, user replies \"yeah\"",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "yeah",
+          "precedingAiContext": "You work out in the mornings, right?"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 1,
+          "types": ["preference", "state"],
+          "formedBy": ["confirmed"]
+        },
+        "resolutions": {
+          "responseAct": ["affirm"]
+        },
+        "shouldFormGists": ["Form a cognition that the user works out in the mornings"],
+        "shouldNotFormGists": [
+          "Expand a one-word yes into claims about fitness level or training routine",
+          "Record the assistant question itself as a cognition"
+        ]
+      }
+    },
+    {
+      "id": "CC-103",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 猜「你应该不常出差吧」、用户否认「不是，经常出」",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "不是，我经常出差",
+          "precedingAiContext": "你应该不常出差吧？"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 2,
+          "types": ["fact", "state"]
+        },
+        "resolutions": {
+          "responseAct": ["negate"]
+        },
+        "shouldFormGists": ["形成一条「用户经常出差」的认知"],
+        "shouldNotFormGists": [
+          "把被否认的 AI 猜测（不常出差）记成认知",
+          "从出差频率推断职位级别或工作强度"
+        ]
+      }
+    },
+    {
+      "id": "CC-104",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "AI offers two options, user picks \"the latter\"",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "the latter",
+          "precedingAiContext": "Would you rather have the meeting on Monday or Thursday?"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "resolutions": {
+          "responseAct": ["select"]
+        },
+        "shouldFormGists": [
+          "Resolve \"the latter\" to Thursday using the assistant turn as read-only context"
+        ],
+        "shouldNotFormGists": [
+          "Record a standing preference for Thursday meetings from one scheduling choice",
+          "Store the assistant question as an independent cognition or evidence item"
+        ]
+      }
+    },
+    {
+      "id": "CC-105",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 问「需要我把会议改到下周吗」、用户答「不用」",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "不用",
+          "precedingAiContext": "需要我把会议改到下周吗？"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 1
+        },
+        "resolutions": {
+          "responseAct": ["negate"]
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把「不用」记成关于用户的稳定认知（这只是一次操作层面的拒绝）",
+          "推断用户不喜欢改期或时间观念强"
+        ]
+      }
+    },
+    {
+      "id": "CC-106",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "User elaborates briefly after an assistant guess",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "kind of, mostly on weekends",
+          "precedingAiContext": "You play guitar, don't you?"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 2,
+          "types": ["preference", "state"]
+        },
+        "resolutions": {
+          "responseAct": ["elaborate", "affirm"]
+        },
+        "shouldFormGists": ["Form a cognition that the user plays guitar, mostly on weekends"],
+        "shouldNotFormGists": [
+          "Infer skill level, band membership, or years of practice",
+          "Record the assistant guess as a cognition of its own"
+        ]
+      }
+    },
+    {
+      "id": "CC-107",
+      "discipline": "short-reply",
+      "lang": "zh",
+      "title": "AI 问偏好、用户答「都行」（无信息）",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "都行",
+          "precedingAiContext": "你想先看前端还是后端的部分？"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 0
+        },
+        "resolutions": {
+          "responseAct": ["none", "other"]
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": ["从「都行」推断用户没有技术偏好或性格随和", "强行选一边记成用户偏好"]
+      }
+    },
+    {
+      "id": "CC-108",
+      "discipline": "short-reply",
+      "lang": "en",
+      "title": "Assistant proposes a summary, user affirms it",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "exactly",
+          "precedingAiContext": "So your main blocker is the flaky deployment pipeline?"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 1,
+          "max": 1,
+          "types": ["project", "state"],
+          "formedBy": ["confirmed"]
+        },
+        "resolutions": {
+          "responseAct": ["affirm"]
+        },
+        "shouldFormGists": [
+          "Form a cognition that the flaky deployment pipeline is the user main blocker"
+        ],
+        "shouldNotFormGists": [
+          "Infer the cause of the flakiness or the state of the wider project",
+          "Record the assistant summary itself as evidence about the user"
+        ]
+      }
+    },
+    {
+      "id": "CC-109",
+      "discipline": "chitchat-negative",
+      "lang": "zh",
+      "title": "早上好",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "早上好呀"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 0
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": ["把问候记成关于用户的认知", "从问候语推断用户礼貌／作息"]
+      }
+    },
+    {
+      "id": "CC-110",
+      "discipline": "chitchat-negative",
+      "lang": "en",
+      "title": "Thanks, that helps",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "thanks, that helps a lot"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 0
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Record gratitude as a cognition about the user",
+          "Infer satisfaction with the product as a lasting attitude"
+        ]
+      }
+    },
+    {
+      "id": "CC-111",
+      "discipline": "chitchat-negative",
+      "lang": "zh",
+      "title": "哈哈笑死我了",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "哈哈哈哈笑死我了"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 0
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": ["把笑声记成认知", "推断用户幽默感强或情绪外放"]
+      }
+    },
+    {
+      "id": "CC-112",
+      "discipline": "chitchat-negative",
+      "lang": "en",
+      "title": "Just testing",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "ignore this, just testing something"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 0
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Record a test message as a cognition",
+          "Infer that the user is a developer from the word \"testing\""
+        ]
+      }
+    },
+    {
+      "id": "CC-113",
+      "discipline": "chitchat-negative",
+      "lang": "zh",
+      "title": "嗯嗯知道了",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "嗯嗯，知道了"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 0
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": ["把应答词记成认知", "推断用户配合度高或话少"]
+      }
+    },
+    {
+      "id": "CC-114",
+      "discipline": "chitchat-negative",
+      "lang": "en",
+      "title": "brb",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "brb"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 0
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Record a status filler as a cognition",
+          "Infer anything about availability patterns"
+        ]
+      }
+    },
+    {
+      "id": "CC-115",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "同事升职是第三方命题",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "我同事 Alex 上周升职了"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把「Alex 升职」记成关于用户本人的事实",
+          "推断用户羡慕、有竞争压力或也想升职"
+        ]
+      }
+    },
+    {
+      "id": "CC-116",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "Weather is a world proposition",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "It rained all weekend here"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Store the weather as a user attribute",
+          "Infer mood or weekend activities from the weather"
+        ]
+      }
+    },
+    {
+      "id": "CC-117",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "第三方的饮食偏好",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "我妈不吃海鲜"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把「不吃海鲜」记成用户本人的饮食偏好",
+          "推断用户家庭饮食习惯或用户本人也不吃"
+        ]
+      }
+    },
+    {
+      "id": "CC-118",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "A public event, not a personal fact",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "The conference keynote got cancelled"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Record the cancellation as a fact about the user",
+          "Infer that the user was attending or is disappointed"
+        ]
+      }
+    },
+    {
+      "id": "CC-119",
+      "discipline": "world-person",
+      "lang": "zh",
+      "title": "第一人称叙述里的第三方事实",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "我室友最近在准备雅思，每天背单词到半夜"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "把「准备雅思／背单词到半夜」记成用户本人的目标或作息",
+          "推断用户也打算出国或受室友影响"
+        ]
+      }
+    },
+    {
+      "id": "CC-120",
+      "discipline": "world-person",
+      "lang": "en",
+      "title": "Industry news mentioned in passing",
+      "messages": [
+        {
+          "sourceKind": "spoken",
+          "rawContent": "Apparently that startup raised a Series B"
+        }
+      ],
+      "expect": {
+        "conflict": false,
+        "correct": false,
+        "newCognitions": {
+          "min": 0,
+          "max": 2
+        },
+        "shouldFormGists": [],
+        "shouldNotFormGists": [
+          "Record the funding round as a user attribute",
+          "Infer that the user works there, invests, or is job hunting"
         ]
       }
     }
