@@ -34,8 +34,8 @@ Aligned with `memory-surface-contract.md`:
 - **Stable** — covered by compatibility snapshots and intended for application
   use across the current minor line. After 1.0, breaking changes require a major
   version and a deprecation notice.
-- **Experimental** — usable, but may change in a pre-1.0 minor (or, after 1.0, in
-  a minor) with a changelog notice. Extension points and diagnostics live here.
+- **Experimental** — usable, but may change in a minor release with a changelog
+  notice. Extension points and diagnostics live here.
 - **Internal** — implementation detail. Exported for composition/diagnostics
   only; do not build application contracts around it. May change in any release.
 

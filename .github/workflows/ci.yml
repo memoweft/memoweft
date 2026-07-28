@@ -409,8 +409,25 @@ jobs:
             npm install --no-audit --no-fund
           fi
 
+      # Prereleases must not take the `latest` dist-tag. npm defaults to `latest` when
+      # --tag is omitted, so publishing 1.0.0-rc.1 without this would serve the candidate
+      # to every plain `npm install memoweft`. Prereleases go under `rc`; finals take
+      # `latest`. Detection matches semver: a prerelease is anything with a `-` suffix.
+      - name: Resolve npm dist-tag
+        id: dist_tag
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [[ "$version" == *-* ]]; then
+            tag=rc
+          else
+            tag=latest
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "publishing $version under dist-tag $tag"
+
       # Publish only the root package; integrations have independent release versions.
       - name: Publish memoweft to npm (with provenance)
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --tag "${{ steps.dist_tag.outputs.tag }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

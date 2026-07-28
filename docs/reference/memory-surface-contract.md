@@ -1,13 +1,13 @@
 # MemoWeft public API contract
 
-Applies to `memoweft` 0.7.x. This document describes the application-facing surface returned by `createMemoWeftCore()` and the behavior callers can rely on.
+Applies to `memoweft` 1.0.x, starting with the 1.0 release candidate. This document describes the application-facing surface returned by `createMemoWeftCore()` and the behavior callers can rely on.
 
-MemoWeft is pre-1.0. Additive fields and enum values may appear in minor releases. Breaking changes are documented in the [changelog](../../CHANGELOG.md) with migration notes. Low-level symbols exported from the root package remain available for compatibility, but the Core facade below is the supported integration path.
+The public surface is frozen as of 1.0: breaking a **stable** symbol requires a major version and a prior deprecation notice, while additive fields and enum values may still appear in minor releases, documented in the [changelog](../../CHANGELOG.md). Low-level symbols still exported from the root package are available for composition but are not supported contracts — the cleanest internals were dropped from the root at 1.0. The Core facade below is the supported integration path. The full policy is in [STABILITY.md](../STABILITY.md).
 
 ## Stability labels
 
-- **Stable** — covered by compatibility snapshots and intended for application use throughout the 0.7 line.
-- **Experimental** — usable, but may change in a pre-1.0 minor release with changelog notice.
+- **Stable** — covered by compatibility snapshots and intended for application use across the 1.x line.
+- **Experimental** — usable, but may change in a minor release with a changelog notice.
 - **Internal** — implementation detail; do not build application contracts around it.
 
 Unless marked otherwise, the methods in this document are stable. `clock`, plugins, and low-level model/retrieval implementations are experimental extension points.
