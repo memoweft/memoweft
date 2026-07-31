@@ -508,6 +508,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Workspace prepublishOnly runs typecheck before its own build and imports
+      # Core through the root package export, so the root declarations must
+      # exist in this isolated publish job.
+      - name: Build Core for workspace peer types
+        run: npm run build
+
       - name: Publish selected workspace to npm (with provenance)
         run: npm publish --workspace="${{ steps.package.outputs.workspace }}" --provenance --access public
         env:
