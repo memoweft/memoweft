@@ -6,8 +6,12 @@ name: CI
 on:
   push:
     branches: [main]
-    # Version tags enter this workflow; publish is gated separately below.
-    tags: ['v*']
+    # Root and independently versioned integration tags enter this workflow;
+    # publish jobs are gated separately below.
+    tags:
+      - 'v*'
+      - 'adapter-ai-sdk-v*'
+      - 'mcp-server-v*'
   pull_request:
 
 # Cancel superseded runs on the same ref.
@@ -362,7 +366,7 @@ jobs:
     name: Publish package (tag · npm publish --provenance)
     runs-on: ubuntu-latest
     needs: ci-gate
-    if: startsWith(github.ref, 'refs/tags/') && needs.ci-gate.result == 'success'
+    if: startsWith(github.ref, 'refs/tags/v') && needs.ci-gate.result == 'success'
 
     permissions:
       # Required for npm provenance attestation.
@@ -429,5 +433,82 @@ jobs:
       # Publish only the root package; integrations have independent release versions.
       - name: Publish memoweft to npm (with provenance)
         run: npm publish --provenance --access public --tag "${{ steps.dist_tag.outputs.tag }}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Publish exactly one independently versioned integration workspace on its
+  # dedicated tag. Root vX.Y.Z tags never enter this job, and integration tags
+  # never enter the root publish job above.
+  publish-integration:
+    name: Publish integration workspace (tag · npm publish --provenance)
+    runs-on: ubuntu-latest
+    needs: ci-gate
+    if: >-
+      (startsWith(github.ref, 'refs/tags/adapter-ai-sdk-v') ||
+      startsWith(github.ref, 'refs/tags/mcp-server-v')) &&
+      needs.ci-gate.result == 'success'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Resolve and verify integration tag
+        id: package
+        shell: bash
+        run: |
+          case "$GITHUB_REF_NAME" in
+            adapter-ai-sdk-v*)
+              workspace="@memoweft/adapter-ai-sdk"
+              manifest="packages/adapter-ai-sdk/package.json"
+              prefix="adapter-ai-sdk-v"
+              ;;
+            mcp-server-v*)
+              workspace="@memoweft/mcp-server"
+              manifest="packages/mcp-server/package.json"
+              prefix="mcp-server-v"
+              ;;
+            *)
+              echo "::error::unsupported integration tag $GITHUB_REF_NAME"
+              exit 1
+              ;;
+          esac
+
+          version="$(node -p "require('./${manifest}').version")"
+          expected="${prefix}${version}"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match $workspace version $version"
+            exit 1
+          fi
+
+          echo "workspace=$workspace" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publishing $workspace@$version"
+
+      - name: Verify tagged commit belongs to main
+        shell: bash
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "origin/${{ github.event.repository.default_branch }}"; then
+            echo "::error::tag $GITHUB_REF_NAME does not point to a commit on the default branch"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish selected workspace to npm (with provenance)
+        run: npm publish --workspace="${{ steps.package.outputs.workspace }}" --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

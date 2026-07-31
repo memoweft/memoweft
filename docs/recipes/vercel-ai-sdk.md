@@ -6,13 +6,13 @@ Give your existing Vercel AI SDK app long-term memory. `@memoweft/adapter-ai-sdk
 
 ## Install
 
-`@memoweft/adapter-ai-sdk@0.2.1` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0`; install a compatible set:
+`@memoweft/adapter-ai-sdk@0.2.2` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`; to use the current 1.0 release candidate:
 
 ```bash
-npm i ai memoweft@0.7 @memoweft/adapter-ai-sdk@0.2
+npm i ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.2
 ```
 
-It resolves cleanly against Core `0.5.1`, `0.6`, or `0.7` with no `--legacy-peer-deps`. `ai` `^7` is also a peer dependency; bring your own provider, e.g. `@ai-sdk/openai`.
+It resolves cleanly against Core `0.5.1`, `0.6`, `0.7`, the 1.0 RC series, and final 1.x releases with no `--legacy-peer-deps`. `ai` `^7` is also a peer dependency; bring your own provider, e.g. `@ai-sdk/openai`.
 
 ## Wire it up
 

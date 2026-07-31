@@ -6,13 +6,13 @@ An [MCP](https://modelcontextprotocol.io) server that exposes a [MemoWeft](https
 
 ## Install
 
-`@memoweft/mcp-server@0.2.1` declares a `memoweft` peer range of `^0.5.1 || ^0.6.0 || ^0.7.0`. Install it alongside a compatible Core release:
+`@memoweft/mcp-server@0.2.2` declares a `memoweft` peer range of `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`. To use the current 1.0 release candidate:
 
 ```sh
-npm install memoweft@0.7 @memoweft/mcp-server@0.2
+npm install memoweft@rc @memoweft/mcp-server@0.2.2
 ```
 
-It resolves cleanly against Core `0.5.1`, `0.6`, or `0.7` with no `--legacy-peer-deps`. Needs Node 20+.
+It resolves cleanly against Core `0.5.1`, `0.6`, `0.7`, the 1.0 RC series, and final 1.x releases with no `--legacy-peer-deps`. Needs Node 20+.
 
 ## Tools and data access
 
@@ -63,7 +63,7 @@ await server.connect(new StdioServerTransport());
 
 ## Registry
 
-This repository's `server.json` describes the `0.2.1` server for the official MCP registry; keep it in step with the published npm package and update it when a new version is ready. `package.json`'s `mcpName` must remain identical to `server.json`'s `name`.
+This repository's `server.json` describes the `0.2.2` server for the official MCP registry; keep it in step with the published npm package and update it when a new version is ready. `package.json`'s `mcpName` must remain identical to `server.json`'s `name`.
 
 ## License
 

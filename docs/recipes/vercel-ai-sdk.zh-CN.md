@@ -8,13 +8,13 @@
 
 ## 安装
 
-`@memoweft/adapter-ai-sdk@0.2.1` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0`；请安装兼容的组合：
+`@memoweft/adapter-ai-sdk@0.2.2` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`；使用当前 1.0 发布候选版：
 
 ```bash
-npm i ai memoweft@0.7 @memoweft/adapter-ai-sdk@0.2
+npm i ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.2
 ```
 
-它对 Core `0.5.1`、`0.6`、`0.7` 都能被 npm 干净解析，无需 `--legacy-peer-deps`。`ai` `^7` 同样是 peer 依赖；provider 自备，比如 `@ai-sdk/openai`。
+它对 Core `0.5.1`、`0.6`、`0.7`、1.0 RC 系列和正式 1.x 都能被 npm 干净解析，无需 `--legacy-peer-deps`。`ai` `^7` 同样是 peer 依赖；provider 自备，比如 `@ai-sdk/openai`。
 
 ## 接线
 

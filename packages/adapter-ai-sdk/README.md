@@ -8,10 +8,10 @@ This is an **external integration package**. It wraps MemoWeft's public Core fac
 
 ## Install
 
-`@memoweft/adapter-ai-sdk@0.2.1` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0`. Its compatible, resolver-clean installation is:
+`@memoweft/adapter-ai-sdk@0.2.2` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`. To use the current 1.0 release candidate:
 
 ```bash
-npm i ai memoweft@0.7 @memoweft/adapter-ai-sdk@0.2
+npm i ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.2
 ```
 
 To build the adapter from source instead, use the repository workspace:
@@ -24,7 +24,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-ai-sdk
 ```
 
-Its peer range is `ai` `^7` and `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0`; `0.2.1` resolves cleanly against Core `0.7.0` with no `--legacy-peer-deps`. You also need an `ai` provider (e.g. `@ai-sdk/openai`) for a real model.
+Its peer range is `ai` `^7` and `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`; `0.2.2` resolves cleanly against Core `0.7.0`, the 1.0 RC series, and final 1.x releases with no `--legacy-peer-deps`. You also need an `ai` provider (e.g. `@ai-sdk/openai`) for a real model.
 
 ## Two paths: read and write
 
