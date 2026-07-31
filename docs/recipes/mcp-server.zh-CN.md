@@ -8,10 +8,10 @@
 
 ## 安装
 
-`@memoweft/mcp-server@0.2.2` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`；使用当前 1.0 发布候选版：
+`@memoweft/mcp-server@0.2.3` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`；使用当前 1.0 发布候选版：
 
 ```bash
-npm install memoweft@rc @memoweft/mcp-server@0.2.2
+npm install memoweft@rc @memoweft/mcp-server@0.2.3
 ```
 
 它对 Core `0.5.1`、`0.6`、`0.7`、1.0 RC 系列和正式 1.x 都能被 npm 干净解析，无需 `--legacy-peer-deps`。需要 Node 20+。

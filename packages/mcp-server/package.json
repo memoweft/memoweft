@@ -1,6 +1,6 @@
 {
   "name": "@memoweft/mcp-server",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "mcpName": "io.github.memoweft/memoweft",
   "description": "MCP server for MemoWeft — expose a portable AI memory through five read tools and three controlled writes.",
   "keywords": [

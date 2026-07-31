@@ -1,6 +1,6 @@
 {
   "name": "@memoweft/adapter-ai-sdk",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Vercel AI SDK adapter for MemoWeft — inject long-term memory via middleware (recall) and persist the user's turn on finish (write).",
   "keywords": [
     "vercel-ai-sdk",

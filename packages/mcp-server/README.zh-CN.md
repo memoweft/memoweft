@@ -6,10 +6,10 @@
 
 ## 安装
 
-`@memoweft/mcp-server@0.2.2` 的 `memoweft` peer 范围是 `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`。使用当前 1.0 发布候选版：
+`@memoweft/mcp-server@0.2.3` 的 `memoweft` peer 范围是 `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`。使用当前 1.0 发布候选版：
 
 ```sh
-npm install memoweft@rc @memoweft/mcp-server@0.2.2
+npm install memoweft@rc @memoweft/mcp-server@0.2.3
 ```
 
 它对 Core `0.5.1`、`0.6`、`0.7`、1.0 RC 系列和正式 1.x 都能被 npm 干净解析，无需 `--legacy-peer-deps`。需要 Node 20+。
@@ -63,7 +63,7 @@ await server.connect(new StdioServerTransport());
 
 ## Registry（注册表）
 
-本仓库的 `server.json` 为官方 MCP registry 描述 `0.2.2` 服务器；请让它与已发布的 npm 包保持同步，有新版本时再更新。`package.json` 的 `mcpName` 必须与 `server.json` 的 `name` 完全一致。
+本仓库的 `server.json` 为官方 MCP registry 描述 `0.2.3` 服务器；请让它与已发布的 npm 包保持同步，有新版本时再更新。`package.json` 的 `mcpName` 必须与 `server.json` 的 `name` 完全一致。
 
 ## 许可
 

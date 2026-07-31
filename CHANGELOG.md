@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
-- `@memoweft/adapter-ai-sdk@0.2.2` and `@memoweft/mcp-server@0.2.2` publish the already-reviewed Core peer range through 1.x, so the official integrations install cleanly with the 1.0 release candidates and final 1.x. Dedicated workspace tags now publish these packages through the same gated GitHub Actions provenance path as Core.
+- `@memoweft/adapter-ai-sdk@0.2.3` and `@memoweft/mcp-server@0.2.3` publish the already-reviewed Core peer range through 1.x, so the official integrations install cleanly with the 1.0 release candidates and final 1.x. Dedicated workspace tags now publish these packages through the same gated GitHub Actions provenance path as Core.
 
 ## [1.0.0-rc.2] — 2026-07-31
 

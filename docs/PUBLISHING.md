@@ -30,22 +30,22 @@ Publish an adapter or the MCP server as its own reviewed release:
 3. Merge the reviewed release commit to `main`, wait for the `main` CI gate, then create the matching annotated workspace tag:
 
    ```bash
-   git tag -a adapter-ai-sdk-v0.2.2 -m "@memoweft/adapter-ai-sdk v0.2.2"
-   git push origin adapter-ai-sdk-v0.2.2
+   git tag -a adapter-ai-sdk-v0.2.3 -m "@memoweft/adapter-ai-sdk v0.2.3"
+   git push origin adapter-ai-sdk-v0.2.3
 
-   git tag -a mcp-server-v0.2.2 -m "@memoweft/mcp-server v0.2.2"
-   git push origin mcp-server-v0.2.2
+   git tag -a mcp-server-v0.2.3 -m "@memoweft/mcp-server v0.2.3"
+   git push origin mcp-server-v0.2.3
    ```
 
    Each tag publishes exactly one workspace through GitHub Actions with npm provenance. A root `vX.Y.Z` tag cannot publish an integration, and an integration tag cannot publish Core.
 
 4. For `@memoweft/mcp-server`, update the official MCP registry only after its npm version is live. Keep `mcpName` and `server.json.name` identical, set `server.json` and its npm package reference to the published version, validate with the registry publisher, then submit the registry update.
-5. Verify each published package in a fresh temporary directory without `--legacy-peer-deps`. Version `0.2.2` of both official integrations declares `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`, so it resolves cleanly against Core `0.7.0`, the 1.0 RC series, and final 1.x.
+5. Verify each published package in a fresh temporary directory without `--legacy-peer-deps`. Version `0.2.3` of both official integrations declares `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`, so it resolves cleanly against Core `0.7.0`, the 1.0 RC series, and final 1.x.
 
    ```bash
    npm init -y
-   npm install ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.2
-   npm install memoweft@rc @memoweft/mcp-server@0.2.2
+   npm install ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.3
+   npm install memoweft@rc @memoweft/mcp-server@0.2.3
    ```
 
 ## Prepare the release
