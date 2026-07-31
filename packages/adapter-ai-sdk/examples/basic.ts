@@ -4,12 +4,12 @@
  * 读：wrapLanguageModel(model, createMemoWeftMiddleware(core)) —— 召回记忆注入进 prompt。
  * 写：generateText({ onEnd: createPersistOnEnd(...) }) —— 对话结束后沉淀【用户原话】。
  *
- * 从源码检出试用未发布的 0.2.0 workspace：
+ * 从源码检出试用 workspace：
  *   git clone https://github.com/memoweft/memoweft.git && cd memoweft
  *   npm ci && npm run build && npm run build --workspace @memoweft/adapter-ai-sdk
  *   # 将下方 baseModel 声明替换为已配置的 provider model（例如 @ai-sdk/openai）
  *   node --experimental-strip-types packages/adapter-ai-sdk/examples/basic.ts
- * npm 已发布版本的兼容安装组合见本包 README；不要把 registry 0.1.0 与 Core 0.6 强行组合。
+ * npm 已发布版本的兼容安装组合见本包 README。
  */
 import { generateText, wrapLanguageModel } from 'ai';
 import { createMemoWeftCore } from 'memoweft';

@@ -8,10 +8,10 @@
 
 ## 安装
 
-`@memoweft/adapter-ai-sdk@0.2.1` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0`。可由 npm 正常解析的组合是：
+`@memoweft/adapter-ai-sdk@0.2.2` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`。使用当前 1.0 发布候选版：
 
 ```bash
-npm i ai memoweft@0.7 @memoweft/adapter-ai-sdk@0.2
+npm i ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.2
 ```
 
 若想改从源码构建适配器，请用本仓库的 workspace：
@@ -24,7 +24,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-ai-sdk
 ```
 
-它的 peer 范围为 `ai` `^7` 和 `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0`；`0.2.1` 对 Core `0.7.0` 能被 npm 干净解析，无需 `--legacy-peer-deps`。运行真实模型还需一个 `ai` provider（如 `@ai-sdk/openai`）。
+它的 peer 范围为 `ai` `^7` 和 `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`；`0.2.2` 对 Core `0.7.0`、1.0 RC 系列和正式 1.x 都能被 npm 干净解析，无需 `--legacy-peer-deps`。运行真实模型还需一个 `ai` provider（如 `@ai-sdk/openai`）。
 
 ## 两条路：读和写
 

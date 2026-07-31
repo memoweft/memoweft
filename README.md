@@ -142,17 +142,17 @@ Your host remains responsible for chat UX, consent, authentication, encryption a
 
 ## Integrations
 
-| Ecosystem                                                                                            | Integration surface                          | Availability                              |
-| ---------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------- |
-| [Vercel AI SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-ai-sdk)              | Middleware recall and controlled persistence | npm `0.2.0` supports Core `0.5.1` / `0.6` |
-| [Model Context Protocol](https://github.com/memoweft/memoweft/tree/main/packages/mcp-server)         | Stdio: 5 reads and 3 controlled writes       | npm `0.2.0` supports Core `0.5.1` / `0.6` |
-| [Claude Agent SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-claude-agent-sdk) | User-prompt and tool-result hooks            | Source preview                            |
-| [OpenAI Agents SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-openai-agents)   | Run wrapper and model-input filter           | Source preview                            |
-| [LangChain](https://github.com/memoweft/memoweft/tree/main/packages/adapter-langchain)               | v1 middleware or retriever/callback paths    | Source preview                            |
-| [Mastra](https://github.com/memoweft/memoweft/tree/main/packages/adapter-mastra)                     | Processor-based read/write integration       | Source preview                            |
-| [LlamaIndex.TS](https://github.com/memoweft/memoweft/tree/main/packages/adapter-llamaindex)          | Memory block and stream tap                  | Legacy; upstream archived                 |
+| Ecosystem                                                                                            | Integration surface                          | Availability                                      |
+| ---------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------- |
+| [Vercel AI SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-ai-sdk)              | Middleware recall and controlled persistence | npm `0.2.2`: Core `0.5.1` / `0.6` / `0.7` / `1.x` |
+| [Model Context Protocol](https://github.com/memoweft/memoweft/tree/main/packages/mcp-server)         | Stdio: 5 reads and 3 controlled writes       | npm `0.2.2`: Core `0.5.1` / `0.6` / `0.7` / `1.x` |
+| [Claude Agent SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-claude-agent-sdk) | User-prompt and tool-result hooks            | Source preview                                    |
+| [OpenAI Agents SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-openai-agents)   | Run wrapper and model-input filter           | Source preview                                    |
+| [LangChain](https://github.com/memoweft/memoweft/tree/main/packages/adapter-langchain)               | v1 middleware or retriever/callback paths    | Source preview                                    |
+| [Mastra](https://github.com/memoweft/memoweft/tree/main/packages/adapter-mastra)                     | Processor-based read/write integration       | Source preview                                    |
+| [LlamaIndex.TS](https://github.com/memoweft/memoweft/tree/main/packages/adapter-llamaindex)          | Memory block and stream tap                  | Legacy; upstream archived                         |
 
-The two published integrations — `@memoweft/adapter-ai-sdk@0.2.0` and `@memoweft/mcp-server@0.2.0` — install with Core `0.5.1` and `0.6`. Source-preview integrations are available for evaluation from this repository and are not presented as npm-installable until released.
+The two published integrations — `@memoweft/adapter-ai-sdk@0.2.2` and `@memoweft/mcp-server@0.2.2` — install with Core `0.5.1`, `0.6`, `0.7`, the 1.0 RC series, and final 1.x releases. Source-preview integrations are available for evaluation from this repository and are not presented as npm-installable until released.
 
 ## Run the reference host locally
 

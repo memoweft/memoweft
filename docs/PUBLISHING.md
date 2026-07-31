@@ -6,13 +6,13 @@ MemoWeft releases are immutable. Publish only from a clean, reviewed commit afte
 
 ## What the version tag publishes
 
-A `vX.Y.Z` tag triggers the publish job in [CI](../.github/workflows/ci.yml). The current workflow publishes only the root `memoweft` package with npm provenance.
+A `vX.Y.Z` tag triggers the root-package publish job in [CI](../.github/workflows/ci.yml). `adapter-ai-sdk-vX.Y.Z` and `mcp-server-vX.Y.Z` trigger the corresponding integration workspace publish. Every publish path waits for the aggregate CI gate and attaches npm provenance.
 
 Adapters and the MCP server have independent package versions. Do not publish all workspaces from a root release tag.
 
 ## Publish an integration workspace
 
-The tag workflow publishes only the root package. Publish an adapter or the MCP server as its own reviewed release:
+Publish an adapter or the MCP server as its own reviewed release:
 
 1. Update only that workspace's version, its package-lock entry, peer range, README, and changelog entry; do not reuse a published version.
 2. From a clean checkout, run its checks and inspect its tarball:
@@ -27,23 +27,26 @@ The tag workflow publishes only the root package. Publish an adapter or the MCP 
 
    Substitute the target workspace name (for example, `@memoweft/mcp-server`).
 
-3. Publish from the reviewed commit with an npm account authorized for that package. A local manual publish cannot attach npm provenance (provenance is generated only by the CI GitHub OIDC flow), and the registry must be set explicitly because a maintainer's default registry may be a mirror such as npmmirror:
+3. Merge the reviewed release commit to `main`, wait for the `main` CI gate, then create the matching annotated workspace tag:
 
    ```bash
-   npm publish --workspace=@memoweft/adapter-ai-sdk --access public --registry=https://registry.npmjs.org
+   git tag -a adapter-ai-sdk-v0.2.2 -m "@memoweft/adapter-ai-sdk v0.2.2"
+   git push origin adapter-ai-sdk-v0.2.2
+
+   git tag -a mcp-server-v0.2.2 -m "@memoweft/mcp-server v0.2.2"
+   git push origin mcp-server-v0.2.2
    ```
 
-   To attach provenance to a subpackage, give it its own CI publish job (GitHub OIDC); that is not configured yet.
+   Each tag publishes exactly one workspace through GitHub Actions with npm provenance. A root `vX.Y.Z` tag cannot publish an integration, and an integration tag cannot publish Core.
 
 4. For `@memoweft/mcp-server`, update the official MCP registry only after its npm version is live. Keep `mcpName` and `server.json.name` identical, set `server.json` and its npm package reference to the published version, validate with the registry publisher, then submit the registry update.
-5. Verify the published package in a fresh temporary directory without `--legacy-peer-deps`. For example, `@memoweft/adapter-ai-sdk@0.2.1` and `@memoweft/mcp-server@0.2.1` declare a `memoweft` peer range of `^0.5.1 || ^0.6.0 || ^0.7.0`, so they resolve cleanly against Core `0.7.0`.
+5. Verify each published package in a fresh temporary directory without `--legacy-peer-deps`. Version `0.2.2` of both official integrations declares `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`, so it resolves cleanly against Core `0.7.0`, the 1.0 RC series, and final 1.x.
 
    ```bash
    npm init -y
-   npm install memoweft@0.7 @memoweft/adapter-ai-sdk@0.2
+   npm install ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.2
+   npm install memoweft@rc @memoweft/mcp-server@0.2.2
    ```
-
-Use a workspace-specific annotated tag if release tracking needs one (for example, `adapter-ai-sdk-v0.2.1`); it does not trigger the root package workflow.
 
 ## Prepare the release
 
