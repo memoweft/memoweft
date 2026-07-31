@@ -64,6 +64,8 @@ Core 会关闭自己创建的 SQLite store、向量检索器或关键词检索�
 | `ingestObservation(input)` | 写零到多条 `observed` evidence。                          | 无。       | 单条 observation 可覆盖授权默认值。`kind` 是开放字符串；`kind` 和 `meta` 当前接受但不持久化。 |
 | `ingestToolResult(input)`  | 写一条 `tool` evidence。                                  | 无。       | 只存工具返回结果，不存工具调用意图或参数；建议用 `originId` 保证幂等。                        |
 
+Stable Core 写路径要求 `subjectId`、`hostId`（含配置中的缺省值）非空；显式提供的 `conversationId` 也必须非空。显式 `occurredAt` 必须是真实存在、带 `Z` 或数字时区偏移的 ISO-8601 日期时间。消息内容本身仍允许为空。
+
 `observed` 与 `tool` evidence 缺省可进入内建本地写模型提示词、不可进入内建云端写模型提示词，并允许推断。Observation 可在摄入时覆盖这些值；`ToolResultInput` 没有授权覆盖字段，需要随后调用 `core.memory.updateEvidenceAuthorization()`。这些标记不限制召回、list/read API、MCP 工具、适配器注入、派生记录、导出、日志或宿主自写代码。
 
 ### 召回与画像整理
@@ -86,11 +88,11 @@ Core 会关闭自己创建的 SQLite store、向量检索器或关键词检索�
 
 ### 会话辅助方法
 
-| 方法                                                | 行为                                                                                                                                              |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `handleConversationTurn(input)`                     | 保存用户消息、召回合格记忆并调用 chat model。同一个 `conversationId` 复用活跃的内存窗口；`systemPrompt` 与 `seedTurns` 只在首次创建该会话时生效。 |
-| `recordAssistantReply({ conversationId, content })` | 把助手回复加入已有交互窗口，供后续用户短回答结合上下文解析。它永远不创建 evidence；未知会话 id 会被忽略。                                         |
-| `dropConversation(conversationId)`                  | 丢弃活跃的内存会话与交互窗口，不删除持久记忆。下一次调用可建立新的 prompt 与 seed turns。                                                         |
+| 方法                                                | 行为                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `handleConversationTurn(input)`                     | 保存用户消息、召回合格记忆、调用 chat model，并落一条可见 interaction context。显式 `episodeId` 会生效，否则按 idle 自动切段。一个 Core 生命周期内，`conversationId` 永久绑定单一 subject，跨 subject 复用会被拒绝；`systemPrompt` 与 `seedTurns` 只在该 subject 绑定首次建立时生效。 |
+| `recordAssistantReply({ conversationId, content })` | 把助手回复加入该 `conversationId` 当前绑定 subject 的交互窗口，供后续用户短回答结合上下文解析。它永远不创建 evidence；未知会话 id 会被忽略。                                                                                                                                          |
+| `dropConversation(conversationId)`                  | 丢弃活跃内存会话与交互窗口，但保留 subject 绑定，以拒绝另一身份的迟到回复。不删除持久记忆；同一 subject 可用新 prompt 与 seed turns 重建，另一 subject 必须使用新 id。                                                                                                                |
 
 助手文本可以作为 interaction context 保存，但永远拿不到 evidence id，也不能满足 cognition 的溯源要求。
 
@@ -100,7 +102,7 @@ Core 会关闭自己创建的 SQLite store、向量检索器或关键词检索�
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `health()` | 返回内建 OpenAI-compatible client 与向量 retriever 的 `{ llmReady, embedReady }`。自定义注入实现即使可用也可能仍返回 `false`，它不是通用能力探测器。                                                                           |
 | `usage()`  | 返回 Core 自持 client 的累计 `{ llm, embed, total }` token 计数。每个桶含 `promptTokens`、`completionTokens`、`totalTokens`、`callsWithUsage`。端点不返回 usage 时不会计入；注入 retriever 的 embed 用量由宿主管理，这里为零。 |
-| `close()`  | 关闭 Core 所有的 store 与自建 retriever。关闭后不要继续使用；注入 retriever 仍由调用方负责。                                                                                                                                   |
+| `close()`  | 先清除内存会话文本和 subject 绑定，再关闭 Core 所有 store 与自建 retriever；之后拒绝会话摄入/回复追加。注入 retriever 仍由调用方负责；重复调用安全。                                                                           |
 
 ## 受控记忆管理 API
 
@@ -117,18 +119,21 @@ Core 会关闭自己创建的 SQLite store、向量检索器或关键词检索�
 
 ### 状态、授权与删除
 
-| 方法                                 | 未找到或拒绝时                                           | 说明                                                               |
-| ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------ |
-| `invalidateCognition(input)`         | 不存在返回 `null`。                                      | 设置 `invalidAt`；`reason` 必填。                                  |
-| `archiveCognition(input)`            | 不存在返回 `null`。                                      | 设置 `archivedAt`；`reason` 必填。                                 |
-| `muteCognition(input)`               | 不存在返回 `null`。                                      | 静音或恢复召回，不修改 confidence；`reason` 必填。                 |
-| `updateEvidenceAuthorization(input)` | 不存在返回 `null`。                                      | 修改 `allowCloudRead` 和/或 `allowInference`；无变化时不写审计。   |
-| `mergeCognition(input)`              | 缺失、跨 subject、失效或归档目标会抛错。                 | 去重迁移溯源链、重算目标 confidence，并让 source 失效。            |
-| `removeEvidenceSafely(input)`        | 有引用且未 force 时返回 `{ removed: false, blockers }`。 | `force: true` 会在同一数据库事务内清掉引用关系。                   |
-| `removeCognitionSafely(input)`       | 不存在时 `removed: false`。                              | 删除 cognition 与溯源链，不删除 evidence 本体。                    |
-| `resetSubject(input)`                | 返回删除计数。                                           | 破坏性重置；`reason` 可选，因为该 subject 的审计历史也会一并清除。 |
+| 方法                                 | 未找到或拒绝时                                               | 说明                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `invalidateCognition(input)`         | 不存在返回 `null`。                                          | 设置 `invalidAt`；`reason` 必填。                                                                     |
+| `archiveCognition(input)`            | 不存在返回 `null`。                                          | 设置 `archivedAt`；`reason` 必填。                                                                    |
+| `muteCognition(input)`               | 不存在返回 `null`。                                          | 静音或恢复召回，不修改 confidence；`reason` 必填。                                                    |
+| `updateEvidenceAuthorization(input)` | 不存在返回 `null`。                                          | 修改 `allowCloudRead` 和/或 `allowInference`；无变化时不写审计。                                      |
+| `mergeCognition(input)`              | 缺失、跨 subject、失效或归档目标会抛错。                     | 去重迁移溯源链、重算目标 confidence，并让 source 失效。                                               |
+| `reinforceCognition(input)`          | cognition/evidence 缺失或跨 subject、认知已失效/归档时抛错。 | 把已有 evidence 作为 `support` 或 `contradict` 挂到认知并重算 confidence/status；同关系重复调用幂等。 |
+| `removeEvidenceSafely(input)`        | 有引用且未 force 时返回 `{ removed: false, blockers }`。     | `force: true` 会在同一数据库事务内删除每个关联事件与认知（派生文本不可拆分），再墓碑化撤回证据。      |
+| `removeCognitionSafely(input)`       | 不存在时 `removed: false`。                                  | 删除 cognition 与溯源链，不删除 evidence 本体。                                                       |
+| `resetSubject(input)`                | 返回删除计数。                                               | 破坏性重置；`reason` 可选，因为该 subject 的审计历史也会一并清除。                                    |
 
 成功的管理变更会把 metadata 与 reason 写入 `management_log`，只有 `resetSubject` 例外：它会主动删除该日志。被拒绝和无变化的操作不产生审计行。
+
+强制删除证据是撤回活动记忆，不是逐行物理隐私擦除：证据墓碑为审计保留；所有依赖它的 event/cognition 会删除，避免派生文本继续从列表、图、导出或内建模型路径出现。`interaction_context` 没有 `evidence_id`，此定向入口不会删除它；完整 subject 级隐私清除请用 `resetSubject`。
 
 `resetSubject` 会在事务内删除该 subject 的 evidence、event、cognition、关系行、interaction context、semantic resolution 与管理审计。返回计数只覆盖 evidence、event、cognition 和 audit。召回索引随后通过 `indexAll([])` 清理，不属于数据库事务；若使用异步外部索引，方法可能在索引完全清空前返回。
 
@@ -146,8 +151,11 @@ core.portable.importBundle(bundle, { mode: 'dryRun' | 'merge' })
 
 - `dryRun` 只校验和统计计划写入，不修改数据库。
 - `merge` 经 Core facade 在事务内导入，并按 id 与 evidence `originId` 去重。
+- 只有完整导出实体、自有溯源关系及 event 消化状态都与目标一致时，同 id 才算幂等重复；同 id 碰撞会整包拒绝，不能把 bundle 派生文本绑定到无关目标行或其更宽授权。
+- 导入会在写入前拒绝非法日期、枚举、关系、interaction context 哈希，以及孤儿或重复的 semantic resolution。
+- 删除跨恢复保持单调：旧备份不能复活已有墓碑的 evidence，也不能复活依赖它的派生实体。
 - Bundle schema v2 可导入 schema v1；缺失的交互段按空处理。
-- 0.6.x 没有 `replace` 导入模式。
+- 1.0 没有 `replace` 导入模式。
 
 导入后，如需从导入画像重建 retriever 索引，请调用 `updateProfile()`。
 

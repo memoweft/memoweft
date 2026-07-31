@@ -13,6 +13,7 @@ import { config, cloudReadDefault, type MemoWeftConfig } from '../config.ts';
 import { systemClock, type Clock } from '../clock.ts';
 import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';
 import type { Evidence, EvidenceInput, SourceKind } from './model.ts';
+import { registerEvidenceTombstoneReader } from './tombstoneRegistry.ts';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS evidence (
@@ -154,6 +155,7 @@ export class SqliteEvidenceStore implements EvidenceStore {
     this.clock = clock;
     this.db.exec(SCHEMA);
     this.migrate();
+    registerEvidenceTombstoneReader(this, this.db);
   }
 
   /** 幂等迁移：为旧库补上 nullable 的 preceding_ai_context 列；新库由 SCHEMA 直接包含。

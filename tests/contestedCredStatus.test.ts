@@ -158,18 +158,19 @@ function peek(core: ReturnType<typeof createMemoWeftCore>, id: string) {
     credStatus: c.credStatus,
     supportCount: support.length,
     contradictCount: c.sources.filter((l) => l.relation === 'contradict').length,
-    firstSupportId: support[0]?.evidenceId,
   };
 }
 
-test('端到端：删证据后重算——支撑仍占优的认知落到 contested 而非 conflicted', async () => {
+test('端到端：补支撑证据后重算——支撑仍占优的认知落到 contested 而非 conflicted', async () => {
   const { core, dbPath, cleanup } = freshCore();
   try {
     const id = await seedWithLinks(core, dbPath, 4, 1);
-    // 触发 managementApi 的重算路径：删掉一条【支撑】证据，剩 3 支撑 1 反证，支撑仍占优。
-    core.memory.removeEvidenceSafely({
-      evidenceId: peek(core, id).firstSupportId!,
-      force: true,
+    // force 删除会按 rc.2 删除整条 cognition；这里以补一条支撑触发仍适用的重算路径。
+    const evidence = await core.ingestUserMessage({ content: 'tea once more', subjectId: 'u' });
+    core.memory.reinforceCognition({
+      cognitionId: id,
+      evidenceId: evidence.id,
+      relation: 'support',
       reason: 'test',
     });
 
@@ -181,7 +182,7 @@ test('端到端：删证据后重算——支撑仍占优的认知落到 contest
   }
 });
 
-test('端到端：反证追平后落回 conflicted（中间态不是单向棘轮）', async () => {
+test('端到端：补反证后追平落回 conflicted（中间态不是单向棘轮）', async () => {
   const { core, dbPath, cleanup } = freshCore();
   try {
     const id = await seedWithLinks(core, dbPath, 2, 1);
@@ -189,10 +190,12 @@ test('端到端：反证追平后落回 conflicted（中间态不是单向棘轮
     assert.equal(before.supportCount, 2);
     assert.equal(before.contradictCount, 1);
 
-    // 删掉一条支撑 → 1 支撑 1 反证，回到一比一对峙
-    core.memory.removeEvidenceSafely({
-      evidenceId: before.firstSupportId!,
-      force: true,
+    // 再补一条反证 → 2 支撑 2 反证，回到对峙。
+    const evidence = await core.ingestUserMessage({ content: 'coffee again', subjectId: 'u' });
+    core.memory.reinforceCognition({
+      cognitionId: id,
+      evidenceId: evidence.id,
+      relation: 'contradict',
       reason: 'test',
     });
 
@@ -210,12 +213,12 @@ test('图谱：contested 单独标色、计入 contestedCount，且仍被 onlyCo
   const { core, dbPath, cleanup } = freshCore();
   try {
     const id = await seedWithLinks(core, dbPath, 4, 1);
-    // 直接往 store 加链【不会】重算 credStatus——重算只发生在写路径上，而目前没有任何 API
-    //   能"给指定认知补证据并重算"（那正是 A6 reinforceCognition 要补的缺口）。
-    //   这里借删除路径触发一次重算：删掉一条支撑后剩 3 支撑 1 反证，支撑仍占优。
-    core.memory.removeEvidenceSafely({
-      evidenceId: peek(core, id).firstSupportId!,
-      force: true,
+    // 直接往 store 加链不会重算 credStatus；通过公开 reinforceCognition 触发重算。
+    const evidence = await core.ingestUserMessage({ content: 'tea once more', subjectId: 'u' });
+    core.memory.reinforceCognition({
+      cognitionId: id,
+      evidenceId: evidence.id,
+      relation: 'support',
       reason: 'test',
     });
     assert.equal(peek(core, id).credStatus, 'contested', '前提：已落到 contested');

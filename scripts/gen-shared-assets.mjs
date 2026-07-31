@@ -1727,7 +1727,7 @@ function seedBundle() {
           conversationId: 'conv-1',
           episodeId: 'ep-1',
           context: [{ role: 'user', content: 'hi' }],
-          contextHash: 'abc123',
+          contextHash: hashContext([{ role: 'user', content: 'hi' }]),
           createdAt: '2026-01-01T00:00:00.500Z',
         },
       ],
@@ -1818,9 +1818,46 @@ function buildBundleFixtures() {
       }),
     },
     {
-      label: 'subject-mismatch-warning',
+      label: 'duplicate-eventEvidence-link',
+      bundle: clone((b) => {
+        b.data.eventEvidence.push({ ...b.data.eventEvidence[0] });
+      }),
+    },
+    {
+      label: 'duplicate-cognitionEvidence-link',
+      bundle: clone((b) => {
+        b.data.cognitionEvidence.push({ ...b.data.cognitionEvidence[0] });
+      }),
+    },
+    {
+      label: 'subject-mismatch-error',
       bundle: clone((b) => {
         b.data.evidence[0].subjectId = 'other';
+      }),
+    },
+    // 时间戳跨语言严校验：只接受真实日期 + T 时间 + Z/±HH:MM；禁 Date.parse/RFC 宽松回退。
+    {
+      label: 'timestamp-offset-ok',
+      bundle: clone((b) => {
+        b.data.evidence[0].occurredAt = '2026-02-28T23:59:59.123+08:00';
+      }),
+    },
+    {
+      label: 'timestamp-feb30-rejected',
+      bundle: clone((b) => {
+        b.data.evidence[0].occurredAt = '2026-02-30T12:00:00Z';
+      }),
+    },
+    {
+      label: 'timestamp-rfc2822-rejected',
+      bundle: clone((b) => {
+        b.exportedAt = 'Fri, 31 Jul 2026 12:00:00 GMT';
+      }),
+    },
+    {
+      label: 'timestamp-no-zone-rejected',
+      bundle: clone((b) => {
+        b.data.cognitions[0].updatedAt = '2026-01-01T00:00:03';
       }),
     },
     {
@@ -1833,6 +1870,12 @@ function buildBundleFixtures() {
       label: 'unconsolidated-unknown-warning',
       bundle: clone((b) => {
         b.data.unconsolidatedEventIds = ['ghost'];
+      }),
+    },
+    {
+      label: 'interaction-context-hash-mismatch',
+      bundle: clone((b) => {
+        b.data.interactionContexts[0].contextHash = '0'.repeat(64);
       }),
     },
     // 字段值校验（越界枚举 / 非法 confidence）—— 导入路径唯一守门，跨语言必须逐字段一致。

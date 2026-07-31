@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+from copy import deepcopy
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any
@@ -18,6 +19,7 @@ from memoweft.store.event import SqliteEventStore
 from memoweft.store.evidence import SqliteEvidenceStore
 from memoweft.store.interaction_context import SqliteInteractionContextStore
 from memoweft.store.semantic_resolution import SqliteSemanticResolutionStore
+from memoweft.types import Evidence
 
 
 def _load() -> Any:
@@ -77,5 +79,71 @@ def test_import_roundtrip_preserves_data() -> None:
         assert again.counts.evidence == 0 and again.counts.cognitions == 0 and again.counts.events == 0
         assert again.duplicates.evidence == 2 and again.duplicates.events == 1 and again.duplicates.cognitions == 1
         assert len(st["evidence_store"].all()) == 2
+    finally:
+        db.close()
+
+
+def test_same_evidence_id_with_different_payload_or_permissions_is_fatal() -> None:
+    bundle = _load()
+    db = open_db(":memory:")
+    try:
+        st = _stores(db)
+        source = next(e for e in bundle["data"]["evidence"] if e["id"] == "ev-1")
+        st["evidence_store"].insert(
+            Evidence(
+                id=source["id"],
+                subject_id=source["subjectId"],
+                source_kind=source["sourceKind"],
+                host_id=source["hostId"],
+                origin_id=source.get("originId"),
+                occurred_at=source["occurredAt"],
+                recorded_at=source["recordedAt"],
+                raw_content="target public collision",
+                summary="target public collision",
+                allow_local_read=True,
+                allow_cloud_read=True,
+                allow_inference=True,
+                corrects_evidence_id=source.get("correctsEvidenceId"),
+            )
+        )
+
+        plan = import_bundle(bundle, **st, transaction=make_transaction(db))
+
+        assert not plan.valid
+        assert any("evidence ev-1" in error for error in plan.errors)
+        assert plan.counts.evidence == plan.counts.events == plan.counts.cognitions == 0
+        assert st["cognition_store"].all("owner") == []
+    finally:
+        db.close()
+
+
+def test_same_event_or_cognition_id_with_different_payload_or_links_is_fatal() -> None:
+    bundle = _load()
+    db = open_db(":memory:")
+    try:
+        st = _stores(db)
+        assert import_bundle(bundle, **st, transaction=make_transaction(db)).valid
+
+        payload_collision = deepcopy(bundle)
+        payload_collision["data"]["events"][0]["summary"] = "colliding event"
+        payload_collision["data"]["cognitions"][0]["content"] = "colliding cognition"
+        payload_plan = import_bundle(
+            payload_collision, **st, transaction=make_transaction(db)
+        )
+        assert not payload_plan.valid
+        assert any("event " in error for error in payload_plan.errors)
+        assert any("cognition " in error for error in payload_plan.errors)
+
+        relation_collision = deepcopy(bundle)
+        relation_collision["data"]["eventEvidence"] = relation_collision["data"][
+            "eventEvidence"
+        ][:1]
+        relation_collision["data"]["cognitionEvidence"][0]["relation"] = "contradict"
+        relation_plan = import_bundle(
+            relation_collision, **st, transaction=make_transaction(db)
+        )
+        assert not relation_plan.valid
+        assert any("event " in error for error in relation_plan.errors)
+        assert any("cognition " in error for error in relation_plan.errors)
     finally:
         db.close()

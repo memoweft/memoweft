@@ -1,17 +1,19 @@
 """交互上下文存储（v0.6），与 TypeScript 存储实现保持契约一致。
 
-只存用户可见的非证据上下文快照，不产 Cognition、永不成为 Evidence。record 按 context_hash 查重幂等。
+只存用户可见的非证据上下文快照，不产 Cognition、永不成为 Evidence。record 按
+subject_id + conversation_id + episode_id + context_hash 查重幂等，不能让相同文本跨用户/会话/episode 互相吞掉。
 hash_context 用 json.dumps(ensure_ascii=False, separators) 复刻 JS JSON.stringify 字节。
 """
+
 from __future__ import annotations
 
-import hashlib
 import json
 import sqlite3
 import uuid
 from typing import Optional
 
 from ..clock import Clock, system_clock, to_iso_z
+from ..context_hash import hash_context as hash_context
 from ..types import InteractionContext, InteractionContextInput, VisibleTurn
 from ._rows import row_all, row_one
 
@@ -21,14 +23,10 @@ def _turns_to_payload(context: list[VisibleTurn]) -> list[dict[str, str]]:
     return [{"role": t.role, "content": t.content} for t in context]
 
 
-def hash_context(context: list[VisibleTurn]) -> str:
-    """计算 sha256(JSON.stringify(context)) 内容指纹，并保持与 JS 相同的序列化字节。"""
-    j = json.dumps(_turns_to_payload(context), ensure_ascii=False, separators=(",", ":"))
-    return hashlib.sha256(j.encode("utf-8")).hexdigest()
-
-
 def _context_to_json(context: list[VisibleTurn]) -> str:
-    return json.dumps(_turns_to_payload(context), ensure_ascii=False, separators=(",", ":"))
+    return json.dumps(
+        _turns_to_payload(context), ensure_ascii=False, separators=(",", ":")
+    )
 
 
 def _context_from_json(s: str) -> list[VisibleTurn]:
@@ -55,9 +53,15 @@ class SqliteInteractionContextStore:
         self._clock = clock
 
     def record(self, inp: InteractionContextInput) -> InteractionContext:
-        # 幂等:按 context_hash 查重(非 DB 唯一约束——避免便携包跨库导入撞车)。
+        # 幂等：同 subject + conversation + episode 内按 context_hash 查重。相同文本可合法出现在
+        # 不同用户、会话和 episode，不能跨归属返回别的上下文记录。
         ch = hash_context(inp.context)
-        existing = row_one(self._db, "SELECT * FROM interaction_context WHERE context_hash = ?", (ch,))
+        existing = row_one(
+            self._db,
+            "SELECT * FROM interaction_context "
+            "WHERE subject_id = ? AND conversation_id = ? AND episode_id = ? AND context_hash = ?",
+            (inp.subject_id, inp.conversation_id, inp.episode_id, ch),
+        )
         if existing is not None:
             return _from_row(existing)
         ctx = InteractionContext(
@@ -77,8 +81,13 @@ class SqliteInteractionContextStore:
             "INSERT INTO interaction_context (id, subject_id, conversation_id, episode_id, context_json, context_hash, created_at) "
             "VALUES (?,?,?,?,?,?,?)",
             (
-                ctx.id, ctx.subject_id, ctx.conversation_id, ctx.episode_id,
-                _context_to_json(ctx.context), ctx.context_hash, ctx.created_at,
+                ctx.id,
+                ctx.subject_id,
+                ctx.conversation_id,
+                ctx.episode_id,
+                _context_to_json(ctx.context),
+                ctx.context_hash,
+                ctx.created_at,
             ),
         )
 
@@ -94,7 +103,10 @@ class SqliteInteractionContextStore:
                 (subject_id,),
             )
         else:
-            rows = row_all(self._db, "SELECT * FROM interaction_context ORDER BY created_at ASC, rowid ASC")
+            rows = row_all(
+                self._db,
+                "SELECT * FROM interaction_context ORDER BY created_at ASC, rowid ASC",
+            )
         return [_from_row(r) for r in rows]
 
     def by_conversation(self, conversation_id: str) -> list[InteractionContext]:
@@ -110,5 +122,7 @@ class SqliteInteractionContextStore:
 
     def remove_by_subject(self, subject_id: str) -> int:
         cur = self._db.cursor()
-        cur.execute("DELETE FROM interaction_context WHERE subject_id = ?", (subject_id,))
+        cur.execute(
+            "DELETE FROM interaction_context WHERE subject_id = ?", (subject_id,)
+        )
         return cur.rowcount

@@ -141,13 +141,72 @@ test(':memory: 库视为新库，盖最新版', () => {
   }
 });
 
-test('迁移器：假 v2 迁移会 ALTER + 迁移前备份 + 升版号（不碰生产迁移列表）', () => {
+test('v2：rc.1 撤回台账对应的 cognition 与关联行会整体删除，并按框架备份/升版', () => {
+  const { dir, cleanup } = tempDir();
+  try {
+    const path = join(dir, 'rc1.db');
+    const seed = openStores(path);
+    const evidence = seed.evidenceStore.put({
+      subjectId: 'owner',
+      sourceKind: 'spoken',
+      hostId: 'test',
+      rawContent: '已经撤回的原话',
+    });
+    const cognition = seed.cognitionStore.put({
+      subjectId: 'owner',
+      content: '仍会泄露的旧派生认知',
+      contentType: 'preference',
+      formedBy: 'stated',
+      confidence: 600,
+      credStatus: 'limited',
+      evidence: [{ evidenceId: evidence.id, relation: 'support' }],
+    });
+    seed.evidenceStore.remove(evidence.id);
+    seed.db
+      .prepare(
+        'INSERT INTO evidence_retraction (cognition_id, evidence_id, retracted_at) VALUES (?,?,?)',
+      )
+      .run(cognition.id, evidence.id, '2026-07-30T00:00:00.000Z');
+    seed.db.exec('PRAGMA user_version = 1');
+    seed.close();
+
+    const db = new DatabaseSync(path);
+    try {
+      const result = runMigrations(db, { dbPath: path, fresh: false });
+      assert.deepEqual(result.applied, [2]);
+      assert.equal(result.to, LATEST_SCHEMA_VERSION);
+      assert.ok(result.backupPath && existsSync(result.backupPath), 'v2 数据迁移前留下备份');
+      assert.equal(
+        Number(db.prepare('SELECT COUNT(*) AS n FROM cognition').get()?.n),
+        0,
+        '旧派生认知被删除',
+      );
+      assert.equal(
+        Number(db.prepare('SELECT COUNT(*) AS n FROM cognition_evidence').get()?.n),
+        0,
+        '旧认知关联行被删除',
+      );
+      assert.equal(
+        Number(db.prepare('SELECT COUNT(*) AS n FROM evidence_retraction').get()?.n),
+        0,
+        '撤回台账行被删除',
+      );
+      assert.equal(uv(db), 2);
+    } finally {
+      db.close();
+    }
+  } finally {
+    cleanup();
+  }
+});
+
+test('迁移器：假 v3 迁移会 ALTER + 迁移前备份 + 升版号（不碰生产迁移列表）', () => {
   const { dir, cleanup } = tempDir();
   try {
     const path = join(dir, 'v1.db');
-    openStores(path).close(); // 先建一个当前版本(v1)的库
-    const fakeV2: Migration = {
-      version: 2,
+    openStores(path).close(); // 先建一个当前版本(v2)的库
+    const fakeV3: Migration = {
+      version: 3,
       name: 'test-add-col',
       up: (db) => db.exec('ALTER TABLE cognition ADD COLUMN test_col TEXT'),
     };
@@ -156,13 +215,13 @@ test('迁移器：假 v2 迁移会 ALTER + 迁移前备份 + 升版号（不碰�
       const r = runMigrations(db, {
         dbPath: path,
         fresh: false,
-        migrations: [...MIGRATIONS, fakeV2],
+        migrations: [...MIGRATIONS, fakeV3],
       });
-      assert.equal(r.from, 1);
-      assert.equal(r.to, 2);
-      assert.deepEqual(r.applied, [2]);
+      assert.equal(r.from, 2);
+      assert.equal(r.to, 3);
+      assert.deepEqual(r.applied, [3]);
       assert.ok(r.backupPath && existsSync(r.backupPath), '迁移前备份文件在');
-      assert.equal(uv(db), 2);
+      assert.equal(uv(db), 3);
       const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{
         name: string;
       }>;
@@ -183,8 +242,8 @@ test('dry-run：只报计划、不改库', () => {
   try {
     const path = join(dir, 'v1.db');
     openStores(path).close();
-    const fakeV2: Migration = {
-      version: 2,
+    const fakeV3: Migration = {
+      version: 3,
       name: 'test',
       up: (db) => db.exec('ALTER TABLE cognition ADD COLUMN x TEXT'),
     };
@@ -193,12 +252,12 @@ test('dry-run：只报计划、不改库', () => {
       const r = runMigrations(db, {
         dbPath: path,
         fresh: false,
-        migrations: [...MIGRATIONS, fakeV2],
+        migrations: [...MIGRATIONS, fakeV3],
         dryRun: true,
       });
       assert.equal(r.dryRun, true);
-      assert.deepEqual(r.applied, [2]);
-      assert.equal(uv(db), 1, '库版本号没被动');
+      assert.deepEqual(r.applied, [3]);
+      assert.equal(uv(db), 2, '库版本号没被动');
       const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{
         name: string;
       }>;
@@ -216,8 +275,8 @@ test('迁移抛错 → 整段回滚，版本号不变、库不留半迁移', () 
   try {
     const path = join(dir, 'v1.db');
     openStores(path).close();
-    const badV2: Migration = {
-      version: 2,
+    const badV3: Migration = {
+      version: 3,
       name: 'test-boom',
       up: (db) => {
         db.exec('ALTER TABLE cognition ADD COLUMN half TEXT');
@@ -227,10 +286,10 @@ test('迁移抛错 → 整段回滚，版本号不变、库不留半迁移', () 
     const db = new DatabaseSync(path);
     try {
       assert.throws(
-        () => runMigrations(db, { dbPath: path, fresh: false, migrations: [...MIGRATIONS, badV2] }),
+        () => runMigrations(db, { dbPath: path, fresh: false, migrations: [...MIGRATIONS, badV3] }),
         /boom/,
       );
-      assert.equal(uv(db), 1, '版本号仍是 1（未升）');
+      assert.equal(uv(db), 2, '版本号仍是 2（未升）');
       const cols = db.prepare("SELECT name FROM pragma_table_info('cognition')").all() as Array<{
         name: string;
       }>;

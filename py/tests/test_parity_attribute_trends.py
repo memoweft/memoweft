@@ -17,7 +17,7 @@ from memoweft.store import open_db
 from memoweft.store.cognition import SqliteCognitionStore
 from memoweft.store.evidence import SqliteEvidenceStore
 from memoweft.trends import aggregate_trends
-from memoweft.types import Cognition, EvidenceInput, EvidenceLink, Lang, ModelTier, SourceKind
+from memoweft.types import Cognition, CognitionInput, EvidenceInput, EvidenceLink, Lang, ModelTier, SourceKind
 
 
 def _store_clock() -> datetime:
@@ -99,6 +99,64 @@ def test_attribute_matches_ts() -> None:
         assert got == w["hypotheses"], f"[{lang}] hypotheses 分叉"
         assert result.considered_phenomena == w["consideredPhenomena"]
         assert result.llm_calls == w["llmCalls"]
+        db.close()
+
+
+def test_attribute_isolates_time_window_candidates_by_subject() -> None:
+    """另一 subject 的时间窗 evidence 既不能进入 prompt，也不能挂为当前假设 support。"""
+    db = open_db(":memory:")
+    ev = SqliteEvidenceStore(db, clock=_store_clock)
+    cog = SqliteCognitionStore(db, clock=_store_clock)
+    try:
+        sleep_1 = ev.put(
+            EvidenceInput(
+                subject_id="owner", source_kind="spoken", host_id="local",
+                occurred_at="2026-01-01T22:00:00.000Z", raw_content="昨晚没睡好",
+            )
+        )
+        sleep_2 = ev.put(
+            EvidenceInput(
+                subject_id="owner", source_kind="spoken", host_id="local",
+                occurred_at="2026-01-01T23:00:00.000Z", raw_content="今天也没睡好",
+            )
+        )
+        owner_cause = ev.put(
+            EvidenceInput(
+                subject_id="owner", source_kind="observed", host_id="local",
+                occurred_at="2026-01-01T03:00:00.000Z", raw_content="凌晨3点还在打游戏", allow_cloud_read=True,
+            )
+        )
+        other_cause = ev.put(
+            EvidenceInput(
+                subject_id="other-user", source_kind="observed", host_id="other-host",
+                occurred_at="2026-01-01T04:00:00.000Z", raw_content="另一用户的私密睡眠记录：凌晨四点仍在工作", allow_cloud_read=True,
+            )
+        )
+        cog.put(
+            CognitionInput(
+                subject_id="owner", content="最近总没睡好", content_type="state", formed_by="stated",
+                confidence=300, cred_status="low",
+                evidence=[
+                    EvidenceLink(evidence_id=sleep_1.id, relation="support"),
+                    EvidenceLink(evidence_id=sleep_2.id, relation="support"),
+                ],
+            )
+        )
+        llm = _StubLLM(
+            json.dumps(
+                {"hypotheses": [{"content": "可能是熬夜打游戏导致没睡好", "based_on_evidence_ids": [owner_cause.id]}]},
+                ensure_ascii=False,
+            )
+        )
+
+        result = attribute("owner", evidence_store=ev, cognition_store=cog, llm=llm, clock=_now, lang="zh")
+
+        assert len(result.hypotheses) == 1, "当前用户自己的候选仍可归因"
+        prompt = llm.seen[0][1].content
+        assert other_cause.raw_content not in prompt, "另一用户文本绝不进入 LLM prompt"
+        assert other_cause.id not in result.hypotheses[0].based_on_evidence_ids, "另一用户 evidence 绝不成为当前假设 support"
+        assert owner_cause.id in result.hypotheses[0].based_on_evidence_ids, "只接受当前用户的候选"
+    finally:
         db.close()
 
 

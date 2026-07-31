@@ -1,11 +1,15 @@
 """schema parity:Python 建的库结构与 TS(shared/parity/schema.json)逐表逐列一致。"""
 from __future__ import annotations
 
+import sqlite3
 from typing import Any
+
+import pytest
 
 from conftest import parity
 
-from memoweft.store import open_db, user_version
+from memoweft.store import SqliteCognitionStore, SqliteEvidenceStore, open_db, user_version
+from memoweft.types import CognitionInput, EvidenceInput, EvidenceLink
 
 
 def _table_info(db: Any, table: str) -> list[dict[str, Any]]:
@@ -25,3 +29,52 @@ def test_schema_matches_ts() -> None:
             assert got_cols == want_cols, f"表 {table} 列结构分叉:\n got:  {got_cols}\n want: {want_cols}"
     finally:
         db.close()
+
+
+def test_existing_v1_db_migrates_retracted_cognition_before_stamping_v2(tmp_path: Any) -> None:
+    path = str(tmp_path / "rc1.db")
+    db = open_db(path)
+    evidence_store = SqliteEvidenceStore(db)
+    cognition_store = SqliteCognitionStore(db)
+    evidence = evidence_store.put(
+        EvidenceInput(subject_id="owner", source_kind="spoken", host_id="test", raw_content="已撤回原话")
+    )
+    cognition = cognition_store.put(
+        CognitionInput(
+            subject_id="owner",
+            content="旧派生认知",
+            content_type="preference",
+            formed_by="stated",
+            confidence=600,
+            cred_status="limited",
+            evidence=[EvidenceLink(evidence_id=evidence.id, relation="support")],
+        )
+    )
+    evidence_store.remove(evidence.id)
+    db.execute(
+        "INSERT INTO evidence_retraction (cognition_id, evidence_id, retracted_at) VALUES (?,?,?)",
+        (cognition.id, evidence.id, "2026-07-30T00:00:00.000Z"),
+    )
+    db.execute("PRAGMA user_version = 1")
+    db.close()
+
+    upgraded = open_db(path)
+    try:
+        assert user_version(upgraded) == 2
+        assert upgraded.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 0
+        assert upgraded.execute("SELECT COUNT(*) FROM cognition_evidence").fetchone()[0] == 0
+        assert upgraded.execute("SELECT COUNT(*) FROM evidence_retraction").fetchone()[0] == 0
+    finally:
+        upgraded.close()
+
+
+def test_future_python_schema_is_rejected_before_any_upgrade(tmp_path: Any) -> None:
+    path = str(tmp_path / "future.db")
+    db = sqlite3.connect(path)
+    try:
+        db.execute("PRAGMA user_version = 3")
+        db.commit()
+    finally:
+        db.close()
+    with pytest.raises(RuntimeError, match="higher"):
+        open_db(path)

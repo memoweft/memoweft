@@ -179,7 +179,7 @@ export interface MemoryManagementAPI {
    *  零变更（两位都没动）原样返回、不落审计——审计只记真实发生的变更。 */
   updateEvidenceAuthorization(input: UpdateEvidenceAuthorizationInput): Evidence | null;
   /** 安全删证据：先查 event_evidence / cognition_evidence 引用；有引用且未 force → 拒绝并返回影响面；
-   *  force → 事务内删证据 + 清关联链 + 审计（blockers 快照进 detail）。 */
+   *  force → 事务内删每个关联事件与认知（派生文本不可拆分）、撤回证据并审计（blockers 快照进 detail）。 */
   removeEvidenceSafely(input: RemoveEvidenceSafelyInput): RemoveEvidenceResult;
   /** 删认知（连溯源链，包现有 remove）+ 审计；返回影响面（被断掉的链）。
    *  审计 detail 只存元数据 {contentType, formedBy, credStatus, linkCount}、【不存内容原文】
@@ -344,59 +344,21 @@ export function createMemoryManagementAPI(
         if (!evidenceStore.get(evidenceId)) return { removed: false, blockers: [] }; // 不存在（拒绝只发生在有引用时）
         const blockers = blockersOf(evidenceId);
         if (blockers.length > 0 && !force) return { removed: false, blockers }; // 拒绝：影响面摆给调用方，没改就不审计
-        // force（或无引用）：记撤回台账 → 清关联链 → 软删证据 → 审计，同一事务全成或全滚。
+        // force（或无引用）：event.summary 与 cognition.content 都是不可拆分的派生文本。
+        // 只断引用链会让已删除内容继续从管理列表、图、导出，甚至后续模型路径泄漏；
+        // 因此删每个关联事件和认知实体，再撤回证据，全部在同一事务内。
+        const affectedEventIds = new Set(
+          blockers.filter((b) => b.kind === 'event').map((b) => b.id),
+        );
+        for (const eventId of affectedEventIds) eventStore.remove(eventId);
         const affectedCogIds = new Set(
           blockers.filter((b) => b.kind === 'cognition').map((b) => b.id),
         );
-        // 记撤回关联（给 explainCognition 的 expiredCount）：必须在清 cognition_evidence 【之前】——
-        //   清完就问不出这条证据挂过哪些认知了。与置信度无关：active 链仍照旧清、置信度照旧下降。
-        const retractedAt = clock().toISOString();
-        for (const cogId of affectedCogIds)
-          cognitionStore.recordRetraction(cogId, evidenceId, retractedAt);
-        db.prepare('DELETE FROM event_evidence WHERE evidence_id = ?').run(evidenceId);
-        db.prepare('DELETE FROM cognition_evidence WHERE evidence_id = ?').run(evidenceId);
+        for (const cogId of affectedCogIds) cognitionStore.remove(cogId);
         // 这条证据的语义解析（用户原话的解开改写）跟着删——必须在删证据之前，删完就找不着关联了。
         //   漏掉它等于：用户点「删除这条」，界面说删了，而那句话的改写版永久留库、再无入口可删。
         semanticResolutionStore.removeByEvidenceIds([evidenceId]);
         evidenceStore.remove(evidenceId);
-        // 受影响认知按【剩余】链重算——与 mergeCognition 同口径（那里的注释写着「不留旧值撒谎」）。
-        //   不重算的话：一条靠 5 条证据攒到 stable 的认知，用户删掉其中 4 条后仍然是 stable，
-        //   系统对他的把握度停留在已经被撤回的证据上。credStatus 随之重导出，不留旧值。
-        //   blockers 按 (认知, relation) 逐条列出，同一认知可能出现多次 → 去重后各算一次。
-        for (const cogId of affectedCogIds) {
-          const cog = cognitionStore.get(cogId);
-          if (!cog || cog.invalidAt) continue; // 已失效的不动：它的置信度是历史快照，重算反而抹掉当时的判断
-          const links = cognitionStore.sourcesOf(cogId);
-          const supportCount = links.filter((l) => l.relation === 'support').length;
-          const contradictCount = links.filter((l) => l.relation === 'contradict').length;
-          // 接线点 6/8 · removeEvidenceSafely。hedged 按【剩余】链重派生：与置信度重算同口径。
-          //   **必须接**：用户只是删掉一条无关证据，若 hedged 蒸发，这条含糊自述会从 280
-          //   反弹回 600——删证据反而让系统更笃定。
-          //   顺序依赖（勿调换）：上面的 `semanticResolutionStore.removeByEvidenceIds` 在本循环【之前】
-          //   执行，所以被删证据的解析已同步消失，此处回查看到的正是删后视图。
-          let confidence = computeConfidence(
-            {
-              contentType: cog.contentType,
-              formedBy: cog.formedBy,
-              supportCount,
-              contradictCount,
-              hedged: hedgedOf(cog, links),
-            },
-            cfg,
-          );
-          if (cog.contentType === 'hypothesis')
-            confidence = Math.min(confidence, cfg.attribution.hypothesisCap); // 同 merge：假设类不因重算被抬成结论
-          cognitionStore.update(cogId, {
-            confidence,
-            credStatus: deriveCredStatus(
-              confidence,
-              contradictCount,
-              cog.contentType,
-              cfg,
-              supportCount,
-            ),
-          });
-        }
         managementLog.append({
           op: 'remove_evidence',
           targetKind: 'evidence',

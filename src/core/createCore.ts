@@ -11,7 +11,7 @@
  * vectorDbPath 口径：向量索引保持"一个 subject 一个实例"的存储契约；
  *   缺省与 dbPath 同库（vectors 表挂同一文件，testbench 同款）。
  */
-import { config as globalConfig, type MemoWeftConfig } from '../config.ts';
+import { config as globalConfig, resolveLang, type MemoWeftConfig } from '../config.ts';
 import { systemClock, type Clock } from '../clock.ts';
 import { openStores } from '../store/openStores.ts';
 import { perceive } from '../pipeline/perceive.ts';
@@ -46,6 +46,7 @@ import { loadLLMPool, type LLMPool } from '../llm/pool.ts';
 import { OpenAICompatClient, type LLMClient, type UsageStats } from '../llm/client.ts';
 import { createMemoryManagementAPI, type MemoryManagementAPI } from '../memory/managementApi.ts';
 import { exportBundle, importBundle, validateBundle } from '../portable/index.ts';
+import { isStrictIsoDateTime } from '../portable/validateBundle.ts';
 import type { MemoryBundle, ImportPlan, ValidateResult } from '../portable/model.ts';
 import type { ExportOptions } from '../portable/exportBundle.ts';
 import type { ImportOptions } from '../portable/importBundle.ts';
@@ -170,7 +171,7 @@ export interface ConversationInput {
   message: string;
   /** 会话标识；缺省 'default'。同 id 复用同一个 Conversation 实例（窗口连续）。 */
   conversationId?: string;
-  /** 交互 episode 标识（v0.6）：宿主可选传；不传则库内按 idle 间隔自动切分。落进本轮 interaction_context。 */
+  /** 交互 episode 标识（v0.6）：宿主可选传；不传则库内按 idle 间隔自动切分。每次 handleConversationTurn 都会落进本轮 interaction_context。 */
   episodeId?: string;
   subjectId?: string;
   hostId?: string;
@@ -357,7 +358,31 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     return { embedder: embedderRef, minSimilarity: o.minSimilarity, topK: o.topK };
   })();
 
-  const subjectOf = (explicit?: string) => explicit ?? cfg.identity.subjectId;
+  const requireNonEmptyId = (name: 'subjectId' | 'hostId' | 'conversationId', value: string) => {
+    if (value.length === 0) {
+      throw new Error(
+        resolveLang(cfg) === 'zh' ? `${name} 不能为空字符串` : `${name} must not be empty`,
+      );
+    }
+    return value;
+  };
+  const subjectOf = (explicit?: string) =>
+    requireNonEmptyId('subjectId', explicit ?? cfg.identity.subjectId);
+  const hostOf = (explicit?: string) =>
+    requireNonEmptyId('hostId', explicit ?? cfg.identity.hostId);
+  const occurredAtOf = (explicit?: string): string | undefined => {
+    if (explicit !== undefined && !isStrictIsoDateTime(explicit)) {
+      throw new Error(
+        resolveLang(cfg) === 'zh'
+          ? 'occurredAt 必须是带时区的有效 ISO-8601 日期时间'
+          : 'occurredAt must be a valid ISO-8601 date-time with a time zone',
+      );
+    }
+    return explicit;
+  };
+  // 配置身份也是稳定写路径的缺省值；构造时即验证，避免插件 onLoad 等早期路径产出不可恢复数据。
+  subjectOf();
+  hostOf();
 
   /**
    * 组一条认知的溯源链。`recall({ explain: true })` 与 `explainCognition` 共用这一段——
@@ -369,10 +394,11 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
    * 自筛；write-path 的 filterReadableByTier 不受影响。
    * 证据已不在（悬挂链，正常级联删不该发生）则跳过、不凭空造字段。
    */
-  function buildProvenance(cognitionId: string): RecalledEvidence[] {
+  function buildProvenance(cognitionId: string, subjectId: string): RecalledEvidence[] {
     return cognitionStore.sourcesOf(cognitionId).flatMap((link) => {
       const e = evidenceStore.get(link.evidenceId);
-      return e
+      // 防御导入或低层 store 造成的历史脏链：认知的解释永远不能带出另一 subject 的证据。
+      return e && e.subjectId === subjectId
         ? [
             {
               evidenceId: link.evidenceId,
@@ -391,6 +417,25 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
   // 交互会话缓存（v0.6）：conversationId → InteractionSession。裸 ingestUserMessage 路的上下文窗口 +
   //   episode 切分在此维护（与 conversations 分开：那是回话实例，这是纯上下文；不走回话的宿主只用 sessions）。
   const sessions = new Map<string, InteractionSession>();
+  // conversationId 的永久 subject 归属。recordAssistantReply 只带 conversationId，无法辨认跨主体
+  // 复用后的迟到回复属于谁；因此一个 Core 生命周期内绝不允许同 id 换 subject。drop 只清窗口，
+  // 不解除身份绑定；真正释放全部绑定由 close 完成。
+  const conversationSubjects = new Map<string, string>();
+  let closed = false;
+
+  function ensureOpen(): void {
+    if (closed) throw new Error('MemoWeft Core is closed');
+  }
+
+  function bindConversationSubject(conversationId: string, subjectId: string): void {
+    const current = conversationSubjects.get(conversationId);
+    if (current !== undefined && current !== subjectId) {
+      throw new Error(
+        `conversationId '${conversationId}' is permanently bound to subject '${current}' for this Core lifetime`,
+      );
+    }
+    if (current === undefined) conversationSubjects.set(conversationId, subjectId);
+  }
 
   // ── 插件（契约 v2）：hook 全在本工厂的方法边界触发，conversation.ts / ingest.ts 保持纯逻辑。──
   const plugins = options.plugins ?? [];
@@ -418,7 +463,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         }
         const clean: Observation = {
           kind: input.kind,
-          occurredAt: input.occurredAt,
+          occurredAt: occurredAtOf(input.occurredAt)!,
           content: input.content,
           originId: input.originId ?? null,
           meta: input.meta,
@@ -461,21 +506,26 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
 
   return {
     async ingestUserMessage(input) {
+      ensureOpen();
       // testbench/server.mjs 现行组合（perceive → put）的正式归位：Host 以后调这里，不再自己拼。
       // 交互上下文捕获（v0.6）：带 conversationId 时，用 InteractionSession 抓「上一轮 AI 那句」填进
       //   EvidenceInput.precedingAiContext 写入专用上下文列，下游 distill/consolidate 无需改动即可
       //   【裸 ingest 路】生效（修复「weftmate 全走裸 ingest、附和上下文从未捕获」的头号缺口）；并落一条
       //   interaction_context（供  resolver / 审计 / 导出）。不带 conversationId → precedingAiContext=null、不落上下文，行为同旧。
+      const subjectId = subjectOf(input.subjectId);
+      const hostId = hostOf(input.hostId);
+      const occurredAt = occurredAtOf(input.occurredAt);
       let precedingAiContext: string | null = null;
-      if (input.conversationId) {
-        const subjectId = subjectOf(input.subjectId);
-        let session = sessions.get(input.conversationId);
+      if (input.conversationId !== undefined) {
+        const conversationId = requireNonEmptyId('conversationId', input.conversationId);
+        bindConversationSubject(conversationId, subjectId);
+        let session = sessions.get(conversationId);
         if (!session) {
           session = new InteractionSession({ maxTurns: cfg.workingMemory.maxTurns });
-          sessions.set(input.conversationId, session);
+          sessions.set(conversationId, session);
         }
-        const atMs = input.occurredAt
-          ? Date.parse(input.occurredAt)
+        const atMs = occurredAt
+          ? Date.parse(occurredAt)
           : (options.clock ?? systemClock)().getTime();
         const turn = session.beginUserTurn(atMs, input.episodeId);
         precedingAiContext = turn.precedingAiContext;
@@ -485,7 +535,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         context.push({ role: 'user', content: input.content });
         stores.interactionContextStore.record({
           subjectId,
-          conversationId: input.conversationId,
+          conversationId,
           episodeId: turn.episodeId,
           context,
         });
@@ -495,11 +545,11 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         ...perceive(
           input.content,
           {
-            subjectId: input.subjectId,
-            hostId: input.hostId,
+            subjectId,
+            hostId,
             sourceKind: input.sourceKind,
             originId: input.originId,
-            occurredAt: input.occurredAt,
+            occurredAt,
           },
           cfg,
         ),
@@ -509,9 +559,10 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
 
     async ingestObservation(input) {
       const subjectId = subjectOf(input.subjectId);
+      for (const observation of input.observations) occurredAtOf(observation.occurredAt);
       const r = ingestObservations(subjectId, input.observations, {
         evidenceStore,
-        hostId: input.hostId,
+        hostId: hostOf(input.hostId),
         config: cfg,
       });
       // onObservation hook（方法边界触发、观察不改管线）：每条已提交观察触发一次。ingest.ts 保持纯逻辑。
@@ -524,17 +575,18 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     },
 
     async ingestToolResult(input) {
+      const occurredAt = occurredAtOf(input.occurredAt);
       // 同 ingestUserMessage 的 perceive → put 组合，sourceKind 固定为 'tool'：
       //   授权缺省由 put 按 sourceKind 兜底（toolDefaults：local✓/cloud✗/infer✓，最后防线）；带 originId 幂等。
       return evidenceStore.put(
         perceive(
           input.content,
           {
-            subjectId: input.subjectId,
-            hostId: input.hostId,
+            subjectId: subjectOf(input.subjectId),
+            hostId: hostOf(input.hostId),
             sourceKind: 'tool',
             originId: input.originId,
-            occurredAt: input.occurredAt,
+            occurredAt,
           },
           cfg,
         ),
@@ -543,9 +595,10 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
 
     async recall(input) {
       // 读路径 now 走注入 clock：前进 clock → 淡了的情绪衰减出局、事实留存。
+      const subjectId = subjectOf(input.subjectId);
       let items = await recallCognitions(
         input.query,
-        subjectOf(input.subjectId),
+        subjectId,
         { retriever, cognitionStore },
         cfg,
         (options.clock ?? systemClock)(),
@@ -557,7 +610,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       }
       if (!input.explain) return items;
       // 召回解释：门面已有两个 store → 逐条补支撑/反证证据链，不动 recallCognitions/RecallDeps。
-      return items.map((it) => ({ ...it, provenance: buildProvenance(it.id) }));
+      return items.map((it) => ({ ...it, provenance: buildProvenance(it.id, subjectId) }));
     },
 
     explainCognition(input) {
@@ -566,7 +619,7 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       if (!cog) return null;
       // 归属校验：跨 subject 一律 null。不做这层，任何拿到 id 的调用方都能读到别人的认知。
       if (cog.subjectId !== subjectOf(input.subjectId)) return null;
-      const provenance = buildProvenance(cog.id);
+      const provenance = buildProvenance(cog.id, cog.subjectId);
       return {
         id: cog.id,
         subjectId: cog.subjectId,
@@ -587,7 +640,12 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     },
 
     async handleConversationTurn(input) {
-      const id = input.conversationId ?? 'default';
+      ensureOpen();
+      const id = requireNonEmptyId('conversationId', input.conversationId ?? 'default');
+      const subjectId = subjectOf(input.subjectId);
+      const hostId = hostOf(input.hostId);
+      const occurredAt = occurredAtOf(input.occurredAt);
+      bindConversationSubject(id, subjectId);
       let convo = conversations.get(id);
       if (!convo) {
         convo = new Conversation({
@@ -602,12 +660,43 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
         });
         conversations.set(id, convo);
       }
+
+      // Conversation 负责「存证据 → 召回 → 回话」的工作窗口；InteractionSession 只负责
+      // 可导出的可见交互快照和 episode 切分。二者不互相替代，但同一条 Conversation 路要
+      // 同步推进，才能兑现 ConversationInput.episodeId 的 stable 契约。
+      let session = sessions.get(id);
+      if (!session) {
+        session = new InteractionSession({ maxTurns: cfg.workingMemory.maxTurns });
+        // 与首次创建 Conversation 时使用的续聊种子保持同一可见历史；不读取或合并其他
+        // sessions，保留裸 ingest 与 Conversation 两条入口的既有分治。
+        if (input.seedTurns) session.seed(input.seedTurns);
+        sessions.set(id, session);
+      }
+      const atMs = occurredAt ? Date.parse(occurredAt) : (options.clock ?? systemClock)().getTime();
+      const turn = session.beginUserTurn(atMs, input.episodeId);
+
       const outcome = await convo.handle(input.message, {
-        subjectId: input.subjectId,
-        hostId: input.hostId,
+        subjectId,
+        hostId,
         originId: input.originId,
-        occurredAt: input.occurredAt,
+        occurredAt,
       });
+      // 交互快照严格只含用户可见 user/assistant 文本。助手回复仍只在 context_json 中，
+      // 不经 EvidenceStore 写入，故不会成为证据或进入 evidence portable 字段。
+      const context: VisibleTurn[] = [];
+      if (turn.precedingAiContext) {
+        context.push({ role: 'assistant', content: turn.precedingAiContext });
+      }
+      context.push({ role: 'user', content: input.message });
+      stores.interactionContextStore.record({
+        subjectId,
+        conversationId: id,
+        episodeId: turn.episodeId,
+        context,
+      });
+      session.pushUser(input.message);
+      session.pushAssistant(outcome.reply);
+
       // onUserMessage hook（回复生成后在方法边界触发、观察不改管线；返回值丢弃）。conversation.ts 保持纯逻辑。
       if (plugins.some((p) => typeof p.onUserMessage === 'function')) {
         const msg: PluginUserMessage = {
@@ -621,18 +710,21 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     },
 
     recordAssistantReply(input) {
+      ensureOpen();
       // 宿主（自建 agent 循环）把生成的 AI 回复报告给 core：push 进该会话的 InteractionSession 窗口，
       //   下一轮 ingestUserMessage 就能把它当「上一轮 AI 那句」捕获。仅供后续上下文使用，不写入证据。
       //   该 conversationId 尚无 session（还没 ingest 过）→ 静默略过（下次 ingest 会建）。
-      const session = sessions.get(input.conversationId);
+      const session = sessions.get(requireNonEmptyId('conversationId', input.conversationId));
       if (session) session.pushAssistant(input.content);
     },
 
     dropConversation(conversationId) {
       // 丢弃活跃实例 → 下次该 conversationId 会重建（systemPrompt/seedTurns 仅在建实例时生效，
       //   不丢就换不了人设、也重种不了续聊窗口）。只删内存里的实例，不碰库。
-      conversations.delete(conversationId);
-      sessions.delete(conversationId); // 交互会话上下文窗口一并丢（v0.6）
+      const id = requireNonEmptyId('conversationId', conversationId);
+      conversations.delete(id);
+      sessions.delete(id); // 交互会话上下文窗口一并丢（v0.6）
+      // 身份绑定故意保留：迟到的旧 subject assistant reply 不得在同 id 重绑后进入新主体。
     },
 
     async updateProfile(input = {}) {
@@ -765,6 +857,12 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     },
 
     close() {
+      if (closed) return;
+      closed = true;
+      // 先释放可能含 user/assistant 原文的工作内存，再关闭持久层资源。
+      conversations.clear();
+      sessions.clear();
+      conversationSubjects.clear();
       stores.close();
       // 自建的向量/关键词召回器有独立连接要关；NullRetriever 没有 close，注入的归调用方。
       if (

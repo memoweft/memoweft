@@ -102,6 +102,148 @@ test('助手输出排除：上一轮 AI 文本不经 exportBundle 作为证据�
   }
 });
 
+test('handleConversationTurn：stable episodeId 落 interaction_context，AI 回复只作下一轮上下文而非 evidence', async () => {
+  const assistantReply = '只应存在于交互上下文的助手回复';
+  const llm = {
+    callCount: 0,
+    async chat() {
+      this.callCount++;
+      return assistantReply;
+    },
+  };
+  const core = createMemoWeftCore({
+    dbPath: ':memory:',
+    llm,
+  });
+  try {
+    await core.handleConversationTurn({
+      subjectId: 'subject-a',
+      conversationId: 'conversation-a',
+      episodeId: 'episode-explicit',
+      message: '第一轮用户消息',
+      occurredAt: '2026-07-31T08:00:00.000Z',
+    });
+    await core.handleConversationTurn({
+      subjectId: 'subject-a',
+      conversationId: 'conversation-a',
+      message: '第二轮用户消息',
+      occurredAt: '2026-07-31T08:01:00.000Z',
+    });
+
+    const bundle = core.portable.exportBundle({ subjectId: 'subject-a' });
+    const contexts = bundle.data.interactionContexts ?? [];
+    assert.equal(contexts.length, 2, 'Conversation 路每轮均落一条 interaction_context');
+    assert.equal(contexts[0]!.episodeId, 'episode-explicit', '显式 episodeId 原样落库');
+    assert.equal(contexts[1]!.episodeId, 'episode-explicit', '短间隔下一轮沿用当前 episode');
+    assert.deepEqual(contexts[0]!.context, [{ role: 'user', content: '第一轮用户消息' }]);
+    assert.deepEqual(contexts[1]!.context, [
+      { role: 'assistant', content: assistantReply },
+      { role: 'user', content: '第二轮用户消息' },
+    ]);
+    assert.equal(bundle.data.evidence.length, 2, '只有用户消息成为 evidence');
+    assert.ok(
+      !JSON.stringify(bundle.data.evidence).includes(assistantReply),
+      'handleConversationTurn 的 AI 回复不进入 evidence / evidence portable 字段',
+    );
+  } finally {
+    core.close();
+  }
+});
+
+test('同 conversationId 切换 subject：永久身份绑定 fail-closed，拒绝跨主体复用', async () => {
+  const calls: string[] = [];
+  const llm = {
+    callCount: 0,
+    async chat(messages: Array<{ role: string; content: string }>) {
+      this.callCount++;
+      calls.push(JSON.stringify(messages));
+      return `assistant-reply-${this.callCount}`;
+    },
+  };
+  const core = createMemoWeftCore({ dbPath: ':memory:', llm });
+  try {
+    await core.handleConversationTurn({
+      subjectId: 'subject-a',
+      conversationId: 'shared-id',
+      message: 'subject-a 的私密消息',
+    });
+    await assert.rejects(
+      core.handleConversationTurn({
+        subjectId: 'subject-b',
+        conversationId: 'shared-id',
+        message: 'subject-b 的首轮消息',
+      }),
+      /permanently bound|永久绑定/,
+    );
+
+    assert.equal(calls.length, 1, '拒绝发生在 B 的模型调用前');
+    const subjectB = core.portable.exportBundle({ subjectId: 'subject-b' });
+    assert.deepEqual(subjectB.data.interactionContexts, []);
+    assert.deepEqual(subjectB.data.evidence, []);
+  } finally {
+    core.close();
+  }
+});
+
+test('裸 ingest 同 conversationId 切换 subject：永久身份绑定拒绝重绑', async () => {
+  const core = createMemoWeftCore({ dbPath: ':memory:' });
+  try {
+    await core.ingestUserMessage({
+      subjectId: 'subject-a',
+      conversationId: 'shared-id',
+      content: 'A 的用户消息',
+    });
+    core.recordAssistantReply({ conversationId: 'shared-id', content: 'A 的助手私密回复' });
+    await assert.rejects(
+      core.ingestUserMessage({
+        subjectId: 'subject-b',
+        conversationId: 'shared-id',
+        content: 'B 的首轮消息',
+      }),
+      /permanently bound|永久绑定/,
+    );
+
+    const subjectB = core.portable.exportBundle({ subjectId: 'subject-b' });
+    assert.deepEqual(subjectB.data.interactionContexts, []);
+    assert.deepEqual(subjectB.data.evidence, []);
+    assert.ok(
+      !JSON.stringify(subjectB).includes('A 的助手私密回复'),
+      '旧 subject 的助手文本不进入新 subject bundle',
+    );
+  } finally {
+    core.close();
+  }
+});
+
+test('dropConversation 只重建同主体窗口，不解除 conversationId 身份绑定', async () => {
+  const core = createMemoWeftCore({ dbPath: ':memory:' });
+  try {
+    await core.ingestUserMessage({
+      subjectId: 'subject-a',
+      conversationId: 'shared-id',
+      content: 'A',
+    });
+    core.dropConversation('shared-id');
+    await assert.rejects(
+      core.ingestUserMessage({
+        subjectId: 'subject-b',
+        conversationId: 'shared-id',
+        content: 'B',
+      }),
+      /permanently bound|永久绑定/,
+    );
+    await assert.doesNotReject(
+      core.ingestUserMessage({
+        subjectId: 'subject-a',
+        conversationId: 'shared-id',
+        content: 'A 重建',
+      }),
+    );
+  } finally {
+    core.close();
+  }
+});
+
 test('不带 conversationId：行为同旧（不落 interaction_context、preceding 恒 null）', async () => {
   const core = createMemoWeftCore({ dbPath: ':memory:' });
   try {

@@ -101,16 +101,25 @@ export async function aggregateTrends(
   // 隐私关（按当前模型 tier）：tier=cloud 筛 allowCloudRead / tier=local 筛 allowLocalRead。缺省 'cloud'。
   const tier = deps.llm.tier ?? 'cloud';
   for (const s of states) {
-    for (const link of deps.cognitionStore.sourcesOf(s.id)) {
-      if (link.relation !== 'support') continue;
-      const e = deps.evidenceStore.get(link.evidenceId);
-      // 隐私护栏：当前模型 tier 无权读取的证据不进入趋势模型输入，也不能成为趋势支撑（与 distill/consolidate/attribute 一致）。
-      if (
-        e &&
-        filterReadableByTier([e], tier).length > 0 &&
-        e.occurredAt >= windowStart &&
-        !windowEvidence.has(e.id)
-      ) {
+    const supportIds = deps.cognitionStore
+      .sourcesOf(s.id)
+      .filter((link) => link.relation === 'support')
+      .map((link) => link.evidenceId);
+    const supportEvidence = supportIds
+      .map((id) => deps.evidenceStore.get(id))
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+    // state 原文可能是全部支撑证据的派生内容。只要来源链不完整、跨 subject、禁止推理，
+    // 或当前模型 tier 不能读取任一来源，就跳过整个 state，避免只过滤单条 evidence 后泄露 state.content。
+    if (
+      supportIds.length === 0 ||
+      supportEvidence.length !== supportIds.length ||
+      supportEvidence.some((e) => e.subjectId !== subjectId || !e.allowInference) ||
+      filterReadableByTier(supportEvidence, tier).length !== supportEvidence.length
+    ) {
+      continue;
+    }
+    for (const e of supportEvidence) {
+      if (e.occurredAt >= windowStart && !windowEvidence.has(e.id)) {
         windowEvidence.add(e.id);
         items.push({
           id: e.id,

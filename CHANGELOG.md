@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] — 2026-07-31
+
+### Fixed
+
+- Subject isolation now applies to the attribution time-window scan and active conversation/session caches. Attribution cannot place another subject's evidence in a prompt or hypothesis. A `conversationId` is permanently bound to one subject for the lifetime of a Core and cross-subject reuse is rejected, preventing a late subject-A assistant reply from entering subject B after an id reuse.
+- Stable Core write methods now reject empty identity/conversation identifiers and impossible or timezone-less `occurredAt` values before persistence, so every accepted write remains portable through the stricter restore validator. Empty message content remains accepted.
+- Stable `ConversationInput.episodeId` is now honored by `handleConversationTurn`, which records a visible interaction-context snapshot on every turn. Context deduplication is scoped to subject, conversation, episode, and content, so identical text in another identity or episode is not silently swallowed.
+- Trend aggregation now requires every source of a derived state to belong to the subject, permit inference, and be readable by the selected model tier. Asking and conflict-review phrasing similarly falls back to a local template unless the complete provenance chain authorizes model processing, preventing a filtered evidence list from leaking the derived cognition text itself.
+- Portable import now validates dates, enums, link relations, interaction records (including a recomputed canonical context hash), and semantic-resolution cardinality before writing. Same-id evidence, events, and cognitions count as idempotent only when their complete exported payload and owned provenance relationships match the target; any collision is fatal instead of allowing target authorization to legitimize unrelated bundle-derived content. Older backups cannot revive tombstoned evidence or derived records that depended on it; an existing semantic resolution remains the single result for its evidence.
+- Forced evidence removal now deletes every event and cognition that references the evidence in the same transaction. Event summaries and cognition content are indivisible derived text, so clearing only links could leave deleted content visible through listing, graph output, portable export, or later built-in model paths. Other evidence from a removed multi-evidence event or cognition remains stored and pending for later distillation; an unforced removal remains a zero-change refusal. This retracts active memory and tombstones the source evidence for audit; it does not claim per-row physical erasure. `interaction_context` has no evidence id and is intentionally outside this targeted operation; use `resetSubject` for the complete subject-level privacy clear. Schema v2 applies the same fail-closed rule to rc.1 `evidence_retraction` records, deleting their affected cognitions and relation rows transactionally before the old content can be listed, graphed, or exported.
+- Transaction depth is entered only after SQLite `BEGIN` succeeds in both the TypeScript and Python store helpers. A rejected `BEGIN` (for example, while an external transaction is open) no longer leaves the helper poisoned so a later callback executes outside a rollback boundary.
+- `core.close()` now clears all in-memory conversation windows and permanent subject bindings before closing owned resources, rejects later conversation ingestion/reply capture, and remains idempotent.
+
 ## [1.0.0-rc.1] — 2026-07-28
 
 First release candidate for 1.0. Nothing new is added here beyond the surface work below: 0.9 was the last feature version, and this candidate exists so the frozen API can be exercised before 1.0 is tagged. The supported integration path — `createMemoWeftCore()` and the facade around it — is unchanged from 0.7.0, and no schema migration is involved.

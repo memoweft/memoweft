@@ -62,6 +62,55 @@ test('ingestUserMessage：缺省 subjectId/sourceKind 走 config，originId 幂�
   }
 });
 
+test('stable Core 写路径拒绝空 identity / conversationId，避免产出无法恢复的 bundle', async () => {
+  const core = createMemoWeftCore({ dbPath: ':memory:', llm: stubLLM(), retriever: nullRetriever });
+  try {
+    await assert.rejects(
+      core.ingestUserMessage({ content: 'x', subjectId: '' }),
+      /subjectId.*empty|subjectId.*空/,
+    );
+    await assert.rejects(
+      core.ingestUserMessage({ content: 'x', hostId: '' }),
+      /hostId.*empty|hostId.*空/,
+    );
+    await assert.rejects(
+      core.ingestUserMessage({ content: 'x', conversationId: '' }),
+      /conversationId.*empty|conversationId.*空/,
+    );
+    await assert.rejects(
+      core.handleConversationTurn({ message: 'x', conversationId: '' }),
+      /conversationId.*empty|conversationId.*空/,
+    );
+    await assert.rejects(
+      core.ingestUserMessage({ content: 'x', occurredAt: '2026-02-30T00:00:00Z' }),
+      /occurredAt.*ISO-8601/,
+    );
+    await assert.rejects(
+      core.ingestObservation({
+        observations: [{ kind: 'x', content: 'x', occurredAt: 'Thu, 01 Jan 2026 00:00:00 GMT' }],
+      }),
+      /occurredAt.*ISO-8601/,
+    );
+    const validOffset = await core.ingestToolResult({
+      content: 'x',
+      occurredAt: '2026-01-01T08:00:00+08:00',
+    });
+    assert.equal(validOffset.occurredAt, '2026-01-01T08:00:00+08:00');
+    assert.throws(
+      () => core.recordAssistantReply({ conversationId: '', content: 'x' }),
+      /conversationId.*empty|conversationId.*空/,
+    );
+    assert.throws(() => core.dropConversation(''), /conversationId.*empty|conversationId.*空/);
+    assert.equal(
+      core.memory.listEvidence().length,
+      1,
+      '只有合法 offset 写入；所有拒绝都在写入前发生',
+    );
+  } finally {
+    core.close();
+  }
+});
+
 test('ingestObservation：observed 证据落库，默认不上云（observedDefaults）', async () => {
   const core = createMemoWeftCore({ dbPath: ':memory:', llm: stubLLM(), retriever: nullRetriever });
   try {
@@ -258,6 +307,32 @@ test('dropConversation：丢弃实例后同 conversationId 重建，换 systemPr
   } finally {
     core.close();
   }
+});
+
+test('close：立即释放会话工作内存并拒绝继续追加', async () => {
+  const core = createMemoWeftCore({ dbPath: ':memory:' });
+  await core.ingestUserMessage({
+    subjectId: 'owner',
+    conversationId: 'sensitive',
+    content: '敏感用户文本',
+  });
+  core.recordAssistantReply({ conversationId: 'sensitive', content: '敏感助手文本' });
+
+  core.close();
+
+  assert.throws(
+    () => core.recordAssistantReply({ conversationId: 'sensitive', content: '迟到回复' }),
+    /closed/,
+  );
+  await assert.rejects(
+    core.ingestUserMessage({
+      subjectId: 'owner',
+      conversationId: 'sensitive',
+      content: '关闭后消息',
+    }),
+    /closed/,
+  );
+  assert.doesNotThrow(() => core.close(), 'close 保持幂等');
 });
 
 test('updateProfile：空库早退不调模型，返回 timings/metrics 形状完整', async () => {

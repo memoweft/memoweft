@@ -95,14 +95,20 @@ export function openStores(
   let depth = 0;
   const transaction: Transaction = (fn) => {
     if (depth > 0) return fn(); // 已在事务里 → 直接跑，不再 BEGIN（否则报 "cannot start a transaction within a transaction"）
-    depth++;
     db.exec('BEGIN');
+    // BEGIN 成功后才算进入事务。若外部事务占用连接导致 BEGIN 抛错，不能让 depth
+    // 留在 1；否则后续调用会误当作嵌套事务直接执行，失去回滚边界。
+    depth++;
     try {
       const r = fn();
       db.exec('COMMIT');
       return r;
     } catch (e) {
-      db.exec('ROLLBACK'); // 任一步抛错 → 整段回滚（cognition 写入与 markConsolidated 一起回滚）
+      try {
+        db.exec('ROLLBACK'); // 任一步抛错 → 整段回滚（cognition 写入与 markConsolidated 一起回滚）
+      } catch {
+        // 保留 callback / COMMIT 的原始错误；rollback 失败不能掩盖它。
+      }
       throw e;
     } finally {
       depth--;

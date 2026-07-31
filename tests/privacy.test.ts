@@ -23,6 +23,8 @@ import type { ChatMessage } from '../src/llm/client.ts';
 const CLOUD_TXT = '可以上云的话';
 const LOCAL_TXT = '机密不许上云的话';
 const LOCAL2_TXT = '另一条机密不许上云的话';
+const NO_INFERENCE_TXT = '允许读取但禁止推理的话';
+const DERIVED_PRIVATE_TXT = '由未授权来源派生的敏感认知';
 
 test('filterCloudReadable：只留 allowCloudRead=true，顺序保留', () => {
   const items = [
@@ -208,7 +210,7 @@ test('attribute：cloud=false 的候选原因不进入 LLM prompt', async () => 
   }
 });
 
-test('trends：cloud=false 状态证据不进云端 prompt、也进不了趋势支撑', async () => {
+test('trends：不可读或禁止推理的状态不进云端 prompt、也进不了趋势支撑', async () => {
   const ev = new SqliteEvidenceStore(':memory:');
   const cog = new SqliteCognitionStore(':memory:');
   const now = new Date('2026-06-30T00:00:00.000Z');
@@ -253,15 +255,46 @@ test('trends：cloud=false 状态证据不进云端 prompt、也进不了趋势�
       credStatus: 'low',
       evidence: [{ evidenceId: eLocal.id, relation: 'support' }],
     });
+    const eNoInference = ev.put({
+      subjectId: 'u',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: NO_INFERENCE_TXT,
+      allowCloudRead: true,
+      allowInference: false,
+      occurredAt: '2026-06-24T08:00:00.000Z',
+    });
+    cog.put({
+      subjectId: 'u',
+      content: '用户禁止推理的状态',
+      contentType: 'state',
+      formedBy: 'stated',
+      confidence: 250,
+      credStatus: 'low',
+      evidence: [{ evidenceId: eNoInference.id, relation: 'support' }],
+    });
+    // 即便一个 state 同时挂可读与不可读证据，也不能只过滤证据后泄露派生的 state.content。
+    cog.put({
+      subjectId: 'u',
+      content: DERIVED_PRIVATE_TXT,
+      contentType: 'state',
+      formedBy: 'inferred',
+      confidence: 250,
+      credStatus: 'low',
+      evidence: [
+        { evidenceId: cloudIds[0]!, relation: 'support' },
+        { evidenceId: eLocal.id, relation: 'support' },
+      ],
+    });
 
     let seen = '';
     const stub = {
       callCount: 0,
-      // LLM 硬引所有 id（含 cloud=false）——cloud=false 应被 windowEvidence 挡掉、进不了支撑。
+      // LLM 硬引所有 id（含不可读 / 禁止推理）——二者都应被 windowEvidence 挡住。
       async chat(msgs: ChatMessage[]): Promise<string> {
         this.callCount++;
         seen = JSON.stringify(msgs);
-        return `{"trends":[{"content":"用户最近持续情绪低落","based_on_evidence_ids":${JSON.stringify([...cloudIds, eLocal.id])}}]}`;
+        return `{"trends":[{"content":"用户最近持续情绪低落","based_on_evidence_ids":${JSON.stringify([...cloudIds, eLocal.id, eNoInference.id])}}]}`;
       },
     };
     const r = await aggregateTrends(
@@ -271,9 +304,12 @@ test('trends：cloud=false 状态证据不进云端 prompt、也进不了趋势�
     );
     assert.ok(seen.includes(cloudTexts[0]!), 'cloud=true 状态原话进了 prompt');
     assert.ok(!seen.includes(LOCAL_TXT), 'cloud=false 状态原话没进 prompt');
+    assert.ok(!seen.includes(NO_INFERENCE_TXT), 'allowInference=false 状态原话没进 prompt');
+    assert.ok(!seen.includes(DERIVED_PRIVATE_TXT), '混合授权来源派生的 state 原文没进 prompt');
     assert.equal(r.trends.length, 1, '聚出 1 条趋势');
     const links = cog.sourcesOf(r.trends[0]!.id).map((l) => l.evidenceId);
     assert.ok(!links.includes(eLocal.id), 'cloud=false 证据没成为趋势支撑');
+    assert.ok(!links.includes(eNoInference.id), 'allowInference=false 证据没成为趋势支撑');
     assert.ok(
       cloudIds.every((id) => links.includes(id)),
       '3 条 cloud=true 证据都成了支撑',
@@ -284,7 +320,7 @@ test('trends：cloud=false 状态证据不进云端 prompt、也进不了趋势�
   }
 });
 
-test('proposeAsk：cloud=false 支撑不进云端提问 prompt；宿主展示保留完整', async () => {
+test('proposeAsk：任一支撑未授权时不向模型发送派生认知；宿主展示保留完整', async () => {
   const ev = new SqliteEvidenceStore(':memory:');
   const cog = new SqliteCognitionStore(':memory:');
   try {
@@ -315,21 +351,18 @@ test('proposeAsk：cloud=false 支撑不进云端提问 prompt；宿主展示保
         { evidenceId: eLocal.id, relation: 'support' },
       ],
     });
-    let seen = '';
     const stub = {
       callCount: 0,
-      async chat(msgs: ChatMessage[]): Promise<string> {
+      async chat(_msgs: ChatMessage[]): Promise<string> {
         this.callCount++;
-        seen = JSON.stringify(msgs);
         return '你是不是熬夜了？';
       },
     };
     const r = await proposeAsk('owner', { cognitionStore: cog, evidenceStore: ev, llm: stub });
     assert.equal(r.proposals.length, 1, '产出 1 条提问建议');
-    assert.equal(stub.callCount, 1, '调了措辞模型');
-    assert.ok(seen.includes(CLOUD_TXT), 'cloud=true 证据进了提问 prompt');
-    assert.ok(!seen.includes(LOCAL_TXT), 'cloud=false 证据没进提问 prompt');
-    // 过滤只作用于喂云端的那份：返回给宿主展示的 evidence 仍是完整两条（展示归宿主）。
+    assert.equal(stub.callCount, 0, '来源未全部授权时不调措辞模型');
+    assert.notEqual(r.proposals[0]!.question, '你是不是熬夜了？', '使用本地模板而非模型返回');
+    // 云端 fail-closed 不影响返回宿主的同 subject 完整证据（展示归宿主）。
     const shownIds = r.proposals[0]!.evidence.map((e) => e.id);
     assert.ok(
       shownIds.includes(eCloud.id) && shownIds.includes(eLocal.id),
@@ -341,7 +374,48 @@ test('proposeAsk：cloud=false 支撑不进云端提问 prompt；宿主展示保
   }
 });
 
-test('revisitConflicts：cloud=false 的正/反证据都不进云端提问 prompt', async () => {
+test('proposeAsk：全部来源授权时仍可调用措辞模型', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  try {
+    const e = ev.put({
+      subjectId: 'owner',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: CLOUD_TXT,
+      allowCloudRead: true,
+      allowInference: true,
+    });
+    cog.put({
+      subjectId: 'owner',
+      content: '用户可能需要早点休息',
+      contentType: 'hypothesis',
+      formedBy: 'inferred',
+      confidence: 250,
+      credStatus: 'low',
+      evidence: [{ evidenceId: e.id, relation: 'support' }],
+    });
+    let seen = '';
+    const stub = {
+      callCount: 0,
+      async chat(msgs: ChatMessage[]): Promise<string> {
+        this.callCount++;
+        seen = JSON.stringify(msgs);
+        return '今晚要不要早点休息？';
+      },
+    };
+    const r = await proposeAsk('owner', { cognitionStore: cog, evidenceStore: ev, llm: stub });
+    assert.equal(stub.callCount, 1, '完整授权链仍调措辞模型');
+    assert.ok(seen.includes(CLOUD_TXT), '授权证据进入 prompt');
+    assert.ok(seen.includes('用户可能需要早点休息'), '授权派生认知进入 prompt');
+    assert.equal(r.proposals[0]!.question, '今晚要不要早点休息？');
+  } finally {
+    ev.close();
+    cog.close();
+  }
+});
+
+test('revisitConflicts：任一正反来源未授权时不向模型发送派生认知', async () => {
   const ev = new SqliteEvidenceStore(':memory:');
   const cog = new SqliteCognitionStore(':memory:');
   try {
@@ -379,21 +453,69 @@ test('revisitConflicts：cloud=false 的正/反证据都不进云端提问 promp
         { evidenceId: eLocalCon.id, relation: 'contradict' },
       ],
     });
+    const stub = {
+      callCount: 0,
+      async chat(_msgs: ChatMessage[]): Promise<string> {
+        this.callCount++;
+        return '你现在到底更常喝哪种？';
+      },
+    };
+    const r = await revisitConflicts('u', { cognitionStore: cog, evidenceStore: ev, llm: stub });
+    assert.equal(r.proposals.length, 1, '复看那条冲突');
+    assert.equal(stub.callCount, 0, '来源未全部授权时不调措辞模型');
+    assert.notEqual(r.proposals[0]!.question, '你现在到底更常喝哪种？');
+  } finally {
+    ev.close();
+    cog.close();
+  }
+});
+
+test('revisitConflicts：全部正反来源授权时仍可调用措辞模型', async () => {
+  const ev = new SqliteEvidenceStore(':memory:');
+  const cog = new SqliteCognitionStore(':memory:');
+  try {
+    const support = ev.put({
+      subjectId: 'u',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: '最近更常喝茶',
+      allowCloudRead: true,
+      allowInference: true,
+    });
+    const contradict = ev.put({
+      subjectId: 'u',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: '昨天说更常喝咖啡',
+      allowCloudRead: true,
+      allowInference: true,
+    });
+    cog.put({
+      subjectId: 'u',
+      content: '用户喜欢喝茶',
+      contentType: 'preference',
+      formedBy: 'stated',
+      confidence: 600,
+      credStatus: 'conflicted',
+      evidence: [
+        { evidenceId: support.id, relation: 'support' },
+        { evidenceId: contradict.id, relation: 'contradict' },
+      ],
+    });
     let seen = '';
     const stub = {
       callCount: 0,
       async chat(msgs: ChatMessage[]): Promise<string> {
         this.callCount++;
         seen = JSON.stringify(msgs);
-        return '你现在到底更常喝哪种？';
+        return '你现在更常喝茶还是咖啡？';
       },
     };
     const r = await revisitConflicts('u', { cognitionStore: cog, evidenceStore: ev, llm: stub });
-    assert.equal(r.proposals.length, 1, '复看那条冲突');
-    assert.equal(stub.callCount, 1, '调了措辞模型');
-    assert.ok(seen.includes(CLOUD_TXT), 'cloud=true 证据进了提问 prompt');
-    assert.ok(!seen.includes(LOCAL_TXT), 'cloud=false 支撑证据没进 prompt');
-    assert.ok(!seen.includes(LOCAL2_TXT), 'cloud=false 反对证据没进 prompt');
+    assert.equal(stub.callCount, 1, '完整授权链仍调措辞模型');
+    assert.ok(seen.includes('用户喜欢喝茶'), '授权派生认知进入 prompt');
+    assert.ok(seen.includes('最近更常喝茶') && seen.includes('昨天说更常喝咖啡'));
+    assert.equal(r.proposals[0]!.question, '你现在更常喝茶还是咖啡？');
   } finally {
     ev.close();
     cog.close();

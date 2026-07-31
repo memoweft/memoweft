@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createMemoWeftCore } from '../src/core/createCore.ts';
 import { SqliteCognitionStore } from '../src/cognition/store.ts';
+import { SqliteEvidenceStore } from '../src/evidence/store.ts';
 import type { ChatMessage } from '../src/llm/client.ts';
 import type { Retriever } from '../src/retrieval/retriever.ts';
 
@@ -174,45 +175,56 @@ test('explainCognition：跨 subject → null（拿不到别人的认知）', as
   }
 });
 
-test('explainCognition：悬挂链跳过——证据已删则不出现在溯源里，也不凭空造字段', async () => {
-  const { core, cleanup } = freshCore();
+test('explainCognition / recall explain：历史跨 subject 脏链不带出另一人的证据', async () => {
+  const { core, dbPath, cleanup } = freshCore();
   try {
-    const id = await seedOne(core);
-    const before = core.explainCognition({ cognitionId: id, subjectId: 'u' });
-    assert.ok(before && before.provenance.length >= 1);
-    const gone = before.provenance[0]!.evidenceId;
+    const id = await seedOne(core, 'u');
+    const evidenceStore = new SqliteEvidenceStore(dbPath);
+    const cognitionStore = new SqliteCognitionStore(dbPath);
+    let foreignEvidenceId = '';
+    try {
+      const foreign = evidenceStore.put({
+        subjectId: 'other',
+        sourceKind: 'spoken',
+        hostId: 'local',
+        rawContent: 'OTHER SUBJECT SECRET',
+      });
+      foreignEvidenceId = foreign.id;
+      cognitionStore.addEvidence(id, [{ evidenceId: foreign.id, relation: 'support' }]);
+    } finally {
+      evidenceStore.close();
+      cognitionStore.close();
+    }
 
-    core.memory.removeEvidenceSafely({ evidenceId: gone, force: true, reason: 'test' });
-
-    const after = core.explainCognition({ cognitionId: id, subjectId: 'u' });
-    assert.ok(after, '认知仍在');
+    const explained = core.explainCognition({ cognitionId: id, subjectId: 'u' });
+    assert.ok(explained);
     assert.ok(
-      !after.provenance.some((p) => p.evidenceId === gone),
-      '已删证据不出现在溯源里（同 D-0021：跳过、不凭空造字段）',
+      !explained.provenance.some((p) => p.evidenceId === foreignEvidenceId),
+      '按 id 解释过滤跨 subject 脏链',
+    );
+    const recalled = await core.recall({ subjectId: 'u', query: 'User likes tea', explain: true });
+    assert.ok(recalled.length > 0, '前置：能召回当前 subject 认知');
+    assert.ok(
+      recalled.every((item) => !item.provenance?.some((p) => p.evidenceId === foreignEvidenceId)),
+      '召回解释复用同一隔离护栏',
     );
   } finally {
     cleanup();
   }
 });
 
-test('explainCognition：软删一条证据后 expiredCount 记一笔（撤回台账，与 active 溯源链分开）', async () => {
+test('explainCognition：force 删任一支撑证据后，派生认知不再可解释', async () => {
   const { core, cleanup } = freshCore();
   try {
     const id = await seedOne(core);
     const before = core.explainCognition({ cognitionId: id, subjectId: 'u' });
     assert.ok(before && before.provenance.length >= 1);
-    assert.equal(before.expiredCount, 0, '删之前撤回数为 0');
     const gone = before.provenance[0]!.evidenceId;
 
     core.memory.removeEvidenceSafely({ evidenceId: gone, force: true, reason: 'test' });
 
     const after = core.explainCognition({ cognitionId: id, subjectId: 'u' });
-    assert.ok(after, '认知仍在');
-    assert.equal(after.expiredCount, 1, '撤回一条证据 → expiredCount=1（台账记一笔）');
-    assert.ok(
-      !after.provenance.some((p) => p.evidenceId === gone),
-      '被撤回的证据已不在 active 溯源链里（置信度随之下降；台账与 provenance 分开）',
-    );
+    assert.equal(after, null, '派生认知与已删证据一并删除，不能再解释或泄漏内容');
   } finally {
     cleanup();
   }

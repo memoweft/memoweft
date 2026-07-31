@@ -135,6 +135,36 @@ test('transaction：可重入——里层再调不报 "nested transaction"，随
   }
 });
 
+test('transaction：外部 BEGIN 令 BEGIN 失败后，后续事务仍会建立并回滚', () => {
+  const s = openStores(':memory:');
+  try {
+    s.db.exec('BEGIN');
+    assert.throws(
+      () => s.transaction(() => undefined),
+      /transaction/i,
+      '外部事务存在时，最外层 BEGIN 必须失败',
+    );
+    s.db.exec('ROLLBACK');
+
+    assert.throws(
+      () =>
+        s.transaction(() => {
+          s.eventStore.put({
+            subjectId: 'owner',
+            summary: '必须回滚',
+            occurredAt: new Date().toISOString(),
+            evidenceIds: [],
+          });
+          throw new Error('callback boom');
+        }),
+      /callback boom/,
+    );
+    assert.equal(s.eventStore.all('owner').length, 0, '失败 BEGIN 不得让后续写脱离事务');
+  } finally {
+    s.close();
+  }
+});
+
 test('consolidate（共享连接 + 事务）：正常路径提交，认知落库 + 事件标已消化', async () => {
   const s = openStores(':memory:');
   try {

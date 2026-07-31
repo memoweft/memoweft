@@ -86,7 +86,7 @@
             "role": "user"
           }
         ],
-        "contextHash": "abc123",
+        "contextHash": "b03d228fdf33e7c81a9a7ea3eadadcf2cdcb98823fe93c669b8f0db42e0fa8a0",
         "conversationId": "conv-1",
         "createdAt": "2026-01-01T00:00:00.500Z",
         "episodeId": "ep-1",

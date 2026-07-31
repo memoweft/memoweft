@@ -71,15 +71,18 @@ test('validateBundle：溯源引用悬空 → 致命 error', () => {
   );
 });
 
-test('validateBundle：subject 混入 → 软告警但仍 valid', () => {
+test('validateBundle：subject 混入 → 致命拒绝，绝不导入', () => {
   const b = seedBundle();
   const mixed: MemoryBundle = {
     ...b,
     data: { ...b.data, evidence: b.data.evidence.map((e) => ({ ...e, subjectId: 'intruder' })) },
   };
   const r = validateBundle(mixed);
-  assert.equal(r.valid, true, '混入不致命');
-  assert.ok(r.warnings.length > 0, '但要告警');
+  assert.equal(r.valid, false, '混入必须致命拒绝');
+  assert.ok(
+    r.errors.some((error) => error.includes('subjectId')),
+    '报出跨 subject 边界',
+  );
 });
 
 test('validateBundle：元素缺 id → 致命 error（不被 Set(undefined) 蒙混放行）', () => {

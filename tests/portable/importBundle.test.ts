@@ -147,6 +147,66 @@ test('importBundle · merge 幂等：重复导入不制造重复', () => {
   }
 });
 
+test('importBundle · 同 evidence id 但内容或授权不同：整包拒绝且派生认知不落库', () => {
+  const bundle = seedSource();
+  const t = openStores(':memory:');
+  try {
+    const source = bundle.data.evidence.find((e) =>
+      bundle.data.cognitionEvidence.some((link) => link.evidenceId === e.id),
+    )!;
+    t.evidenceStore.insert({
+      ...source,
+      rawContent: '目标库中无关的公开内容',
+      summary: '目标库中无关的公开内容',
+      allowCloudRead: true,
+      allowInference: true,
+    });
+
+    const plan = importBundle(bundle, t, { mode: 'merge' });
+
+    assert.equal(plan.valid, false);
+    assert.deepEqual(plan.counts, {
+      evidence: 0,
+      events: 0,
+      cognitions: 0,
+      eventEvidence: 0,
+      cognitionEvidence: 0,
+      interactionContexts: 0,
+      semanticResolutions: 0,
+    });
+    assert.ok(plan.errors.some((error) => error.includes(`evidence ${source.id}`)));
+    assert.equal(t.cognitionStore.all('owner').length, 0, '不能把包内派生内容绑定到碰撞记录');
+  } finally {
+    t.close();
+  }
+});
+
+test('importBundle · 同 event/cognition id 的 payload 或溯源关系不同：整包拒绝', () => {
+  const bundle = seedSource();
+  const t = openStores(':memory:');
+  try {
+    assert.equal(importBundle(bundle, t, { mode: 'merge' }).valid, true);
+
+    const payloadCollision = structuredClone(bundle);
+    payloadCollision.data.events[0]!.summary = '碰撞后的事件摘要';
+    payloadCollision.data.cognitions[0]!.content = '碰撞后的认知内容';
+    const payloadPlan = importBundle(payloadCollision, t, { mode: 'merge' });
+    assert.equal(payloadPlan.valid, false);
+    assert.ok(payloadPlan.errors.some((error) => error.includes('event ')));
+    assert.ok(payloadPlan.errors.some((error) => error.includes('cognition ')));
+
+    const relationCollision = structuredClone(bundle);
+    relationCollision.data.eventEvidence = relationCollision.data.eventEvidence.slice(0, 1);
+    relationCollision.data.cognitionEvidence[0]!.relation = 'contradict';
+    const relationPlan = importBundle(relationCollision, t, { mode: 'merge' });
+    assert.equal(relationPlan.valid, false);
+    assert.ok(relationPlan.errors.some((error) => error.includes('event ')));
+    assert.ok(relationPlan.errors.some((error) => error.includes('cognition ')));
+  } finally {
+    t.close();
+  }
+});
+
 test('importBundle · 往返一致：A 导出 → B 导入 → B 再导出，data 深等', () => {
   const bundle = seedSource();
   const t = openStores(':memory:');
@@ -172,7 +232,7 @@ test('importBundle · 非法包一条都不写（不污染库）', () => {
   }
 });
 
-test('importBundle · originId 跨血缘撞车：证据跳过 + 悬空溯源丢弃 + 告警（绝不写悬空引用）', () => {
+test('importBundle · originId 跨血缘撞车：依赖该证据的派生 cognition fail-closed 跳过', () => {
   // 目标库已有一条 originId=dup 的证据（id 与包里那条不同）——模拟同一段对话两边各自摄入、uuid 不同。
   const t = openStores(':memory:');
   const src = openStores(':memory:');
@@ -215,11 +275,14 @@ test('importBundle · originId 跨血缘撞车：证据跳过 + 悬空溯源丢�
       '给出 originId 撞车告警',
     );
 
-    // 认知本身是新的 → 落库；但它指向 Y 的溯源被丢弃（绝不写悬空引用）。
-    const cog = t.cognitionStore.all('owner').find((c) => c.content === '基于 Y 的判断')!;
-    assert.ok(cog, '新认知照常落库（不丢用户判断）');
-    assert.equal(plan.counts.cognitionEvidence, 0, '指向悬空 Y 的溯源链被丢');
-    assert.deepEqual(t.cognitionStore.sourcesOf(cog.id), [], '库里该认知无悬空溯源');
+    // cognition.content 同样是 evidence 派生物；其唯一来源 Y 未解析时必须整条跳过。
+    assert.equal(plan.counts.cognitions, 0, '依赖悬空 Y 的 cognition 不落库');
+    assert.equal(plan.counts.cognitionEvidence, 0, '不写指向悬空 Y 的溯源链');
+    assert.equal(
+      t.cognitionStore.all('owner').some((c) => c.content === '基于 Y 的判断'),
+      false,
+      '库里不残留脱离来源的派生画像',
+    );
   } finally {
     t.close();
     src.close();

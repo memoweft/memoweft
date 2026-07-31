@@ -204,6 +204,41 @@ test('onlyCloudBlocked：只留 allowCloudRead=false 的证据', () => {
   }
 });
 
+test('历史跨 subject 脏链：当前 subject 图谱不展示另一人的 evidence', () => {
+  const s = openStores(':memory:');
+  try {
+    const foreign = s.evidenceStore.put({
+      subjectId: 'other',
+      sourceKind: 'spoken',
+      hostId: 'h',
+      rawContent: 'OTHER SUBJECT SECRET',
+    });
+    const cognition = s.cognitionStore.put({
+      subjectId: 'owner',
+      content: '当前用户认知',
+      contentType: 'fact',
+      formedBy: 'stated',
+      confidence: 500,
+      credStatus: 'limited',
+      evidence: [{ evidenceId: foreign.id, relation: 'support' }],
+    });
+
+    const graph = buildMemoryGraph('owner', s);
+    assert.ok(
+      graph.nodes.some((node) => node.id === cognition.id),
+      '当前 subject 认知仍展示',
+    );
+    assert.ok(!graph.nodes.some((node) => node.id === foreign.id), '另一 subject 证据节点被隔离');
+    assert.ok(
+      !graph.edges.some((edge) => edge.source === foreign.id || edge.target === foreign.id),
+      '跨 subject 脏链不生成边',
+    );
+    assert.ok(!JSON.stringify(graph).includes('OTHER SUBJECT SECRET'));
+  } finally {
+    s.close();
+  }
+});
+
 test('tool 证据：节点 colorKey=tool + stats.toolEvidenceCount 计数（tool-result-ingest）', () => {
   const s = openStores(':memory:');
   try {

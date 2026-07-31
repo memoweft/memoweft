@@ -37,7 +37,7 @@ test('interaction_context：record / get / 字段回读', () => {
   }
 });
 
-test('interaction_context：record 按 context_hash 幂等(同内容二次 record 不重复落库)', () => {
+test('interaction_context：只在同 subject + conversation + episode 内按 context_hash 幂等', () => {
   const store = new SqliteInteractionContextStore(':memory:');
   try {
     const a = store.record({
@@ -46,14 +46,37 @@ test('interaction_context：record 按 context_hash 幂等(同内容二次 recor
       episodeId: 'ep-1',
       context: CTX,
     });
-    const b = store.record({
+    const duplicate = store.record({
       subjectId: 'owner',
       conversationId: 'conv-1',
       episodeId: 'ep-1',
       context: CTX,
     });
-    assert.equal(a.id, b.id, '同内容返回同一条');
+    assert.equal(a.id, duplicate.id, '同一 subject + conversation + 内容返回同一条');
     assert.equal(store.all('owner').length, 1, '不重复落库');
+    const differentConversation = store.record({
+      subjectId: 'owner',
+      conversationId: 'conv-2',
+      episodeId: 'ep-2',
+      context: CTX,
+    });
+    const differentSubject = store.record({
+      subjectId: 'other',
+      conversationId: 'conv-1',
+      episodeId: 'ep-3',
+      context: CTX,
+    });
+    assert.notEqual(differentConversation.id, a.id, '同文本跨会话必须各自落库');
+    assert.notEqual(differentSubject.id, a.id, '同文本跨 subject 必须各自落库');
+    const differentEpisode = store.record({
+      subjectId: 'owner',
+      conversationId: 'conv-1',
+      episodeId: 'ep-next',
+      context: CTX,
+    });
+    assert.notEqual(differentEpisode.id, a.id, '同文本跨 episode 必须各自落库');
+    assert.equal(store.all('owner').length, 3);
+    assert.equal(store.all('other').length, 1);
     // 内容变 → 新的一条
     const c = store.record({
       subjectId: 'owner',
@@ -62,7 +85,7 @@ test('interaction_context：record 按 context_hash 幂等(同内容二次 recor
       context: [...CTX, { role: 'assistant', content: '为什么?' }],
     });
     assert.notEqual(c.id, a.id);
-    assert.equal(store.all('owner').length, 2);
+    assert.equal(store.all('owner').length, 4);
   } finally {
     store.close();
   }
