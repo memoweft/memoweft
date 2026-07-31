@@ -88,6 +88,42 @@ test('归因：现象 + 时间窗观察证据 → 低置信可解释假设（挂
   }
 });
 
+test('归因：时间窗候选按 subject 隔离，另一用户的证据既不进 prompt 也不成为 support', async () => {
+  const { ev, cog, eGame } = setupScenario();
+  try {
+    const otherEvidence = ev.put({
+      subjectId: 'other-user',
+      sourceKind: 'observed',
+      hostId: 'h-other',
+      rawContent: '另一用户的私密睡眠记录：凌晨四点仍在工作',
+      occurredAt: '2026-06-23T04:00:00.000Z',
+      allowCloudRead: true,
+    });
+    let prompt = '';
+    const stub = {
+      callCount: 0,
+      async chat(messages: Array<{ role: string; content: string }>) {
+        this.callCount++;
+        prompt = messages.find((message) => message.role === 'user')?.content ?? '';
+        return `{"hypotheses":[{"content":"可能因为玩游戏太晚导致没睡好","based_on_evidence_ids":["${eGame.id}"]}]}`;
+      },
+    };
+
+    const result = await attribute('owner', { evidenceStore: ev, cognitionStore: cog, llm: stub });
+
+    assert.equal(result.hypotheses.length, 1, '当前用户自己的候选仍可归因');
+    assert.ok(!prompt.includes(otherEvidence.rawContent), '另一用户文本绝不进入 LLM prompt');
+    assert.ok(
+      !result.hypotheses[0]!.basedOnEvidenceIds.includes(otherEvidence.id),
+      '另一用户 evidence 绝不成为当前假设 support',
+    );
+    assert.ok(result.hypotheses[0]!.basedOnEvidenceIds.includes(eGame.id), '只接受当前用户的候选');
+  } finally {
+    ev.close();
+    cog.close();
+  }
+});
+
 test('归因：支撑精简 —— 现象积累一堆杂证据，假设也只挂 ≤2 原因 + 1 锚点（防爆炸）', async () => {
   const ev = new SqliteEvidenceStore(':memory:');
   const cog = new SqliteCognitionStore(':memory:');

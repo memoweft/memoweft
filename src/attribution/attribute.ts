@@ -110,16 +110,25 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
       .sourcesOf(cogId)
       .filter((l) => l.relation === 'support')
       .map((l) => l.evidenceId);
+  // EvidenceStore 的时间窗接口是全库查询，归因则是严格的 subject-scoped 写路径。
+  // 所有从 support 或时间窗拿到的证据都必须在这里收口：其他 subject 的内容不能进
+  // prompt，也不能成为当前 subject 新假设的 support。不要把这个边界下放给调用方。
+  const evidenceForSubject = (evidenceId: string) => {
+    const evidence = deps.evidenceStore.get(evidenceId);
+    return evidence?.subjectId === subjectId ? evidence : null;
+  };
+  const subjectSupportOf = (cogId: string): string[] =>
+    supportOf(cogId).filter((evidenceId) => evidenceForSubject(evidenceId) !== null);
 
   // state 现象自身的证据：只能当"现象 side"，【不能当原因】——禁"用一个抱怨解释另一个抱怨"。
   const stateEvidence = new Set<string>();
-  for (const s of states) for (const id of supportOf(s.id)) stateEvidence.add(id);
+  for (const s of states) for (const id of subjectSupportOf(s.id)) stateEvidence.add(id);
   // 已有假设引用过的证据 → 判某现象【是否已归因】（按现象去重，修旧的"按证据去重"bug：
   //   state 证据只会出现在现象 side，故"现象证据被某假设引用" ⇔ 该现象已归因，可靠）。
   const hypoRefEvidence = new Set<string>();
-  for (const h of hypos) for (const id of supportOf(h.id)) hypoRefEvidence.add(id);
+  for (const h of hypos) for (const id of subjectSupportOf(h.id)) hypoRefEvidence.add(id);
   const isAttributed = (phenomId: string): boolean =>
-    supportOf(phenomId).some((id) => hypoRefEvidence.has(id));
+    subjectSupportOf(phenomId).some((id) => hypoRefEvidence.has(id));
 
   // 只归因【最近活跃、还没归因过】的现象，一次最多 maxPhenomenaPerRun 个（避免一次扫全部 state 爆炸）。
   // 按 updatedAt 降序：用户刚（重新）抱怨的那条会被 consolidate 触碰、updatedAt 最新，正是"当下要解释的"。
@@ -127,7 +136,7 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
   // 别每句"好累"就推一串因果。偶发一次的情绪先攒着，反复出现（多条支撑）再解释。N 可配、integration testing 后调。
   const phenomena = states
     .filter((c) => !isAttributed(c.id))
-    .filter((c) => supportOf(c.id).length >= cfg.minPhenomenonSupport)
+    .filter((c) => subjectSupportOf(c.id).length >= cfg.minPhenomenonSupport)
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
     .slice(0, cfg.maxPhenomenaPerRun);
 
@@ -138,7 +147,7 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
 
   for (const phenom of phenomena) {
     const phenomEvidences = supportOf(phenom.id)
-      .map((id) => deps.evidenceStore.get(id))
+      .map(evidenceForSubject)
       .filter((e): e is NonNullable<typeof e> => e !== null)
       .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1)); // 最晚在前
     // 现象锚 = 最晚一条现象证据（抱怨时刻）。只挂【这一条】当假设的现象 side 支撑，
@@ -152,6 +161,7 @@ export async function attribute(subjectId: string, deps: AttributeDeps): Promise
     const causes = filterReadableByTier(
       deps.evidenceStore
         .byTimeRange(minusHours(anchor, cfg.windowHours), upperBound)
+        .filter((e) => e.subjectId === subjectId)
         .filter((e) => e.allowInference)
         .filter((e) => !stateEvidence.has(e.id)),
       deps.llm.tier ?? 'cloud',

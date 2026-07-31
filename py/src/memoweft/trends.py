@@ -4,6 +4,7 @@
 使用 all() 的历史口径（包含已失效或归档项）判断是否曾反复出现，并排除 confirmed 以避免把诱导附和计为趋势；
   已聚合的证据不会重复生成趋势；隐私边界按 tier 过滤，但不按 allow_inference 过滤（与 attribute 不同）。
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -46,7 +47,11 @@ def _build_messages(
         else:
             parts.append(f'- [{tag}] ({at[:10]}) state "{state}" ← utterance: {text}')
     listing = "\n".join(parts)
-    body = f"【近期反复出现的状态】：\n{listing}" if zh else f"[Recent recurring states]:\n{listing}"
+    body = (
+        f"【近期反复出现的状态】：\n{listing}"
+        if zh
+        else f"[Recent recurring states]:\n{listing}"
+    )
     messages = [
         ChatMessage(role="system", content=prompt_text("trends", lang)),
         ChatMessage(role="user", content=body),
@@ -69,30 +74,53 @@ def aggregate_trends(
     window_start = ms_to_iso(epoch_ms(now) - cfg.trend_window_days * 86_400_000)
 
     # 历史口径使用 all()，并排除 confirmed，避免将诱导附和计为趋势。
-    states = [c for c in cognition_store.all(subject_id) if c.content_type == "state" and c.formed_by != "confirmed"]
+    states = [
+        c
+        for c in cognition_store.all(subject_id)
+        if c.content_type == "state" and c.formed_by != "confirmed"
+    ]
     items: list[tuple[str, str, str, str]] = []
     window_evidence: set[str] = set()
     tier = llm.tier if llm.tier is not None else "cloud"
     for s in states:
-        for link in cognition_store.sources_of(s.id):
-            if link.relation != "support":
-                continue
-            e = evidence_store.get(link.evidence_id)
-            if (
-                e is not None
-                and len(filter_readable_by_tier([e], tier)) > 0
-                and e.occurred_at >= window_start
-                and e.id not in window_evidence
-            ):
+        support_ids = [
+            link.evidence_id
+            for link in cognition_store.sources_of(s.id)
+            if link.relation == "support"
+        ]
+        support_evidence = [
+            e for i in support_ids if (e := evidence_store.get(i)) is not None
+        ]
+        # state 原文可能派生自全部支撑证据。来源链不完整、跨 subject、禁止推理，
+        # 或当前模型 tier 无权读取任一来源时，跳过整个 state，避免泄露 state.content。
+        if (
+            len(support_ids) == 0
+            or len(support_evidence) != len(support_ids)
+            or any(
+                e.subject_id != subject_id or not e.allow_inference
+                for e in support_evidence
+            )
+            or len(filter_readable_by_tier(support_evidence, tier))
+            != len(support_evidence)
+        ):
+            continue
+        for e in support_evidence:
+            if e.occurred_at >= window_start and e.id not in window_evidence:
                 window_evidence.add(e.id)
-                items.append((e.id, s.content, e.summary or e.raw_content, e.occurred_at))
+                items.append(
+                    (e.id, s.content, e.summary or e.raw_content, e.occurred_at)
+                )
 
     if len(items) < cfg.trend_min_count:
-        return TrendResult(trends=[], considered_count=len(items), llm_calls=0)  # 规则筛:不够频
+        return TrendResult(
+            trends=[], considered_count=len(items), llm_calls=0
+        )  # 规则筛:不够频
 
     # 若当前证据集合已被 active 趋势完整覆盖，则不重复生成趋势。
     covered: set[str] = set()
-    for t in [c for c in cognition_store.active(subject_id) if c.content_type == "trend"]:
+    for t in [
+        c for c in cognition_store.active(subject_id) if c.content_type == "trend"
+    ]:
         for lk in cognition_store.sources_of(t.id):
             covered.add(lk.evidence_id)
     if all(i in covered for i in window_evidence):
@@ -114,20 +142,36 @@ def aggregate_trends(
         based_raw = raw.get("based_on_evidence_ids") or []
         cited = list(
             dict.fromkeys(
-                r for r in (resolve_echoed_id(i, window_evidence, tag_to_id) for i in based_raw) if r is not None
+                r
+                for r in (
+                    resolve_echoed_id(i, window_evidence, tag_to_id) for i in based_raw
+                )
+                if r is not None
             )
         )
         if len(cited) == 0:
             continue  # 未引用有效状态证据时不生成趋势。
         confidence = compute_confidence(
-            ConfidenceInputs(content_type="trend", formed_by="ruled", support_count=len(cited), contradict_count=0), cfg
+            ConfidenceInputs(
+                content_type="trend",
+                formed_by="ruled",
+                support_count=len(cited),
+                contradict_count=0,
+            ),
+            cfg,
         )
         trends.append(
             cognition_store.put(
                 CognitionInput(
-                    subject_id=subject_id, content=content, content_type="trend", formed_by="ruled",
-                    confidence=confidence, cred_status=derive_cred_status(confidence, 0, "trend", cfg),
-                    evidence=[EvidenceLink(evidence_id=i, relation="support") for i in cited],
+                    subject_id=subject_id,
+                    content=content,
+                    content_type="trend",
+                    formed_by="ruled",
+                    confidence=confidence,
+                    cred_status=derive_cred_status(confidence, 0, "trend", cfg),
+                    evidence=[
+                        EvidenceLink(evidence_id=i, relation="support") for i in cited
+                    ],
                 )
             )
         )

@@ -14,6 +14,7 @@ from ..clock import Clock, system_clock, to_iso_z
 from ..config import CONFIG, Config, cloud_read_default
 from ..types import Evidence, EvidenceInput
 from ._rows import row_all, row_one
+from ._tombstones import register_evidence_tombstone_reader
 
 
 def _from_row(r: sqlite3.Row) -> Evidence:
@@ -42,6 +43,7 @@ class SqliteEvidenceStore:
         self._db = db
         self._cfg = cfg
         self._clock = clock
+        register_evidence_tombstone_reader(self, db)
 
     def put(self, inp: EvidenceInput) -> Evidence:
         # origin_id 提供幂等性；已存在时返回原记录而不重复写入。

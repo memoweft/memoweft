@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+from os.path import exists
 import sqlite3
 
 from .schema import SCHEMA_SQL, SCHEMA_VERSION
@@ -27,21 +28,59 @@ def fts5_available(db: sqlite3.Connection) -> bool:
         return False
 
 
-def open_db(path: str = ":memory:") -> sqlite3.Connection:
-    """开库:设 busy_timeout、建 fresh schema(全列)、盖 user_version。返回单条共享连接。
+def _migrate(db: sqlite3.Connection, current: int) -> None:
+    """把已有库升到当前版本；每一版数据迁移独立事务，和 TS 迁移器同口径。"""
+    for version in range(current + 1, SCHEMA_VERSION + 1):
+        try:
+            db.execute("BEGIN")
+            if version == 2:
+                # rc.1 的撤回台账意味着 cognition 已依赖被删证据。其 content 是不可拆分的
+                # 派生文本，必须连同两类关系行整体清掉，不能只断一条 provenance 链。
+                db.execute(
+                    "DELETE FROM cognition_evidence WHERE cognition_id IN "
+                    "(SELECT DISTINCT cognition_id FROM evidence_retraction)"
+                )
+                db.execute(
+                    "DELETE FROM cognition WHERE id IN "
+                    "(SELECT DISTINCT cognition_id FROM evidence_retraction)"
+                )
+                db.execute("DELETE FROM evidence_retraction")
+            db.execute(f"PRAGMA user_version = {version}")
+            db.execute("COMMIT")
+        except BaseException as exc:
+            try:
+                db.execute("ROLLBACK")
+            except sqlite3.Error:
+                pass
+            raise RuntimeError(f"Migration v{version} failed and was rolled back: {exc}") from exc
 
-    只处理 fresh 库（新文件 / :memory:）；老库升级（runMigrations 从旧 user_version 升）由宿主负责。
-    """
+
+def open_db(path: str = ":memory:") -> sqlite3.Connection:
+    """开库并升级 schema：新库直接盖当前版本，旧库按事务迁移，未来库拒绝打开。"""
+    fresh = path == ":memory:" or not exists(path)
     db = sqlite3.connect(path)
     # autocommit(isolation_level=None):每条 DML 立即提交、无隐式 BEGIN,对齐 TS node:sqlite 的
     #   autocommit 语义;跨表事务由写路径显式 BEGIN/COMMIT/ROLLBACK 控制( transaction,同 openStores)。
     db.isolation_level = None
     db.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
-    for stmt in SCHEMA_SQL:
-        db.execute(stmt)
-    db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-    db.commit()
-    return db
+    current = user_version(db)
+    if current > SCHEMA_VERSION:
+        db.close()
+        raise RuntimeError(
+            f"Database schema version v{current} is higher than the v{SCHEMA_VERSION} supported by this memoweft"
+        )
+    try:
+        # 新库和旧库都先保证当前表集合存在；数据升级仍只在 _migrate 的事务中执行。
+        for stmt in SCHEMA_SQL:
+            db.execute(stmt)
+        if fresh:
+            db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+        else:
+            _migrate(db, current)
+        return db
+    except BaseException:
+        db.close()
+        raise
 
 
 def user_version(db: sqlite3.Connection) -> int:

@@ -275,9 +275,9 @@ test('consolidate conflict（:630）：被反驳后仍封顶 280，不会反而�
   }
 });
 
-// ══════════ managementApi：重算期三点（:333 / :425 / :547）══════════
+// ══════════ managementApi：force 删除 + 其余重算点（:333 / :425 / :547）══════════
 
-test('removeEvidenceSafely（:333）：删掉一条证据后 hedged 不蒸发', () => {
+test('removeEvidenceSafely（:333）：删掉一条证据后，派生 cognition 整体移除', () => {
   const b = openStores(':memory:');
   try {
     const api = createMemoryManagementAPI(b);
@@ -288,11 +288,7 @@ test('removeEvidenceSafely（:333）：删掉一条证据后 hedged 不蒸发', 
       force: true,
     });
     assert.equal(res.removed, true);
-    assert.equal(
-      b.cognitionStore.get(cog.id)!.confidence,
-      HEDGE_CAP,
-      `按剩余链重算后仍应封顶（漏接则 ${STATED_1}——删证据反而让系统更笃定）`,
-    );
+    assert.equal(b.cognitionStore.get(cog.id), null, '认知内容不能脱离已删证据继续存在');
   } finally {
     b.close();
   }

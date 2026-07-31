@@ -65,6 +65,8 @@ Core owns and closes the SQLite stores and any vector or keyword retriever it cr
 | `ingestObservation(input)` | Writes zero or more `observed` evidence rows.                                       | None.                | Each observation may override authorization defaults. `kind` is an open string; `kind` and `meta` are accepted but are not currently persisted. |
 | `ingestToolResult(input)`  | Writes one `tool` evidence row.                                                     | None.                | Stores the returned tool payload, not tool-call intent or arguments. `originId` is recommended for idempotency.                                 |
 
+Stable Core write methods require non-empty `subjectId` and `hostId` values (including configured defaults), and a provided `conversationId` must be non-empty. A provided `occurredAt` must be a real ISO-8601 date-time with `Z` or an explicit numeric offset. Empty message content remains valid.
+
 `observed` and `tool` evidence default to eligible for built-in local write-model prompts, ineligible for built-in cloud write-model prompts, and eligible for inference. An observation may override those flags at ingestion. `ToolResultInput` does not expose authorization overrides; use `core.memory.updateEvidenceAuthorization()` afterward. These flags do not restrict recall, list/read APIs, MCP tools, adapter injection, derived records, exports, logs, or custom host code.
 
 ### Recall and profile formation
@@ -100,11 +102,11 @@ Optional, host-scheduled maintenance entry points, decoupled from `updateProfile
 
 ### Conversation helpers
 
-| Method                                              | Behavior                                                                                                                                                                                                              |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `handleConversationTurn(input)`                     | Stores the user message, recalls eligible memory, and calls the chat model. A `conversationId` reuses its active in-memory window. `systemPrompt` and `seedTurns` apply only when that conversation is first created. |
-| `recordAssistantReply({ conversationId, content })` | Adds an assistant reply to an existing interaction window so a later user reply can be interpreted in context. It never creates evidence. An unknown conversation id is ignored.                                      |
-| `dropConversation(conversationId)`                  | Drops the active in-memory conversation and interaction window. It does not delete stored memory. The next call may establish a new prompt and seed turns.                                                            |
+| Method                                              | Behavior                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `handleConversationTurn(input)`                     | Stores the user message, recalls eligible memory, calls the chat model, and writes a visible interaction-context snapshot. `episodeId` is honored; otherwise idle time splits episodes automatically. A `conversationId` is permanently bound to one subject for the Core lifetime; cross-subject reuse is rejected. `systemPrompt` and `seedTurns` apply only when that subject-bound conversation is first created. |
+| `recordAssistantReply({ conversationId, content })` | Adds an assistant reply to the currently subject-bound interaction window so a later user reply can be interpreted in context. It never creates evidence. An unknown conversation id is ignored.                                                                                                                                                                                                                      |
+| `dropConversation(conversationId)`                  | Drops the active in-memory conversation and interaction window, but retains the subject binding to reject late replies from another identity. It does not delete stored memory. The same subject may rebuild the id with a new prompt and seed turns; another subject must use a new id.                                                                                                                              |
 
 Assistant text may be stored as interaction context, but it never receives an evidence id and cannot satisfy a cognition's provenance requirement.
 
@@ -114,7 +116,7 @@ Assistant text may be stored as interaction context, but it never receives an ev
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `health()` | Returns `{ llmReady, embedReady }` for MemoWeft's built-in OpenAI-compatible client and vector retriever. Custom injected implementations may work while these flags remain `false`; the report is not a generic capability probe.                                                                               |
 | `usage()`  | Returns cumulative `{ llm, embed, total }` token counters for the Core's owned clients. Each bucket has `promptTokens`, `completionTokens`, `totalTokens`, and `callsWithUsage`. Endpoints that omit usage produce no counted tokens; an injected retriever's embed usage is caller-owned and reports zero here. |
-| `close()`  | Closes stores and retrievers owned by Core. Do not use the Core after closing it. Calling code remains responsible for injected retrievers.                                                                                                                                                                      |
+| `close()`  | Clears in-memory conversation text and subject bindings, then closes stores and retrievers owned by Core. Conversation ingestion/reply capture is rejected afterward. Calling code remains responsible for injected retrievers. The call is idempotent.                                                          |
 
 ## Controlled memory API
 
@@ -131,18 +133,21 @@ Use `core.memory`; applications should not write the SQLite tables directly.
 
 ### State, authorization, and deletion
 
-| Method                               | Not-found or refusal behavior                                          | Notes                                                                                                            |
-| ------------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `invalidateCognition(input)`         | Returns `null` when absent.                                            | Sets `invalidAt`; requires `reason`.                                                                             |
-| `archiveCognition(input)`            | Returns `null` when absent.                                            | Sets `archivedAt`; requires `reason`.                                                                            |
-| `muteCognition(input)`               | Returns `null` when absent.                                            | Mutes or unmutes recall without changing confidence; requires `reason`.                                          |
-| `updateEvidenceAuthorization(input)` | Returns `null` when absent.                                            | Changes `allowCloudRead` and/or `allowInference`; no-op changes are not audited.                                 |
-| `mergeCognition(input)`              | Throws for missing, cross-subject, invalid, or archived targets.       | Moves deduplicated provenance links, recomputes target confidence, and invalidates the source.                   |
-| `removeEvidenceSafely(input)`        | Returns `{ removed: false, blockers }` when referenced and not forced. | `force: true` removes reference links in the same database transaction.                                          |
-| `removeCognitionSafely(input)`       | Returns `removed: false` when absent.                                  | Removes the cognition and its links, not the underlying evidence.                                                |
-| `resetSubject(input)`                | Returns removal counts.                                                | Destructive reset; `reason` is optional and is not retained because the subject's audit history is also removed. |
+| Method                               | Not-found or refusal behavior                                                                 | Notes                                                                                                                                                      |
+| ------------------------------------ | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalidateCognition(input)`         | Returns `null` when absent.                                                                   | Sets `invalidAt`; requires `reason`.                                                                                                                       |
+| `archiveCognition(input)`            | Returns `null` when absent.                                                                   | Sets `archivedAt`; requires `reason`.                                                                                                                      |
+| `muteCognition(input)`               | Returns `null` when absent.                                                                   | Mutes or unmutes recall without changing confidence; requires `reason`.                                                                                    |
+| `updateEvidenceAuthorization(input)` | Returns `null` when absent.                                                                   | Changes `allowCloudRead` and/or `allowInference`; no-op changes are not audited.                                                                           |
+| `mergeCognition(input)`              | Throws for missing, cross-subject, invalid, or archived targets.                              | Moves deduplicated provenance links, recomputes target confidence, and invalidates the source.                                                             |
+| `reinforceCognition(input)`          | Throws for missing or cross-subject evidence/cognition and for invalid or archived cognition. | Attaches existing evidence as `support` or `contradict`, recomputes confidence/status, and is idempotent for the same relation.                            |
+| `removeEvidenceSafely(input)`        | Returns `{ removed: false, blockers }` when referenced and not forced.                        | `force: true` removes every referencing event and cognition (their derived text is indivisible), then tombstones the evidence in one database transaction. |
+| `removeCognitionSafely(input)`       | Returns `removed: false` when absent.                                                         | Removes the cognition and its links, not the underlying evidence.                                                                                          |
+| `resetSubject(input)`                | Returns removal counts.                                                                       | Destructive reset; `reason` is optional and is not retained because the subject's audit history is also removed.                                           |
 
 Successful management mutations are written to `management_log` with metadata and a reason, except `resetSubject`, which deliberately removes that log. Rejected and no-op operations do not create audit rows.
+
+Forced evidence removal retracts active memory; it is not a per-row physical privacy erasure. The evidence tombstone remains for audit, while every event or cognition derived from it is removed so its derived text cannot be listed, graphed, exported, or reused by built-in model paths. `interaction_context` has no `evidence_id`, so this targeted operation does not remove it; use `resetSubject` for the complete subject-level privacy clear.
 
 `resetSubject` transactionally removes the subject's evidence, events, cognitions, relationship rows, interaction contexts, semantic resolutions, and management audit rows. Its returned counts cover evidence, events, cognitions, and audit rows. Recall-index clearing happens afterward through `indexAll([])` and is not part of the database transaction; the method may return before an asynchronous external index finishes clearing.
 
@@ -160,8 +165,11 @@ A bundle contains evidence, events, cognitions, provenance relationships, pendin
 
 - `dryRun` validates and reports planned writes without modifying the database.
 - `merge` imports transactionally through the Core facade and deduplicates by id and evidence `originId`.
+- An id is an idempotent duplicate only when the complete exported entity and its owned provenance links match the target (including event consolidation state). A same-id collision is fatal; imports never bind bundle-derived text to an unrelated target row or its wider authorization.
+- Imports reject malformed dates, enum values, relationships, interaction-context hashes, and orphan or duplicate semantic resolutions before writing.
+- Evidence deletion is monotonic across restores: an older bundle cannot revive a tombstoned evidence item or derived entities that depended on it.
 - Bundle schema v2 imports schema v1 bundles with missing interaction sections treated as empty.
-- There is no `replace` import mode in 0.7.x.
+- There is no `replace` import mode in 1.0.
 
 After an import, call `updateProfile()` when you want the retriever index rebuilt from the imported profile.
 

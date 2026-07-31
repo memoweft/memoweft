@@ -24,14 +24,20 @@ def make_transaction(db: sqlite3.Connection) -> Transaction:
     def transaction(fn: Callable[[], Any]) -> Any:
         if depth[0] > 0:
             return fn()  # 已在事务里 → 直接跑(SQLite 不支持嵌套 BEGIN)
-        depth[0] += 1
         db.execute("BEGIN")
+        # 只有 BEGIN 成功后才进入深度。外部事务令 BEGIN 失败时不能毒化后续调用，
+        # 否则它们会被误判为嵌套事务并在 autocommit 中直接执行。
+        depth[0] += 1
         try:
             r = fn()
             db.execute("COMMIT")
             return r
         except BaseException:
-            db.execute("ROLLBACK")  # 任一步抛错 → 整段回滚
+            try:
+                db.execute("ROLLBACK")  # 任一步抛错 → 整段回滚
+            except sqlite3.Error:
+                # 保留 callback / COMMIT 的原始异常；rollback 异常不应覆盖它。
+                pass
             raise
         finally:
             depth[0] -= 1

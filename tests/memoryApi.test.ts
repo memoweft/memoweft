@@ -16,6 +16,8 @@ import { createMemoryManagementAPI } from '../src/memory/managementApi.ts';
 import { SqliteCognitionStore } from '../src/cognition/store.ts';
 import { computeConfidence } from '../src/consolidation/confidence.ts';
 import { recallCognitions } from '../src/retrieval/recall.ts';
+import { buildMemoryGraph } from '../src/graph/buildMemoryGraph.ts';
+import { exportBundle } from '../src/portable/exportBundle.ts';
 
 /** 快速搭一套 :memory: 库 + 管理 API。 */
 function setup(): { bundle: StoreBundle; api: ReturnType<typeof createMemoryManagementAPI> } {
@@ -173,11 +175,14 @@ test('removeEvidenceSafely：force → 删证据 + 清关联链 + 审计含 bloc
       occurredAt: e.occurredAt,
       evidenceIds: [e.id],
     });
-    seedCognition(bundle, { evidence: [{ evidenceId: e.id, relation: 'support' }] });
+    const cognition = seedCognition(bundle, {
+      evidence: [{ evidenceId: e.id, relation: 'support' }],
+    });
 
     const r = api.removeEvidenceSafely({ evidenceId: e.id, reason: '确认要删', force: true });
     assert.equal(r.removed, true);
     assert.equal(bundle.evidenceStore.get(e.id), null, '证据已删');
+    assert.equal(bundle.cognitionStore.get(cognition.id), null, '派生认知已随之删除');
     assert.ok(api.checkIntegrity().ok, '关联链已清，不留孤儿');
     const log = bundle.managementLog.list(e.id);
     assert.equal(log.length, 1);
@@ -185,6 +190,149 @@ test('removeEvidenceSafely：force → 删证据 + 清关联链 + 审计含 bloc
     const detail = log[0]!.detail as { force: boolean; blockers: unknown[] };
     assert.equal(detail.force, true);
     assert.equal(detail.blockers.length, 2, 'blockers 快照进了 detail');
+  } finally {
+    bundle.close();
+  }
+});
+
+test('removeEvidenceSafely：force 删除所有关联事件，其他证据转 pending，列表/图/导出不留旧摘要', () => {
+  const { bundle, api } = setup();
+  try {
+    const target = seedEvidence(bundle, '必须删除的原话');
+    const survivor = seedEvidence(bundle, '同一事件中仍有效的原话');
+    const unaffected = seedEvidence(bundle, '完全无关的原话');
+    const single = bundle.eventStore.put({
+      subjectId: 'owner',
+      summary: '旧摘要：只引用目标证据',
+      occurredAt: target.occurredAt,
+      evidenceIds: [target.id],
+    });
+    const mixed = bundle.eventStore.put({
+      subjectId: 'owner',
+      summary: '旧摘要：混合目标和幸存证据',
+      occurredAt: target.occurredAt,
+      evidenceIds: [target.id, survivor.id],
+    });
+    const kept = bundle.eventStore.put({
+      subjectId: 'owner',
+      summary: '保留摘要：无关事件',
+      occurredAt: unaffected.occurredAt,
+      evidenceIds: [unaffected.id],
+    });
+    const singleCognition = seedCognition(bundle, {
+      content: '旧认知：只引用目标证据',
+      evidence: [{ evidenceId: target.id, relation: 'support' }],
+    });
+    const mixedCognition = seedCognition(bundle, {
+      content: '旧认知：混合目标和幸存证据',
+      evidence: [
+        { evidenceId: target.id, relation: 'support' },
+        { evidenceId: survivor.id, relation: 'support' },
+      ],
+    });
+    const keptCognition = seedCognition(bundle, {
+      content: '保留认知：无关证据',
+      evidence: [{ evidenceId: survivor.id, relation: 'support' }],
+    });
+    bundle.cognitionStore.addEvidence(keptCognition.id, [
+      { evidenceId: unaffected.id, relation: 'support' },
+    ]);
+
+    const result = api.removeEvidenceSafely({
+      evidenceId: target.id,
+      reason: '隐私删除',
+      force: true,
+    });
+    assert.equal(result.removed, true);
+    assert.ok(result.blockers.some((b) => b.kind === 'event' && b.id === single.id));
+    assert.ok(result.blockers.some((b) => b.kind === 'event' && b.id === mixed.id));
+    assert.ok(result.blockers.some((b) => b.kind === 'cognition' && b.id === singleCognition.id));
+    assert.ok(result.blockers.some((b) => b.kind === 'cognition' && b.id === mixedCognition.id));
+    assert.equal(bundle.evidenceStore.get(target.id), null, '目标证据已撤回');
+    assert.ok(bundle.evidenceStore.get(survivor.id), '混合事件中的其他证据仍保留');
+    assert.equal(bundle.cognitionStore.get(singleCognition.id), null, '单证据认知已删除');
+    assert.equal(
+      bundle.cognitionStore.get(mixedCognition.id),
+      null,
+      '多证据认知整体删除，不保留派生内容',
+    );
+    assert.ok(bundle.cognitionStore.get(keptCognition.id), '无关认知保持');
+    assert.ok(
+      !bundle.eventStore.coveredEvidenceIds('owner').includes(survivor.id),
+      '事件被整体删除后，幸存证据重新成为 pending',
+    );
+
+    const listed = api.listEvents();
+    assert.deepEqual(
+      listed.map((e) => e.id),
+      [kept.id],
+      '仅不受影响事件仍可列出',
+    );
+    assert.ok(!listed.some((e) => e.summary.includes('旧摘要')), '列表不含已删内容的派生摘要');
+    const listedCognitions = api.listCognitions();
+    assert.deepEqual(
+      listedCognitions.map((c) => c.id),
+      [keptCognition.id],
+    );
+    assert.ok(
+      !listedCognitions.some((c) => c.content.includes('旧认知')),
+      '列表不含已删内容的派生认知',
+    );
+
+    const graph = buildMemoryGraph('owner', bundle);
+    assert.ok(
+      !graph.nodes.some((n) => n.kind === 'event' && n.summary?.includes('旧摘要')),
+      '图谱不含已删内容的事件摘要',
+    );
+    assert.ok(
+      !graph.nodes.some((n) => n.kind === 'cognition' && n.summary?.includes('旧认知')),
+      '图谱不含已删内容的派生认知',
+    );
+    const portable = exportBundle('owner', bundle, { now: '2026-07-31T00:00:00.000Z' });
+    assert.ok(!JSON.stringify(portable).includes('旧摘要'), '便携导出不含旧摘要');
+    assert.ok(!JSON.stringify(portable).includes('旧认知'), '便携导出不含旧认知');
+    assert.deepEqual(
+      portable.data.events.map((e) => e.id),
+      [kept.id],
+    );
+  } finally {
+    bundle.close();
+  }
+});
+
+test('removeEvidenceSafely：force 的中途失败会原子回滚事件、关联、解析、证据和审计', () => {
+  const { bundle, api } = setup();
+  try {
+    const evidence = seedEvidence(bundle, '原子回滚证据');
+    const event = bundle.eventStore.put({
+      subjectId: 'owner',
+      summary: '原子回滚摘要',
+      occurredAt: evidence.occurredAt,
+      evidenceIds: [evidence.id],
+    });
+    const cognition = seedCognition(bundle, {
+      evidence: [{ evidenceId: evidence.id, relation: 'support' }],
+    });
+    bundle.semanticResolutionStore.put({
+      evidenceId: evidence.id,
+      resolvedContent: '原子回滚解析',
+      resolverVersion: 'test@1',
+    });
+    bundle.evidenceStore.remove = () => {
+      throw new Error('injected evidence remove failure');
+    };
+
+    assert.throws(
+      () => api.removeEvidenceSafely({ evidenceId: evidence.id, reason: '故障注入', force: true }),
+      /injected evidence remove failure/,
+    );
+    assert.ok(bundle.evidenceStore.get(evidence.id), '证据回滚');
+    assert.ok(bundle.eventStore.get(event.id), '已先删除的事件回滚');
+    assert.deepEqual(bundle.cognitionStore.sourcesOf(cognition.id), [
+      { evidenceId: evidence.id, relation: 'support' },
+    ]);
+    assert.ok(bundle.semanticResolutionStore.ofEvidence(evidence.id), '解析回滚');
+    assert.equal(bundle.managementLog.list(evidence.id).length, 0, '审计也不应留下半条记录');
   } finally {
     bundle.close();
   }
@@ -203,10 +351,7 @@ test('removeEvidenceSafely：无引用 → 不用 force 直接删', () => {
   }
 });
 
-test('removeEvidenceSafely：删证据后重算受影响认知的置信（不留旧值撒谎）', () => {
-  // 为什么要这条：删除路径此前只清链、不重算。一条靠多条证据攒到高置信的认知，
-  //   用户删掉其中几条后仍保持删除前的把握度——系统对他的确信程度停留在已被撤回的证据上。
-  //   同文件的 mergeCognition 路径做了重算，注释自称「不留旧值撒谎」；删除路径没做到。
+test('removeEvidenceSafely：删多证据认知中的一条证据时，整条派生认知删除', () => {
   const { bundle, api } = setup();
   try {
     const e1 = seedEvidence(bundle, '我每天都喝茶');
@@ -230,27 +375,11 @@ test('removeEvidenceSafely：删证据后重算受影响认知的置信（不留
         { evidenceId: e3.id, relation: 'support' },
       ],
     });
-    const before = bundle.cognitionStore.get(c.id)!.confidence;
-
     const r = api.removeEvidenceSafely({ evidenceId: e1.id, reason: '用户要求删除', force: true });
     assert.equal(r.removed, true, '有引用但 force → 删掉');
-
-    const after = bundle.cognitionStore.get(c.id)!;
-    assert.equal(bundle.cognitionStore.sourcesOf(c.id).length, 2, '溯源链只剩两条');
-    assert.ok(
-      after.confidence < before,
-      `支持证据从 3 条减到 2 条，置信应下调：before=${before} after=${after.confidence}`,
-    );
-    assert.equal(
-      after.confidence,
-      computeConfidence({
-        contentType: 'preference',
-        formedBy: 'stated',
-        supportCount: 2,
-        contradictCount: 0,
-      }),
-      '重算结果应与按剩余链直接计算一致（同 merge 路径口径）',
-    );
+    assert.equal(bundle.cognitionStore.get(c.id), null, '认知内容不能脱离已删证据继续存在');
+    assert.ok(bundle.evidenceStore.get(e2.id), '其他证据仍保留');
+    assert.ok(bundle.evidenceStore.get(e3.id), '其他证据仍保留');
   } finally {
     bundle.close();
   }

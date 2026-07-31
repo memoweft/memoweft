@@ -10,12 +10,12 @@
 
 注:preceding_ai_context / asked_at / archived_at / muted_at 在 TS 里 fresh 库由 SCHEMA 常量直接带全,
   旧数据库由各 store 的 migrate() 补列；Python 新建数据库时直接按 SCHEMA 建立完整列集。
-LATEST_SCHEMA_VERSION = 1(store/migrations.ts);新库 user_version 盖 1。
+LATEST_SCHEMA_VERSION = 2(store/migrations.ts);新库 user_version 盖 2。
 """
 from __future__ import annotations
 
 #: PRAGMA user_version，与 TS LATEST_SCHEMA_VERSION 保持一致。
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 #: 幂等的建表与索引 DDL；shared/parity/schema.json 验证列序、NOT NULL、DEFAULT 与主键契约。
 SCHEMA_SQL: tuple[str, ...] = (
@@ -79,7 +79,7 @@ SCHEMA_SQL: tuple[str, ...] = (
   relation     TEXT NOT NULL
 )""",
     "CREATE INDEX IF NOT EXISTS ix_cogev_cog ON cognition_evidence(cognition_id)",
-    # ── evidence_retraction(软删撤回台账;Python 侧仅为 schema 平价,不写不读)──
+    # ── evidence_retraction（旧版软删撤回台账；v2 升级会清理其派生认知）──
     """CREATE TABLE IF NOT EXISTS evidence_retraction (
   cognition_id TEXT NOT NULL,
   evidence_id  TEXT NOT NULL,

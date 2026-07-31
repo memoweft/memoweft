@@ -4,13 +4,16 @@
  * 挂 openStores 的共享连接(与三层 store 同连接,才能同事务);单测可传路径 / ':memory:' 自开连接。
  * 只存「某段用户可见上下文」；不生成 Cognition，也不作为证据摄入；内容永不进 consolidate 的 support 白名单。
  *
- * 幂等:record 按 context_hash 写入前查重(非 DB 唯一约束——避免便携包跨库导入时同内容不同 id 撞约束)。
+ * 幂等:record 按 subject_id + conversation_id + episode_id + context_hash 写入前查重（非 DB 唯一约束——
+ * 避免便携包跨库导入时同内容不同 id 撞约束）。同一句可出现在不同用户/会话/episode，不能跨归属吞掉记录。
  */
 import { DatabaseSync } from '../store/nodeSqliteDriver.ts';
-import { randomUUID, createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { BUSY_TIMEOUT_MS } from '../store/busyTimeout.ts';
 import { systemClock, type Clock } from '../clock.ts';
 import type { InteractionContext, InteractionContextInput, VisibleTurn } from './model.ts';
+import { hashContext } from './contextHash.ts';
+export { hashContext } from './contextHash.ts';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS interaction_context (
@@ -49,13 +52,8 @@ function fromRow(r: Row): InteractionContext {
   };
 }
 
-/** 内容指纹(sha256 over 规范化 JSON)——幂等去重用。 */
-export function hashContext(context: VisibleTurn[]): string {
-  return createHash('sha256').update(JSON.stringify(context)).digest('hex');
-}
-
 export interface InteractionContextStore {
-  /** 落一条上下文快照;按 context_hash 写入前查重(同一快照重复写返回已存在的,不重复落库)。 */
+  /** 落一条上下文快照;按 subjectId + conversationId + episodeId + context_hash 写入前查重（同一 episode 的同一快照重复写返回已存在的，不重复落库）。 */
   record(input: InteractionContextInput): InteractionContext;
   get(id: string): InteractionContext | null;
   /** 某 subject 的全部(便携包导出用);缺省全 subject。 */
@@ -85,8 +83,12 @@ export class SqliteInteractionContextStore implements InteractionContextStore {
   record(input: InteractionContextInput): InteractionContext {
     const contextHash = hashContext(input.context);
     const existing = this.db
-      .prepare('SELECT * FROM interaction_context WHERE context_hash = ?')
-      .get(contextHash) as unknown as Row | undefined;
+      .prepare(
+        `SELECT * FROM interaction_context
+         WHERE subject_id = ? AND conversation_id = ? AND episode_id = ? AND context_hash = ?`,
+      )
+      .get(input.subjectId, input.conversationId, input.episodeId, contextHash) as unknown as
+      Row | undefined;
     if (existing) return fromRow(existing);
     const ctx: InteractionContext = {
       id: randomUUID(),

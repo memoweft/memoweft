@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -62,6 +63,24 @@ def test_transaction_reentrant() -> None:
     with pytest.raises(RuntimeError):
         tx(outer_boom)
     assert len(cog.all("owner")) == 2  # 外2/里2 随外层一起回滚
+
+
+def test_failed_external_begin_does_not_poison_later_transaction() -> None:
+    db = open_db(":memory:")
+    cog = SqliteCognitionStore(db, clock=_clock)
+    tx = make_transaction(db)
+    db.execute("BEGIN")
+    with pytest.raises(sqlite3.OperationalError):
+        tx(lambda: None)
+    db.execute("ROLLBACK")
+
+    def boom() -> None:
+        cog.put(_mk("必须回滚"))
+        raise RuntimeError("callback boom")
+
+    with pytest.raises(RuntimeError, match="callback boom"):
+        tx(boom)
+    assert len(cog.all("owner")) == 0  # 失败 BEGIN 后仍须真正开事务并回滚
 
 
 def test_noop_transaction() -> None:

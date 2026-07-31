@@ -160,7 +160,7 @@ export function buildMemoryGraph(
     const evidenceById = new Map<string, Evidence>();
     for (const eid of new Set(links.map((l) => l.evidenceId))) {
       const e = evidenceStore.get(eid);
-      if (!e) continue; // 溯源指向的证据可能已被删（防御）
+      if (!e || e.subjectId !== subjectId) continue; // 已删或历史跨 subject 脏链都不能进入当前图
       let keep = true;
       if (sourceKinds && !sourceKinds.includes(e.sourceKind)) keep = false;
       if (keep && opts.onlyCloudBlocked && e.allowCloudRead) keep = false;

@@ -44,6 +44,22 @@ export const MIGRATIONS: Migration[] = [
       /* schema 由 store 构造建，此处只 stamp 版本号 */
     },
   },
+  {
+    version: 2,
+    name: 'remove-retracted-derived-cognitions',
+    up: (db) => {
+      // rc.1 的 evidence_retraction 表表示该 cognition 已有一条被撤回的证据。
+      // cognition.content 是不可拆分的派生文本；只保留剩余链会让旧内容从 list/graph/export
+      // 或后续模型路径继续出现。按 rc.2 fail-closed 语义删除整条 cognition 与两类关联行。
+      db.exec(
+        'DELETE FROM cognition_evidence WHERE cognition_id IN (SELECT DISTINCT cognition_id FROM evidence_retraction)',
+      );
+      db.exec(
+        'DELETE FROM cognition WHERE id IN (SELECT DISTINCT cognition_id FROM evidence_retraction)',
+      );
+      db.exec('DELETE FROM evidence_retraction');
+    },
+  },
 ];
 
 /** 当前代码支持的最新 schema 版本。 */

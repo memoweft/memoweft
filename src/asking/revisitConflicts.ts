@@ -107,27 +107,31 @@ export async function revisitConflicts(
 
   for (const cog of candidates) {
     const links = deps.cognitionStore.sourcesOf(cog.id);
-    const supportEv = evidenceByIds(
-      links.filter((l) => l.relation === 'support').map((l) => l.evidenceId),
-      deps.evidenceStore,
-    );
-    const contradictEv = evidenceByIds(
-      links.filter((l) => l.relation === 'contradict').map((l) => l.evidenceId),
-      deps.evidenceStore,
-    );
+    const supportIds = links.filter((l) => l.relation === 'support').map((l) => l.evidenceId);
+    const contradictIds = links.filter((l) => l.relation === 'contradict').map((l) => l.evidenceId);
+    const resolvedSupportEv = evidenceByIds(supportIds, deps.evidenceStore);
+    const resolvedContradictEv = evidenceByIds(contradictIds, deps.evidenceStore);
+    // 防御历史脏链：当前 subject 的冲突复看绝不展示或处理另一 subject 的证据。
+    const supportEv = resolvedSupportEv.filter((e) => e.subjectId === subjectId);
+    const contradictEv = resolvedContradictEv.filter((e) => e.subjectId === subjectId);
     const support = supportEv.map(brief);
     const contradict = contradictEv.map(brief);
-    // 隐私护栏（按当前措辞模型 tier）：只将该 tier 可读的两面证据提供给措辞模型；宿主展示的两面证据保持完整。
+    // 认知原文可能同时派生自正反两面证据。只要链不完整、跨 subject、禁止推理或当前
+    // tier 不能读取任一来源，就不得把认知原文交给措辞模型，改用本地模板 fail-closed。
     const tier = deps.llm?.tier ?? 'cloud';
-    const question = deps.llm
-      ? await phraseQuestion(
-          cog.content,
-          filterReadableByTier(supportEv, tier).map(brief),
-          filterReadableByTier(contradictEv, tier).map(brief),
-          deps.llm,
-          lang,
-        )
-      : templateQuestion(cog.content, support, contradict, lang);
+    const relevantCount = supportIds.length + contradictIds.length;
+    const allEvidence = [...supportEv, ...contradictEv];
+    const modelAuthorized =
+      relevantCount > 0 &&
+      resolvedSupportEv.length === supportIds.length &&
+      resolvedContradictEv.length === contradictIds.length &&
+      allEvidence.length === relevantCount &&
+      allEvidence.every((e) => e.allowInference) &&
+      filterReadableByTier(allEvidence, tier).length === allEvidence.length;
+    const question =
+      deps.llm && modelAuthorized
+        ? await phraseQuestion(cog.content, support, contradict, deps.llm, lang)
+        : templateQuestion(cog.content, support, contradict, lang);
 
     proposals.push({
       cognitionId: cog.id,

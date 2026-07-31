@@ -134,22 +134,30 @@ export async function proposeAsk(
       .sourcesOf(cog.id)
       .filter((l) => l.relation === 'support')
       .map((l) => l.evidenceId);
-    const supportEvidence = supportIds
+    const resolvedSupportEvidence = supportIds
       .map((id) => deps.evidenceStore.get(id))
-      .filter((e): e is NonNullable<typeof e> => e !== null)
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+    // 防御历史脏链：当前 subject 的提问绝不展示或处理另一 subject 的证据。
+    const supportEvidence = resolvedSupportEvidence
+      .filter((e) => e.subjectId === subjectId)
       .sort(
         (a, b) => (a.sourceKind === 'observed' ? -1 : 0) - (b.sourceKind === 'observed' ? -1 : 0),
       );
     const evidence = supportEvidence.map((e) => ({ id: e.id, summary: e.summary || e.rawContent }));
-    // 隐私护栏（按当前措辞模型 tier）：只将该 tier 可读的证据提供给措辞模型；返回宿主展示的 evidence 保持完整。
-    const readable = filterReadableByTier(supportEvidence, deps.llm?.tier ?? 'cloud').map((e) => ({
-      id: e.id,
-      summary: e.summary || e.rawContent,
-    }));
+    // 认知原文可能是所有支撑证据的派生内容，不能只过滤证据列表后仍把认知原文交给模型。
+    // 仅当链完整、属于当前 subject、允许推理且当前 tier 可读时，才允许模型润色；否则本地模板 fail-closed。
+    const tier = deps.llm?.tier ?? 'cloud';
+    const modelAuthorized =
+      supportIds.length > 0 &&
+      resolvedSupportEvidence.length === supportIds.length &&
+      supportEvidence.length === supportIds.length &&
+      supportEvidence.every((e) => e.allowInference) &&
+      filterReadableByTier(supportEvidence, tier).length === supportEvidence.length;
 
-    const question = deps.llm
-      ? await phraseQuestion(cog.content, readable, deps.llm, lang)
-      : templateQuestion(cog.content, evidence, lang);
+    const question =
+      deps.llm && modelAuthorized
+        ? await phraseQuestion(cog.content, evidence, deps.llm, lang)
+        : templateQuestion(cog.content, evidence, lang);
 
     proposals.push({
       cognitionId: cog.id,

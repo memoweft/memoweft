@@ -20,7 +20,7 @@ from .llm.prompts import prompt_text
 from .privacy import filter_readable_by_tier
 from .store.cognition import SqliteCognitionStore
 from .store.evidence import SqliteEvidenceStore
-from .types import Cognition, CognitionInput, ConfidenceInputs, EvidenceLink, Lang
+from .types import Cognition, CognitionInput, ConfidenceInputs, Evidence, EvidenceLink, Lang
 
 
 @dataclass(slots=True)
@@ -87,20 +87,30 @@ def attribute(
     def support_of(cog_id: str) -> list[str]:
         return [lk.evidence_id for lk in cognition_store.sources_of(cog_id) if lk.relation == "support"]
 
+    # EvidenceStore 的时间窗接口是全库查询，归因则是严格的 subject-scoped 写路径。
+    # 所有从 support 或时间窗拿到的证据都必须在这里收口：其他 subject 的内容不能进
+    # prompt，也不能成为当前 subject 新假设的 support。不要把这个边界下放给调用方。
+    def evidence_for_subject(evidence_id: str) -> Optional[Evidence]:
+        evidence = evidence_store.get(evidence_id)
+        return evidence if evidence is not None and evidence.subject_id == subject_id else None
+
+    def subject_support_of(cog_id: str) -> list[str]:
+        return [evidence_id for evidence_id in support_of(cog_id) if evidence_for_subject(evidence_id) is not None]
+
     # state 现象自身的证据只能当现象 side,不能当原因(禁 state→state)。
     state_evidence: set[str] = set()
     for s in states:
-        state_evidence.update(support_of(s.id))
+        state_evidence.update(subject_support_of(s.id))
     # 已有假设引用过的证据 → 判某现象是否已归因(按现象去重)。
     hypo_ref_evidence: set[str] = set()
     for h in hypos:
-        hypo_ref_evidence.update(support_of(h.id))
+        hypo_ref_evidence.update(subject_support_of(h.id))
 
     def is_attributed(phenom_id: str) -> bool:
-        return any(i in hypo_ref_evidence for i in support_of(phenom_id))
+        return any(i in hypo_ref_evidence for i in subject_support_of(phenom_id))
 
     # 现象必须达到 min_phenomenon_support；按 updated_at 降序取最近 max_phenomena_per_run 个。
-    pool = [c for c in states if not is_attributed(c.id) and len(support_of(c.id)) >= a.min_phenomenon_support]
+    pool = [c for c in states if not is_attributed(c.id) and len(subject_support_of(c.id)) >= a.min_phenomenon_support]
     phenomena = sorted(pool, key=lambda c: c.updated_at, reverse=True)[: a.max_phenomena_per_run]
 
     before = llm.call_count
@@ -110,7 +120,7 @@ def attribute(
 
     for phenom in phenomena:
         phenom_evidences = sorted(
-            [e for e in (evidence_store.get(i) for i in support_of(phenom.id)) if e is not None],
+            [e for e in (evidence_for_subject(i) for i in support_of(phenom.id)) if e is not None],
             key=lambda e: e.occurred_at,
             reverse=True,  # 最晚在前
         )
@@ -122,7 +132,7 @@ def attribute(
             [
                 e
                 for e in evidence_store.by_time_range(_minus_hours(anchor, a.window_hours), upper_bound)
-                if e.allow_inference and e.id not in state_evidence
+                if e.subject_id == subject_id and e.allow_inference and e.id not in state_evidence
             ],
             llm.tier if llm.tier is not None else "cloud",
         )
