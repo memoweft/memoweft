@@ -44,8 +44,8 @@ Publish an adapter or the MCP server as its own reviewed release:
 
    ```bash
    npm init -y
-   npm install ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.3
-   npm install memoweft@rc @memoweft/mcp-server@0.2.3
+   npm install ai memoweft@1.0.0 @memoweft/adapter-ai-sdk@0.2.3
+   npm install memoweft@1.0.0 @memoweft/mcp-server@0.2.3
    ```
 
 ## Prepare the release

@@ -8,10 +8,10 @@ This is an **external integration package**. It wraps MemoWeft's public Core fac
 
 ## Install
 
-`@memoweft/adapter-ai-sdk@0.2.3` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`. To use the current 1.0 release candidate:
+`@memoweft/adapter-ai-sdk@0.2.3` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`. To use the current stable Core release:
 
 ```bash
-npm i ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.3
+npm i ai memoweft @memoweft/adapter-ai-sdk@0.2.3
 ```
 
 To build the adapter from source instead, use the repository workspace:

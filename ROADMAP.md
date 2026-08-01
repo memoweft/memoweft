@@ -2,11 +2,11 @@
 
 MemoWeft is a library-first memory layer with embedded SQLite storage. The roadmap prioritizes a small, dependable public API, inspectable memory behavior, and portable data over hosted features.
 
-Last updated: 2026-07-28
+Last updated: 2026-08-01
 
 ## Now
 
-- Ship 1.0: a frozen public API with a documented support tier per export and a written stability policy, hardened around provenance, corrections, conflicts, and portable bundles.
+- Maintain the 1.x stable API and its documented support tiers, with continued hardening around provenance, corrections, conflicts, and portable bundles.
 - Keep Node 20, 22, and 24 compatibility covered by CI, with Node 24 as the zero-dependency path.
 - Expand maintained integrations from runnable examples into versioned, installable packages.
 - Publish reproducible benchmark artifacts with commit, model, configuration, and dataset checksums.

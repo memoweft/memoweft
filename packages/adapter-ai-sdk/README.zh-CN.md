@@ -8,10 +8,10 @@
 
 ## 安装
 
-`@memoweft/adapter-ai-sdk@0.2.3` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`。使用当前 1.0 发布候选版：
+`@memoweft/adapter-ai-sdk@0.2.3` 支持 Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`。使用当前稳定版 Core：
 
 ```bash
-npm i ai memoweft@rc @memoweft/adapter-ai-sdk@0.2.3
+npm i ai memoweft @memoweft/adapter-ai-sdk@0.2.3
 ```
 
 若想改从源码构建适配器，请用本仓库的 workspace：

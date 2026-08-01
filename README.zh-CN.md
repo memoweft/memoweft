@@ -13,7 +13,6 @@
 MemoWeft 是面向 TypeScript AI 应用的开源长期记忆引擎。它把用户原话、行为观察、模型推断和未解决的冲突分别保存，让记忆可以追溯、纠正、管理和迁移，并存放在由你的应用控制的 SQLite 中。
 
 [![npm stable](https://img.shields.io/npm/v/memoweft?style=flat-square&label=stable&labelColor=14110B&color=E2A75E)](https://www.npmjs.com/package/memoweft)
-[![npm rc](https://img.shields.io/npm/v/memoweft/rc?style=flat-square&label=1.0%20RC&labelColor=14110B&color=6FB7B0)](https://www.npmjs.com/package/memoweft?activeTab=versions)
 [![CI](https://img.shields.io/github/actions/workflow/status/memoweft/memoweft/ci.yml?style=flat-square&labelColor=14110B&label=CI)](https://github.com/memoweft/memoweft/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/Node-20%20%7C%2022%20%7C%2024-4A4438?style=flat-square&labelColor=14110B)](./docs/INSTALL.zh-CN.md)
 [![license](https://img.shields.io/badge/license-MIT-4A4438?style=flat-square&labelColor=14110B)](./LICENSE)
@@ -111,11 +110,7 @@ Done. (in-memory database — nothing written to disk)
 Node 24+ 是最简单的使用方式：
 
 ```bash
-# 当前稳定版
 npm install memoweft
-
-# 或主动体验 1.0 候选版
-npm install memoweft@rc
 ```
 
 Node 20 或 22 还需要安装可选 SQLite 驱动：
@@ -191,15 +186,15 @@ MemoWeft 让信息从来源到召回的路径始终明确：
 
 ## 生态集成
 
-| 生态                                                    | 接入方式                             | 当前公开状态                                               |
-| ------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
-| [Vercel AI SDK](./packages/adapter-ai-sdk)              | 中间件召回与受控持久化               | npm `0.2.1` 支持 Core 至 `0.7`；`main` 已有 1.0-ready 源码 |
-| [Model Context Protocol](./packages/mcp-server)         | stdio：5 个读工具、3 个受控写工具    | npm `0.2.1` 支持 Core 至 `0.7`；`main` 已有 1.0-ready 源码 |
-| [Claude Agent SDK](./packages/adapter-claude-agent-sdk) | 用户输入与工具结果 hooks             | 仓库源码预览                                               |
-| [OpenAI Agents SDK](./packages/adapter-openai-agents)   | `run()` 包装与模型输入过滤           | 仓库源码预览                                               |
-| [LangChain](./packages/adapter-langchain)               | v1 middleware、retriever 与 callback | 仓库源码预览                                               |
-| [Mastra](./packages/adapter-mastra)                     | Processor 读写集成                   | 仓库源码预览                                               |
-| [LlamaIndex.TS](./packages/adapter-llamaindex)          | Memory block 与 stream tap           | Legacy；上游已归档                                         |
+| 生态                                                    | 接入方式                             | 当前公开状态                                 |
+| ------------------------------------------------------- | ------------------------------------ | -------------------------------------------- |
+| [Vercel AI SDK](./packages/adapter-ai-sdk)              | 中间件召回与受控持久化               | npm `0.2.3` 支持 Core `0.5.1` 至稳定版 `1.x` |
+| [Model Context Protocol](./packages/mcp-server)         | stdio：5 个读工具、3 个受控写工具    | npm `0.2.3` 支持 Core `0.5.1` 至稳定版 `1.x` |
+| [Claude Agent SDK](./packages/adapter-claude-agent-sdk) | 用户输入与工具结果 hooks             | 仓库源码预览                                 |
+| [OpenAI Agents SDK](./packages/adapter-openai-agents)   | `run()` 包装与模型输入过滤           | 仓库源码预览                                 |
+| [LangChain](./packages/adapter-langchain)               | v1 middleware、retriever 与 callback | 仓库源码预览                                 |
+| [Mastra](./packages/adapter-mastra)                     | Processor 读写集成                   | 仓库源码预览                                 |
+| [LlamaIndex.TS](./packages/adapter-llamaindex)          | Memory block 与 stream tap           | Legacy；上游已归档                           |
 
 已发布包和仓库源码按照独立节奏推进。安装前请以 npm 上实际版本的元数据和对应 package README 为准；源码预览在正式发布前不会被描述成可直接 npm 安装。
 
@@ -223,11 +218,11 @@ CI 持续验证离线回归、API 快照、可运行文档片段、构建与 Nod
 
 ## 项目状态与路线图
 
-MemoWeft 是 library-first 的库，Core 1.0 当前处于 release candidate 阶段。可以安装 `memoweft@rc` 参与验证；在 GA 前，npm 默认的 `latest` 标签仍保留在当前稳定版本线。
+MemoWeft 是 library-first 的库，Core 1.0 是其 TypeScript 支持门面与记忆契约的首个稳定版本。直接运行 `npm install memoweft` 会跟随稳定的 `latest` 版本线。
 
 公共接口分别标注 stable、experimental 和 internal。1.0 之后，破坏 stable 符号需要主版本并提前弃用；experimental 接口仍可能在 minor 版本中带说明调整。Python 包仍是实验性的规则一致性实现，不是功能完整的稳定 SDK。
 
-**当前重点：**完成 Core 1.0，发布兼容 1.0 的集成更新，维持 Node 20/22/24 覆盖，扩展可复现实验材料，并完善 TypeScript 与 Python 之间的便携包一致性。
+**当前重点：**维护 Core 1.x 契约，扩展带版本的集成，维持 Node 20/22/24 覆盖，增加可复现实验材料，并完善 TypeScript 与 Python 之间的便携包一致性。
 
 [路线图](./ROADMAP.md) · [更新记录](./CHANGELOG.md) · [稳定性策略](./docs/STABILITY.md)
 
