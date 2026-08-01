@@ -1,31 +1,62 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/memoweft/memoweft/main/assets/hero-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/memoweft/memoweft/main/assets/hero-light.svg">
-  <img alt="MemoWeft — 面向 AI 应用的长期记忆" src="https://raw.githubusercontent.com/memoweft/memoweft/main/assets/hero-dark.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/hero-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/hero-light.svg">
+  <img alt="MemoWeft — 面向 AI 应用的长期记忆" src="./assets/hero-dark.svg" width="100%">
 </picture>
 
 # MemoWeft
 
-**把证据、推断与冲突明确分开的长期记忆。**
+### 让 AI 记得你，同时永远分清：哪些是你说的，哪些只是它猜的。
 
-面向 TypeScript AI 应用的可移植、可追溯用户记忆。MemoWeft 把来源记录与模型推断分开，保留矛盾，并导出带版本、可由宿主校验和导入的记忆包。
+MemoWeft 是面向 TypeScript AI 应用的开源长期记忆引擎。它把用户原话、行为观察、模型推断和未解决的冲突分别保存，让记忆可以追溯、纠正、管理和迁移，并存放在由你的应用控制的 SQLite 中。
 
-[![npm](https://img.shields.io/npm/v/memoweft?style=flat-square&labelColor=14110B&color=E2A75E)](https://www.npmjs.com/package/memoweft)
+[![npm stable](https://img.shields.io/npm/v/memoweft?style=flat-square&label=stable&labelColor=14110B&color=E2A75E)](https://www.npmjs.com/package/memoweft)
+[![npm rc](https://img.shields.io/npm/v/memoweft/rc?style=flat-square&label=1.0%20RC&labelColor=14110B&color=6FB7B0)](https://www.npmjs.com/package/memoweft?activeTab=versions)
 [![CI](https://img.shields.io/github/actions/workflow/status/memoweft/memoweft/ci.yml?style=flat-square&labelColor=14110B&label=CI)](https://github.com/memoweft/memoweft/actions/workflows/ci.yml)
-[![Node](https://img.shields.io/badge/Node-20%20%7C%2022%20%7C%2024-4A4438?style=flat-square&labelColor=14110B)](https://github.com/memoweft/memoweft/blob/main/docs/INSTALL.zh-CN.md)
-[![license](https://img.shields.io/badge/license-MIT-4A4438?style=flat-square&labelColor=14110B)](https://github.com/memoweft/memoweft/blob/main/LICENSE)
+[![Node](https://img.shields.io/badge/Node-20%20%7C%2022%20%7C%2024-4A4438?style=flat-square&labelColor=14110B)](./docs/INSTALL.zh-CN.md)
+[![license](https://img.shields.io/badge/license-MIT-4A4438?style=flat-square&labelColor=14110B)](./LICENSE)
 
-[离线演示](#30-秒看出差别) · [安装](#安装并完成第一次调用) · [生态集成](#生态集成) · [参考宿主](#在本地运行参考宿主) · [文档](#文档)
+[为什么需要它](#为什么-ai-记忆需要一条可追溯的路径) · [离线演示](#无需-api-key-的离线体验) · [快速开始](#快速开始) · [生态集成](#生态集成) · [信任边界](#信任和隐私的本地边界) · [文档](#文档与社区)
 
-[English](https://github.com/memoweft/memoweft/blob/main/README.md) · **简体中文**
+[English](./README.md) · **简体中文**
 
 </div>
 
-MemoWeft 是宿主应用直接导入的库——不是托管服务、聊天 UI、人设、向量数据库或 Agent 框架。
+> [!IMPORTANT]
+> MemoWeft 是宿主应用直接导入的库——不是聊天产品、托管记忆服务、人设框架、向量数据库或 Agent 框架。
 
-## 30 秒看出差别
+## 为什么 AI 记忆需要一条可追溯的路径
+
+今天的 AI 已经很会对话，却未必能可靠地记住一个人。
+
+跨越多次对话后，它可能忘记重要背景；遇到新信息时，它可能悄悄覆盖旧记录；一句模型猜测，也可能在后续对话里被当成用户亲口说过的事实。换一个模型或宿主，积累的记忆还可能无法带走。
+
+MemoWeft 不替模型武断地决定“真相”。它保留信息从哪里来、何时出现、是否冲突，以及系统为什么形成某条记忆，让应用和用户都能看见从证据到召回的完整路径。
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <strong>证据始终是证据</strong><br><br>
+      用户原话、外部观察、工具结果和模型推断保留不同来源。
+    </td>
+    <td width="33%" valign="top">
+      <strong>冲突始终可见</strong><br><br>
+      纠正会保留历史，未解决的矛盾不会被静默覆盖。
+    </td>
+    <td width="33%" valign="top">
+      <strong>记忆仍由你掌握</strong><br><br>
+      宿主可以检查、管理、导出、校验并导入带版本的记忆包。
+    </td>
+  </tr>
+</table>
+
+数值置信度由规则计算，不直接采用模型对自己的主观打分。临时状态可以比长期事实和偏好更快失效。内置摄入路径也不会因为助手自己说过一句话，就把它当成用户证据。
+
+[了解六条记忆纪律](./docs/concepts/README.zh-CN.md) · [阅读架构说明](./docs/internals/architecture.zh-CN.md)
+
+## 无需 API Key 的离线体验
 
 准备好 Node 24 后运行：
 
@@ -37,56 +68,59 @@ npm run build
 node examples/no-key-demo.ts
 ```
 
-演示使用内存数据库和确定性的 stub 模型。依赖安装完成后，它不需要 API key、不访问网络，也不会写入磁盘。
+依赖安装完成后，这个确定性演示不需要 API Key、不访问网络、使用内存数据库，也不会写入磁盘。
 
 ```text
 [limited   ] conf  600/1000  The user lives in Osaka  — stated memory
-[conflicted] conf  600/1000  The user lives in Tokyo  — conflict kept, not overwritten
+[conflicted] conf  480/1000  The user lives in Tokyo  — conflict kept, not overwritten
 [candidate ] conf  200/1000  The user probably works somewhere central  — guess (low confidence)
 
 Summary: 3 cognitions, 1 in conflict-exposed state; inference remains labeled and rule-scored separately from stated memory.
 Done. (in-memory database — nothing written to disk)
 ```
 
-这段演示调用真实的 MemoWeft Core 公共 API，验证的是记忆规则，而不是模型质量。要继续查看纠正历史和分型衰减，运行 `npm run demo`。
+它展示用户亲口说过的内容、模型推断出的低置信猜测，以及不会被静默覆盖的冲突。这个演示验证的是 MemoWeft 的记忆规则，不是模型质量排行榜。要继续查看纠正历史和分型衰减，运行 `npm run demo`。
 
-[阅读四幕演示说明](https://github.com/memoweft/memoweft/blob/main/docs/demo-script.zh-CN.md) · [查看离线演示源码](https://github.com/memoweft/memoweft/blob/main/examples/no-key-demo.ts)
+[阅读四幕演示说明](./docs/demo-script.zh-CN.md) · [查看演示源码](./examples/no-key-demo.ts)
 
-### WeftMate 的实际产品体验
+## 放进真实产品后是什么样子
 
-[WeftMate](https://www.weftmate.com/) 是一款桌面产品，使用 MemoWeft 把对话线索整理为可见、可由用户修改的画像。MemoWeft 提供可移植的记忆层；产品体验仍留在 Core 之外。
+[WeftMate](https://www.weftmate.com/) 是一款使用 MemoWeft 构建的桌面产品。它把 Core 的记忆模型呈现为可见的用户画像、来源链路、冲突视图和用户控制。
 
-![WeftMate 画像界面，展示可供用户查看和修改的、由对话线索形成的画像信息](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-memory-demo.png)
+下面展示的是 **WeftMate 的产品 UI**，不是 MemoWeft Core 自带的界面。MemoWeft 提供记忆层与可移植数据契约；实际产品体验仍由宿主应用负责。
 
-同一组行为还由离线回归和 API 表面检查覆盖。CI 在 Node 24 上运行完整门禁，在 Node 22 上做 Core 兼容测试，并在 Node 20 上做已构建包的 SQLite smoke test。详见[实验与复现协议](https://github.com/memoweft/memoweft/blob/main/BENCHMARKS.md)。
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="./assets/weftmate-memory-profile.png" alt="WeftMate 记忆画像，显示记忆类型、把握度、来源话语与控制">
+    </td>
+    <td width="50%" valign="top">
+      <img src="./assets/weftmate-chat.png" alt="WeftMate 对话界面，展示短回复在写入记忆前被解析">
+    </td>
+  </tr>
+  <tr>
+    <td valign="top"><strong>知道一条记忆从哪里来。</strong>每条内容都可以展示类型、把握度和来源链路。</td>
+    <td valign="top"><strong>短回复先解释，再写入。</strong>一句简短确认不会把助手提出的内容直接升级为用户原话。</td>
+  </tr>
+</table>
 
-## 为什么是 MemoWeft
+[查看证据图谱](./assets/weftmate-memory-graph.png) · [查看便携数据控制](./assets/weftmate-data-portability.png) · [运行参考宿主](./docs/reference-host.zh-CN.md)
 
-- **证据不等于认知。** 用户原话、外部观察、工具结果与模型推断保留不同来源。
-- **冲突会暴露，不会被静默覆盖。** 显式纠正保留历史；未决矛盾并列存在。
-- **置信度由规则计算。** 模型不会直接设置最终的数值置信度。
-- **记忆可检查、可迁移。** 认知能够回溯证据，宿主可以导出、校验并导入带版本的记忆包。
-- **助手不能自我印证。** 内建摄入路径可以用回复解释用户下一句话，但不会仅因为助手说过就把回复持久化为证据。
-- **不同信息按类型衰减。** 临时状态比稳定事实和明确偏好更快失效。
+## 快速开始
 
-数据流保持显式：
-
-```text
-证据  →  事件  →  认知  →  召回
- ↑                  │
- └──── 可追溯来源 ───┘
-```
-
-[了解六条记忆纪律](https://github.com/memoweft/memoweft/tree/main/docs/concepts) · [查看架构如何落实这些约束](https://github.com/memoweft/memoweft/blob/main/docs/internals/architecture.zh-CN.md)
-
-## 安装并完成第一次调用
-
-**推荐 Node 24+。** Node 20 和 22 使用可选的 `better-sqlite3` 驱动。
+Node 24+ 是最简单的使用方式：
 
 ```bash
+# 当前稳定版
 npm install memoweft
 
-# 仅 Node 20 / 22
+# 或主动体验 1.0 候选版
+npm install memoweft@rc
+```
+
+Node 20 或 22 还需要安装可选 SQLite 驱动：
+
+```bash
 npm install better-sqlite3
 ```
 
@@ -98,12 +132,12 @@ import { createMemoWeftCore } from 'memoweft';
 const core = createMemoWeftCore({ dbPath: ':memory:' });
 
 await core.ingestUserMessage({
-  subjectId: 'user-42',
-  content: '下午三点以后我只喝低因咖啡，咖啡因会让我睡不着。',
+  subjectId: 'alice',
+  content: '下午三点后我只喝低因咖啡，咖啡因会影响睡眠。',
 });
 
-for (const evidence of core.memory.listEvidence({ subjectId: 'user-42' })) {
-  console.log(evidence.sourceKind, '·', evidence.rawContent);
+for (const item of core.memory.listEvidence({ subjectId: 'alice' })) {
+  console.log(item.sourceKind, '·', item.rawContent);
 }
 
 core.close();
@@ -115,123 +149,103 @@ core.close();
 node quickstart.mjs
 ```
 
-预期输出：
+保存并读回原始证据不需要模型或网络。把证据整理成画像、区分猜测与事实并参与后续召回，需要配置一个 OpenAI-compatible 聊天模型；嵌入模型是可选项，没有它时 Core 通常使用本地 FTS5 关键词召回。
+
+[继续阅读五分钟入门指南](./docs/getting-started.zh-CN.md)
+
+## 它怎样工作
+
+MemoWeft 让信息从来源到召回的路径始终明确：
 
 ```text
-spoken · 下午三点以后我只喝低因咖啡，咖啡因会让我睡不着。
+用户原话 · 外部观察 · 工具结果
+                 │
+                 ▼
+               证据
+                 │  保留来源
+                 ▼
+               事件
+                 │
+                 ▼
+               认知  ◀── 纠正与冲突
+                 │
+                 ▼
+               召回
 ```
 
-第一次调用只负责保存和读取原始证据，并不会把普通存储包装成用户画像。把证据整理成认知并召回到上下文需要聊天模型。继续阅读[五分钟上手指南](https://github.com/memoweft/memoweft/blob/main/docs/getting-started.zh-CN.md)。
+应用接入时推荐使用 `createMemoWeftCore()` facade。底层导出用于高级组合，并分别标注 stable、experimental 或 internal 支持层级。
 
-## MemoWeft 适合什么
+[API 接口面与支持层级](./docs/reference/api-surface.md) · [记忆接口契约](./docs/reference/memory-surface-contract.md)
 
-适合：
+## MemoWeft 适合你吗？
 
-- 需要跨对话、跨模型或跨宿主保存用户长期记忆；
-- 需要来源追溯、纠正历史、冲突可见和可控召回；
-- 希望将 SQLite 记忆层直接嵌入 TypeScript 应用；
-- 希望宿主能够检查、管理、导入和导出记忆；
-- 需要嵌入式 SQLite Core，并明确控制内建模型路径能够读取哪些内容。
+| 这些需求适合 MemoWeft                    | 这些需求应该选择其他层                         |
+| ---------------------------------------- | ---------------------------------------------- |
+| 跨对话、模型或宿主保留长期用户记忆       | 只需要短期聊天记录或通用文档 RAG               |
+| 需要来源、纠正历史、冲突可见性和受控召回 | 需要开箱即用的聊天 UI、人设或消费级应用        |
+| 需要由 SQLite 支撑的嵌入式 TypeScript 库 | 需要托管式多租户记忆 API 或现成多设备同步      |
+| 记忆需要可检查、可管理、可导入导出       | 需要开箱即用的 PostgreSQL 或可替换生产存储后端 |
+| 需要明确控制内置模型读取路径             | 需要库本身提供认证、同意界面、合规或磁盘加密   |
 
-不适合：
-
-- 只需要短期聊天记录或文档 RAG；
-- 需要现成的多租户托管记忆 API 或托管同步服务；
-- 开箱即用地要求 PostgreSQL 或可替换生产存储后端；
-- 需要完整的人设、聊天产品、同意界面或管理后台。
-
-聊天体验、用户同意、身份认证、静态加密、画像更新调度和部署始终由宿主负责。
+宿主仍需负责产品 UX、认证、授权、用户同意、加密、备份、日志策略与部署。
 
 ## 生态集成
 
-| 生态                                                                                                 | 接入方式                            | 可用状态                                          |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------- |
-| [Vercel AI SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-ai-sdk)              | 中间件召回与受控持久化              | npm `0.2.3`：Core `0.5.1` / `0.6` / `0.7` / `1.x` |
-| [Model Context Protocol](https://github.com/memoweft/memoweft/tree/main/packages/mcp-server)         | stdio：5 读、3 个受控写             | npm `0.2.3`：Core `0.5.1` / `0.6` / `0.7` / `1.x` |
-| [Claude Agent SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-claude-agent-sdk) | 用户输入与工具结果 hooks            | 源码预览                                          |
-| [OpenAI Agents SDK](https://github.com/memoweft/memoweft/tree/main/packages/adapter-openai-agents)   | Run wrapper 与模型输入过滤          | 源码预览                                          |
-| [LangChain](https://github.com/memoweft/memoweft/tree/main/packages/adapter-langchain)               | v1 middleware 或 retriever/callback | 源码预览                                          |
-| [Mastra](https://github.com/memoweft/memoweft/tree/main/packages/adapter-mastra)                     | Processor 读写接入                  | 源码预览                                          |
-| [LlamaIndex.TS](https://github.com/memoweft/memoweft/tree/main/packages/adapter-llamaindex)          | Memory block 与 stream tap          | 仅维护存量；上游已归档                            |
+| 生态                                                    | 接入方式                             | 当前公开状态                                               |
+| ------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
+| [Vercel AI SDK](./packages/adapter-ai-sdk)              | 中间件召回与受控持久化               | npm `0.2.1` 支持 Core 至 `0.7`；`main` 已有 1.0-ready 源码 |
+| [Model Context Protocol](./packages/mcp-server)         | stdio：5 个读工具、3 个受控写工具    | npm `0.2.1` 支持 Core 至 `0.7`；`main` 已有 1.0-ready 源码 |
+| [Claude Agent SDK](./packages/adapter-claude-agent-sdk) | 用户输入与工具结果 hooks             | 仓库源码预览                                               |
+| [OpenAI Agents SDK](./packages/adapter-openai-agents)   | `run()` 包装与模型输入过滤           | 仓库源码预览                                               |
+| [LangChain](./packages/adapter-langchain)               | v1 middleware、retriever 与 callback | 仓库源码预览                                               |
+| [Mastra](./packages/adapter-mastra)                     | Processor 读写集成                   | 仓库源码预览                                               |
+| [LlamaIndex.TS](./packages/adapter-llamaindex)          | Memory block 与 stream tap           | Legacy；上游已归档                                         |
 
-两个已发布集成——`@memoweft/adapter-ai-sdk@0.2.3` 和 `@memoweft/mcp-server@0.2.3`——均支持 Core `0.5.1`、`0.6`、`0.7`、1.0 RC 系列和正式 1.x。尚未发布的集成只作为仓库源码预览，不会被描述成可直接 npm 安装。
+已发布包和仓库源码按照独立节奏推进。安装前请以 npm 上实际版本的元数据和对应 package README 为准；源码预览在正式发布前不会被描述成可直接 npm 安装。
 
-## 在本地运行参考宿主
+[Vercel AI SDK 配方](./docs/recipes/vercel-ai-sdk.zh-CN.md) · [MCP 配方](./docs/recipes/mcp-server.zh-CN.md) · [集成指南](./docs/integration.zh-CN.md)
 
-参考宿主是**参考实现，不是产品**。它的存在是为了让你能端到端跑通 Core——带召回的聊天、记忆形成过程、证据图、记忆管理以及便携包导入导出——并读到它发出的每一处调用。
+## 信任和隐私的本地边界
 
-要求：
+MemoWeft 的本地优先来自可检查的架构边界，而不是一句“数据永不离开设备”的口号。
 
-- Node 24+
-- OpenAI-compatible 聊天模型端点
-- 可用于 SQLite 数据的本地目录
+- 记忆存放在应用指定的 SQLite 数据库中，不要求使用托管记忆服务。
+- 保存和读取原始证据可以完全离线；仓库也提供无需 API Key 的确定性演示。
+- 画像形成需要聊天模型。宿主可以连接云端或本地 OpenAI-compatible 端点。
+- `allowCloudRead` 会限制 MemoWeft 内置云端写模型路径选择哪些证据，但它不是访问控制，也不会约束自定义代码、召回、MCP、Adapter、导出或日志。
+- 外部观察与工具结果默认不会进入内置云端写模型提示，但宿主仍需实现同意、审阅和授权变更体验。
+- SQLite 文件不会由 MemoWeft 自动加密。认证、租户隔离、磁盘加密、备份、日志与合规策略属于宿主职责。
+- 强制移除单条证据时，Core 会移除依赖它的派生事件和认知，并留下审计墓碑；这不是逐行物理擦除。完整的主体级清理应使用 `resetSubject`，宿主仍需处理外部索引、日志和备份。
 
-```bash
-git clone https://github.com/memoweft/memoweft.git
-cd memoweft
-npm ci
-npm run build
-npm start -w @memoweft/host
-```
+CI 持续验证离线回归、API 快照、可运行文档片段、构建与 Node 兼容性。公开评测会同时说明方法和不覆盖的范围。
 
-打开 <http://localhost:7788>。
+[评测与复现协议](./BENCHMARKS.md) · [API 稳定性](./docs/STABILITY.md) · [部署与隐私](./docs/deployment.zh-CN.md) · [安全策略](./.github/SECURITY.md)
 
-首次运行时，配置向导会把模型配置保存到 `apps/memoweft-host/.env`；记忆保存在 `apps/memoweft-host/data/host.db`。两处均已被 Git 忽略。保存配置后请重启宿主。
+## 项目状态与路线图
 
-参考宿主不是生产部署模板。接入真实应用前请阅读[它是什么、又不是什么](https://github.com/memoweft/memoweft/blob/main/docs/reference-host.zh-CN.md)和[部署与隐私模型](https://github.com/memoweft/memoweft/blob/main/docs/deployment.zh-CN.md)。
+MemoWeft 是 library-first 的库，Core 1.0 当前处于 release candidate 阶段。可以安装 `memoweft@rc` 参与验证；在 GA 前，npm 默认的 `latest` 标签仍保留在当前稳定版本线。
 
-## 可信度、隐私与证据
+公共接口分别标注 stable、experimental 和 internal。1.0 之后，破坏 stable 符号需要主版本并提前弃用；experimental 接口仍可能在 minor 版本中带说明调整。Python 包仍是实验性的规则一致性实现，不是功能完整的稳定 SDK。
 
-- **离线回归覆盖：**认知规则由[离线评测用例](https://github.com/memoweft/memoweft/tree/main/tests/eval)固定。
-- **持续验证：**CI 运行 lint、类型检查、测试、构建、API 表面检查、可运行文档片段以及 Node 兼容性任务。
-- **可复现实验：**[BENCHMARKS.md](https://github.com/memoweft/memoweft/blob/main/BENCHMARKS.md)说明仓库自带的回归夹具、外部数据集协议、公开结果门槛和当前限制。
-- **明确的 API 稳定性：**[Memory Surface Contract](https://github.com/memoweft/memoweft/blob/main/docs/reference/memory-surface-contract.zh-CN.md)区分稳定、实验性和内部表面。
-- **小依赖边界：**Node 24 使用内建 SQLite，不要求第三方运行时依赖；Node 20 和 22 使用可选的 `better-sqlite3` peer 驱动。
-- **可移植数据：**导出、校验、dry-run 导入和版本检查属于公共管理表面。
+**当前重点：**完成 Core 1.0，发布兼容 1.0 的集成更新，维持 Node 20/22/24 覆盖，扩展可复现实验材料，并完善 TypeScript 与 Python 之间的便携包一致性。
 
-隐私边界：MemoWeft 将记忆存入标准、未加密的 SQLite 数据库。内建写路径在组装云模型提示词时遵守 `allowCloudRead`；这个标志不是访问控制、磁盘加密，也不约束自定义集成。宿主负责用户同意、角色边界、删除界面、访问控制、备份、日志策略以及操作系统或应用层加密。
+[路线图](./ROADMAP.md) · [更新记录](./CHANGELOG.md) · [稳定性策略](./docs/STABILITY.md)
 
-## 使用 MemoWeft 构建
+## 文档与社区
 
-[WeftMate](https://www.weftmate.com/) 是构建在 MemoWeft 之上的桌面伴侣。它展示了这个库的那些保证在真实产品里长什么样——下面是它的实际界面，不是效果图，图中每一个标签都对应 Core 的一个概念。
+- [入门指南](./docs/getting-started.zh-CN.md) —— 从第一条证据到可召回画像
+- [核心概念](./docs/concepts/README.zh-CN.md) —— 六条记忆纪律
+- [示例](./examples) —— Core、管理、插件与便携包
+- [文档索引](./docs/README.zh-CN.md) —— 参考、配方、部署与内部设计
+- [GitHub Discussions](https://github.com/memoweft/memoweft/discussions) —— 使用帮助与设计讨论
+- [Issues](https://github.com/memoweft/memoweft/issues) —— 可复现缺陷与具体功能建议
+- [参与贡献](./CONTRIBUTING.zh-CN.md) —— 开发环境与评审预期
+- [支持说明](./SUPPORT.md) —— 去哪里提问、需要提供哪些信息
 
-**亲口说的和模型猜的，不会被摆成同一回事。** 每条记忆都带着它的类型、把握度档位，以及可展开的来源话语，旁边就是永久删除。"用户是后端开发"（主动说出）和"用户偏 I"（AI 猜、用户答"是啊"）在结构上就落在不同档位。
+贡献不只限于 Core 代码：更清楚的示例、新的框架集成、平台兼容性验证、能复现真实失败的评测用例，以及针对来源、冲突、删除和隐私边界的审查，都很重要。
 
-![WeftMate 记忆画像——每条记忆显示类型、把握度、来源话语与删除控制](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-memory-profile.png)
-
-**短回应在落库前先被解开。** 这里 AI 先猜，用户只回了两个字，Core 记下的是这两个字实际断言了什么——而不会把 AI 的猜测提升成用户的陈述。
-
-![WeftMate 聊天——AI 猜测、用户以短回应确认](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-chat.png)
-
-**每条认知都能溯回它的证据。** 图谱就是证据 → 经历 → 认知的链路，可以从主体节点向外查看。
-
-![WeftMate 记忆图谱——认知从主体节点向外连接](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-memory-graph.png)
-
-**记忆可携带、可删除，主动权在用户手上。** 导出产出的是记忆面契约里描述的带版本便携包；导入会先预览条数再写入；清空记忆和删除全部本机数据是两个分开的、明确不可恢复的操作。
-
-![WeftMate 数据控制——导出记忆包、从记忆包恢复、清空记忆、删除全部本机数据](https://raw.githubusercontent.com/memoweft/memoweft/main/assets/weftmate-data-portability.png)
-
-## 文档
-
-- [快速上手](https://github.com/memoweft/memoweft/blob/main/docs/getting-started.zh-CN.md)
-- [概念](https://github.com/memoweft/memoweft/tree/main/docs/concepts)
-- [示例](https://github.com/memoweft/memoweft/tree/main/examples)
-- [API 表面契约](https://github.com/memoweft/memoweft/blob/main/docs/reference/memory-surface-contract.zh-CN.md)
-- [术语表](https://github.com/memoweft/memoweft/blob/main/docs/glossary.zh-CN.md)
-- [参考宿主](https://github.com/memoweft/memoweft/blob/main/docs/reference-host.zh-CN.md)
-- [部署与隐私](https://github.com/memoweft/memoweft/blob/main/docs/deployment.zh-CN.md)
-- [完整文档索引](https://github.com/memoweft/memoweft/blob/main/docs/README.zh-CN.md)
-
-## 项目状态
-
-MemoWeft 是 library-first 的库，目前处于 1.0 release candidate 阶段。公共 API 接口面已冻结：每个导出都标注了支持层级，破坏 stable 符号需要发布主版本。实验性接口——可注入的扩展点、插件契约、后台维护算子——仍可能在 minor 版本之间变化。详见 [STABILITY.md](docs/STABILITY.md)。
-
-真实模型评测的质量数字（含 95% 置信区间，以及「这些数字不覆盖什么」的明确说明）见 [BENCHMARKS.md](docs/BENCHMARKS.md)。
-
-[更新日志](https://github.com/memoweft/memoweft/blob/main/CHANGELOG.md) · [路线图](https://github.com/memoweft/memoweft/blob/main/ROADMAP.md) · [参与贡献](https://github.com/memoweft/memoweft/blob/main/CONTRIBUTING.zh-CN.md) · [支持](https://github.com/memoweft/memoweft/blob/main/SUPPORT.md) · [安全](https://github.com/memoweft/memoweft/blob/main/.github/SECURITY.md)
-
-如果 MemoWeft 的记忆模型对你的工作有帮助，欢迎 Star 仓库，或把离线演示分享给另一位开发者。
+如果你也相信 AI 记忆应该可追溯、可纠正、可带走，而不是一个看不见的黑箱，欢迎 **Star MemoWeft**、运行离线演示，或告诉我们你正在构建怎样的记忆体验。
 
 ## License
 
-[MIT](https://github.com/memoweft/memoweft/blob/main/LICENSE) © 2026 MemoWeft contributors.
+[MIT](./LICENSE) © 2026 MemoWeft contributors.
