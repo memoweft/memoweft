@@ -968,20 +968,24 @@ function printConsole(summaries, agg, meta) {
 // ══════════════════════════════════════════════════════════════════════════
 
 /**
- * Resolves report paths. `--out` overrides the default ignored path under
- * `bench/runs/`.
+ * Resolves report paths and creates their parent directory. `--out` overrides
+ * the default ignored path under `bench/runs/`.
  */
-function resolveOutputPaths(meta, outPrefix) {
-  if (outPrefix) return { md: `${outPrefix}.md`, json: `${outPrefix}.json` };
-  mkdirSync(RUNS_DIR, { recursive: true });
-  const date = meta.generatedAt.slice(0, 10); // YYYY-MM-DD
-  const parts = [];
-  if (meta.subjectEnv)
-    parts.push(`subject-${String(meta.model || meta.subjectEnv).replace(/[^A-Za-z0-9._-]/g, '_')}`);
-  if (meta.filter?.discipline) parts.push(meta.filter.discipline);
-  if (meta.filter?.limit) parts.push(`limit${meta.filter.limit}`);
-  const tag = parts.join('-') || 'full';
-  const base = resolve(RUNS_DIR, `${date}-${meta.commit}-consolidation-${tag}`);
+export function resolveOutputPaths(meta, outPrefix) {
+  let base = outPrefix;
+  if (!base) {
+    const date = meta.generatedAt.slice(0, 10); // YYYY-MM-DD
+    const parts = [];
+    if (meta.subjectEnv)
+      parts.push(
+        `subject-${String(meta.model || meta.subjectEnv).replace(/[^A-Za-z0-9._-]/g, '_')}`,
+      );
+    if (meta.filter?.discipline) parts.push(meta.filter.discipline);
+    if (meta.filter?.limit) parts.push(`limit${meta.filter.limit}`);
+    const tag = parts.join('-') || 'full';
+    base = resolve(RUNS_DIR, `${date}-${meta.commit}-consolidation-${tag}`);
+  }
+  mkdirSync(dirname(resolve(base)), { recursive: true });
   return { md: `${base}.md`, json: `${base}.json` };
 }
 
