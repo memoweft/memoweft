@@ -7,7 +7,7 @@
  *
  * 三个阶段：
  *   阶段 1 · live e2e       node --test tests/**\/*.e2e.ts（等价 npm run test:e2e）。非零退出 = 失败。
- *   阶段 2 · 固化真实臂（全量 42） node bench/eval-consolidation.mjs --out bench/runs/<date>-<sha>-consolidation-live
+ *   阶段 2 · 固化真实臂（全量语料） node bench/eval-consolidation.mjs --out bench/runs/<date>-<sha>-consolidation-live
  *                          读 <prefix>.json：agg.errored>0 = 失败（崩溃门，非质量门； /  不设质量阈）。
  *                          --out keeps the two run artifacts grouped under one timestamped prefix.
  *   阶段 3 · 检索真实臂：仅当 embed 配置（MEMOWEFT_EMBED_*，含 DLA_ 回退）存在时运行：
@@ -134,7 +134,7 @@ async function main() {
     '阶段 1 · live e2e：将运行 node --test tests/**/*.e2e.ts（各用例靠 HAS_LLM 自动 skip/run）',
   );
   console.log(
-    `阶段 2 · 固化真实臂（全量 42）：将运行 eval-consolidation --out ${consolidationPrefix}`,
+    `阶段 2 · 固化真实臂（全量语料）：将运行 eval-consolidation --out ${consolidationPrefix}`,
   );
   console.log(
     '                          崩溃门：agg.errored>0 → 失败；不设质量分数阈（提示词变更规则）',
@@ -166,9 +166,15 @@ async function main() {
         : `node --test 退出码 ${r1.code}`,
   });
 
-  // ── 阶段 2 · 固化真实臂（全量 42）──
+  if (r1.code !== 0) {
+    console.error('');
+    console.error('test:live 失败：阶段 1 未通过；为避免在不可用端点上继续消耗，阶段 2/3 未运行。');
+    process.exit(1);
+  }
+
+  // ── 阶段 2 · 固化真实臂（全量语料）──
   console.log('');
-  console.log('──────── 阶段 2 · 固化真实臂（全量 42）开始 ────────');
+  console.log('──────── 阶段 2 · 固化真实臂（全量语料）开始 ────────');
   const r2 = runNodeLeg(
     ['bench/eval-consolidation.mjs', '--out', consolidationPrefix],
     process.env,

@@ -6,10 +6,10 @@ An [MCP](https://modelcontextprotocol.io) server that exposes a [MemoWeft](https
 
 ## Install
 
-`@memoweft/mcp-server@0.2.3` declares a `memoweft` peer range of `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`. To use the current 1.0 release candidate:
+`@memoweft/mcp-server@0.2.3` declares a `memoweft` peer range of `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`. To use the current stable Core release:
 
 ```sh
-npm install memoweft@rc @memoweft/mcp-server@0.2.3
+npm install memoweft @memoweft/mcp-server@0.2.3
 ```
 
 It resolves cleanly against Core `0.5.1`, `0.6`, `0.7`, the 1.0 RC series, and final 1.x releases with no `--legacy-peer-deps`. Needs Node 20+.

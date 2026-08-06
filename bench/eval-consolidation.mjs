@@ -98,10 +98,11 @@ const GEN_CMD = 'node bench/eval-consolidation.mjs';
 const JUDGE_RUNS = 3;
 /**
  * Version of the gist-scoring method. Version 2 checks conflict formation via
- * active `conflicted` status; other gist checks remain model-judged. Scores
- * from different method or judge-prompt versions are not directly comparable.
+ * active `conflicted` status; version 3 also rejects invalid judge responses.
+ * Scores from different method or judge-prompt versions are not directly
+ * comparable.
  */
-const GIST_SCORING_VERSION = 'v2';
+const GIST_SCORING_VERSION = 'v3';
 
 // ══════════════════════════════════════════════════════════════════════════
 // Versioned judge prompt.
@@ -140,7 +141,11 @@ function renderCognitionList(contents, lang) {
 // Helpers
 // ══════════════════════════════════════════════════════════════════════════
 
-/** Parses YES/NO answers; ambiguous responses default to NO. */
+/**
+ * Legacy cross-language parser used by the shared parity fixture. The live
+ * judge path applies the stricter protocol parser below before accepting a
+ * vote.
+ */
 export function parseYesNo(ans) {
   const t = String(ans).trim().toUpperCase();
   const yi = t.search(/\bYES\b/);
@@ -151,6 +156,15 @@ export function parseYesNo(ans) {
   if (hasNo && !hasYes) return false;
   if (hasYes && hasNo) return yi < ni;
   return false;
+}
+
+/** Returns a vote only when the judge emitted exactly one YES/NO token. */
+function parseJudgeVote(ans) {
+  const t = String(ans).trim().toUpperCase();
+  const hasYes = /\bYES\b/.test(t);
+  const hasNo = /\bNO\b/.test(t);
+  if (hasYes === hasNo) return null;
+  return hasYes;
 }
 
 const UUID_RE = /\[([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\]/gi;
@@ -188,7 +202,11 @@ async function judgeMajority(judge, lang, question) {
       { role: 'system', content: JUDGE_PROMPT_V1.system[lang] ?? JUDGE_PROMPT_V1.system.en },
       { role: 'user', content: question },
     ]);
-    votes.push(parseYesNo(ans));
+    const vote = parseJudgeVote(ans);
+    if (vote === null) {
+      throw new Error('Invalid judge response: expected exactly one YES or NO token.');
+    }
+    votes.push(vote);
   }
   const yesCount = votes.filter(Boolean).length;
   return { votes, yes: yesCount * 2 > JUDGE_RUNS };
@@ -531,13 +549,13 @@ function buildResolutionProbe(resolutions) {
   };
 }
 
-function buildSummary(sc, run, checks, gist) {
+function buildSummary(sc, run, checks, gist, evaluationError = run.error) {
   return {
     id: sc.id,
     discipline: sc.discipline,
     lang: sc.lang,
     title: sc.title,
-    error: run.error,
+    error: evaluationError,
     checks,
     structPass: checks.filter((c) => c.pass).length,
     structTotal: checks.length,
@@ -661,7 +679,7 @@ function bootstrapMeanCI(values, { iterations = 10000, seed = 20260728 } = {}) {
   return { lo: at(0.025), hi: at(0.975) };
 }
 
-function aggregate(summaries) {
+export function aggregate(summaries) {
   const structPass = summaries.reduce((a, s) => a + s.structPass, 0);
   const structTotal = summaries.reduce((a, s) => a + s.structTotal, 0);
   const recalls = summaries.map((s) => s.gistRecall).filter((v) => v !== null);
@@ -768,7 +786,7 @@ function describeFilter(filter) {
 const signed = (n, digits) =>
   n === null || n === undefined ? 'n/a' : (n >= 0 ? '+' : '') + n.toFixed(digits);
 
-function buildReport(summaries, agg, meta) {
+export function buildReport(summaries, agg, meta) {
   const L = [];
   L.push('# Consolidation discipline report');
   L.push('');
@@ -811,7 +829,7 @@ function buildReport(summaries, agg, meta) {
   );
   L.push(`| judge 提示词版本 | ${meta.judgePromptVersion}（每要点 ${JUDGE_RUNS} 次取多数） |`);
   L.push(
-    `| gist 评分口径版本 | ${meta.gistScoringVersion ?? 'v1'}（v2: conflict shouldForm uses persisted status; cross-version gistRecall is not comparable） |`,
+    `| gist 评分口径版本 | ${meta.gistScoringVersion ?? 'v1'}（v2: conflict shouldForm uses persisted status; v3: invalid judge responses fail closed; cross-version gistRecall is not comparable） |`,
   );
   L.push(`| 被测提示词版本 | ${formatPromptVersions(meta.promptVersions)} |`);
   L.push(
@@ -950,25 +968,29 @@ function printConsole(summaries, agg, meta) {
 // ══════════════════════════════════════════════════════════════════════════
 
 /**
- * Resolves report paths. `--out` overrides the default ignored path under
- * `bench/runs/`.
+ * Resolves report paths and creates their parent directory. `--out` overrides
+ * the default ignored path under `bench/runs/`.
  */
-function resolveOutputPaths(meta, outPrefix) {
-  if (outPrefix) return { md: `${outPrefix}.md`, json: `${outPrefix}.json` };
-  mkdirSync(RUNS_DIR, { recursive: true });
-  const date = meta.generatedAt.slice(0, 10); // YYYY-MM-DD
-  const parts = [];
-  if (meta.subjectEnv)
-    parts.push(`subject-${String(meta.model || meta.subjectEnv).replace(/[^A-Za-z0-9._-]/g, '_')}`);
-  if (meta.filter?.discipline) parts.push(meta.filter.discipline);
-  if (meta.filter?.limit) parts.push(`limit${meta.filter.limit}`);
-  const tag = parts.join('-') || 'full';
-  const base = resolve(RUNS_DIR, `${date}-${meta.commit}-consolidation-${tag}`);
+export function resolveOutputPaths(meta, outPrefix) {
+  let base = outPrefix;
+  if (!base) {
+    const date = meta.generatedAt.slice(0, 10); // YYYY-MM-DD
+    const parts = [];
+    if (meta.subjectEnv)
+      parts.push(
+        `subject-${String(meta.model || meta.subjectEnv).replace(/[^A-Za-z0-9._-]/g, '_')}`,
+      );
+    if (meta.filter?.discipline) parts.push(meta.filter.discipline);
+    if (meta.filter?.limit) parts.push(`limit${meta.filter.limit}`);
+    const tag = parts.join('-') || 'full';
+    base = resolve(RUNS_DIR, `${date}-${meta.commit}-consolidation-${tag}`);
+  }
+  mkdirSync(dirname(resolve(base)), { recursive: true });
   return { md: `${base}.md`, json: `${base}.json` };
 }
 
 /** Formats a compact summary for one run. */
-function commitSummarySingle(agg, meta) {
+export function commitSummarySingle(agg, meta) {
   return `结构断言 ${pct(agg.structRate)}(${agg.structPass}/${agg.structTotal})；scenariosPassed ${agg.scenariosPassed}/${meta.scenarioCount}；errored ${agg.errored}；avgGistRecall ${f2(agg.avgGistRecall)}；avgOverInferRate ${f2(agg.avgOverInferRate)}`;
 }
 
@@ -1012,7 +1034,7 @@ function diffRuns(a, b) {
   const gsvB = bm.gistScoringVersion ?? 'v1';
   if (gsvA !== gsvB)
     warnings.push(
-      `gist 评分口径变了：${gsvA} → ${gsvB}（v2 uses persisted conflict status rather than the model judge）——conflict gistRecall 与总体 avgGistRecall 不可跨版本比。`,
+      `gist 评分口径变了：${gsvA} → ${gsvB}（评分信号或 judge 响应协议可能不同）——gistRecall 与总体 avgGistRecall 不可跨版本比。`,
     );
 
   // Compare every prompt identifier present in either run.
@@ -1284,6 +1306,7 @@ async function mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv }) 
     const run = await runScenario(sc, llm);
     const checks = checkStructural(sc, run);
     let gist = { formResults: [], notResults: [], gistRecall: null, overInferRate: null };
+    let evaluationError = run.error;
     if (run.error) {
       console.error(`  ✗ updateProfile failed: ${run.error}`);
     } else {
@@ -1293,11 +1316,13 @@ async function mainReal({ limit, discipline, outPrefix, subjectEnv, judgeEnv }) 
       try {
         gist = await scoreGists(sc, run, judge);
       } catch (e) {
-        console.error(`  judge 判分失败: ${e instanceof Error ? e.message : String(e)}`);
+        const message = e instanceof Error ? e.message : String(e);
+        evaluationError = `judge failed: ${message}`;
+        console.error(`  judge 判分失败: ${message}`);
       }
     }
     console.log(`  用时 ${((Date.now() - t0) / 1000).toFixed(1)}s`);
-    summaries.push(buildSummary(sc, run, checks, gist));
+    summaries.push(buildSummary(sc, run, checks, gist, evaluationError));
   }
 
   const agg = aggregate(summaries);
@@ -1441,6 +1466,11 @@ async function selftest() {
   const g1 = await scoreGists(s1, r1, new MockJudge(['YES', 'YES', 'YES', 'NO', 'NO', 'NO']));
   ok(g1.gistRecall === 1, `ST-1 gistRecall=1（实际 ${g1.gistRecall}）`);
   ok(g1.overInferRate === 0, `ST-1 overInferRate=0（实际 ${g1.overInferRate}）`);
+  const judgeFailureSummary = buildSummary(s1, r1, c1, g1, 'judge failed: timeout');
+  ok(
+    aggregate([judgeFailureSummary]).errored === 1,
+    'ST-1 judge 失败进入 errored 崩溃门（不得以空评分假报成功）',
+  );
 
   // ── 2) 结构断言 · conflict ──
   console.log('[selftest] 2) 结构断言 · conflict');
@@ -1639,6 +1669,17 @@ async function selftest() {
       parseYesNo('嗯') === false,
     'parseYesNo 容错（大小写/标点/含糊保守判NO）',
   );
+  for (const invalid of ['嗯', 'YES and NO']) {
+    let invalidJudgeRejected = false;
+    try {
+      await judgeMajority(new MockJudge([invalid]), 'zh', 'q');
+    } catch (error) {
+      invalidJudgeRejected =
+        error instanceof Error &&
+        error.message === 'Invalid judge response: expected exactly one YES or NO token.';
+    }
+    ok(invalidJudgeRejected, `judge 无效判词失败关闭（${JSON.stringify(invalid)}）`);
+  }
 
   // ── 6) diffRuns 纯函数（离线前后对比：上升 / 下降 / 样本不同 / 提示词版本变更） ──
   console.log('[selftest] 6) diffRuns 纯函数（离线前后对比）');

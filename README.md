@@ -13,7 +13,6 @@
 MemoWeft is an open-source long-term memory engine for TypeScript AI applications. It keeps what users said, what systems observed, what models inferred, and what remains conflicted as distinct records—so memory can be inspected, corrected, managed, and moved between hosts in SQLite controlled by your application.
 
 [![npm stable](https://img.shields.io/npm/v/memoweft?style=flat-square&label=stable&labelColor=14110B&color=E2A75E)](https://www.npmjs.com/package/memoweft)
-[![npm rc](https://img.shields.io/npm/v/memoweft/rc?style=flat-square&label=1.0%20RC&labelColor=14110B&color=6FB7B0)](https://www.npmjs.com/package/memoweft?activeTab=versions)
 [![CI](https://img.shields.io/github/actions/workflow/status/memoweft/memoweft/ci.yml?style=flat-square&labelColor=14110B&label=CI)](https://github.com/memoweft/memoweft/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/Node-20%20%7C%2022%20%7C%2024-4A4438?style=flat-square&labelColor=14110B)](./docs/INSTALL.md)
 [![license](https://img.shields.io/badge/license-MIT-4A4438?style=flat-square&labelColor=14110B)](./LICENSE)
@@ -111,11 +110,7 @@ The screenshots below show **WeftMate's UI**, not UI bundled with MemoWeft Core.
 Node 24+ is the simplest path:
 
 ```bash
-# Current stable release
 npm install memoweft
-
-# Or opt into the 1.0 release candidate
-npm install memoweft@rc
 ```
 
 On Node 20 or 22, also install the optional SQLite driver:
@@ -191,15 +186,15 @@ Your host remains responsible for product UX, authentication, authorization, con
 
 ## Integrations
 
-| Ecosystem                                               | Integration surface                           | Current public status                                                  |
-| ------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
-| [Vercel AI SDK](./packages/adapter-ai-sdk)              | Middleware recall and controlled persistence  | npm `0.2.1` supports Core through `0.7`; 1.0-ready source is in `main` |
-| [Model Context Protocol](./packages/mcp-server)         | Stdio: five reads and three controlled writes | npm `0.2.1` supports Core through `0.7`; 1.0-ready source is in `main` |
-| [Claude Agent SDK](./packages/adapter-claude-agent-sdk) | User-prompt and tool-result hooks             | Source preview                                                         |
-| [OpenAI Agents SDK](./packages/adapter-openai-agents)   | `run()` wrapper and model-input filter        | Source preview                                                         |
-| [LangChain](./packages/adapter-langchain)               | v1 middleware, retriever, and callback paths  | Source preview                                                         |
-| [Mastra](./packages/adapter-mastra)                     | Processor-based read/write integration        | Source preview                                                         |
-| [LlamaIndex.TS](./packages/adapter-llamaindex)          | Memory block and stream tap                   | Legacy; upstream archived                                              |
+| Ecosystem                                               | Integration surface                           | Current public status                                  |
+| ------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
+| [Vercel AI SDK](./packages/adapter-ai-sdk)              | Middleware recall and controlled persistence  | npm `0.2.3` supports Core `0.5.1` through stable `1.x` |
+| [Model Context Protocol](./packages/mcp-server)         | Stdio: five reads and three controlled writes | npm `0.2.3` supports Core `0.5.1` through stable `1.x` |
+| [Claude Agent SDK](./packages/adapter-claude-agent-sdk) | User-prompt and tool-result hooks             | Source preview                                         |
+| [OpenAI Agents SDK](./packages/adapter-openai-agents)   | `run()` wrapper and model-input filter        | Source preview                                         |
+| [LangChain](./packages/adapter-langchain)               | v1 middleware, retriever, and callback paths  | Source preview                                         |
+| [Mastra](./packages/adapter-mastra)                     | Processor-based read/write integration        | Source preview                                         |
+| [LlamaIndex.TS](./packages/adapter-llamaindex)          | Memory block and stream tap                   | Legacy; upstream archived                              |
 
 Published packages and repository source move on independent release schedules. Check the installed release's npm metadata and package README for its exact compatibility range. Source previews are not presented as npm-installable until released.
 
@@ -223,11 +218,11 @@ CI verifies offline regressions, API snapshots, runnable documentation snippets,
 
 ## Project status and roadmap
 
-MemoWeft is library-first and Core 1.0 is currently a release candidate. Install `memoweft@rc` to evaluate it; npm's default `latest` tag remains on the current stable line until GA.
+MemoWeft is library-first, and Core 1.0 is the first stable release of its supported TypeScript facade and memory contract. A plain `npm install memoweft` follows the stable `latest` line.
 
 Stable, experimental, and internal surfaces are documented separately. After 1.0, breaking a stable symbol requires a major release and prior deprecation; experimental interfaces may still change in a minor release with notice. The Python package remains an experimental parity implementation rather than a feature-complete stable SDK.
 
-**Now:** finish Core 1.0, publish the 1.0-compatible integration updates, preserve Node 20/22/24 coverage, expand reproducible evaluation artifacts, and complete portable-bundle parity across TypeScript and Python.
+**Now:** maintain the Core 1.x contract, expand versioned integrations, preserve Node 20/22/24 coverage, grow reproducible evaluation artifacts, and complete portable-bundle parity across TypeScript and Python.
 
 [Roadmap](./ROADMAP.md) · [Changelog](./CHANGELOG.md) · [Stability policy](./docs/STABILITY.md)
 

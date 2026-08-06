@@ -6,9 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-08-06
+
+MemoWeft 1.0 is the first stable release of the TypeScript Core. The supported `createMemoWeftCore()` facade, public memory contract, portable bundle format, and stable export tiers are now governed by the documented 1.x compatibility and deprecation policy. The Core runtime is unchanged from `1.0.0-rc.2` apart from the final version identity and GA-facing documentation.
+
 ### Changed
 
 - `@memoweft/adapter-ai-sdk@0.2.3` and `@memoweft/mcp-server@0.2.3` publish the already-reviewed Core peer range through 1.x, so the official integrations install cleanly with the 1.0 release candidates and final 1.x. Dedicated workspace tags now publish these packages through the same gated GitHub Actions provenance path as Core.
+- `@memoweft/mcp-server` now uses `@modelcontextprotocol/sdk` 1.30.x, allowing the patched `@hono/node-server` 2.x line and removing the Windows encoded-backslash path-traversal advisory from the production dependency tree.
 
 ## [1.0.0-rc.2] — 2026-07-31
 
@@ -163,6 +168,9 @@ Please report anything that looks like it still needs to change before 1.0; that
 - Cloud-read filtering for model-facing write paths.
 - A local reference host and active-window collector plugin.
 
+[Unreleased]: https://github.com/memoweft/memoweft/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/memoweft/memoweft/compare/v1.0.0-rc.2...v1.0.0
+[1.0.0-rc.2]: https://github.com/memoweft/memoweft/compare/v1.0.0-rc.1...v1.0.0-rc.2
 [1.0.0-rc.1]: https://github.com/memoweft/memoweft/compare/v0.7.0...v1.0.0-rc.1
 [0.7.0]: https://github.com/memoweft/memoweft/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/memoweft/memoweft/tree/v0.6.0
