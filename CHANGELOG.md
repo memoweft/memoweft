@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-## [1.0.0] — 2026-08-01
+## [1.0.0] — 2026-08-06
 
 MemoWeft 1.0 is the first stable release of the TypeScript Core. The supported `createMemoWeftCore()` facade, public memory contract, portable bundle format, and stable export tiers are now governed by the documented 1.x compatibility and deprecation policy. The Core runtime is unchanged from `1.0.0-rc.2` apart from the final version identity and GA-facing documentation.
 

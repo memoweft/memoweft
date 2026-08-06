@@ -11,12 +11,16 @@ on:
 permissions:
   contents: read
 
+# A slow live endpoint must not make two nightly batches compete for the same model.
+concurrency:
+  group: nightly-live
+  cancel-in-progress: false
+
 jobs:
-  live:
-    name: Live model verification
+  live-e2e:
+    name: Live e2e preflight
     runs-on: ubuntu-latest
-    # Full live-model evaluation plus retrieval checks.
-    timeout-minutes: 150
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -30,20 +34,156 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Live tests (test:live)
-        run: npm run test:live
+      - name: Verify live-model configuration
+        run: >-
+          node --input-type=module -e
+          "import { checkLlmConfig } from './scripts/test-live.mjs';
+          const cfg = checkLlmConfig(process.env);
+          if (!cfg.ok) {
+            console.error('Missing required live-model configuration: ' + cfg.missing.join(', '));
+            process.exit(1);
+          }"
         env:
           MEMOWEFT_LLM_BASE_URL: ${{ secrets.MEMOWEFT_LLM_BASE_URL }}
           MEMOWEFT_LLM_API_KEY: ${{ secrets.MEMOWEFT_LLM_API_KEY }}
           MEMOWEFT_LLM_MODEL: ${{ secrets.MEMOWEFT_LLM_MODEL }}
+
+      # Fail before the expensive corpus shards when the live endpoint is unhealthy.
+      - name: Live e2e
+        run: npm run test:e2e
+        env:
+          MEMOWEFT_LLM_BASE_URL: ${{ secrets.MEMOWEFT_LLM_BASE_URL }}
+          MEMOWEFT_LLM_API_KEY: ${{ secrets.MEMOWEFT_LLM_API_KEY }}
+          MEMOWEFT_LLM_MODEL: ${{ secrets.MEMOWEFT_LLM_MODEL }}
+
+  consolidation:
+    name: Consolidation (${{ matrix.discipline }})
+    needs: live-e2e
+    runs-on: ubuntu-latest
+    # The 120-scenario corpus no longer fits reliably in one 150-minute job.
+    # Each discipline is sequential internally; two shards may use the endpoint at once.
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        discipline:
+          - conflict
+          - correct
+          - emotion-cap
+          - fact-vs-belief
+          - no-over-inference
+          - chitchat-negative
+          - short-reply
+          - world-person
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run consolidation shard
+        shell: bash
+        run: |
+          prefix="bench/runs/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DISCIPLINE}"
+          node bench/eval-consolidation.mjs --discipline "$DISCIPLINE" --out "$prefix"
+          node -e 'const fs = require("node:fs"); const p = process.argv[1]; const run = JSON.parse(fs.readFileSync(p, "utf8")); const errored = run.agg?.errored ?? 0; if (errored > 0) { console.error(`[nightly] ${errored} scenario(s) errored in ${run.meta?.filter?.discipline ?? "unknown"}`); process.exit(1); } console.log(`[nightly] shard passed its crash gate: errored=${errored}`);' "$prefix.json"
+        env:
+          DISCIPLINE: ${{ matrix.discipline }}
+          MEMOWEFT_LLM_BASE_URL: ${{ secrets.MEMOWEFT_LLM_BASE_URL }}
+          MEMOWEFT_LLM_API_KEY: ${{ secrets.MEMOWEFT_LLM_API_KEY }}
+          MEMOWEFT_LLM_MODEL: ${{ secrets.MEMOWEFT_LLM_MODEL }}
+
+      - name: Upload consolidation artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: consolidation-shard-${{ matrix.discipline }}
+          path: bench/runs/
+          if-no-files-found: warn
+          overwrite: true
+
+  consolidation-gate:
+    name: Consolidation full-corpus gate
+    needs: consolidation
+    if: ${{ always() && needs.consolidation.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '24'
+
+      - name: Download consolidation shards
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: consolidation-shard-*
+          path: bench/shards/
+          merge-multiple: true
+
+      - name: Merge and verify full corpus
+        run: >-
+          node scripts/merge-consolidation-shards.mjs
+          --input bench/shards
+          --out bench/runs/${{ github.run_id }}-${{ github.run_attempt }}-consolidation-live
+
+      - name: Upload full-corpus artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: consolidation-full
+          path: bench/runs/
+          if-no-files-found: warn
+          overwrite: true
+
+  retrieval:
+    name: Retrieval real arm
+    needs: live-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Setup Node 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run retrieval real arm when configured
+        shell: bash
+        run: |
+          if [[ -z "$MEMOWEFT_EMBED_BASE_URL" || -z "$MEMOWEFT_EMBED_API_KEY" || -z "$MEMOWEFT_EMBED_MODEL" ]]; then
+            echo "[nightly] retrieval real arm skipped: MEMOWEFT_EMBED_* is not fully configured"
+            exit 0
+          fi
+          prefix="bench/runs/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-retrieval-live"
+          EVAL_REAL_ARM=1 node bench/eval-retrieval.mjs --ablation --require-real-arm --out "$prefix"
+        env:
           MEMOWEFT_EMBED_BASE_URL: ${{ secrets.MEMOWEFT_EMBED_BASE_URL }}
           MEMOWEFT_EMBED_API_KEY: ${{ secrets.MEMOWEFT_EMBED_API_KEY }}
           MEMOWEFT_EMBED_MODEL: ${{ secrets.MEMOWEFT_EMBED_MODEL }}
 
-      - name: Upload live run artifacts
+      - name: Upload retrieval artifact
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: test-live-runs
+          name: retrieval-live
           path: bench/runs/
           if-no-files-found: warn
+          overwrite: true
