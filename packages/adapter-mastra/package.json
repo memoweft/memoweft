@@ -50,7 +50,7 @@
     "memoweft": "^0.6.0 || ^0.7.0 || ^1.0.0-rc.1"
   },
   "devDependencies": {
-    "@mastra/core": "^1.51.0",
+    "@mastra/core": "^1.55.0",
     "memoweft": "*"
   }
 }
