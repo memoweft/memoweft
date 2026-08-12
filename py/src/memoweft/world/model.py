@@ -19,6 +19,16 @@ from ..types import ContentType, CredStatus, EvidenceLink, FormedBy
 EntityKind = str
 TargetKind = Literal["world", "entity", "relationship", "event"]
 PerspectiveKind = Literal["entity", "joint", "system"]
+StructuredStatementKind = Literal[
+    "attribute",
+    "evaluation",
+    "relationship_statement",
+    "event_statement",
+    "naming",
+    "alias",
+]
+ClaimPolarity = Literal["assert", "negate"]
+ClaimEpistemicStatus = Literal["asserted", "owner_imagined", "reported", "uncertain"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,6 +151,27 @@ class Perspective:
 
 
 @dataclass(frozen=True, slots=True)
+class StructuredClaim:
+    """Machine-readable semantics for an accepted cognition.
+
+    ``content`` remains the owner-visible narrative.  This optional companion
+    preserves the claim shape needed to render and retrieve a personal world
+    without re-parsing that narrative later.  It intentionally does not own
+    the target, perspective, or evidence: those remain the corresponding
+    ``WorldCognition`` fields and are validated at the world-delta boundary.
+
+    ``None`` on ``WorldCognition.structured_claim`` denotes a legacy snapshot
+    or an accepted cognition whose semantic structure was not available.
+    """
+
+    statement_kind: StructuredStatementKind
+    predicate: Optional[str] = None
+    value: Optional[str] = None
+    polarity: ClaimPolarity = "assert"
+    epistemic_status: ClaimEpistemicStatus = "asserted"
+
+
+@dataclass(frozen=True, slots=True)
 class WorldCognition:
     """A belief/understanding attached to a world object.
 
@@ -165,3 +196,7 @@ class WorldCognition:
     scope: Optional[str] = None
     valid_at: Optional[str] = None
     invalid_at: Optional[str] = None
+    # Deliberately last with a default: existing positional constructors and
+    # persisted snapshots continue to work while newer accepted cognitions can
+    # carry a typed claim envelope.
+    structured_claim: Optional[StructuredClaim] = None

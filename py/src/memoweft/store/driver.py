@@ -8,7 +8,7 @@ from __future__ import annotations
 from os.path import exists
 import sqlite3
 
-from .schema import SCHEMA_SQL, SCHEMA_VERSION
+from .schema import BASE_SCHEMA_SQL, SCHEMA_VERSION, WORLD_SCHEMA_SQL
 
 #: 写锁被别的进程占着时最多等这么久再报 SQLITE_BUSY(对齐 TS store/busyTimeout.ts)。
 BUSY_TIMEOUT_MS = 5000
@@ -45,6 +45,14 @@ def _migrate(db: sqlite3.Connection, current: int) -> None:
                     "(SELECT DISTINCT cognition_id FROM evidence_retraction)"
                 )
                 db.execute("DELETE FROM evidence_retraction")
+            elif version == 3:
+                for statement in WORLD_SCHEMA_SQL:
+                    db.execute(statement)
+            elif version == 4:
+                # v4 stamps the closed world-evolution proposal payload
+                # contract.  It needs no new table, but older code must refuse
+                # to interpret the new proposal kind as a legacy correction.
+                pass
             db.execute(f"PRAGMA user_version = {version}")
             db.execute("COMMIT")
         except BaseException as exc:
@@ -70,13 +78,18 @@ def open_db(path: str = ":memory:") -> sqlite3.Connection:
             f"Database schema version v{current} is higher than the v{SCHEMA_VERSION} supported by this memoweft"
         )
     try:
-        # 新库和旧库都先保证当前表集合存在；数据升级仍只在 _migrate 的事务中执行。
-        for stmt in SCHEMA_SQL:
+        # 1.0 基础表先按原有兼容路径补齐；2.0 表在 v3 migration 内原子加入。
+        for stmt in BASE_SCHEMA_SQL:
             db.execute(stmt)
         if fresh:
+            for stmt in WORLD_SCHEMA_SQL:
+                db.execute(stmt)
             db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         else:
             _migrate(db, current)
+            # 已是 v3+ 的库也幂等核对表集合，保持 open_db 的自愈式建表行为。
+            for stmt in WORLD_SCHEMA_SQL:
+                db.execute(stmt)
         return db
     except BaseException:
         db.close()

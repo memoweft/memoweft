@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "corpus_id": "gate2-entity-continuity-v1",
+  "thresholds": {
+    "every_case_passes": true,
+    "every_predicate_passes": true,
+    "zero_hard_failures": true,
+    "exact_observation_completeness": true,
+    "deterministic_repeat_equality": true,
+    "id_variant_semantic_equivalence": true
+  },
+  "variants": [
+    {"id": "namespace_amber", "namespace": "amber::91?K", "reverse_insertion_order": false},
+    {"id": "namespace_cobalt", "namespace": "cobalt/%E2%98%83/77", "reverse_insertion_order": true}
+  ],
+  "cases": [
+    {"id": "01_owner_alias_pronoun", "predicate_ids": ["alias.owner_relative_resolved", "alias.review_accepted", "pronoun.cross_session_same_canonical", "alias.no_duplicate_entity"], "severity": "hard", "hard_failure_code": "G2-01"},
+    {"id": "02_exact_known_alias", "predicate_ids": ["exact_known_alias.resolves_canonical", "exact_known_alias.no_creation"], "severity": "hard", "hard_failure_code": "G2-02"},
+    {"id": "03_structured_trip_friend", "predicate_ids": ["structured_description.trip_friend_resolves", "structured_description.no_creation"], "severity": "hard", "hard_failure_code": "G2-03"},
+    {"id": "04_same_name_collision", "predicate_ids": ["same_name_collision.ambiguous", "same_name_collision.no_creation"], "severity": "hard", "hard_failure_code": "G2-04"},
+    {"id": "05_latest_people_ambiguous", "predicate_ids": ["latest_people.pronoun_ambiguous", "latest_people.no_creation"], "severity": "hard", "hard_failure_code": "G2-05"},
+    {"id": "06_role_only_unresolved", "predicate_ids": ["role_only.unresolved", "role_only.no_creation"], "severity": "hard", "hard_failure_code": "G2-06"},
+    {"id": "07_unknown_person_unresolved", "predicate_ids": ["unknown_person.unresolved", "unknown_person.no_creation"], "severity": "hard", "hard_failure_code": "G2-07"},
+    {"id": "08_no_shared_continuity", "predicate_ids": ["no_shared_continuity.pronoun_unresolved", "no_shared_continuity.no_creation"], "severity": "hard", "hard_failure_code": "G2-08"},
+    {"id": "09_evidence_and_span", "predicate_ids": ["evidence.assistant_rejected", "evidence.exact_codepoint_span_enforced"], "severity": "hard", "hard_failure_code": "G2-09"},
+    {"id": "10_reject_zero_mutation", "predicate_ids": ["reject.zero_canonical_mutation", "reject.audit_envelope_retained"], "severity": "hard", "hard_failure_code": "G2-10"},
+    {"id": "11_stale_tampered_causal", "predicate_ids": ["review.tamper_fails_closed", "review.time_causal", "review.stale_fails_closed"], "severity": "hard", "hard_failure_code": "G2-11"},
+    {"id": "12_atom_target_and_alias_collision", "predicate_ids": ["atom.one_active_target", "alias.collision_rejected"], "severity": "hard", "hard_failure_code": "G2-12"},
+    {"id": "13_merge_all_surfaces", "predicate_ids": ["merge.preview_all_seven_surfaces", "merge.explicit_survivor_one_hop_redirect", "merge.complete_tombstone_manifest", "merge.no_free_text_rewrite", "merge.no_auto_alias_union", "merge.source_removed_no_old_refs"], "severity": "hard", "hard_failure_code": "G2-13"},
+    {"id": "14_merge_cardinality", "predicate_ids": ["merge.cardinality_collapse_rejected"], "severity": "hard", "hard_failure_code": "G2-14"},
+    {"id": "15_split_complete", "predicate_ids": ["split.complete_locator_binding_partitions", "split.fresh_successors", "split.no_one_to_many_redirect", "split.complete_tombstone_no_old_refs"], "severity": "hard", "hard_failure_code": "G2-15"},
+    {"id": "16_split_incomplete_retired", "predicate_ids": ["split.incomplete_rejected", "split.retired_id_reuse_rejected"], "severity": "hard", "hard_failure_code": "G2-16"},
+    {"id": "17_stale_context_revision", "predicate_ids": ["sealed_context.accepted_revision_stale"], "severity": "hard", "hard_failure_code": "G2-17"}
+  ]
+}

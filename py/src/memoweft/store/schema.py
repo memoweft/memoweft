@@ -7,18 +7,21 @@
   management_log      ← src/memory/managementLog.ts
   interaction_context ← src/interaction/interactionContextStore.ts
   semantic_resolution ← src/interaction/semanticResolutionStore.ts
+  memory_state / evidence_ledger / proposals / cognition_transitions
+                      ← memoweft.world.loop.MemoryLoop
+  identity_state      ← memoweft.world.identity_store.SqliteIdentityStore
 
 注:preceding_ai_context / asked_at / archived_at / muted_at 在 TS 里 fresh 库由 SCHEMA 常量直接带全,
   旧数据库由各 store 的 migrate() 补列；Python 新建数据库时直接按 SCHEMA 建立完整列集。
-LATEST_SCHEMA_VERSION = 2(store/migrations.ts);新库 user_version 盖 2。
+LATEST_SCHEMA_VERSION = 4(store/migrations.ts);新库 user_version 盖 4。
 """
 from __future__ import annotations
 
 #: PRAGMA user_version，与 TS LATEST_SCHEMA_VERSION 保持一致。
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 
 #: 幂等的建表与索引 DDL；shared/parity/schema.json 验证列序、NOT NULL、DEFAULT 与主键契约。
-SCHEMA_SQL: tuple[str, ...] = (
+BASE_SCHEMA_SQL: tuple[str, ...] = (
     # ── evidence(唯一真相层)──
     """CREATE TABLE IF NOT EXISTS evidence (
   id                   TEXT    PRIMARY KEY,
@@ -124,3 +127,55 @@ SCHEMA_SQL: tuple[str, ...] = (
 )""",
     "CREATE INDEX IF NOT EXISTS ix_semres_evidence ON semantic_resolution(evidence_id)",
 )
+
+#: MemoWeft Next 2.0 在 1.0 主库上追加的持久化表。这里既是 fresh schema，
+#: 也是 v3 migration 的 DDL 来源，MemoryLoop 与 identity store 复用同一形状。
+MEMORY_LOOP_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE IF NOT EXISTS memory_state (
+  singleton    INTEGER PRIMARY KEY CHECK(singleton = 1),
+  revision     INTEGER NOT NULL,
+  snapshot_json TEXT    NOT NULL,
+  snapshot_hash TEXT    NOT NULL
+)""",
+    """CREATE TABLE IF NOT EXISTS evidence_ledger (
+  id           TEXT PRIMARY KEY,
+  content      TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+)""",
+    """CREATE TABLE IF NOT EXISTS proposals (
+  id                  TEXT PRIMARY KEY,
+  kind                TEXT NOT NULL,
+  base_revision       INTEGER NOT NULL,
+  result_hash         TEXT NOT NULL,
+  payload_json        TEXT NOT NULL,
+  review_payload_json TEXT,
+  status              TEXT NOT NULL CHECK(status IN ('pending', 'accept', 'reject'))
+)""",
+    """CREATE TABLE IF NOT EXISTS cognition_transitions (
+  id                         TEXT PRIMARY KEY,
+  prior_cognition_id         TEXT NOT NULL UNIQUE,
+  replacement_cognition_id   TEXT NOT NULL,
+  reason                     TEXT NOT NULL,
+  revision                   INTEGER NOT NULL
+)""",
+)
+
+IDENTITY_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE IF NOT EXISTS identity_state (
+  singleton             INTEGER PRIMARY KEY CHECK(singleton = 1),
+  identity_schema_version INTEGER NOT NULL,
+  world_id              TEXT    NOT NULL,
+  memory_revision       INTEGER NOT NULL CHECK(memory_revision >= 0),
+  memory_snapshot_hash  TEXT    NOT NULL,
+  identity_graph_hash   TEXT    NOT NULL,
+  state_json            TEXT    NOT NULL,
+  state_hash            TEXT    NOT NULL,
+  storage_generation    INTEGER NOT NULL CHECK(storage_generation >= 1)
+)""",
+)
+
+#: 2.0 的完整追加结构。
+WORLD_SCHEMA_SQL: tuple[str, ...] = MEMORY_LOOP_SCHEMA_SQL + IDENTITY_SCHEMA_SQL
+
+#: 完整当前 schema；新库一次性创建，旧库由版本化迁移补齐 WORLD_SCHEMA_SQL。
+SCHEMA_SQL: tuple[str, ...] = BASE_SCHEMA_SQL + WORLD_SCHEMA_SQL

@@ -1,0 +1,9 @@
+{
+  "query_id": "query-why-nanjing-argument",
+  "text": "你还记得我和 Friend_X 为什么因为南京旅行吵起来吗？",
+  "expected_anchor": {"target_type": "event", "target_id": "event:nanjing-conflict"},
+  "required_context": ["person:user", "person:friend-x", "relationship:user-friend-x", "activity:nanjing-trip", "place:nanjing"],
+  "required_facets": ["cause", "position"],
+  "required_evidence_ids": ["turn-001", "turn-003"],
+  "forbidden_evidence_ids": ["turn-002", "turn-004"]
+}

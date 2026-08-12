@@ -1,0 +1,4 @@
+{"turn_id":"turn-001","conversation_id":"conv-golden-001-nanjing","role":"user","content":"我和 Friend_X 是朋友，最近一起计划去南京旅行。","occurred_at":"2026-08-06T09:00:00+08:00"}
+{"turn_id":"turn-002","conversation_id":"conv-golden-001-nanjing","role":"assistant","content":"听起来你们正在计划一次南京之旅。","occurred_at":"2026-08-06T09:00:05+08:00"}
+{"turn_id":"turn-003","conversation_id":"conv-golden-001-nanjing","role":"user","content":"我旅行时更喜欢开车、不要固定行程，也很看重未知和临场探索；Friend_X 更喜欢提前做行程、照着旅游攻略走。我们因为这个计划方式的差异吵起来了。","occurred_at":"2026-08-06T09:01:00+08:00"}
+{"turn_id":"turn-004","conversation_id":"conv-golden-001-nanjing","role":"assistant","content":"你们的争执似乎和旅行中的计划程度不同有关。","occurred_at":"2026-08-06T09:01:05+08:00"}

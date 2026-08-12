@@ -23,7 +23,7 @@ import {
   SqliteSemanticResolutionStore,
   type SemanticResolutionStore,
 } from '../interaction/semanticResolutionStore.ts';
-import { runMigrations } from './migrations.ts';
+import { runMigrations, WORLD_SCHEMA_SQL } from './migrations.ts';
 import { BUSY_TIMEOUT_MS } from './busyTimeout.ts';
 import type { Transaction } from './transaction.ts';
 import type { MemoWeftConfig } from '../config.ts';
@@ -84,6 +84,8 @@ export function openStores(
     //   被 migrations.test 的 schema 签名收敛测试兜住（同 management_log，不进 formal migrations）。
     interactionContextStore = new SqliteInteractionContextStore(db, clock);
     semanticResolutionStore = new SqliteSemanticResolutionStore(db, clock);
+    // 新库直接创建 2.0 world / identity 表；老库由 v3 migration 在事务内补齐。
+    if (fresh) db.exec(WORLD_SCHEMA_SQL);
     // 建表后统一走版本化：新库盖最新版，老库升级（有真改动会先备份）。
     runMigrations(db, { dbPath, fresh });
   } catch (e) {
