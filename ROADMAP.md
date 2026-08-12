@@ -1,8 +1,12 @@
 # Roadmap
 
+> Scope: the maintained MemoWeft 1.x library release line. This document does
+> not govern MemoWeft 2.0 product work. The active 2.0 route is
+> `docs/next/product-vertical-route.md`.
+
 MemoWeft is a library-first memory layer with embedded SQLite storage. The roadmap prioritizes a small, dependable public API, inspectable memory behavior, and portable data over hosted features.
 
-Last updated: 2026-08-01
+Last updated: 2026-08-12
 
 ## Now
 
