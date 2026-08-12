@@ -50,6 +50,88 @@ test('turn 递增、readRecent 读回顺序正确', () => {
   }
 });
 
+test('Next bridge 结果可随新轮落盘，旧日志没有该字段仍可读回', () => {
+  const dir = freshDir();
+  try {
+    const log = createRunLogger({ dir, sessionId: 'next-bridge' });
+    const written = log.appendTurn({
+      userInput: '我搬到上海了',
+      nextMemory: { status: 'ok', run: { id: 'memory-run-1' }, pipeline: [{ name: 'Review' }] },
+    } as Partial<TurnRecord>);
+    const writtenWithNext = written as TurnRecord & {
+      nextMemory?: { status: string; run?: { id: string } };
+    };
+    assert.equal(writtenWithNext.nextMemory?.status, 'ok');
+    assert.equal(writtenWithNext.nextMemory?.run?.id, 'memory-run-1');
+
+    // 旧记录没有 nextMemory 是正常兼容形态，不需要迁移历史 jsonl。
+    const old = log.appendTurn({ userInput: '旧兼容' });
+    assert.equal((old as TurnRecord & { nextMemory?: unknown }).nextMemory, undefined);
+    const recent = log.readRecent(2);
+    assert.equal(
+      (recent[0] as TurnRecord & { nextMemory?: { status: string } })?.nextMemory?.status,
+      'ok',
+    );
+    assert.equal((recent[1] as TurnRecord & { nextMemory?: unknown })?.nextMemory, undefined);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Next bridge 日志拒绝任意顶层字段、循环值与超大诊断对象', () => {
+  const dir = freshDir();
+  try {
+    const log = createRunLogger({ dir, sessionId: 'next-bridge-bounded' });
+    const projected = log.appendTurn({
+      userInput: '字段投影',
+      nextMemory: {
+        status: 'ok',
+        run: { id: 'kept' },
+        arbitraryTopLevel: 'must-not-be-logged',
+      },
+    } as Partial<TurnRecord>);
+    assert.deepEqual((projected as TurnRecord & { nextMemory?: unknown }).nextMemory, {
+      status: 'ok',
+      run: { id: 'kept' },
+    });
+
+    const oversized = 'x'.repeat(140 * 1024);
+    const written = log.appendTurn({
+      userInput: '边界测试',
+      nextMemory: {
+        status: 'ok',
+        run: { oversized },
+        arbitraryTopLevel: 'must-not-be-logged',
+      },
+    } as Partial<TurnRecord>);
+    const nextMemory = (
+      written as TurnRecord & {
+        nextMemory?: { status: string; code?: string; arbitraryTopLevel?: string };
+      }
+    ).nextMemory;
+    assert.deepEqual(nextMemory, { status: 'failed', code: 'NEXT_MEMORY_LOG_REJECTED' });
+
+    const cyclic: { self?: unknown } = {};
+    cyclic.self = cyclic;
+    const cyclicWritten = log.appendTurn({
+      userInput: '循环值',
+      nextMemory: { status: 'ok', run: cyclic },
+    } as Partial<TurnRecord>);
+    assert.deepEqual((cyclicWritten as TurnRecord & { nextMemory?: unknown }).nextMemory, {
+      status: 'failed',
+      code: 'NEXT_MEMORY_LOG_REJECTED',
+    });
+
+    const lines = readFileSync(log.file, 'utf8').split('\n').filter(Boolean);
+    assert.equal(lines.length, 3);
+    assert.ok(lines.every((line) => Buffer.byteLength(line, 'utf8') < 128 * 1024));
+    assert.ok(lines.every((line) => !line.includes('must-not-be-logged')));
+    assert.ok(lines.every((line) => !line.includes(oversized)));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('透视字段齐全（与测试台透视区对齐）', () => {
   const dir = freshDir();
   try {

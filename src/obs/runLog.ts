@@ -35,6 +35,65 @@ export interface ProfileChange {
   detail: string;
 }
 
+/**
+ * The optional result of the MemoWeft Next candidate-memory bridge.  It is
+ * diagnostic metadata only: the 1.x chat reply and Evidence pipeline remain
+ * independently durable if the experimental local lab is unavailable.
+ */
+interface NextMemoryRecord {
+  status: 'ok' | 'unavailable' | 'failed';
+  code?: string;
+  memoryProposal?: unknown;
+  memoryFailure?: unknown;
+  pipeline?: unknown;
+  world?: unknown;
+  run?: unknown;
+}
+
+const MAX_NEXT_MEMORY_LOG_BYTES = 128 * 1024;
+const NEXT_MEMORY_LOG_FAILURE: NextMemoryRecord = Object.freeze({
+  status: 'failed',
+  code: 'NEXT_MEMORY_LOG_REJECTED',
+});
+
+/**
+ * Keep the local bridge diagnostic bounded before it reaches JSONL or the
+ * immediate chat response.  The bridge is an experimental process boundary,
+ * so callers do not get to add arbitrary top-level fields and a malformed,
+ * cyclic, or oversized value degrades to one stable diagnostic code.
+ */
+function boundedNextMemory(value: unknown): NextMemoryRecord | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return NEXT_MEMORY_LOG_FAILURE;
+  }
+  const source = value as Record<string, unknown>;
+  if (!['ok', 'unavailable', 'failed'].includes(String(source.status))) {
+    return NEXT_MEMORY_LOG_FAILURE;
+  }
+  if (source.code !== undefined && (typeof source.code !== 'string' || source.code.length > 160)) {
+    return NEXT_MEMORY_LOG_FAILURE;
+  }
+  const projected: NextMemoryRecord = {
+    status: source.status as NextMemoryRecord['status'],
+    ...(source.code !== undefined ? { code: source.code as string } : {}),
+    ...(source.memoryProposal !== undefined ? { memoryProposal: source.memoryProposal } : {}),
+    ...(source.memoryFailure !== undefined ? { memoryFailure: source.memoryFailure } : {}),
+    ...(source.pipeline !== undefined ? { pipeline: source.pipeline } : {}),
+    ...(source.world !== undefined ? { world: source.world } : {}),
+    ...(source.run !== undefined ? { run: source.run } : {}),
+  };
+  try {
+    const json = JSON.stringify(projected);
+    if (Buffer.byteLength(json, 'utf8') > MAX_NEXT_MEMORY_LOG_BYTES) {
+      return NEXT_MEMORY_LOG_FAILURE;
+    }
+  } catch {
+    return NEXT_MEMORY_LOG_FAILURE;
+  }
+  return projected;
+}
+
 /** 一轮对话的完整诊断记录。落盘一行 = 一个 TurnRecord。 */
 export interface TurnRecord {
   /** 记录类型（对话轮默认不写此字段）；更新画像见 ProfileUpdateRecord.kind='profile_update'。 */
@@ -61,6 +120,9 @@ export interface TurnRecord {
   /** 出错信息；无则 null。 */
   error: string | null;
 }
+
+/** Internal testbench-only augmentation; not part of the published 1.x core API. */
+type TurnRecordWithNextMemory = TurnRecord & { nextMemory?: NextMemoryRecord };
 
 /** "更新画像"各步耗时(ms)。 */
 export interface ProfileUpdateTimings {
@@ -155,6 +217,11 @@ export class RunLogger {
 
   /** 追加一轮对话诊断记录；缺省字段补成空值，返回写入的完整记录。 */
   appendTurn(rec: Partial<TurnRecord>): TurnRecord {
+    // `nextMemory` belongs to the local testbench diagnostic ledger rather
+    // than MemoWeft's exported core TurnRecord contract.  Keeping the public
+    // type stable is intentional: old consumers can read the extra JSON field
+    // harmlessly, but are never required to understand the experimental lab.
+    const nextMemory = boundedNextMemory((rec as Partial<TurnRecordWithNextMemory>).nextMemory);
     const full: TurnRecord = {
       ts: (this.opts.clock ?? systemClock)().toISOString(),
       sessionId: this.opts.sessionId,
@@ -169,6 +236,7 @@ export class RunLogger {
       llmCalls: rec.llmCalls ?? 0,
       profileChanges: rec.profileChanges ?? [],
       error: rec.error ?? null,
+      ...(nextMemory ? { nextMemory } : {}),
     };
     appendFileSync(this.file, JSON.stringify(full) + '\n', 'utf8');
     return full;
