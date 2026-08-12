@@ -8,8 +8,10 @@ from __future__ import annotations
 import math
 import os
 import re
+from ipaddress import ip_address
 from dataclasses import dataclass
 from typing import Any, Literal, Mapping, Optional, Protocol
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -41,6 +43,9 @@ class LLMConfig:
     model: str
     temperature: Optional[float] = None
     tier: Optional[ModelTier] = None
+    enable_thinking: Optional[bool] = None
+    max_tokens: Optional[int] = None
+    response_format: Optional[Mapping[str, Any]] = None
 
 
 class LLMClient(Protocol):
@@ -149,7 +154,11 @@ class OpenAICompatClient:
     def __init__(self, cfg: Optional[LLMConfig] = None, *, transport: Optional[httpx.BaseTransport] = None) -> None:
         self._config = cfg if cfg is not None else load_llm_config()
         # transport 是测试接缝(注入 MockTransport);生产不传 = 真实网络。
-        self._client = httpx.Client(transport=transport) if transport is not None else httpx.Client()
+        self._client = (
+            httpx.Client(transport=transport)
+            if transport is not None
+            else httpx.Client(trust_env=_trust_environment_proxy(self._config.base_url))
+        )
         self._call_count = 0
         self._usage = UsageStats()
 
@@ -176,6 +185,14 @@ class OpenAICompatClient:
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "temperature": self._config.temperature if self._config.temperature is not None else 0.3,
         }
+        if self._config.enable_thinking is not None:
+            body["chat_template_kwargs"] = {"enable_thinking": self._config.enable_thinking}
+        if self._config.max_tokens is not None:
+            if type(self._config.max_tokens) is not int or self._config.max_tokens <= 0:
+                raise ValueError("max_tokens must be a positive integer")
+            body["max_tokens"] = self._config.max_tokens
+        if self._config.response_format is not None:
+            body["response_format"] = dict(self._config.response_format)
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self._config.api_key}"}
         try:
             res = self._client.post(url, headers=headers, json=body, timeout=timeout_ms / 1000.0)
@@ -217,6 +234,28 @@ def _json_snippet(data: object) -> str:
     import json
 
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"))[:500]
+
+
+def _trust_environment_proxy(base_url: str) -> bool:
+    """Keep configured proxies for remote APIs, but always direct-connect loopback.
+
+    On Windows, httpx's environment discovery also sees the system Internet
+    proxy.  A missing loopback bypass can otherwise send ``127.0.0.1`` through
+    that proxy and return a synthetic 502 without reaching llama.cpp.
+    """
+    try:
+        host = urlsplit(base_url).hostname
+    except ValueError:
+        return True
+    if host is None:
+        return True
+    normalized = host.rstrip(".").lower()
+    if normalized == "localhost" or normalized.endswith(".localhost"):
+        return False
+    try:
+        return not ip_address(normalized).is_loopback
+    except ValueError:
+        return True
 
 
 __all__ = [
