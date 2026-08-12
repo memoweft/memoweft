@@ -15,6 +15,17 @@ if ([string]::IsNullOrWhiteSpace($ModelSource)) {
     throw 'Supply -ModelSource or MEMOWEFT_LOCAL_MODEL_SOURCE with the Qwen GGUF file.'
 }
 
+$lifecycleLock = Enter-LocalModelLifecycleLock
+try {
+    $managedState = Get-LocalModelState
+    if ($null -ne $managedState) {
+        throw 'The local-model state file exists. Stop the managed service before installing or replacing runtime files.'
+    }
+    $listenerSnapshot = Get-LocalModelListenerSnapshot
+    if ($listenerSnapshot.Kind -ne 'none') {
+        throw "Port $($script:ServerPort) has a listener. Stop or diagnose it before installing or replacing runtime files."
+    }
+
 if (-not (Test-Path -LiteralPath $RuntimeSource -PathType Container)) {
     throw "CUDA llama.cpp runtime source does not exist: $RuntimeSource"
 }
@@ -93,3 +104,7 @@ Write-Host "CUDA runtime installed: $($script:RuntimeRoot)"
 Write-Host "Model installed: $($script:ModelPath)"
 Write-Host "Model install method: $modelInstallMethod"
 Write-Host "Installation record: $installationPath"
+}
+finally {
+    Exit-LocalModelLifecycleLock -Lock $lifecycleLock
+}

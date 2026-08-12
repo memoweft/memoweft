@@ -19,6 +19,7 @@ Run these from the repository root:
 
 ```powershell
 # One-time/idempotent local installation
+# The managed service and every 8012 listener must be stopped first.
 pwsh -NoProfile -File .\scripts\local-model\Install-Local-Model.ps1 `
   -RuntimeSource 'C:\path\to\llama-cpp' `
   -ModelSource 'C:\path\to\Qwen3-14B-Q5_K_M.gguf'
@@ -40,6 +41,9 @@ pwsh -NoProfile -File .\scripts\local-model\Verify-Local-Model.ps1
 
 # Focused stopped/unmanaged/collision lifecycle smoke; requires free port 8012
 pwsh -NoProfile -File .\scripts\local-model\Test-Local-ModelLifecycle.ps1
+
+# Pure state/argv/mutex contract; safe while the managed model is running
+pwsh -NoProfile -File .\scripts\local-model\Test-Local-ModelStateContract.ps1
 ```
 
 For unattended installation, the same two inputs may be supplied through
@@ -48,11 +52,20 @@ source paths are recorded under `.local/state/installation.json`; they are
 never committed.
 
 The stop command never searches by process name. It only stops the PID stored in
-`.local/state/server.json` after both the executable path and fixed command-line
-signature match. If trusted state is absent but `127.0.0.1:8012` still has a
+`.local/state/server.json` after the process creation time, executable path,
+and exact argv all match; when a listener exists, it must have the same PID.
+State schema v2 is strict;
+the original v1 state is accepted only through a bounded creation-time
+compatibility check, and the next managed start writes v2. If trusted state is
+absent but `127.0.0.1:8012` still has a
 listener, Status reports the unmanaged owner PID, identity result and health;
 Stop reports the same diagnostics and refuses to adopt or terminate it. Multiple
 listener rows, invalid owners and vanished owners are reported as collisions.
+
+Install, Start, foreground Serve, Status, and Stop share one abandoned-safe
+Windows lifecycle mutex. Concurrent launchers therefore cannot both pass the
+empty-state/empty-port check or overwrite each other's state. Installation also
+refuses to replace the runtime while any managed state or 8012 listener exists.
 
 Status exit codes are: `0` managed and healthy; `1` truly stopped or stale;
 `2` managed loading/unhealthy or an identity-matching unmanaged listener; and

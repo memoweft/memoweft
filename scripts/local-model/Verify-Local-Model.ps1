@@ -60,7 +60,7 @@ $state = Get-LocalModelState
 if ($null -eq $state) {
     throw 'No state-managed local model is running. Use Start-Local-Model.cmd first.'
 }
-$inspection = Get-LocalModelProcessInspection -TargetProcessId ([int]$state.pid)
+$inspection = Get-LocalModelProcessInspection -TargetProcessId ([int]$state.pid) -ExpectedProcessStartTicks ([string]$state.processStartTicks)
 if (-not $inspection.Verified) {
     throw "Managed PID validation failed: $($inspection.Reason)."
 }

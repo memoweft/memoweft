@@ -5,8 +5,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Common.ps1')
 
-$state = Get-LocalModelState
-if ($null -eq $state) {
+$lifecycleLock = Enter-LocalModelLifecycleLock
+try {
+  $state = Get-LocalModelState
+  if ($null -eq $state) {
     $listenerSnapshot = Get-LocalModelListenerSnapshot
     if ($listenerSnapshot.Kind -eq 'none') {
         Write-Host 'Local model is already stopped (no state-managed PID or loopback listener).'
@@ -23,12 +25,16 @@ if ($null -eq $state) {
     )
     if ($identityMatches) { exit 2 }
     exit 3
-}
+  }
 
-$result = Stop-VerifiedLocalModelProcess -TargetProcessId ([int]$state.pid)
+$result = Stop-VerifiedLocalModelProcess -State $state
 if ($result.AlreadyExited) {
     Write-Host "Removed stale state for exited PID $($result.ProcessId)."
 }
 else {
     Write-Host "Stopped verified local model PID $($result.ProcessId)."
+}
+}
+finally {
+  Exit-LocalModelLifecycleLock -Lock $lifecycleLock
 }

@@ -5,8 +5,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Common.ps1')
 
-$state = Get-LocalModelState
-if ($null -eq $state) {
+$lifecycleLock = Enter-LocalModelLifecycleLock -TimeoutSeconds 10
+try {
+  $state = Get-LocalModelState
+  if ($null -eq $state) {
     $listenerSnapshot = Get-LocalModelListenerSnapshot
     if ($listenerSnapshot.Kind -eq 'none') {
         Write-Host 'State: stopped (no managed PID or loopback listener)'
@@ -23,10 +25,10 @@ if ($null -eq $state) {
     )
     if ($identityMatches) { exit 2 }
     exit 3
-}
+  }
 
 $health = Get-LocalModelHealth
-$inspection = Get-LocalModelProcessInspection -TargetProcessId ([int]$state.pid)
+$inspection = Get-LocalModelProcessInspection -TargetProcessId ([int]$state.pid) -ExpectedProcessStartTicks ([string]$state.processStartTicks)
 Write-Host "PID: $($state.pid)"
 Write-Host "Identity: $($inspection.Reason)"
 Write-Host "Mode: $($state.mode)"
@@ -48,3 +50,7 @@ if ($health.Healthy) {
 }
 Write-Host "Health: unavailable or loading ($($health.StatusCode))"
 exit 2
+}
+finally {
+  Exit-LocalModelLifecycleLock -Lock $lifecycleLock
+}
