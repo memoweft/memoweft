@@ -13,6 +13,7 @@ $script:BindAddress = '127.0.0.1'
 $script:WorkbenchPort = 7888
 $script:StateSchemaVersion = 2
 $script:WorkbenchIdentityKind = 'memoweft-workbench'
+$script:MinimumWorkbenchNodeMajor = 24
 
 function Initialize-WorkbenchDirectories {
   New-Item -ItemType Directory -Force -Path $script:WorkbenchRoot | Out-Null
@@ -24,6 +25,31 @@ function Get-WorkbenchListeners {
 
 function Get-CurrentWorkbenchNodeExecutable {
   return [IO.Path]::GetFullPath((Get-Command node.exe -ErrorAction Stop).Source)
+}
+
+function Get-ValidatedWorkbenchNodeExecutable {
+  try {
+    $node = Get-CurrentWorkbenchNodeExecutable
+  } catch {
+    throw "MemoWeft workbench requires Node.js $script:MinimumWorkbenchNodeMajor or newer, but node.exe was not found on PATH. $($_.Exception.Message)"
+  }
+
+  $versionOutput = @(& $node --version 2>&1)
+  $exitCode = $LASTEXITCODE
+  $versionText = (($versionOutput | ForEach-Object { [string]$_ }) -join "`n").Trim()
+  if ($exitCode -ne 0) {
+    throw "Unable to validate the Node.js $script:MinimumWorkbenchNodeMajor+ requirement: '$node --version' exited with code $exitCode."
+  }
+
+  $match = [regex]::Match($versionText, '^v(?<major>\d+)\.\d+\.\d+(?:[-+].*)?$')
+  if (-not $match.Success) {
+    throw "Unable to validate the Node.js $script:MinimumWorkbenchNodeMajor+ requirement: '$node --version' returned '$versionText'."
+  }
+  if ([int64]$match.Groups['major'].Value -lt $script:MinimumWorkbenchNodeMajor) {
+    throw "MemoWeft workbench requires Node.js $script:MinimumWorkbenchNodeMajor or newer because its source testbench imports .ts files directly and uses node:sqlite. Found $versionText at $node."
+  }
+
+  return $node
 }
 
 function Get-WorkbenchProcessStartTicks {

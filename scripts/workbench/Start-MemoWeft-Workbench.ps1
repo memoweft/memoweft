@@ -5,6 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Common.ps1')
 
+$node = Get-ValidatedWorkbenchNodeExecutable
 $mutex = [Threading.Mutex]::new($false, 'Local\MemoWeft-Workbench-7888-Start')
 $lockTaken = $false
 try {
@@ -37,7 +38,6 @@ try {
   & (Join-Path $script:ProjectRoot 'Start-Next-Lab.cmd')
   if ($LASTEXITCODE -ne 0) { throw 'MemoWeft Next backend startup failed.' }
 
-  $node = Get-CurrentWorkbenchNodeExecutable
   $token = New-WorkbenchInstanceToken
   $argv = Get-WorkbenchExpectedArguments $token
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
