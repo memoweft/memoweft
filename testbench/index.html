@@ -486,6 +486,19 @@
         justify-content: center;
         font-weight: 600;
       }
+      #rail .rail-clear {
+        width: 100%;
+        padding: 7px var(--sp-2);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        font-size: var(--fs-sm);
+      }
+      #rail .rail-clear:hover {
+        color: var(--danger);
+        background: var(--danger-soft);
+        border-color: var(--danger-soft);
+      }
       #rail .rail-sessions {
         flex: 1;
         min-height: 0;
@@ -1475,6 +1488,34 @@
         display: flex;
         flex-direction: column;
         gap: var(--sp-2);
+      }
+      /* 2.0 accepted world: one card per stable entity.  Candidate material
+         deliberately does not share these classes or this rendering path. */
+      .next-entity-card {
+        margin: var(--sp-2) 0;
+      }
+      .next-entity-card .acc-body {
+        display: grid;
+        gap: var(--sp-3);
+      }
+      .next-entity-section {
+        border-top: 1px solid var(--line-soft);
+        padding-top: var(--sp-2);
+      }
+      .next-entity-section:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+      .next-entity-section-title {
+        color: var(--muted);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+      }
+      .next-entity-fact {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--radius-sm);
+        background: var(--panel-2);
+        padding: var(--sp-2) var(--sp-3);
       }
       .ux-item {
         padding: var(--sp-3) var(--sp-4);
@@ -2516,6 +2557,15 @@
         ＋ 新会话
       </button>
       <div class="rail-sessions" id="railSessions"><div class="rail-empty">加载会话中…</div></div>
+      <button
+        id="clearChatHistoryButton"
+        class="rail-clear"
+        type="button"
+        onclick="clearChatHistory()"
+        title="清空左侧所有聊天和当前对话窗口；正式记忆保持不变"
+      >
+        清空聊天记录
+      </button>
       <div class="rail-foot">
         <div class="rail-foot-title">设置</div>
         <button
@@ -2532,7 +2582,7 @@
           data-mode="memory"
           onclick="applyMode('memory')"
         >
-          🗂 记忆管理
+          🗂 1.0 兼容 / 调试来源
         </button>
         <button
           class="rail-link"
@@ -2906,9 +2956,9 @@
        #mode-user 容器本身留空（CSS display:none），只作模式占位。 -->
     <div id="mode-user"></div>
 
-    <!-- 记忆抽屉：右侧滑出，装「它对我的了解」（友好认知/事件卡）。由 #memPill 开、叉/Esc/点遮罩关。 -->
+    <!-- 记忆抽屉：右侧滑出，2.0 accepted world 是唯一正式记忆；1.0 内容只作迁移来源。 -->
     <div id="memMask" onclick="closeMem()"></div>
-    <aside id="memPanel" role="dialog" aria-modal="true" aria-label="它对我的了解">
+    <aside id="memPanel" role="dialog" aria-modal="true" aria-label="正式记忆与迁移线索">
       <div class="sp-head">
         <div>
           <div class="sp-ttl">
@@ -2923,9 +2973,9 @@
                 display: inline-block;
               "
             ></span
-            >它对我的了解
+            >正式记忆与迁移线索
           </div>
-          <div class="sp-sub">聊着聊着顺手记下的——说得不对可以随时改或删</div>
+          <div class="sp-sub">只有你接受的 2.0 候选才是正式记忆；1.0 内容仅供迁移</div>
         </div>
         <span class="spacer"></span>
         <button class="sp-close" onclick="closeMem()" title="关闭">✕</button>
@@ -2934,59 +2984,82 @@
         <div class="ux-hero" style="margin-bottom: var(--sp-5)">
           <p style="text-align: left; max-width: none">
             你像平时一样<span class="accent">聊天、随口提一点自己</span
-            >，它就在旁边顺手一句句记下来、慢慢把这些拼成「它对你的了解」。不用填表、不用打标签——<span
-              class="accent"
-              >聊着聊着，它就更接得上你说过的话</span
+            >，它会把值得保留的内容提出为候选；只有你接受后，才会写进下面的<span class="accent"
+              >正式记忆</span
             >。
           </p>
         </div>
 
-        <!-- 卡片一：MemoWeft 目前对我的了解（友好只读版画像） -->
-        <div class="ux-card">
+        <!-- 唯一正式记忆：只有 2.0 接受后的当前世界能在这里出现。 -->
+        <div class="ux-card" id="nextWorldCard">
           <div class="ux-card-head">
             <span class="dot"></span>
-            <span class="ttl">MemoWeft 目前对我的了解</span>
+            <span class="ttl">正式记忆</span>
           </div>
           <p class="ux-card-sub">
-            这些是它从你说过的话里慢慢体会出来的。说得不对可以随时改，或者删掉。
+            这里只有你接受后写入的当前世界；候选、旧版整理线索和聊天原话都不会自动变成正式记忆。
           </p>
-          <div id="uxCogList" class="ux-list">
-            <div class="ux-empty">
-              <span class="big">🫧</span
-              >还没攒下什么——先聊几句，它会慢慢记下你说的、开始拼出对你的了解。
+          <div id="nextWorldStatus" class="evmeta">正在读取 2.0 世界…</div>
+          <details class="acc" open>
+            <summary><span class="chev">▸</span><span class="acc-ttl">关于我</span></summary>
+            <div class="acc-body">
+              <div id="nextWorldOwner" class="ux-list"><span class="empty">正在读取…</span></div>
             </div>
-          </div>
+          </details>
+          <details class="acc">
+            <summary>
+              <span class="chev">▸</span><span class="acc-ttl">其他实体、关系、事件与认知</span>
+            </summary>
+            <div class="acc-body">
+              <div id="nextWorldOther" class="ux-list"><span class="empty">正在读取…</span></div>
+            </div>
+          </details>
+          <details class="acc">
+            <summary><span class="chev">▸</span><span class="acc-ttl">待决定</span></summary>
+            <div class="acc-body">
+              <div id="nextWorldPending" class="ux-list">
+                <span class="empty">没有等待决定的 2.0 候选。</span>
+              </div>
+            </div>
+          </details>
+          <details class="acc">
+            <summary>
+              <span class="chev">▸</span><span class="acc-ttl">问问已接受的 2.0 记忆</span>
+            </summary>
+            <div class="acc-body">
+              <input id="nextMemoryQuery" placeholder="例如：我平时怎么安排休息？" />
+              <button type="button" onclick="askNextMemory()">召回并回答</button>
+              <div id="nextMemoryQueryResult" class="evmeta"></div>
+            </div>
+          </details>
         </div>
 
-        <!-- 卡片二：最近发生的事（友好只读版事件） -->
-        <div class="ux-card">
-          <div class="ux-card-head">
-            <span class="dot"></span>
-            <span class="ttl">最近这些对话，整理成的片段</span>
-          </div>
-          <p class="ux-card-sub">它把你们的对话，整理成了一小段一小段好回看的片段。</p>
-          <div id="uxEvtList" class="ux-list">
-            <div class="ux-empty">
-              <span class="big">🌱</span>还没有片段——聊上几句，这里就会长出内容。
+        <!-- 1.x 不再是正式记忆：默认收起，只能从已有原话产生一个待决定的 2.0 候选。 -->
+        <details class="acc" id="legacyMigrationSource">
+          <summary>
+            <span class="chev">▸</span
+            ><span class="acc-ttl">1.0 整理出的迁移线索（尚未成为正式记忆）</span>
+          </summary>
+          <div class="acc-body">
+            <p class="ux-card-sub">
+              这是旧版从原话整理出的兼容线索，只读、不参与正式召回。你可以用对应原话生成一个正式候选，再自己决定是否接受。
+            </p>
+            <div id="uxCogList" class="ux-list">
+              <div class="ux-empty"><span class="big">🫧</span>还没有可迁移的 1.0 线索。</div>
+            </div>
+            <div class="ux-card-head" style="margin-top: var(--sp-4)">
+              <span class="dot"></span><span class="ttl">1.0 对话整理片段（只读）</span>
+            </div>
+            <div id="uxEvtList" class="ux-list">
+              <div class="ux-empty"><span class="big">🌱</span>还没有片段。</div>
             </div>
           </div>
-        </div>
-
-        <!-- 抽屉底部：不显眼的「重新开始」（复用 factory-reset 的软文案入口）。 -->
-        <div class="sp-danger">
-          <button
-            class="icon-btn ghost"
-            onclick="userSoftReset()"
-            title="重新开始：让它忘掉目前对我的全部了解"
-          >
-            <span class="gear">⚙</span>重新开始 · 让它忘掉目前对我的全部了解
-          </button>
-        </div>
+        </details>
       </div>
     </aside>
 
     <!-- ══════════════════════════════════════════════════════════════════
-       记忆管理模式：让用户真正能管理记忆，而不是只能看开发者 JSON。
+       1.0 兼容 / 调试来源：保留旧版的原始资料与调试管理能力，不是正式记忆。
        左筛选 / 中列表（认知卡片 ⇄ 证据列表）/ 右详情（全字段 + 来源链 + 操作）。
        数据全部来自现有接口：GET /api/cognition（带 sources+effectiveConfidence）、
        GET /api/evidence、GET /api/event（evidenceIds 反查覆盖事件）。前端过滤（数据量小）。
@@ -3417,7 +3490,7 @@
     <footer>
       每轮自动落盘 → <code id="logfile">logs/run-*.jsonl</code> ｜ 执行 Agent 直接读此文件 +
       <code>testbench-evidence.db</code>
-      调整。后端为真实逻辑（记忆线索/对你的了解/召回/纠正/猜测原因+主动询问）。
+      调整。后端为真实逻辑（原话 Evidence、2.0 候选审核、正式召回与纠正）。
     </footer>
 
     <!-- toast 宿主（右下角轻提示，JS 往里塞、几秒自动移除） -->
@@ -3464,25 +3537,26 @@
         <!-- 参数旋钮：renderCfgKnobs 直接把 47 项按 group 渲进 #cfgKnobs，每个 group 包成一个默认折叠的 <details class="acc">。 -->
         <div id="cfgKnobs"><span class="empty">进入「调试」后加载…</span></div>
 
-        <!-- 备份 / 迁移：导出记忆包（下载 JSON）/ 导入记忆包（先试算 dryRun 展示计划，确认后 merge 合并）。
-           纯只读导出 + 合并导入，不删数据；非法包会显眼报错、且不让走 merge。 -->
+        <!-- 1.0 兼容备份 / 迁移：只处理旧版库，不包含 2.0 accepted world。 -->
         <div class="acc" style="border-color: var(--line); margin-bottom: var(--sp-3)">
           <div style="padding: 12px var(--sp-4)">
-            <div style="font-weight: 600; margin-bottom: 6px">📦 备份 / 迁移 · 便携记忆包</div>
+            <div style="font-weight: 600; margin-bottom: 6px">
+              📦 1.0 兼容备份 / 迁移 · 旧版便携包
+            </div>
             <div class="evmeta" style="margin-bottom: 10px">
-              把 MemoWeft 对你的全部记忆（原话 / 经历片段 / 理解条目 + 溯源链）打成一个
-              <code>.bundle.json</code> 文件，可备份、可搬到另一台机器导入。<br />
-              <b>向量检索索引不进包</b>（那是派生物）——导入后点一次「更新画像」即可重建召回。
+              这里只导出 1.0 兼容库里的原话、经历片段、旧理解条目和溯源链；<b>不包含 2.0 正式记忆</b
+              >。导入也只回到 1.0 兼容来源，不能绕过 2.0 候选审核。<br />
+              <b>向量检索索引不进包</b>；需要时仅在 1.0 调试模式重建。
             </div>
             <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap">
-              <button onclick="exportBundle()" title="下载当前全部记忆为 .bundle.json 文件">
-                导出记忆包
+              <button onclick="exportBundle()" title="下载 1.0 兼容数据为 .bundle.json 文件">
+                导出 1.0 兼容包
               </button>
               <button
                 onclick="$('bundleFile').click()"
                 title="选一个 .bundle.json 文件先试算，再决定是否合并导入"
               >
-                导入记忆包…
+                导入 1.0 兼容包…
               </button>
               <input
                 type="file"
@@ -3510,17 +3584,20 @@
             </div>
           </div>
 
-          <!-- 恢复出厂·清空全部数据：跟「恢复默认参数」是两码事——那个只还原旋钮，这个只清数据。 -->
+          <!-- 清空 1.0 兼容数据：跟「恢复默认参数」是两码事——那个只还原旋钮，这个不触碰正式记忆。 -->
           <div class="danger-zone" style="margin-top: var(--sp-2)">
-            <div class="dz-title">⚠ 恢复出厂 · 清空全部数据</div>
+            <div class="dz-title">⚠ 清空 1.0 兼容数据（不含正式记忆）</div>
             <div class="dz-desc">
-              永久删除 MemoWeft
-              攒下的<b>全部数据</b>：你说过的原话、整理出的经历片段、以及它对你形成的理解，连同检索索引一起清空。<br />
+              永久删除<b>仅限 1.0 兼容库</b>的数据：旧原话、旧经历片段、旧理解条目和旧检索索引；<b
+                >不会删除 2.0 正式记忆</b
+              >。<br />
               和上面的「恢复默认参数」<b>互不相干</b>——那个只还原旋钮、不碰数据；这个只清数据、不动参数。<b
                 >不可恢复。</b
               >
             </div>
-            <button class="danger" onclick="factoryReset()">恢复出厂 · 清空全部数据</button>
+            <button class="danger" onclick="factoryReset()">
+              清空 1.0 兼容数据（不含正式记忆）
+            </button>
           </div>
         </div>
       </div>
@@ -3897,12 +3974,17 @@
         if (mask) mask.classList.remove('show');
         if (panel) panel.classList.remove('show');
       }
-      // 更新胶囊上的计数「它记住我 N 件事」：N = 当前有效认知条数（已失效不算）。_cog 由 loadCognitionFriendly/loadCognition 填。
+      // 更新胶囊上的计数：只数当前 2.0 已接受世界的真实记录；基础 owner 实体不算记忆。
       function updateMemPillCount() {
         const el = $('memPillN');
         if (!el) return;
-        const n = (_cog || []).filter((c) => !c.invalidAt).length;
-        el.textContent = n > 0 ? '它记住我 ' + n + ' 件事' : '它还没记住什么';
+        const memory = _nextWorld?.memory || {};
+        const n =
+          (memory.entities || []).filter((item) => item?.id !== 'entity:owner').length +
+          (memory.relationships || []).length +
+          (memory.events || []).length +
+          (memory.cognitions || []).length;
+        el.textContent = n > 0 ? '正式记忆 ' + n + ' 件' : '还没有正式记忆';
       }
 
       // ── 友好版·就地软编辑一条认知（替代浏览器 prompt）：只把 .txt 换成输入框，回车存 / Esc / 点走取消 ──
@@ -3996,14 +4078,13 @@
         });
       }
 
-      // ── 记忆气泡：后台消化出新认知时，就地织进聊天流「记住了：X · 还没确认 · 改/删」──
+      // ── 1.0 线索气泡：兼容整理结果只能作为迁移线索，不能冒充已写入的正式记忆。 ──
       const _weavedNoteIds = new Set(); // 同一条只织一次
       function weaveMemNote(c) {
         if (!c || !c.id || _weavedNoteIds.has(c.id)) return;
         _weavedNoteIds.add(c.id);
         const chat = $('chat');
         if (!chat) return;
-        const low = c.credStatus === 'candidate' || c.credStatus === 'low'; // 低置信 → 标「还没确认」
         const note = document.createElement('div');
         note.className = 'mem-note';
         const inner = document.createElement('div');
@@ -4015,28 +4096,15 @@
         body.className = 'body';
         const lead = document.createElement('span');
         lead.className = 'lead';
-        lead.textContent = '记住了：';
+        lead.textContent = '1.0 整理出待迁移线索：';
         const txt = document.createElement('span');
         txt.className = 'txt';
         txt.textContent = c.content; // textContent 防注入
         body.append(lead, txt);
-        if (low) {
-          const tag = document.createElement('span');
-          tag.className = 'tag-unconfirmed';
-          tag.textContent = '还没确认';
-          body.append(tag);
-        }
-        const acts = document.createElement('div');
-        acts.className = 'acts';
-        const bEdit = document.createElement('button');
-        bEdit.textContent = '改';
-        bEdit.onclick = () => softEditCog(c.id, bEdit);
-        const bDel = document.createElement('button');
-        bDel.className = 'del';
-        bDel.textContent = '删';
-        bDel.onclick = () => softDelCog(c.id);
-        acts.append(bEdit, bDel);
-        body.append(acts);
+        const tag = document.createElement('span');
+        tag.className = 'tag-unconfirmed';
+        tag.textContent = '还不是正式记忆';
+        body.append(tag);
         inner.append(ic, body);
         note.append(inner);
         chat.append(note);
@@ -4050,9 +4118,7 @@
         else loadCognition();
       }
 
-      // 友好只读版画像：复用 GET /api/cognition，只显示人话 content + 一枚中文分类标签。
-      // 砍掉 confidence/effectiveConfidence/credStatus/formedBy/证据数；filter 掉已失效（invalidAt）项。
-      // 保留「改一下 / 删掉」——复用开发者版的 editCog/delCog，改删后按模式刷新（refreshCognition）。
+      // 1.0 迁移线索：兼容读取旧版 cognition，不把它们显示为正式记忆，也不允许在普通抽屉编辑或删除。
       async function loadCognitionFriendly() {
         const box = $('uxCogList');
         if (!box) return;
@@ -4062,12 +4128,11 @@
         } catch (e) {
           /* 拉取失败：保持现状，不弹错吓用户 */ return;
         }
-        _cog = list; // 与开发者版共用 _cog（editCog/delCog 靠它按 id 找当前 content）
-        updateMemPillCount(); // 刷右上胶囊「它记住我 N 件事」（空列表/正常两条路径都覆盖）
+        _cog = list; // 开发者兼容视图仍可使用；普通抽屉不对它做写操作。
+        updateMemPillCount();
         const live = list.filter((c) => !c.invalidAt); // 已失效的不给普通用户看
         if (!live.length) {
-          box.innerHTML =
-            '<div class="ux-empty"><span class="big">🫧</span>还没攒下什么——先聊几句，它会慢慢记下你说的、开始拼出对你的了解。</div>';
+          box.replaceChildren(domEl('div', 'ux-empty', '还没有可迁移的 1.0 线索。'));
           return;
         }
         const fragment = document.createDocumentFragment();
@@ -4079,11 +4144,10 @@
             domEl('span', 'ux-tag', enumText(TYPE_CN, c.contentType)),
             domEl('span', 'spacer'),
           );
-          const edit = button('这条说得不对，改一下', () => softEditCog(c.id, edit));
-          foot.append(
-            edit,
-            button('删掉这条', () => softDelCog(c.id), 'del'),
+          const migrate = button('用原话生成正式候选', () =>
+            stageLegacyCognitionMigration(c, migrate),
           );
+          foot.append(migrate);
           item.appendChild(foot);
           fragment.appendChild(item);
         }
@@ -4245,19 +4309,9 @@
         if (panel && panel.classList.contains('show') && !confirmOpen) closeSettings();
       });
 
-      // ── 用户体验模式·小齿轮软入口：「清空 MemoWeft 对我的所有了解·重新开始」──
-      // 复用 factory-reset 的二次确认 + doFactoryReset 逻辑，只换成给普通人看的软文案（不出现"恢复出厂/清空数据库"这种硬词）。
+      // 旧入口保留给历史调用，但不能把 1.0 factory reset 冒充成正式记忆的全量删除。
       function userSoftReset() {
-        showConfirm({
-          icon: '🧹',
-          title: '清空它对我的了解，重新开始？',
-          okText: '好，重新开始',
-          okKind: 'danger',
-          bodyHtml:
-            '这会让 MemoWeft <b>忘掉目前对你的全部了解</b>——它记下的你说过的话、整理出的片段、以及慢慢体会出的那些关于你的认知，都会清空，像第一次见面一样从头来。',
-          warnLine: '清空之后没法找回，确认这是你想要的。',
-          onOk: doFactoryReset, // 复用同一套清空逻辑（doFactoryReset 会刷新友好版与开发者版各视图）
-        });
+        toast('正式记忆不能从这里整体清空；请在正式记忆中逐条纠正并决定候选。', 'warn');
       }
 
       function addMsg(role, text) {
@@ -4266,6 +4320,710 @@
         d.appendChild(domEl('div', 'bubble', text));
         $('chat').appendChild(d);
         $('chat').scrollTop = $('chat').scrollHeight;
+      }
+
+      // ── MemoWeft 2.0 bridge ───────────────────────────────────────────
+      // 1.x 的聊天、画像与管理仍然是原页面的主体。这个很薄的同源桥只展示
+      // Python Next 返回的“候选 → Owner 决定 → 已接受世界”，并且从不把候选
+      // 冒充成 1.x 画像或已记住的内容。
+      let _nextWorld = null;
+      const _nextPending = new Map();
+      const _nextRuns = new Map();
+      function nextText(value) {
+        if (value == null) return '';
+        if (typeof value === 'string' || typeof value === 'number') return String(value);
+        return String(
+          value.content ||
+            value.summary ||
+            value.canonical_name ||
+            value.relation_type ||
+            value.id ||
+            '未命名内容',
+        );
+      }
+      function nextMemoryView(raw) {
+        const wrapped = raw || {};
+        const run = wrapped.run || wrapped;
+        const proposal = wrapped.memoryProposal || run.memoryProposal || run;
+        const failure = wrapped.memoryFailure || run.memoryFailure || proposal.failure || null;
+        const state = proposal.state || (failure ? 'failed' : wrapped.state || 'unavailable');
+        return {
+          raw: wrapped,
+          run,
+          proposal,
+          failure,
+          state,
+          pipeline: wrapped.pipeline || run.pipeline || proposal.pipeline || [],
+          world: wrapped.world || run.world || null,
+        };
+      }
+      function nextRunId(view) {
+        return view?.proposal?.runId || view?.proposal?.id || view?.run?.id || null;
+      }
+      function hydrateNextMemory(raw) {
+        const snapshot = raw || {};
+        const snapshotView = nextMemoryView(snapshot);
+        const runId = nextRunId(snapshotView);
+        const liveRun = _nextRuns.get(runId);
+        if (!liveRun) return snapshot;
+        const snapshotProposal = snapshot.memoryProposal || snapshotView.proposal || {};
+        return {
+          ...snapshot,
+          run: liveRun,
+          memoryProposal: {
+            ...snapshotProposal,
+            ...liveRun,
+            state: liveRun.state || snapshotProposal.state,
+          },
+          memoryFailure: liveRun.failure || snapshot.memoryFailure,
+          pipeline: liveRun.pipeline || snapshot.pipeline,
+          world: snapshot.world || liveRun.world,
+        };
+      }
+      function isNextPending(nextMemory) {
+        return ['candidate-ready', 'correction-pending'].includes(nextMemory?.state);
+      }
+      function hasNextPendingDecision() {
+        if ((_nextWorld?.pendingReviews || []).length) return true;
+        if (
+          [..._nextPending.values()].some((raw) =>
+            isNextPending(nextMemoryView(hydrateNextMemory(raw))),
+          )
+        )
+          return true;
+        return [..._nextRuns.values()].some((run) => isNextPending(nextMemoryView(run)));
+      }
+      function nextList(items, kind) {
+        const list = document.createElement('ul');
+        list.className = 'ux-list';
+        for (const item of items || []) {
+          const row = document.createElement('li');
+          row.textContent = `${kind}：${nextText(item)}`;
+          list.appendChild(row);
+        }
+        return list;
+      }
+      function appendNextCandidateContent(host, view) {
+        const proposal = view.proposal || {};
+        const correction = proposal.correction || {};
+        const manual = proposal.candidateCorrection || {};
+        if (view.state === 'correction-pending') {
+          const before = document.createElement('div');
+          const priorText =
+            (correction.supersededCognitions || []).map(nextText).join('；') ||
+            proposal.priorCognitionId ||
+            '一条当前认知';
+          before.textContent = '将替换：' + priorText;
+          const after = document.createElement('div');
+          after.textContent =
+            '改为：' + (correction.replacementContent || manual.content || '未返回候选正文');
+          host.append(before, after);
+          return;
+        }
+        const memory = proposal.candidateMemory || proposal.memory || {};
+        const labels = {
+          entities: '实体',
+          relationships: '关系',
+          events: '事件',
+          cognitions: '认知',
+        };
+        let count = 0;
+        for (const key of Object.keys(labels)) {
+          const items = memory[key] || [];
+          if (!items.length) continue;
+          host.appendChild(nextList(items, labels[key]));
+          count += items.length;
+        }
+        if (!count) host.appendChild(domEl('div', 'evmeta', '本轮没有可展示的候选正文。'));
+      }
+      function appendNextCandidateContext(host, view) {
+        const proposal = view.proposal || {};
+        const target = proposal.target || {};
+        const names = Array.isArray(target.entityNames)
+          ? target.entityNames.filter((value) => typeof value === 'string' && value.trim())
+          : [];
+        const lines = [];
+        if (names.length || target.entityId)
+          lines.push(
+            `对象：${names.join('、') || '未命名对象'}${target.entityId ? `（${target.entityId}）` : ''}`,
+          );
+        if (proposal.statementKind) lines.push(`陈述类型：${proposal.statementKind}`);
+        const perspective = proposal.ownerPerspective || {};
+        if (perspective.kind === 'entity' && (perspective.entityIds || []).includes('entity:owner'))
+          lines.push('视角：Owner（这是 Owner 对该对象的陈述）');
+        if (lines.length) host.appendChild(domEl('div', 'evmeta', lines.join(' · ')));
+      }
+      function appendNextClarification(host, view) {
+        const clarification = view.run.clarification || view.proposal.clarification || {};
+        host.appendChild(
+          domEl(
+            'div',
+            'evmeta',
+            clarification.message || '当前指代不能唯一绑定到已接受对象，请先说明你指的是哪一个。',
+          ),
+        );
+        const names = Array.isArray(clarification.candidateEntityNames)
+          ? clarification.candidateEntityNames.filter(
+              (value) => typeof value === 'string' && value.trim(),
+            )
+          : [];
+        if (names.length)
+          host.appendChild(
+            domEl('div', 'evmeta', `可能指向：${names.join('、')}。请用自己的话说明。`),
+          );
+      }
+      function appendNextEvidence(host, view) {
+        const evidence =
+          view.raw.evidence ||
+          view.proposal.evidence ||
+          view.proposal.candidateCorrection?.evidence ||
+          [];
+        const detail = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = 'Evidence（本轮证据）';
+        detail.appendChild(summary);
+        if (!evidence.length)
+          detail.appendChild(domEl('div', 'evmeta', '本轮没有返回可展示的 Evidence。'));
+        for (const item of evidence)
+          detail.appendChild(domEl('div', 'evmeta', nextText(item.text || item.content || item)));
+        const identityBindings = view.proposal.identityBindings || view.run.identityBindings || [];
+        for (const binding of identityBindings) {
+          if (!binding || typeof binding !== 'object') continue;
+          const start = binding.start_codepoint;
+          const end = binding.end_codepoint;
+          const span =
+            Number.isInteger(start) && Number.isInteger(end) ? `[${start}, ${end})` : '未返回 span';
+          detail.appendChild(
+            domEl(
+              'div',
+              'evmeta',
+              `身份绑定：${binding.entity_id || '未命名对象'} ← ${binding.evidence_id || '本轮 Evidence'}，span ${span}`,
+            ),
+          );
+        }
+        host.appendChild(detail);
+      }
+      function registerNextMemory(nextMemory) {
+        const view = nextMemoryView(nextMemory);
+        const runId = view.proposal.runId || view.proposal.id || view.run.id;
+        if (isNextPending(view) && runId) _nextPending.set(runId, view.raw);
+        if (['accepted', 'rejected'].includes(view.state) && runId) _nextPending.delete(runId);
+        renderNextPending();
+        return view;
+      }
+      function appendNextMemoryTurn(nextMemory) {
+        const hydrated = hydrateNextMemory(nextMemory);
+        const view = registerNextMemory(hydrated);
+        const row = document.createElement('div');
+        row.className = 'msg dla next-memory-turn';
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        const title = domEl('strong', '', 'MemoWeft 2.0 记忆判断');
+        bubble.appendChild(title);
+        const status = domEl('div', 'evmeta');
+        const labels = {
+          'candidate-ready': '等待你决定：以下是候选，还没有记住。',
+          'correction-pending': '等待你决定：这是一条纠正候选，还没有写入。',
+          'no-candidate': '本轮没有形成候选记忆。',
+          'clarification-required':
+            '需要澄清：程序不能确定你指的是哪一个对象，因此没有猜测或写入。',
+          'out-of-scope':
+            '本轮内容当前不在这项能力的写入范围内；没有形成候选，也没有改变正式记忆。',
+          failed: '本轮 2.0 提取失败，但聊天不受影响。',
+          unavailable: 'MemoWeft 2.0 暂不可用；聊天与 1.0 兼容来源仍可使用。',
+          accepted: '这轮候选已接受并写入 2.0 世界。',
+          rejected: '这轮候选已忽略，2.0 世界没有变化。',
+        };
+        status.textContent = labels[view.state] || `2.0 状态：${view.state}`;
+        bubble.appendChild(status);
+        if (
+          ['candidate-ready', 'correction-pending', 'accepted', 'rejected'].includes(view.state)
+        ) {
+          if (view.state === 'candidate-ready') appendNextCandidateContext(bubble, view);
+          appendNextCandidateContent(bubble, view);
+        }
+        if (view.state === 'clarification-required') appendNextClarification(bubble, view);
+        if (isNextPending(view)) {
+          const reviewId = view.proposal.reviewId || view.run.reviewId;
+          const runId = view.proposal.runId || view.proposal.id || view.run.id;
+          const resultHash = view.proposal.resultHash || view.run.resultHash;
+          if (reviewId && runId && resultHash) {
+            const actions = document.createElement('div');
+            actions.className = 'button-row';
+            actions.append(
+              button('接受记忆', () => decideNextMemory(view.raw, 'accept', row), 'primary'),
+            );
+            actions.append(button('忽略这次', () => decideNextMemory(view.raw, 'reject', row)));
+            bubble.appendChild(actions);
+          }
+        } else if (view.failure) {
+          bubble.appendChild(
+            domEl(
+              'div',
+              'evmeta',
+              nextText(view.failure.kind || view.failure.codes || view.failure),
+            ),
+          );
+        }
+        appendNextEvidence(bubble, view);
+        row.appendChild(bubble);
+        $('chat').appendChild(row);
+        $('chat').scrollTop = $('chat').scrollHeight;
+      }
+      async function stageLegacyCognitionMigration(cognition, buttonEl) {
+        if (!cognition?.id || !buttonEl || buttonEl.disabled) return;
+        if (hasNextPendingDecision()) {
+          toast('请先在“待决定”里接受或忽略当前候选，再迁移下一条 1.0 线索。', 'warn');
+          return;
+        }
+        const originalLabel = buttonEl.textContent;
+        buttonEl.disabled = true;
+        buttonEl.textContent = '正在根据原话生成候选…';
+        try {
+          const response = await fetch('/api/next/legacy-cognition-migrations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cognitionId: cognition.id }),
+          });
+          const result = await response.json();
+          if (!response.ok || result.error) {
+            throw Error(result.error || '无法生成正式候选');
+          }
+          const nextMemory = result.nextMemory || result;
+          const view = nextMemoryView(nextMemory);
+          appendNextMemoryTurn(nextMemory);
+          await loadNextMemoryRuns();
+          renderNextPending();
+          if (isNextPending(view)) {
+            toast('已根据原话生成正式候选；请在聊天中的候选卡决定是否接受。', 'ok');
+          } else if (view.state === 'no-candidate') {
+            toast('原话没有形成正式候选，已如实显示，正式记忆没有变化。', 'warn');
+          } else if (view.state === 'failed') {
+            toast('根据原话生成候选失败，正式记忆没有变化。', 'danger');
+          } else {
+            toast('迁移结果已显示；正式记忆尚未因此自动变化。', 'info');
+          }
+        } catch (error) {
+          toast('无法生成正式候选：' + nextText(error.message || error), 'danger');
+        } finally {
+          buttonEl.disabled = false;
+          buttonEl.textContent = originalLabel;
+        }
+      }
+      async function requestNextMemoryCorrection(cognition, buttonEl) {
+        if (!cognition?.id || !buttonEl || buttonEl.disabled) return;
+        const correctionText = prompt('用你自己的话说明应该如何纠正这条正式记忆：', '');
+        if (correctionText == null) return;
+        const text = correctionText.trim();
+        if (!text) {
+          toast('纠正原话不能为空。', 'warn');
+          return;
+        }
+        const originalLabel = buttonEl.textContent;
+        buttonEl.disabled = true;
+        buttonEl.textContent = '正在生成纠正候选…';
+        try {
+          const response = await fetch('/api/next/memory-corrections', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cognitionId: cognition.id, correctionText }),
+          });
+          const result = await response.json();
+          if (!response.ok || result.error) {
+            throw Error(result.error || '无法生成纠正候选');
+          }
+          const nextMemory = result.nextMemory || result;
+          const view = nextMemoryView(nextMemory);
+          appendNextMemoryTurn(nextMemory);
+          await loadNextMemoryRuns();
+          renderNextPending();
+          toast(
+            isNextPending(view)
+              ? '已生成纠正候选；接受前不会改动正式记忆。'
+              : '纠正结果已显示；正式记忆尚未因此自动变化。',
+            isNextPending(view) ? 'ok' : 'warn',
+          );
+        } catch (error) {
+          toast('无法生成纠正候选：' + nextText(error.message || error), 'danger');
+        } finally {
+          buttonEl.disabled = false;
+          buttonEl.textContent = originalLabel;
+        }
+      }
+      async function decideNextMemory(raw, decision, row) {
+        const view = nextMemoryView(raw);
+        const reviewId = view.proposal.reviewId || view.run.reviewId;
+        const runId = view.proposal.runId || view.proposal.id || view.run.id;
+        const resultHash = view.proposal.resultHash || view.run.resultHash;
+        if (!reviewId || !runId || !resultHash || !isNextPending(view)) return;
+        const buttons = row.querySelectorAll('button');
+        buttons.forEach((button) => {
+          button.disabled = true;
+        });
+        try {
+          const response = await fetch('/api/next/memory-decisions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reviewId, runId, resultHash, decision }),
+          });
+          const result = await response.json();
+          if (!response.ok || result.error) throw Error(result.error || '2.0 决定没有完成');
+          view.proposal.state = decision === 'accept' ? 'accepted' : 'rejected';
+          _nextPending.delete(runId);
+          if (result.world) renderNextWorld(result.world);
+          await loadNextMemoryRuns();
+          renderNextPending();
+          row.replaceWith(
+            Object.assign(document.createElement('div'), { className: 'msg dla next-memory-turn' }),
+          );
+          appendNextMemoryTurn(view.raw);
+        } catch (error) {
+          buttons.forEach((button) => {
+            button.disabled = false;
+          });
+          const note = domEl(
+            'div',
+            'evmeta',
+            '无法处理这次 2.0 候选：' + nextText(error.message || error),
+          );
+          row.querySelector('.bubble').appendChild(note);
+        }
+      }
+      function nextOwnerCognition(item) {
+        return item?.target?.kind === 'entity' && item?.target?.id === 'entity:owner';
+      }
+      function nextOwnerRelationship(item) {
+        return (
+          item?.source_entity_id === 'entity:owner' || item?.target_entity_id === 'entity:owner'
+        );
+      }
+      function nextOwnerEvent(item) {
+        return (item?.participants || []).some(
+          (participant) => participant?.entity_id === 'entity:owner',
+        );
+      }
+      function nextEntityName(entityId, entityIndex) {
+        const entity = entityIndex.get(entityId)?.entity;
+        return entity?.canonical_name || entityId || '未命名对象';
+      }
+      function formatNextPerspective(perspective, entityIndex) {
+        if (!perspective || typeof perspective !== 'object') return '视角未返回';
+        const holders = Array.isArray(perspective.holder_entity_ids)
+          ? perspective.holder_entity_ids.map((id) => nextEntityName(id, entityIndex))
+          : [];
+        if (perspective.kind === 'entity') {
+          return perspective.holder_entity_ids?.includes('entity:owner')
+            ? 'Owner 的陈述'
+            : `${holders.join('、') || '某个对象'}的视角`;
+        }
+        if (perspective.kind === 'joint') return `共同视角：${holders.join('、') || '多个对象'}`;
+        if (perspective.kind === 'system') return '系统推断视角';
+        return '视角未返回';
+      }
+      function buildAcceptedEntityIndex(memory) {
+        const entityIndex = new Map();
+        const unbound = { cognitions: [], relationships: [], events: [] };
+        for (const entity of memory?.entities || []) {
+          if (!entity?.id) continue;
+          entityIndex.set(entity.id, { entity, cognitions: [], relationships: [], events: [] });
+        }
+        for (const cognition of memory?.cognitions || []) {
+          const targetId = cognition?.target?.kind === 'entity' ? cognition.target.id : null;
+          const bundle = targetId ? entityIndex.get(targetId) : null;
+          if (bundle) bundle.cognitions.push(cognition);
+          else unbound.cognitions.push(cognition);
+        }
+        for (const relationship of memory?.relationships || []) {
+          const endpoints = new Set([
+            relationship?.source_entity_id,
+            relationship?.target_entity_id,
+          ]);
+          let linked = false;
+          for (const entityId of endpoints) {
+            const bundle = entityIndex.get(entityId);
+            if (!bundle) continue;
+            bundle.relationships.push(relationship);
+            linked = true;
+          }
+          if (!linked) unbound.relationships.push(relationship);
+        }
+        for (const event of memory?.events || []) {
+          const entityIds = new Set([
+            ...(event?.participants || []).map((participant) => participant?.entity_id),
+            ...(event?.related_entity_ids || []),
+          ]);
+          let linked = false;
+          for (const entityId of entityIds) {
+            const bundle = entityIndex.get(entityId);
+            if (!bundle) continue;
+            bundle.events.push(event);
+            linked = true;
+          }
+          if (!linked) unbound.events.push(event);
+        }
+        return { entityIndex, unbound };
+      }
+      function appendAcceptedCognitionDetail(host, cognition, entityIndex) {
+        const fact = document.createElement('details');
+        fact.className = 'next-entity-fact';
+        const summary = document.createElement('summary');
+        summary.textContent = cognition?.content || '未命名认知';
+        fact.appendChild(summary);
+        const status = [
+          formatNextPerspective(cognition?.perspective, entityIndex),
+          cognition?.formed_by ? `形成：${cognition.formed_by}` : null,
+          cognition?.cred_status ? `状态：${cognition.cred_status}` : null,
+          Number.isFinite(cognition?.confidence) ? `置信：${cognition.confidence}` : null,
+        ].filter(Boolean);
+        fact.appendChild(domEl('div', 'evmeta', status.join(' · ') || '没有额外状态。'));
+        const evidence = (cognition?.sources || [])
+          .map((source) => source?.evidence_id || source?.evidenceId)
+          .filter(Boolean);
+        fact.appendChild(
+          domEl(
+            'div',
+            'evmeta',
+            evidence.length ? `Evidence：${evidence.join('、')}` : 'Evidence：未返回',
+          ),
+        );
+        const timing = [
+          cognition?.scope ? `范围：${cognition.scope}` : null,
+          cognition?.valid_at ? `生效：${cognition.valid_at}` : null,
+          cognition?.invalid_at ? `失效：${cognition.invalid_at}` : null,
+        ].filter(Boolean);
+        if (timing.length) fact.appendChild(domEl('div', 'evmeta', timing.join(' · ')));
+        host.appendChild(fact);
+      }
+      function appendAcceptedEntitySection(card, title, emptyText, renderItems) {
+        const section = document.createElement('section');
+        section.className = 'next-entity-section';
+        section.appendChild(domEl('div', 'next-entity-section-title', title));
+        const items = renderItems(section);
+        if (!items) section.appendChild(domEl('div', 'empty', emptyText));
+        card.appendChild(section);
+      }
+      function renderAcceptedEntityCard(bundle, entityIndex) {
+        const entity = bundle.entity;
+        const card = document.createElement('details');
+        card.className = 'acc next-entity-card';
+        const summary = document.createElement('summary');
+        summary.append(
+          domEl('span', 'chev', '▸'),
+          domEl('span', 'acc-ttl', entity.canonical_name || entity.id),
+          domEl('span', 'acc-count', entity.kind || 'entity'),
+        );
+        card.appendChild(summary);
+        const body = document.createElement('div');
+        body.className = 'acc-body';
+        body.appendChild(domEl('div', 'evmeta', `稳定实体 ID：${entity.id}`));
+        if ((entity.aliases || []).length)
+          body.appendChild(domEl('div', 'evmeta', `别名：${entity.aliases.join('、')}`));
+        appendAcceptedEntitySection(body, '当前属性', '尚无已接受属性。', (section) => {
+          if (!bundle.cognitions.length) return false;
+          bundle.cognitions.forEach((item) =>
+            appendAcceptedCognitionDetail(section, item, entityIndex),
+          );
+          return true;
+        });
+        appendAcceptedEntitySection(body, '关系', '尚无已接受关系。', (section) => {
+          if (!bundle.relationships.length) return false;
+          for (const relationship of bundle.relationships) {
+            const source = nextEntityName(relationship.source_entity_id, entityIndex);
+            const target = nextEntityName(relationship.target_entity_id, entityIndex);
+            const status = [
+              `${source} ${relationship.relation_type || '关联'} ${target}`,
+              relationship.status ? `状态：${relationship.status}` : null,
+              relationship.valid_from ? `自 ${relationship.valid_from}` : null,
+              relationship.valid_to ? `至 ${relationship.valid_to}` : null,
+            ].filter(Boolean);
+            section.appendChild(domEl('div', 'evmeta', status.join(' · ')));
+          }
+          return true;
+        });
+        appendAcceptedEntitySection(body, '参与事件', '尚无已接受事件。', (section) => {
+          if (!bundle.events.length) return false;
+          for (const event of bundle.events) {
+            const participants = (event.participants || [])
+              .map((participant) => nextEntityName(participant?.entity_id, entityIndex))
+              .filter(Boolean);
+            const detail = [
+              event.summary || event.event_type || event.id,
+              event.occurred_at ? `发生于 ${event.occurred_at}` : null,
+              participants.length ? `参与：${participants.join('、')}` : null,
+            ].filter(Boolean);
+            section.appendChild(domEl('div', 'evmeta', detail.join(' · ')));
+          }
+          return true;
+        });
+        card.appendChild(body);
+        return card;
+      }
+      function renderUnboundAcceptedContent(unbound, entityIndex) {
+        const total =
+          unbound.cognitions.length + unbound.relationships.length + unbound.events.length;
+        if (!total) return null;
+        const detail = document.createElement('details');
+        detail.className = 'acc next-entity-card';
+        const summary = document.createElement('summary');
+        summary.append(
+          domEl('span', 'chev', '▸'),
+          domEl('span', 'acc-ttl', '其他已接受内容'),
+          domEl('span', 'acc-count', String(total)),
+        );
+        detail.appendChild(summary);
+        const body = document.createElement('div');
+        body.className = 'acc-body';
+        if (unbound.cognitions.length) {
+          body.appendChild(domEl('div', 'next-entity-section-title', '未绑定实体的认知'));
+          unbound.cognitions.forEach((item) =>
+            appendAcceptedCognitionDetail(body, item, entityIndex),
+          );
+        }
+        if (unbound.relationships.length)
+          body.appendChild(
+            domEl('div', 'evmeta', `未连接已知实体的关系：${unbound.relationships.length} 条`),
+          );
+        if (unbound.events.length)
+          body.appendChild(
+            domEl('div', 'evmeta', `未连接已知实体的事件：${unbound.events.length} 条`),
+          );
+        detail.appendChild(body);
+        return detail;
+      }
+      function appendNextWorldItem(list, kind, item) {
+        const row = document.createElement('li');
+        row.appendChild(domEl('span', '', `${kind}：${nextText(item)}`));
+        if (kind === '认知' && item?.id) {
+          const actions = document.createElement('span');
+          actions.className = 'evbtns';
+          const correct = button('纠正', () => requestNextMemoryCorrection(item, correct));
+          actions.appendChild(correct);
+          row.appendChild(actions);
+        }
+        list.appendChild(row);
+      }
+      function renderNextWorld(world) {
+        _nextWorld = world || _nextWorld;
+        const memory = _nextWorld?.memory || {};
+        // This path receives only `memory` from /memory-world: accepted world
+        // state. Pending candidateMemory is intentionally rendered elsewhere.
+        const { entityIndex, unbound } = buildAcceptedEntityIndex(memory);
+        const owner = entityIndex.get('entity:owner');
+        const otherEntities = [...entityIndex.values()]
+          .filter((bundle) => bundle.entity.id !== 'entity:owner')
+          .sort((left, right) =>
+            String(left.entity.canonical_name || left.entity.id).localeCompare(
+              String(right.entity.canonical_name || right.entity.id),
+              'zh-CN',
+            ),
+          );
+        const ownerHost = $('nextWorldOwner');
+        const otherHost = $('nextWorldOther');
+        if (!ownerHost || !otherHost) return;
+        ownerHost.replaceChildren(
+          owner
+            ? renderAcceptedEntityCard(owner, entityIndex)
+            : domEl('span', 'empty', '还没有接受关于你的 2.0 记忆。'),
+        );
+        otherHost.replaceChildren();
+        otherEntities.forEach((bundle) =>
+          otherHost.appendChild(renderAcceptedEntityCard(bundle, entityIndex)),
+        );
+        const unboundContent = renderUnboundAcceptedContent(unbound, entityIndex);
+        if (unboundContent) otherHost.appendChild(unboundContent);
+        if (!otherEntities.length && !unboundContent)
+          otherHost.appendChild(domEl('span', 'empty', '还没有接受其他 2.0 实体或未绑定内容。'));
+        const status = $('nextWorldStatus');
+        if (status)
+          status.textContent =
+            _nextWorld?.revision != null
+              ? `当前 2.0 世界：第 ${_nextWorld.revision} 版，只显示已接受内容。`
+              : '2.0 世界暂不可用。';
+        updateMemPillCount();
+      }
+      function renderNextPending() {
+        const host = $('nextWorldPending');
+        if (!host) return;
+        host.replaceChildren();
+        const pending = [..._nextPending.entries()].flatMap(([runId, raw]) => {
+          const hydrated = hydrateNextMemory(raw);
+          const view = nextMemoryView(hydrated);
+          if (!isNextPending(view)) {
+            _nextPending.delete(runId);
+            return [];
+          }
+          return [hydrated];
+        });
+        const pendingReviews = _nextWorld?.pendingReviews || [];
+        if (!pending.length && !pendingReviews.length) {
+          host.appendChild(domEl('span', 'empty', '没有等待决定的 2.0 候选。'));
+          return;
+        }
+        for (const raw of pending) {
+          const view = nextMemoryView(raw);
+          host.appendChild(
+            domEl(
+              'div',
+              'evmeta',
+              `候选：${nextText(view.proposal.title || view.proposal.id || view.state)}`,
+            ),
+          );
+        }
+        for (const review of pendingReviews)
+          host.appendChild(domEl('div', 'evmeta', `等待复核：${nextText(review)}`));
+      }
+      async function loadNextWorld() {
+        try {
+          const response = await fetch('/api/next/memory-world');
+          const world = await response.json();
+          if (!response.ok || world.error) throw Error(world.error || '2.0 世界不可用');
+          renderNextWorld(world);
+          renderNextPending();
+        } catch (error) {
+          const status = $('nextWorldStatus');
+          if (status) status.textContent = 'MemoWeft 2.0 暂不可用；聊天与 1.0 兼容来源仍可使用。';
+        }
+      }
+      async function loadNextMemoryRuns() {
+        try {
+          const response = await fetch('/api/next/memory-runs');
+          const payload = await response.json();
+          if (!response.ok || payload.error || !Array.isArray(payload.runs))
+            throw Error(payload.error || '2.0 运行记录不可用');
+          const latest = new Map();
+          for (const run of payload.runs) if (run?.id) latest.set(run.id, run);
+          _nextRuns.clear();
+          latest.forEach((run, runId) => _nextRuns.set(runId, run));
+          return true;
+        } catch (error) {
+          // 旧 JSONL 快照仍可安全回放；2.0 bridge 缺席时绝不妨碍 1.x。
+          _nextRuns.clear();
+          return false;
+        }
+      }
+      async function askNextMemory() {
+        const input = $('nextMemoryQuery');
+        const resultHost = $('nextMemoryQueryResult');
+        const query = input?.value.trim();
+        if (!query) return;
+        resultHost.textContent = '正在召回已接受的 2.0 记忆…';
+        try {
+          const response = await fetch('/api/next/memory-queries', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query }),
+          });
+          const result = await response.json();
+          if (!response.ok || result.error) throw Error(result.error || '2.0 召回不可用');
+          resultHost.textContent =
+            result.answer ||
+            (result.status === 'no_memory'
+              ? '没有找到相关的已接受 2.0 记忆。'
+              : '本次没有生成回答。');
+          if (result.world) renderNextWorld(result.world);
+        } catch (error) {
+          resultHost.textContent = '2.0 召回暂不可用：' + nextText(error.message || error);
+        }
       }
 
       // 生成一枚「?」注解图标：hover 出大白话解释。tipLeft=true 时气泡右对齐（靠右缘不溢出）。
@@ -4373,6 +5131,10 @@
         const el = $('text');
         const text = el.value.trim();
         if (!text) return;
+        // Bind the outgoing turn to the session displayed when the user hit
+        // send.  A response that arrives after a session switch is data for
+        // that old conversation, never a message for the newly opened one.
+        const requestSessionId = _currentSessionId;
         el.value = '';
         el.disabled = true;
         _sending = true;
@@ -4393,20 +5155,37 @@
           const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text }),
+            body: JSON.stringify({
+              text,
+              ...(requestSessionId ? { sessionId: requestSessionId } : {}),
+            }),
           });
           const d = await res.json();
+          const responseSessionId = d.sessionId || requestSessionId;
+          if (responseSessionId && responseSessionId !== _currentSessionId) {
+            // The visible stream now belongs to another session. Its history
+            // is durable there and will render if the Owner returns to it.
+            thinking.remove();
+            return;
+          }
           if (d.error) {
             settle('出错：' + d.error);
           } else {
             settle(d.record.reply);
             if (d.record && d.record.turn != null) _renderedTurns.add(d.record.turn); // 手动发的记下 turn，避免 pollChat 重复渲染
             renderXray(d.record);
+            const nextMemory = d.nextMemory || d.record.nextMemory;
+            appendNextMemoryTurn(nextMemory || { state: 'unavailable' });
+            loadNextWorld();
             if (d.logFile) $('logfile').textContent = d.logFile;
             loadSessions(); // 发出首句后本会话才进入列表；刷新轮数与高亮状态
           }
         } catch (e) {
-          settle('没连上，你的话已经存下了，稍后再试试。');
+          if (_currentSessionId === requestSessionId) {
+            settle('没连上，你的话已经存下了，稍后再试试。');
+          } else {
+            thinking.remove();
+          }
         } finally {
           el.disabled = false;
           el.focus();
@@ -4418,6 +5197,8 @@
         try {
           const r = await fetch('/api/reset', { method: 'POST' }).then((x) => x.json());
           _renderedTurns.clear();
+          _nextPending.clear();
+          renderNextPending();
           _currentSessionId = r.sessionId || null; // 更新当前会话，供模式切换时判断会话归属
           _beforeDevSession = null; // 用户明确新建会话后，不再恢复之前记录的用户会话
           $('chat').innerHTML = '';
@@ -4428,6 +5209,51 @@
           toast('已开新会话，之前存下的数据（记忆线索 / 经历片段 / 对你的了解）都还在', 'ok');
         } catch (e) {
           toast('新会话失败：' + String(e), 'danger');
+        }
+      }
+
+      function clearChatHistory() {
+        showConfirm({
+          icon: '🧹',
+          title: '清空聊天记录？',
+          okText: '清空聊天记录',
+          okKind: 'danger',
+          bodyHtml:
+            '这会清空左侧的<b>全部聊天会话</b>和当前聊天窗口，并建立一段空白会话。<br><br><b>正式记忆不会删除</b>：已经接受的 2.0 世界、1.0 兼容记忆和配置都会保留。',
+          warnLine: '旧聊天日志会在本机改名归档，不再参与聊天上下文。',
+          onOk: doClearChatHistory,
+        });
+      }
+
+      async function doClearChatHistory() {
+        const control = $('clearChatHistoryButton');
+        if (control) control.disabled = true;
+        try {
+          const response = await fetch('/api/sessions/clear', { method: 'POST' });
+          const result = await response.json();
+          if (!response.ok || result.error) {
+            toast('清空聊天记录失败：' + (result.error || response.status), 'danger');
+            return;
+          }
+          _renderedTurns.clear();
+          _nextPending.clear();
+          _nextRuns.clear();
+          renderNextPending();
+          _currentSessionId = result.currentId || null;
+          _beforeDevSession = null;
+          localStorage.removeItem(DEV_SESSION_KEY);
+          if ($('chat')) $('chat').innerHTML = '';
+          if ($('xray'))
+            $('xray').innerHTML =
+              '<div class="empty" style="padding:8px 0;">聊天记录已清空；正式记忆保持不变。</div>';
+          if (window._mode !== 'user') applyMode('user');
+          await loadSessions();
+          await loadNextWorld();
+          toast(`已清空 ${result.archivedCount || 0} 段聊天记录；正式记忆保持不变`, 'ok', 4500);
+        } catch (error) {
+          toast('清空聊天记录失败：' + String(error), 'danger');
+        } finally {
+          if (control) control.disabled = false;
         }
       }
 
@@ -4517,16 +5343,21 @@
             return;
           }
           _renderedTurns.clear();
+          _nextPending.clear();
+          renderNextPending();
           _currentSessionId = d.sessionId || id;
           $('chat').innerHTML = '';
           if ($('xray'))
             $('xray').innerHTML =
               '<div class="empty" style="padding:8px 0;">已切到这段对话；发一句话看本轮内幕。</div>';
+          await loadNextMemoryRuns();
           for (const t of d.turns || []) {
             if (t.turn != null) _renderedTurns.add(t.turn); // 记下已渲染 turn，避免 pollChat 重复渲染
             addMsg('user', t.userInput);
             if (t.reply) addMsg('dla', t.reply);
+            if (t.nextMemory) appendNextMemoryTurn(t.nextMemory);
           }
+          loadNextWorld();
           if (toUser) applyMode('user'); // 回到聊天正门
           loadSessions(); // 刷新高亮（current 变了）
         } catch (e) {
@@ -4597,17 +5428,17 @@
         _beforeDevSession = null;
       }
 
-      // ── 恢复出厂 · 清空全部数据（二次确认 → POST /api/factory-reset → 刷新各视图）──
-      // 跟 resetCfg（恢复默认参数、只还原旋钮）是两个独立动作：这个只清数据、不动参数。
+      // ── 1.0 兼容数据恢复出厂（二次确认 → POST /api/factory-reset → 刷新各视图）──
+      // 跟 resetCfg（恢复默认参数、只还原旋钮）是两个独立动作。它不包含正式 2.0 记忆。
       function factoryReset() {
         showConfirm({
           icon: '🗑',
-          title: '恢复出厂 · 清空全部数据？',
+          title: '清空 1.0 兼容数据？',
           okText: '我确定，永久删除',
           okKind: 'danger',
           bodyHtml:
-            '这会永久删除 MemoWeft 攒下的<b>所有数据</b>：<br>· 你说过的<b>原话</b><br>· 整理出的<b>经历片段</b><br>· 它对你形成的<b>理解</b><br>· 以及检索索引<br><br>参数旋钮不受影响（那是「恢复默认参数」管的）。',
-          warnLine: '删除后无法恢复，请确认这不是误操作。',
+            '这会永久删除 1.0 兼容来源中的<b>原话、整理片段与旧版理解</b>。<br><br><b>不含正式记忆</b>：已接受的 2.0 世界不会被这个入口删除。参数旋钮也不受影响（那是「恢复默认参数」管的）。',
+          warnLine: '删除 1.0 兼容数据后无法恢复，请确认这不是误操作。',
           onOk: doFactoryReset,
         });
       }
@@ -4625,7 +5456,7 @@
           if ($('chat')) $('chat').innerHTML = '';
           if ($('xray'))
             $('xray').innerHTML =
-              '<div class="empty" style="padding:8px 0;">已恢复出厂，数据已清空。</div>';
+              '<div class="empty" style="padding:8px 0;">1.0 兼容数据已清空；正式记忆未在此操作中改变。</div>';
           // 各开发者面板与友好版都刷一遍（无论当前哪个模式，刷了不显示也无副作用）。
           if (typeof loadCognition === 'function') loadCognition();
           if (typeof loadEvents === 'function') loadEvents();
@@ -4634,7 +5465,7 @@
           if (typeof loadEventsFriendly === 'function') loadEventsFriendly();
           const n = (r.evidenceRemoved || 0) + (r.eventRemoved || 0) + (r.cognitionRemoved || 0);
           toast(
-            '已恢复出厂：清掉原话' +
+            '已清空 1.0 兼容数据：原话' +
               (r.evidenceRemoved || 0) +
               '条、经历片段' +
               (r.eventRemoved || 0) +
@@ -6314,20 +7145,30 @@
       }
       async function pollChat() {
         if (_sending) return; // 手动发送中，别插队（避免和 send 重复渲染）
+        const sessionId = _currentSessionId;
+        if (!sessionId) return;
         try {
-          const d = await fetch('/api/chat-history').then((x) => x.json());
+          const d = await fetch(
+            '/api/chat-history?sessionId=' + encodeURIComponent(sessionId),
+          ).then((x) => x.json());
+          if (d.sessionId !== sessionId || _currentSessionId !== sessionId) return;
           for (const t of d.turns || []) {
             if (_renderedTurns.has(t.turn)) continue;
             _renderedTurns.add(t.turn);
             addMsg('user', t.userInput);
             if (t.reply) addMsg('dla', t.reply);
+            if (t.nextMemory) appendNextMemoryTurn(t.nextMemory);
           }
         } catch (e) {}
       }
       setInterval(pollSeed, 1500);
       setInterval(pollChat, 2000);
       pollSeed();
-      pollChat();
+      (async function initializeNextBridge() {
+        await loadNextMemoryRuns();
+        await loadNextWorld();
+        pollChat();
+      })();
 
       // 默认进"开发者"模式（方便联调：透视区所有面板可见）。
       applyMode('user'); // 方案A：正门 = 用户房间（原默认是 developer）。
