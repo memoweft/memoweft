@@ -41,4 +41,4 @@ typeCheckingMode = "strict"
 [tool.mypy]
 python_version = "3.11"
 strict = true
-mypy_path = "src"
+mypy_path = ["src", "../next-lab"]
