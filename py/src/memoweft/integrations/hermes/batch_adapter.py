@@ -4056,8 +4056,8 @@ def _ensure_support_link(
     """
     existing = db.execute(
         "SELECT 1 FROM cognition_evidence "
-        "WHERE cognition_id = ? AND evidence_id = ?",
-        (cognition_id, evidence_id),
+        "WHERE cognition_id = ? AND evidence_id = ? AND relation = ?",
+        (cognition_id, evidence_id, relation),
     ).fetchone()
     if existing is not None:
         return 0

@@ -27,7 +27,7 @@ import os
 from pathlib import Path
 import sqlite3
 import threading
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence, cast
 
 from ..hermes import _assert_existing_database_is_current  # host-agnostic probe
 from ..hermes.batch_adapter import HermesBatchAdapterProcessor
@@ -361,15 +361,23 @@ def default_one_shot_route() -> Callable[..., Mapping[str, object]] | None:
 
     Test support: ``MEMOWEFT_TEST_MODEL_RESPONSE`` pins a canned interpretation so
     WeftMate contract tests can drive a real durable pipeline with zero network
-    and zero real model calls.  Production: DeepSeek API via env-injected
-    credentials (``DEEPSEEK_API_KEY`` / ``DEEPSEEK_BASE_URL``, never logged).
-    Temperature is pinned to 0 — the evaluated optimum (deepseek-v4-flash +
-    temperature 0, see the eval harness); the model name defaults to the public
-    ``deepseek-chat`` and can be overridden with ``MEMOWEFT_WORLD_MODEL`` to
-    match the host's routed model.
+    and zero real model calls.  Guarded behind ``MEMOWEFT_TESTING=1`` so a stray
+    test variable can never hijack a production process.  Production: DeepSeek
+    API via env-injected credentials (``DEEPSEEK_API_KEY`` / ``DEEPSEEK_BASE_URL``,
+    never logged).  Temperature is pinned to 0 — the evaluated optimum
+    (deepseek-v4-flash + temperature 0, see the eval harness); the model name
+    defaults to the public ``deepseek-chat`` and can be overridden with
+    ``MEMOWEFT_WORLD_MODEL`` to match the host's routed model.
     """
 
+    testing = os.environ.get("MEMOWEFT_TESTING") == "1"
     mock = os.environ.get("MEMOWEFT_TEST_MODEL_RESPONSE")
+    if mock is not None and not testing:
+        logger.warning(
+            "MEMOWEFT_TEST_MODEL_RESPONSE ignored: MEMOWEFT_TESTING=1 is required "
+            "(test-route guard; production keeps the real API route)"
+        )
+        mock = None
     if mock == "__smart__":
         # 测试专用自适应解释（WeftMate 契约测试）：解析宿主 payload 里第一条
         # user Evidence（id + 原文），按 stated 归一（我→用户）生成 V8 信封——
@@ -538,7 +546,7 @@ class DshMemoWeftRuntime:
             event_id=event_id,
             payload_hash=str(boundary["payload_hash"]),
             formal_target=HermesBoundaryFormalTarget(
-                boundary_schema_version=int(boundary["schema_version"]),
+                boundary_schema_version=cast(int, boundary["schema_version"]),
                 provider_name=str(boundary["provider_name"]),
                 parent_session_id=str(boundary["parent_session_id"]),
                 result_session_id=str(boundary["result_session_id"]),

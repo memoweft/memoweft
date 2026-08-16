@@ -78,6 +78,43 @@ def _graph() -> MemoryWorldGraph:
     return graph
 
 
+def test_borrowed_connection_is_normalized_to_manual_transactions(tmp_path: Path) -> None:
+    """注入的外部连接必须归一为手动事务控制：隐式事务会让 decide() 的
+    BEGIN IMMEDIATE 报 "cannot start a transaction within a transaction"
+    （评审发现：isolation_level 未归一）。"""
+    conn = sqlite3.connect(tmp_path / "borrowed-default.sqlite3")
+    try:
+        loop = MemoryLoop(conn, _graph())
+        assert conn.isolation_level is None  # 已归一，与 store.open_db 一致
+        with pytest.raises(ReviewStateError):
+            loop.decide("missing-review", "no-hash", "accept")
+        loop.close()
+    finally:
+        conn.close()
+
+
+def test_decide_on_borrowed_connection_rolls_back_only_its_savepoint(tmp_path: Path) -> None:
+    """调用方事务打开时，decide() 失败只回滚自己的 SAVEPOINT，
+    不回滚/破坏调用方外层事务（评审发现：ROLLBACK 副作用越界）。"""
+    conn = sqlite3.connect(tmp_path / "borrowed-in-txn.sqlite3", isolation_level=None)
+    try:
+        conn.execute("CREATE TABLE caller_state (k TEXT PRIMARY KEY, v TEXT)")
+        conn.execute("INSERT INTO caller_state VALUES ('marker', 'alive')")
+        conn.execute("BEGIN IMMEDIATE")  # 调用方外层事务
+        loop = MemoryLoop(conn, _graph())
+        with pytest.raises(ReviewStateError):
+            loop.decide("missing-review", "no-hash", "accept")
+        # 调用方标记仍在外层事务里，且外层事务仍可正常提交
+        row = conn.execute("SELECT v FROM caller_state WHERE k = 'marker'").fetchone()
+        assert row is not None and row[0] == "alive"
+        conn.execute("COMMIT")
+        row = conn.execute("SELECT v FROM caller_state WHERE k = 'marker'").fetchone()
+        assert row is not None and row[0] == "alive"
+        loop.close()
+    finally:
+        conn.close()
+
+
 def _score(
     content_type: str,
     formed_by: str,

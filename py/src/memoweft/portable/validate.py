@@ -159,7 +159,12 @@ def validate_bundle(bundle: Any) -> ValidateResult:
             errors.append("data.eventEvidence has an invalid endpoint")
             break
     for l in cogev_list:
-        if not isinstance(l, dict) or not isinstance(l.get("cognitionId"), str) or not isinstance(l.get("evidenceId"), str):
+        if (
+            not isinstance(l, dict)
+            or not isinstance(l.get("cognitionId"), str)
+            or not isinstance(l.get("evidenceId"), str)
+            or not isinstance(l.get("relation"), str)
+        ):
             errors.append("data.cognitionEvidence has an invalid endpoint")
             break
     if errors:

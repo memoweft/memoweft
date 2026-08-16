@@ -776,8 +776,14 @@ def accepted_historical_relationship_ids(
 def historical_relationship_ids(
     graph: MemoryWorldGraph,
     accepted_steps: Iterable[AcceptedEvolutionStep],
+    *,
+    now_ms: int | None = None,
 ) -> frozenset[str]:
-    """Project the append-only graph into its non-current relationship IDs."""
+    """Project the append-only graph into its non-current relationship IDs.
+
+    ``now_ms`` pins the evaluation instant (deterministic recall/replay); when
+    omitted the projection reads the real clock.
+    """
 
     accepted = tuple(accepted_steps)
     historical = {
@@ -800,7 +806,8 @@ def historical_relationship_ids(
         for relationship_id, item in latest_state.items()
         if item.step.relation == "ended"
     )
-    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    if now_ms is None:
+        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
     historical.update(
         relationship.id
         for relationship in graph.relationships.values()
@@ -822,8 +829,14 @@ def historical_relationship_ids(
 def current_relationship_ids(
     graph: MemoryWorldGraph,
     accepted_steps: Iterable[AcceptedEvolutionStep],
+    *,
+    now_ms: int | None = None,
 ) -> frozenset[str]:
-    """Project relationships current now, with accepted evolution as authority."""
+    """Project relationships current now, with accepted evolution as authority.
+
+    ``now_ms`` pins the evaluation instant (deterministic recall/replay); when
+    omitted the projection reads the real clock.
+    """
 
     accepted = tuple(accepted_steps)
     permanently_historical = set(
@@ -844,7 +857,9 @@ def current_relationship_ids(
             prior.step.id,
         ):
             latest_state[step.subject.id] = item
-    at_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    if now_ms is None:
+        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    at_ms = now_ms
     current: set[str] = set()
     for relationship in graph.relationships.values():
         if relationship.id in permanently_historical:

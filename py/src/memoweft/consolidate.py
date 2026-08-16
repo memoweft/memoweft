@@ -266,11 +266,15 @@ def consolidate(
     semantic_resolution_store: Optional[SqliteSemanticResolutionStore] = None,
     transaction: Optional[Transaction] = None,
     cfg: Config = CONFIG,
-    now_iso: str = "",
+    now_iso: str | None = None,
     lang: Optional[Lang] = None,
     contradiction_guard: Optional[ContradictionGuard] = None,
 ) -> ConsolidateResult:
-    """执行增量合并；now_iso 是 correct 分支使用的失效时间戳，由调用方或注入时钟提供。"""
+    """执行增量合并；now_iso 是 correct 分支使用的失效时间戳，由调用方或注入时钟提供。
+
+    correct 分支发现 now_iso 缺失时抛 ValueError（fail-closed）——绝不允许把空串
+    写进 invalid_at 静默伪造失效。
+    """
     new_events = event_store.unconsolidated(subject_id)
     if len(new_events) == 0:
         return ConsolidateResult(
@@ -561,6 +565,8 @@ def consolidate(
             p = _pick_cognition(c)
             if old is None or old.invalid_at or p is None:
                 continue
+            if not now_iso:
+                raise ValueError("now_iso is required for the correct branch (inject a clock)")
             content, content_type, model_says_inferred, type_fallback = p
             support = pick_support(_cited_ids(c))
             if len(support) == 0:

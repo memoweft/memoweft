@@ -378,6 +378,16 @@ class MemoryLoop:
             self._database: str | None = None
             self._conn = database
             self._owns_connection = False
+            # Manual transaction control on borrowed connections: the sqlite3
+            # default isolation_level opens implicit transactions, which can make
+            # decide()'s BEGIN IMMEDIATE fail ("cannot start a transaction within
+            # a transaction") and lets a ROLLBACK leak into the caller's
+            # transaction. Normalize only when nothing is open — the setter
+            # COMMITs any active transaction, which would leak the other way.
+            # A connection that is already mid-transaction stays untouched and
+            # decide() contains itself in a SAVEPOINT instead.
+            if self._conn.isolation_level is not None and not self._conn.in_transaction:
+                self._conn.isolation_level = None
         else:
             self._database = str(database)
             self._conn = open_db(self._database)
@@ -719,8 +729,14 @@ class MemoryLoop:
         """Atomically finalize the exact hash-bound prepared change."""
         if decision not in ("accept", "reject"):
             raise ValueError("decision must be 'accept' or 'reject'")
+        # A borrowed connection may already sit inside the caller's transaction;
+        # contain decide() in a SAVEPOINT there so a failure rolls back only the
+        # loop's own writes and never the caller's outer transaction.
+        use_savepoint = not self._owns_connection and self._conn.in_transaction
         try:
-            self._conn.execute("BEGIN IMMEDIATE")
+            self._conn.execute(
+                "SAVEPOINT memoweft_decide" if use_savepoint else "BEGIN IMMEDIATE"
+            )
             review = self._conn.execute(
                 "SELECT * FROM proposals WHERE id = ?", (review_id,)
             ).fetchone()
@@ -901,9 +917,15 @@ class MemoryLoop:
                     receipt.receipt_hash,
                 ),
             )
-            self._conn.execute("COMMIT")
+            self._conn.execute(
+                "RELEASE SAVEPOINT memoweft_decide" if use_savepoint else "COMMIT"
+            )
         except Exception:
-            self._conn.execute("ROLLBACK")
+            if use_savepoint:
+                self._conn.execute("ROLLBACK TO SAVEPOINT memoweft_decide")
+                self._conn.execute("RELEASE SAVEPOINT memoweft_decide")
+            else:
+                self._conn.execute("ROLLBACK")
             raise
         view = self.view()
         return replace(

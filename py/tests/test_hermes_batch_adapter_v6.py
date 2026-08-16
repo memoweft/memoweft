@@ -31,6 +31,30 @@ _RAW_EVENT = "上周末我和小王去了南京"
 _RAW_CORRECT = "其实上周末我和小王去的是杭州"
 
 
+def test_same_evidence_support_then_contradict_keeps_both_links(tmp_path: Path) -> None:
+    """同一 Evidence 先 support 后 contradict 同一 cognition：两条链并存，
+    contradict 不被去重吞掉（评审发现：去重查询曾忽略 relation）。"""
+    from memoweft.integrations.hermes.batch_adapter import _ensure_support_link
+
+    db_path = tmp_path / "t.sqlite3"
+    _initialize_database(db_path)
+    db = sqlite3.connect(db_path, isolation_level=None)
+    try:
+        assert _ensure_support_link(db, "cog-1", "ev-1", relation="support") == 1
+        assert _ensure_support_link(db, "cog-1", "ev-1", relation="contradict") == 1
+        rows = db.execute(
+            "SELECT relation FROM cognition_evidence "
+            "WHERE cognition_id = ? AND evidence_id = ? ORDER BY relation",
+            ("cog-1", "ev-1"),
+        ).fetchall()
+        assert [row[0] for row in rows] == ["contradict", "support"]
+        # 同 relation 重放仍幂等
+        assert _ensure_support_link(db, "cog-1", "ev-1", relation="support") == 0
+        assert _ensure_support_link(db, "cog-1", "ev-1", relation="contradict") == 0
+    finally:
+        db.close()
+
+
 def _route(script: list[Any]) -> Callable[..., dict[str, object]]:
     def route(messages: list[dict[str, str]], session_id: str) -> dict[str, object]:
         del messages, session_id

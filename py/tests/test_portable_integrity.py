@@ -76,6 +76,22 @@ def test_validate_rejects_bad_date_relation_orphan_and_duplicate_resolution() ->
     assert not validate_bundle(duplicate).valid
 
 
+def test_validate_missing_relation_key_is_structured_invalid() -> None:
+    """缺 relation 键的畸形 link 走 structured valid=False，绝不抛 KeyError（评审发现）。"""
+    bundle = _bundle()
+    bundle["data"]["cognitions"] = [{
+        "id": "cog-1", "subjectId": "owner", "content": "判断", "contentType": "fact",
+        "formedBy": "stated", "confidence": 600, "credStatus": "limited", "scope": None,
+        "validAt": None, "invalidAt": None, "askedAt": None, "createdAt": T, "updatedAt": T,
+    }]
+    bundle["data"]["cognitionEvidence"] = [
+        {"cognitionId": "cog-1", "evidenceId": "ev-1"}  # 缺 relation
+    ]
+    result = validate_bundle(bundle)  # 不得抛异常
+    assert not result.valid
+    assert any("invalid endpoint" in error for error in result.errors)
+
+
 def test_import_rejects_malicious_mixed_subject_provenance_with_zero_writes() -> None:
     db = open_db(":memory:")
     try:
