@@ -42,6 +42,11 @@ export interface ProfileChange {
  */
 interface NextMemoryRecord {
   status: 'ok' | 'unavailable' | 'failed';
+  /** Durable background delivery marker; never an Owner-review state. */
+  state?: 'processing';
+  operationId?: string;
+  sessionId?: string;
+  currentEvidenceId?: string;
   code?: string;
   memoryProposal?: unknown;
   memoryFailure?: unknown;
@@ -74,8 +79,25 @@ function boundedNextMemory(value: unknown): NextMemoryRecord | undefined {
   if (source.code !== undefined && (typeof source.code !== 'string' || source.code.length > 160)) {
     return NEXT_MEMORY_LOG_FAILURE;
   }
+  const processing = source.state === 'processing';
+  if (source.state !== undefined && !processing) return NEXT_MEMORY_LOG_FAILURE;
+  for (const key of ['operationId', 'sessionId', 'currentEvidenceId']) {
+    const field = source[key];
+    if (
+      (processing && (typeof field !== 'string' || !field || field !== field.trim())) ||
+      (field !== undefined && (typeof field !== 'string' || field.length > 200))
+    ) {
+      return NEXT_MEMORY_LOG_FAILURE;
+    }
+  }
   const projected: NextMemoryRecord = {
     status: source.status as NextMemoryRecord['status'],
+    ...(processing ? { state: 'processing' as const } : {}),
+    ...(source.operationId !== undefined ? { operationId: source.operationId as string } : {}),
+    ...(source.sessionId !== undefined ? { sessionId: source.sessionId as string } : {}),
+    ...(source.currentEvidenceId !== undefined
+      ? { currentEvidenceId: source.currentEvidenceId as string }
+      : {}),
     ...(source.code !== undefined ? { code: source.code as string } : {}),
     ...(source.memoryProposal !== undefined ? { memoryProposal: source.memoryProposal } : {}),
     ...(source.memoryFailure !== undefined ? { memoryFailure: source.memoryFailure } : {}),

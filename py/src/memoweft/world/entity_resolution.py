@@ -997,9 +997,6 @@ _RELATION_TERMS: dict[str, frozenset[str]] = {
     "owns": frozenset({"pet", "宠物", "猫", "狗"}),
 }
 
-_INTRINSICALLY_SYMMETRIC_OWNER_RELATIONS = frozenset(
-    {"friend", "colleague", "classmate"}
-)
 _STRICTLY_OWNER_TO_TARGET_RELATIONS = frozenset({"owns", "romantic interest"})
 
 _ROLE_ONLY_SURFACES = frozenset(
@@ -1290,10 +1287,7 @@ def _relationship_supports_owner_target(
     relation_key = _normalize(relationship.relation_type)
     if relation_key in _STRICTLY_OWNER_TO_TARGET_RELATIONS:
         return False
-    return bool(
-        relationship.bidirectional
-        or relation_key in _INTRINSICALLY_SYMMETRIC_OWNER_RELATIONS
-    )
+    return relationship.bidirectional
 
 
 def _connected_events(

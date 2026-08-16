@@ -24,6 +24,7 @@ from memoweft.world import (
     PersistentIdentityAuthority,
     Perspective,
     Relationship,
+    StructuredClaim,
     WorldCognition,
     WorldDelta,
     WorldEvent,
@@ -480,6 +481,181 @@ def test_nanjing_scope_narrowing_persists_as_a_true_transition(tmp_path: Path) -
         assert restored.superseded_cognition_ids == frozenset({prior.id})
         assert restored.graph.cognitions[successor.id].scope == "that_nanjing_trip"
         assert reopened.recall(recall_query) == recall_before_reopen
+
+
+def test_structured_evaluation_correction_is_one_typed_successor_with_exact_trace(
+    tmp_path: Path,
+) -> None:
+    """A structured value replacement persists through the evolution authority."""
+
+    path = tmp_path / "structured-evaluation-correction.sqlite"
+    graph = MemoryWorldGraph(PersonalWorld(WORLD_ID, OWNER_ID))
+    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Yun"))
+    graph.add_entity(Entity(FRIEND_ID, WORLD_ID, "person", "Friend_X"))
+    graph.add_relationship(
+        Relationship(
+            RELATIONSHIP_ID,
+            WORLD_ID,
+            OWNER_ID,
+            FRIEND_ID,
+            "supports",
+        )
+    )
+    target = MemoryTarget("relationship", RELATIONSHIP_ID)
+    prior = WorldCognition(
+        "cog:relationship-reliability:reliable",
+        WORLD_ID,
+        target,
+        "I think this support is reliable.",
+        "fact",
+        "stated",
+        600,
+        "limited",
+        Perspective("entity", (OWNER_ID,)),
+        (EvidenceLink("e:reliable", "support"),),
+        structured_claim=StructuredClaim(
+            "evaluation",
+            value="reliable",
+            polarity="assert",
+            epistemic_status="asserted",
+        ),
+    )
+    graph.add_cognition(prior)
+    evidence_id = "e:not-reliable-correction"
+    evidence_text = "Correction: I think this support is not reliable."
+    claim_text = "I think this support is not reliable"
+    claim_start = evidence_text.index(claim_text)
+    successor = WorldCognition(
+        "cog:relationship-reliability:not-reliable",
+        WORLD_ID,
+        target,
+        claim_text,
+        "fact",
+        "stated",
+        600,
+        "limited",
+        prior.perspective,
+        (EvidenceLink(evidence_id, "support"),),
+        structured_claim=StructuredClaim(
+            "evaluation",
+            value="not reliable",
+            polarity="assert",
+            epistemic_status="asserted",
+        ),
+    )
+    trace = FormationTrace(
+        successor.id,
+        False,
+        (
+            FormationSourceTrace(
+                evidence_id,
+                "support",
+                "user_stated",
+                "elaborate",
+                ClaimSpan(
+                    claim_start,
+                    claim_start + len(claim_text),
+                    sha256(evidence_text.encode("utf-8")).hexdigest(),
+                    sha256(claim_text.encode("utf-8")).hexdigest(),
+                ),
+                None,
+                None,
+                "exact_user_claim",
+                "formation.exact_user_claim",
+            ),
+        ),
+        "stated",
+        1,
+        1,
+        0,
+    )
+    step = EvolutionStep(
+        "evolution:relationship-reliability:corrected",
+        "cognition_change",
+        "corrects",
+        target,
+        (prior.id,),
+        (successor.id,),
+        "2026-08-13T09:00:00Z",
+        (evidence_id,),
+    )
+    plan = WorldEvolutionPlan(
+        WorldDelta(
+            WORLD_ID,
+            (evidence_id,),
+            new_cognitions=(successor,),
+            formation_traces=(trace,),
+        ),
+        (step,),
+    )
+    loop = MemoryLoop(path, graph)
+    pending = loop.stage_evolution(
+        plan,
+        (EvidenceRecord(evidence_id, evidence_text),),
+    )
+    assert pending.kind == "evolution"
+    stored = loop.connection.execute(
+        "SELECT payload_json FROM proposals WHERE id = ?",
+        (pending.id,),
+    ).fetchone()
+    assert stored is not None
+    stored_plan = json.loads(stored[0])["plan"]
+    assert stored_plan["cognition_updates"] == []
+    assert len(stored_plan["delta"]["new_cognitions"]) == 1
+    assert len(stored_plan["delta"]["formation_traces"]) == 1
+    assert stored_plan["steps"] == [
+        {
+            "id": step.id,
+            "kind": "cognition_change",
+            "relation": "corrects",
+            "subject": {"kind": "relationship", "id": RELATIONSHIP_ID},
+            "predecessor_ids": [prior.id],
+            "successor_ids": [successor.id],
+            "effective_at": "2026-08-13T09:00:00Z",
+            "evidence_ids": [evidence_id],
+        }
+    ]
+
+    view = loop.decide(pending.id, pending.result_hash, "accept")
+    assert view.revision == 1
+    assert view.superseded_cognition_ids == frozenset({prior.id})
+    assert {item.id for item in view.current_cognitions} == {successor.id}
+    assert view.graph.cognitions[prior.id] == prior
+    assert view.graph.cognitions[successor.id] == successor
+    assert [
+        (item.prior_cognition_id, item.replacement_cognition_id, item.reason)
+        for item in view.transitions
+    ] == [(prior.id, successor.id, "corrects")]
+    recall_before_reopen = loop.recall(
+        "Is Friend_X's support reliable now?",
+        resolved_entity_ids=(OWNER_ID, FRIEND_ID),
+    )
+    assert recall_before_reopen.status == "resolved"
+    assert recall_before_reopen.current_cognition_ids == (successor.id,)
+    assert recall_before_reopen.historical_cognition_ids == (prior.id,)
+    assert [
+        (item.prior_cognition_id, item.successor_cognition_id, item.relation)
+        for item in recall_before_reopen.cognition_lineage
+    ] == [(prior.id, successor.id, "corrects")]
+    assert {
+        (item.subject_id, item.evidence_id, item.relation)
+        for item in recall_before_reopen.provenance
+    } == {
+        (prior.id, "e:reliable", "support"),
+        (successor.id, evidence_id, "support"),
+    }
+    loop.close()
+
+    with MemoryLoop(path, graph) as reopened:
+        restored = reopened.view()
+        assert restored.revision == 1
+        assert restored.graph.cognitions[prior.id] == prior
+        assert restored.graph.cognitions[successor.id] == successor
+        assert restored.superseded_cognition_ids == frozenset({prior.id})
+        assert reopened.recall(
+            "Is Friend_X's support reliable now?",
+            resolved_entity_ids=(OWNER_ID, FRIEND_ID),
+        ) == recall_before_reopen
 
 
 def test_contradiction_persists_same_id_without_supersession(tmp_path: Path) -> None:

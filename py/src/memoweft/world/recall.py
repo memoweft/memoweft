@@ -15,7 +15,10 @@ from typing import Iterable, Literal, Mapping, Sequence, cast
 from .evolution import (
     AcceptedEvolutionStep,
     RelationshipStateProjection,
+    current_relationship_ids,
+    historical_relationship_ids,
     project_relationship_state,
+    relationship_successor_pairs,
 )
 from .graph import MemoryWorldGraph
 from .model import MemoryTarget, WorldCognition, WorldEvent
@@ -165,6 +168,13 @@ class CognitionLineage:
 
 
 @dataclass(frozen=True, slots=True)
+class RelationshipLineage:
+    prior_relationship_id: str
+    successor_relationship_id: str
+    relation: Literal["reestablished"] = "reestablished"
+
+
+@dataclass(frozen=True, slots=True)
 class MemoryReconstruction:
     """The deterministic result of query parsing, anchoring and traversal."""
 
@@ -182,6 +192,8 @@ class MemoryReconstruction:
     relationship_states: tuple[RelationshipStateProjection, ...] = ()
     traversal: tuple[RecallTraversalEdge, ...] = ()
     provenance: tuple[ProvenanceRef, ...] = ()
+    historical_relationship_ids: tuple[str, ...] = ()
+    relationship_lineage: tuple[RelationshipLineage, ...] = ()
 
     @property
     def evidence_ids(self) -> tuple[str, ...]:
@@ -245,6 +257,7 @@ def reconstruct_memory(
     graph: MemoryWorldGraph,
     *,
     superseded_cognition_ids: frozenset[str] = frozenset(),
+    inactive_cognition_ids: frozenset[str] = frozenset(),
     cognition_lineage: Sequence[CognitionLineage] = (),
     accepted_evolution_steps: Sequence[AcceptedEvolutionStep] = (),
 ) -> MemoryReconstruction:
@@ -260,6 +273,9 @@ def reconstruct_memory(
         raise ValueError("resolved entity id is absent from the accepted graph")
     if any(not isinstance(item, CognitionLineage) for item in cognition_lineage):
         raise TypeError("cognition_lineage must contain CognitionLineage values")
+    unknown_inactive = set(inactive_cognition_ids) - set(graph.cognitions)
+    if unknown_inactive:
+        raise ValueError("inactive cognition id is absent from the accepted graph")
     lineage = tuple(cognition_lineage)
     successors = {
         item.prior_cognition_id: item.successor_cognition_id for item in lineage
@@ -269,7 +285,15 @@ def reconstruct_memory(
     if any(prior not in graph.cognitions or successor not in graph.cognitions for prior, successor in successors.items()):
         raise ValueError("cognition successor mapping is not present in the graph")
 
-    candidates, direct_cognition_ids = _rank_anchors(parsed, graph)
+    accepted_steps = tuple(accepted_evolution_steps)
+    current_relationship_id_set = current_relationship_ids(graph, accepted_steps)
+    noncurrent_relationship_ids = frozenset(graph.relationships) - current_relationship_id_set
+    candidates, direct_cognition_ids = _rank_anchors(
+        parsed,
+        graph,
+        noncurrent_relationship_ids,
+        inactive_cognition_ids,
+    )
     if not candidates:
         return MemoryReconstruction("unsupported", parsed, (), None, "NO_SUPPORTED_ANCHOR")
     preferred = _preferred_candidates(parsed, candidates)
@@ -291,8 +315,10 @@ def reconstruct_memory(
         primary,
         direct_cognition_ids,
         superseded_cognition_ids,
+        inactive_cognition_ids,
         lineage,
-        tuple(accepted_evolution_steps),
+        accepted_steps,
+        current_relationship_id_set,
     )
 
 
@@ -333,10 +359,31 @@ def render_answer_context(
             if state is not None
             else ""
         )
+        arrow = "<->" if item.bidirectional else "->"
         relationship_lines.append(
-            f"- [{item.id}] {item.relation_type}: {source} <-> {target}{suffix}"
+            f"- [{item.id}] {item.relation_type}: {source} {arrow} {target}{suffix}"
         )
     sections.append("Relationships:\n" + "\n".join(relationship_lines))
+    historical_relationship_lines: list[str] = []
+    for relationship_id in reconstruction.historical_relationship_ids:
+        item = graph.relationships[relationship_id]
+        source = graph.entities[item.source_entity_id].canonical_name
+        target = graph.entities[item.target_entity_id].canonical_name
+        arrow = "<->" if item.bidirectional else "->"
+        historical_relationship_lines.append(
+            f"- [{item.id}] {item.relation_type}: {source} {arrow} {target}"
+        )
+    sections.append(
+        "Relevant historical relationships:\n"
+        + "\n".join(historical_relationship_lines)
+    )
+    sections.append(
+        "Relationship lineage:\n"
+        + "\n".join(
+            f"- {item.prior_relationship_id} --{item.relation}--> {item.successor_relationship_id}"
+            for item in reconstruction.relationship_lineage
+        )
+    )
     event_lines: list[str] = []
     for event_id in reconstruction.event_ids:
         event = graph.events[event_id]
@@ -418,6 +465,8 @@ def _render_cognitions(
 def _rank_anchors(
     query: MemoryQuery,
     graph: MemoryWorldGraph,
+    historical_relationships: frozenset[str] = frozenset(),
+    inactive_cognition_ids: frozenset[str] = frozenset(),
 ) -> tuple[tuple[AnchorCandidate, ...], frozenset[str]]:
     accumulated: dict[MemoryTarget, _CandidateAccumulator] = {}
     direct_cognitions: set[str] = set()
@@ -425,6 +474,8 @@ def _rank_anchors(
         score, reasons = _entity_score(query, entity.id, graph)
         _record_candidate(accumulated, MemoryTarget("entity", entity.id), score, reasons)
     for relationship in graph.relationships.values():
+        if relationship.id in historical_relationships:
+            continue
         score, reasons = _relationship_score(query, relationship.id, graph)
         _record_candidate(
             accumulated,
@@ -436,6 +487,13 @@ def _rank_anchors(
         score, reasons = _event_score(query, event, graph)
         _record_candidate(accumulated, MemoryTarget("event", event.id), score, reasons)
     for cognition in graph.cognitions.values():
+        if cognition.id in inactive_cognition_ids:
+            continue
+        if (
+            cognition.target.kind == "relationship"
+            and cognition.target.id in historical_relationships
+        ):
+            continue
         score, reasons = _cognition_score(query, cognition, graph)
         if score < 6:
             continue
@@ -513,8 +571,10 @@ def _reconstruct_resolved(
     primary: AnchorCandidate,
     direct_cognition_ids: frozenset[str],
     superseded_ids: frozenset[str],
+    inactive_cognition_ids: frozenset[str],
     cognition_lineage: tuple[CognitionLineage, ...],
     accepted_steps: tuple[AcceptedEvolutionStep, ...],
+    current_relationship_id_set: frozenset[str],
 ) -> MemoryReconstruction:
     local = graph.expand(primary.target, depth=1)
     entity_ids: set[str] = set()
@@ -593,6 +653,36 @@ def _reconstruct_resolved(
                 relationship_ids.add(relationship.id)
                 entity_ids.update((relationship.source_entity_id, relationship.target_entity_id))
 
+    relationship_pairs = relationship_successor_pairs(accepted_steps)
+    relationship_closure = set(relationship_ids)
+    changed = True
+    while changed:
+        changed = False
+        for predecessor_id, successor_id in relationship_pairs:
+            if successor_id in relationship_closure and predecessor_id not in relationship_closure:
+                relationship_closure.add(predecessor_id)
+                changed = True
+            if predecessor_id in relationship_closure and successor_id not in relationship_closure:
+                relationship_closure.add(successor_id)
+                changed = True
+    relationship_ids.update(relationship_closure)
+    for relationship_id in relationship_closure:
+        relationship = graph.relationships[relationship_id]
+        entity_ids.update(
+            (relationship.source_entity_id, relationship.target_entity_id)
+        )
+    for predecessor_id, successor_id in relationship_pairs:
+        if predecessor_id in relationship_closure and successor_id in relationship_closure:
+            traversal.add(
+                RecallTraversalEdge(
+                    "relationship",
+                    predecessor_id,
+                    "reestablished",
+                    "relationship",
+                    successor_id,
+                )
+            )
+
     selected_evidence_ids = {
         evidence_id
         for event_id in event_ids
@@ -602,7 +692,8 @@ def _reconstruct_resolved(
     relevant_cognitions = {
         cognition.id
         for cognition in graph.cognitions.values()
-        if cognition.target.id
+        if cognition.id not in inactive_cognition_ids
+        and cognition.target.id
         in (
             entity_ids
             if cognition.target.kind == "entity"
@@ -629,8 +720,32 @@ def _reconstruct_resolved(
             for item in cognition_lineage
         },
     )
-    current_ids = relevant_cognitions - set(superseded_ids)
-    historical_ids = relevant_cognitions & set(superseded_ids)
+    relevant_cognitions -= set(inactive_cognition_ids)
+    projected_historical_relationship_ids = historical_relationship_ids(
+        graph,
+        accepted_steps,
+    )
+    deferred_relationship_cognition_ids = {
+        cognition_id
+        for cognition_id in relevant_cognitions
+        if graph.cognitions[cognition_id].target.kind == "relationship"
+        and graph.cognitions[cognition_id].target.id
+        not in current_relationship_id_set
+        and graph.cognitions[cognition_id].target.id
+        not in projected_historical_relationship_ids
+    }
+    relevant_cognitions -= deferred_relationship_cognition_ids
+    relationship_history_cognition_ids = {
+        cognition_id
+        for cognition_id in relevant_cognitions
+        if graph.cognitions[cognition_id].target.kind == "relationship"
+        and graph.cognitions[cognition_id].target.id
+        in projected_historical_relationship_ids
+    }
+    historical_ids = (
+        relevant_cognitions & set(superseded_ids)
+    ) | relationship_history_cognition_ids
+    current_ids = relevant_cognitions - historical_ids
 
     for cognition_id in current_ids | historical_ids:
         cognition = graph.cognitions[cognition_id]
@@ -671,6 +786,18 @@ def _reconstruct_resolved(
         )
     )
     provenance = _provenance(graph, ordered_events, ordered_current, ordered_history)
+    accepted_historical = projected_historical_relationship_ids
+    selected_historical_relationships = tuple(
+        sorted(
+            relationship_closure & set(accepted_historical),
+            key=lambda item: _relationship_sort_key(graph, item),
+        )
+    )
+    selected_relationship_lineage = tuple(
+        RelationshipLineage(predecessor_id, successor_id)
+        for predecessor_id, successor_id in relationship_pairs
+        if predecessor_id in relationship_closure and successor_id in relationship_closure
+    )
     return MemoryReconstruction(
         "resolved",
         query,
@@ -678,7 +805,12 @@ def _reconstruct_resolved(
         primary,
         None,
         tuple(sorted(entity_ids, key=lambda item: _entity_sort_key(graph, item))),
-        tuple(sorted(relationship_ids, key=lambda item: _relationship_sort_key(graph, item))),
+        tuple(
+            sorted(
+                set(relationship_ids) & set(current_relationship_id_set),
+                key=lambda item: _relationship_sort_key(graph, item),
+            )
+        ),
         ordered_events,
         ordered_current,
         ordered_history,
@@ -686,6 +818,8 @@ def _reconstruct_resolved(
         relationship_states,
         tuple(sorted(traversal, key=_traversal_sort_key)),
         provenance,
+        selected_historical_relationships,
+        selected_relationship_lineage,
     )
 
 
@@ -1168,6 +1302,7 @@ __all__ = [
     "QueryIntent",
     "RecallState",
     "RecallTraversalEdge",
+    "RelationshipLineage",
     "parse_memory_query",
     "reconstruct_memory",
     "render_answer_context",

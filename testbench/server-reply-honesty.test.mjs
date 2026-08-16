@@ -52,7 +52,7 @@ test('reply honesty is enforced before model output enters the conversation wind
       '我明白了，原来这个昵称有这样的来历。',
       '我记得你之前说过更喜欢乌龙茶，这次是在补充口味。',
       '我知道了，你的意思是不公开对方的名字。',
-      '当前还没有写入长期记忆；需要等候选被接受。',
+      '当前轮是否形成长期记忆仍在后台验证中。',
       '这句话已保存为 Evidence，但这不代表已经写入长期记忆。',
       '你可以记住这个步骤，下次自己就能复现。',
       'I understand what you mean.',
@@ -204,8 +204,8 @@ test('reply honesty is enforced before model output enters the conversation wind
     ),
   );
 
-  assert.match(result.persona, /当前用户消息[^]*尚未得知是否形成候选/);
-  assert.match(result.persona, /只有明确标注为“已接受记忆”/);
+  assert.match(result.persona, /当前用户消息[^]*后台验证尚未完成/);
+  assert.match(result.persona, /Evidence、后台身份与语义验证并自动 Apply/);
   assert.match(result.persona, /可以说“我记得你之前说过/);
   assert.doesNotMatch(result.persona, /ta 说的会被记下来/);
 });

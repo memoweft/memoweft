@@ -3,19 +3,30 @@
  *
  * The testbench remains the chat owner: it writes 1.x Evidence, produces the
  * sole assistant reply, and keeps its profile pipeline.  This module only
- * submits the recorded user Evidence plus context to Next for a candidate
- * memory proposal.  It deliberately has no generic forward(path) escape hatch.
+ * submits the recorded user Evidence plus context to Next for automatic World
+ * formation.  It deliberately has no generic forward(path) escape hatch.
  */
 
 const DEFAULT_NEXT_BASE_URL = 'http://127.0.0.1:7891';
 const DEFAULT_STATUS_TIMEOUT_MS = 4_500;
 const DEFAULT_OPERATION_TIMEOUT_MS = 300_000;
 const MAX_NEXT_RESPONSE_BYTES = 512 * 1024;
+// Adapter delivery is an operation receipt, not a World snapshot.  The
+// browser reads the single World authority separately after it observes this
+// receipt, so allowing a full graph here would make a committed Apply look
+// transport-ambiguous solely because the graph grew large.
+export const MAX_NEXT_ADAPTER_RECEIPT_BYTES = 128 * 1024;
 const MAX_RECALL_QUERY_CHARS = 1_200;
 const MAX_RECALL_MEMORIES = 8;
 const MAX_RECALL_MEMORY_CHARS = 1_200;
 const MAX_RECALL_CRED_STATUS_CHARS = 80;
 const MAX_RECALL_TOTAL_CHARS = 6_000;
+const MAX_ASK_CONTENT_CHARS = 4_000;
+const MAX_ASK_QUESTION_CHARS = 12_000;
+const MAX_ASK_EVIDENCE_ITEMS = 20;
+const MAX_ASK_EVIDENCE_ID_CHARS = 200;
+const MAX_ASK_EVIDENCE_SUMMARY_CHARS = 4_000;
+const MAX_ASK_EVIDENCE_TOTAL_CHARS = 20_000;
 // Python accepts at most 20 typed turns.  Nine previous 1.x records can
 // contribute user+assistant context (18), leaving one final user Evidence.
 const MAX_CONTEXT_RECORDS = 9;
@@ -26,6 +37,21 @@ const MAX_LEGACY_IMPORT_TURN_ID_CHARS = 200;
 const MAX_LEGACY_IMPORT_TURN_CONTENT_CHARS = 4_000;
 const MAX_LEGACY_IMPORT_TOTAL_CONTENT_CHARS = 20_000;
 const MAX_LEGACY_IMPORT_OCCURRED_AT_CHARS = 64;
+const SYSTEM_EVIDENCE_KEYS = [
+  'allowCloudRead',
+  'allowInference',
+  'allowLocalRead',
+  'correctsEvidenceId',
+  'hostId',
+  'id',
+  'occurredAt',
+  'originId',
+  'rawContent',
+  'recordedAt',
+  'sourceKind',
+  'subjectId',
+  'summary',
+];
 
 function safeString(value) {
   return typeof value === 'string' ? value : '';
@@ -54,6 +80,71 @@ function storedUserEvidenceId(record) {
 
 function assistantTurnId(userTurnId) {
   return `${userTurnId}:assistant`;
+}
+
+function optionalBoundedString(value, maxLength) {
+  return value === null || (typeof value === 'string' && value.length <= maxLength);
+}
+
+/** Preserve the complete already-durable 1.x Evidence as provenance, not as a new authority. */
+function sanitizeSystemEvidence(value) {
+  if (!hasExactKeys(value, SYSTEM_EVIDENCE_KEYS)) {
+    throw new Error('eligible Evidence must use the complete durable system Evidence shape');
+  }
+  for (const [name, maxLength] of [
+    ['id', 200],
+    ['subjectId', 200],
+    ['hostId', 200],
+  ]) {
+    if (!isString(value[name], maxLength) || value[name] !== value[name].trim()) {
+      throw new Error(`eligible Evidence ${name} is invalid`);
+    }
+  }
+  if (value.sourceKind !== 'spoken') {
+    throw new Error('eligible user Evidence must have sourceKind spoken');
+  }
+  if (
+    !optionalBoundedString(value.originId, 1_000) ||
+    !optionalBoundedString(value.correctsEvidenceId, 200) ||
+    typeof value.rawContent !== 'string' ||
+    !value.rawContent ||
+    value.rawContent.length > 4_000 ||
+    typeof value.summary !== 'string' ||
+    value.summary.length > 4_000
+  ) {
+    throw new Error('eligible Evidence content or provenance is invalid');
+  }
+  if (
+    !isString(value.occurredAt, 64) ||
+    !hasExplicitTimezone(value.occurredAt) ||
+    !Number.isFinite(Date.parse(value.occurredAt)) ||
+    !isString(value.recordedAt, 64) ||
+    !hasExplicitTimezone(value.recordedAt) ||
+    !Number.isFinite(Date.parse(value.recordedAt))
+  ) {
+    throw new Error('eligible Evidence timestamps must be timezone-qualified ISO dates');
+  }
+  for (const name of ['allowLocalRead', 'allowCloudRead', 'allowInference']) {
+    if (typeof value[name] !== 'boolean') throw new Error(`eligible Evidence ${name} is invalid`);
+  }
+  if (!value.allowLocalRead || !value.allowInference) {
+    throw new Error('eligible Evidence must authorize local read and inference');
+  }
+  return {
+    id: value.id,
+    subjectId: value.subjectId,
+    sourceKind: value.sourceKind,
+    hostId: value.hostId,
+    originId: value.originId,
+    occurredAt: new Date(value.occurredAt).toISOString(),
+    recordedAt: new Date(value.recordedAt).toISOString(),
+    rawContent: value.rawContent,
+    summary: value.summary,
+    allowLocalRead: value.allowLocalRead,
+    allowCloudRead: value.allowCloudRead,
+    allowInference: value.allowInference,
+    correctsEvidenceId: value.correctsEvidenceId,
+  };
 }
 
 function nextRunFromRecord(record) {
@@ -112,7 +203,7 @@ export function selectCarryForwardEvidenceIds({ sessionId, record, previousRecor
       evidenceId === currentEvidenceId ||
       seen.has(evidenceId) ||
       consumed.has(evidenceId) ||
-      run?.state !== 'no-candidate' ||
+      !['no-change', 'no-candidate'].includes(run?.state) ||
       !adapter ||
       adapter.sessionId !== sessionId ||
       adapter.currentUserTurnId !== evidenceId ||
@@ -178,6 +269,7 @@ export function buildAdapterMemoryTurns({
   sessionId,
   record,
   previousRecords,
+  evidenceRecords,
   carryForwardEvidenceIds = [],
   contextLimit = MAX_CONTEXT_RECORDS,
 }) {
@@ -272,12 +364,181 @@ export function buildAdapterMemoryTurns({
     occurredAt: typedOccurredAt(record.ts),
   });
 
+  if (!Array.isArray(evidenceRecords)) {
+    throw new Error('adapter input must include the complete durable system Evidence records');
+  }
+  const eligibleIds = new Set([...carried, currentEvidenceId]);
+  const sanitizedEvidence = evidenceRecords.map(sanitizeSystemEvidence);
+  const evidenceById = new Map();
+  for (const evidence of sanitizedEvidence) {
+    if (evidenceById.has(evidence.id)) {
+      throw new Error('eligible Evidence IDs must be unique');
+    }
+    evidenceById.set(evidence.id, evidence);
+  }
+  if (
+    evidenceById.size !== eligibleIds.size ||
+    [...eligibleIds].some((evidenceId) => !evidenceById.has(evidenceId))
+  ) {
+    throw new Error('eligible Evidence must exactly match current and carried Evidence IDs');
+  }
+  const typedUserById = new Map(
+    typedTurns.filter((turn) => turn.role === 'user').map((turn) => [turn.turnId, turn]),
+  );
+  for (const evidence of sanitizedEvidence) {
+    const turn = typedUserById.get(evidence.id);
+    if (!turn || turn.content !== evidence.rawContent || turn.occurredAt !== evidence.occurredAt) {
+      throw new Error('eligible Evidence must exactly match its typed user turn');
+    }
+  }
+  sanitizedEvidence.sort((left, right) => left.id.localeCompare(right.id));
+
   return {
     operationId: `testbench:${sessionId}:${currentEvidenceId}`,
     sessionId,
     currentUserTurnId: currentEvidenceId,
     carryForwardEvidenceIds: carried,
+    evidenceRecords: sanitizedEvidence,
     turns: typedTurns,
+  };
+}
+
+/**
+ * Re-validate a durable adapter request before a background worker delivers it.
+ *
+ * The operation ledger may outlive the process that originally built the
+ * request.  Replaying its JSON must therefore cross the same narrow boundary
+ * as a fresh request; a corrupt/local-tampered row never becomes a generic
+ * proxy body.  The exact operation identity is derived from the already
+ * stored Evidence rather than trusted as an arbitrary caller key.
+ */
+export function sanitizePreparedAdapterMemoryTurn(input) {
+  if (
+    !hasExactKeys(input, [
+      'carryForwardEvidenceIds',
+      'currentUserTurnId',
+      'evidenceRecords',
+      'operationId',
+      'sessionId',
+      'turns',
+    ])
+  ) {
+    throw new Error('invalid prepared adapter memory turn');
+  }
+  const { operationId, sessionId, currentUserTurnId } = input;
+  if (
+    !isString(operationId, 200) ||
+    !isString(sessionId, 200) ||
+    !isString(currentUserTurnId, 200) ||
+    operationId !== operationId.trim() ||
+    sessionId !== sessionId.trim() ||
+    currentUserTurnId !== currentUserTurnId.trim() ||
+    operationId !== `testbench:${sessionId}:${currentUserTurnId}`
+  ) {
+    throw new Error('invalid prepared adapter operation identity');
+  }
+  if (
+    !Array.isArray(input.carryForwardEvidenceIds) ||
+    input.carryForwardEvidenceIds.length > MAX_CARRY_FORWARD_EVIDENCE_IDS
+  ) {
+    throw new Error('invalid prepared carry-forward Evidence');
+  }
+  const carried = [];
+  const carriedSet = new Set();
+  for (const evidenceId of input.carryForwardEvidenceIds) {
+    if (
+      !isString(evidenceId, 200) ||
+      evidenceId !== evidenceId.trim() ||
+      evidenceId === currentUserTurnId ||
+      carriedSet.has(evidenceId)
+    ) {
+      throw new Error('invalid prepared carry-forward Evidence');
+    }
+    carriedSet.add(evidenceId);
+    carried.push(evidenceId);
+  }
+  if (carried.some((value, index) => value !== [...carried].sort()[index])) {
+    throw new Error('prepared carry-forward Evidence must be sorted');
+  }
+  if (!Array.isArray(input.turns) || input.turns.length < 1 || input.turns.length > 20) {
+    throw new Error('invalid prepared adapter turns');
+  }
+  const turns = [];
+  const turnIds = new Set();
+  let totalCharacters = 0;
+  for (const turn of input.turns) {
+    if (!hasExactKeys(turn, ['content', 'occurredAt', 'role', 'turnId'])) {
+      throw new Error('invalid prepared adapter turn');
+    }
+    if (
+      !isString(turn.turnId, 200) ||
+      turn.turnId !== turn.turnId.trim() ||
+      turnIds.has(turn.turnId) ||
+      !['user', 'assistant'].includes(turn.role) ||
+      !isString(turn.content, 4_000) ||
+      !isString(turn.occurredAt, 64) ||
+      !Number.isFinite(Date.parse(turn.occurredAt))
+    ) {
+      throw new Error('invalid prepared adapter turn');
+    }
+    turnIds.add(turn.turnId);
+    totalCharacters += turn.content.length;
+    turns.push({
+      turnId: turn.turnId,
+      role: turn.role,
+      content: turn.content,
+      occurredAt: new Date(turn.occurredAt).toISOString(),
+    });
+  }
+  if (totalCharacters > 24_000) throw new Error('prepared adapter turn content is too large');
+  const current = turns.at(-1);
+  if (current?.turnId !== currentUserTurnId || current.role !== 'user') {
+    throw new Error('prepared current Evidence must be the final user turn');
+  }
+  for (const evidenceId of carried) {
+    const index = turns.findIndex((turn) => turn.turnId === evidenceId);
+    if (index < 0 || index === turns.length - 1 || turns[index].role !== 'user') {
+      throw new Error('prepared carry-forward Evidence must reference a prior user turn');
+    }
+  }
+  if (!Array.isArray(input.evidenceRecords)) {
+    throw new Error('invalid prepared eligible Evidence');
+  }
+  const eligibleIds = new Set([...carried, currentUserTurnId]);
+  const evidenceRecords = input.evidenceRecords.map(sanitizeSystemEvidence);
+  const evidenceIds = new Set();
+  const turnById = new Map(turns.map((turn) => [turn.turnId, turn]));
+  for (const evidence of evidenceRecords) {
+    if (evidenceIds.has(evidence.id)) throw new Error('prepared eligible Evidence must be unique');
+    evidenceIds.add(evidence.id);
+    const turn = turnById.get(evidence.id);
+    if (
+      !eligibleIds.has(evidence.id) ||
+      !turn ||
+      turn.role !== 'user' ||
+      turn.content !== evidence.rawContent ||
+      turn.occurredAt !== evidence.occurredAt
+    ) {
+      throw new Error('prepared eligible Evidence must exactly match its typed user turn');
+    }
+  }
+  if (
+    evidenceIds.size !== eligibleIds.size ||
+    [...eligibleIds].some((evidenceId) => !evidenceIds.has(evidenceId)) ||
+    evidenceRecords.some(
+      (evidence, index) =>
+        index > 0 && evidenceRecords[index - 1].id.localeCompare(evidence.id) >= 0,
+    )
+  ) {
+    throw new Error('prepared eligible Evidence set is invalid or unsorted');
+  }
+  return {
+    operationId,
+    sessionId,
+    currentUserTurnId,
+    carryForwardEvidenceIds: carried,
+    evidenceRecords,
+    turns,
   };
 }
 
@@ -303,10 +564,10 @@ function hasExplicitTimezone(value) {
   return /(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
 }
 
-async function readBoundedJsonResponse(response) {
+async function readBoundedJsonResponse(response, { maxBytes = MAX_NEXT_RESPONSE_BYTES } = {}) {
   const declaredLength = response.headers?.get?.('content-length');
   if (declaredLength !== undefined && declaredLength !== null) {
-    if (!/^\d+$/.test(declaredLength) || Number(declaredLength) > MAX_NEXT_RESPONSE_BYTES) {
+    if (!/^\d+$/.test(declaredLength) || Number(declaredLength) > maxBytes) {
       throw new Error('invalid Next response size');
     }
   }
@@ -321,7 +582,7 @@ async function readBoundedJsonResponse(response) {
         if (done) break;
         if (!(value instanceof Uint8Array)) throw new Error('invalid Next response chunk');
         totalBytes += value.byteLength;
-        if (totalBytes > MAX_NEXT_RESPONSE_BYTES) {
+        if (totalBytes > maxBytes) {
           await reader.cancel();
           throw new Error('Next response is too large');
         }
@@ -337,14 +598,92 @@ async function readBoundedJsonResponse(response) {
   // stream. They still cross the same serialized-size boundary.
   if (typeof response.text === 'function') {
     const raw = await response.text();
-    if (Buffer.byteLength(raw, 'utf8') > MAX_NEXT_RESPONSE_BYTES) {
+    if (Buffer.byteLength(raw, 'utf8') > maxBytes) {
       throw new Error('Next response is too large');
     }
     return JSON.parse(raw);
   }
   const value = await response.json();
-  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > MAX_NEXT_RESPONSE_BYTES) {
+  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > maxBytes) {
     throw new Error('Next response is too large');
+  }
+  return value;
+}
+
+async function readAdapterReceiptResponse(response) {
+  const value = await readBoundedJsonResponse(response, {
+    maxBytes: MAX_NEXT_ADAPTER_RECEIPT_BYTES,
+  });
+  if (!isPlainObject(value) || Object.prototype.hasOwnProperty.call(value, 'world')) {
+    throw new Error('adapter response must be a bounded receipt without a World snapshot');
+  }
+  return value;
+}
+
+// A legacy import has no browser-visible review step.  A 2xx response is
+// therefore useful only when it records one of the automatic product
+// outcomes; old `{ staged: 2 }` / `candidate-ready` compatibility payloads
+// must not be misreported as a completed migration.
+const LEGACY_MIGRATION_TERMINAL_STATES = new Set([
+  'applied',
+  'no-change',
+  'clarification-required',
+  'out-of-scope',
+  'failed',
+]);
+
+// A correction is an explicit operation, unlike a read-only query.  A 2xx
+// response is useful only when it says the operation is already in one of
+// the product's automatic terminal states.  In particular, do not let a
+// pre-2.0 `candidate-ready`, `correction-pending`, or `staged` receipt reach
+// the browser as a successful correction.
+const CORRECTION_TERMINAL_STATES = LEGACY_MIGRATION_TERMINAL_STATES;
+
+function correctionReceiptObjects(value) {
+  const receipts = [];
+  const seen = new Set();
+  const visit = (item) => {
+    if (!isPlainObject(item) || seen.has(item)) return;
+    seen.add(item);
+    receipts.push(item);
+    // These are the only receipt wrappers emitted by the Next service.  Do
+    // not traverse arbitrary proposal/world payloads merely because they may
+    // contain an unrelated identifier.
+    visit(item.receipt);
+    visit(item.run);
+    visit(item.adapter);
+  };
+  visit(value);
+  return receipts;
+}
+
+function readCorrectionTerminal(value, operationId) {
+  if (!isPlainObject(value)) throw new Error('invalid correction receipt');
+  const receipts = correctionReceiptObjects(value);
+  let hasTerminalState = false;
+  for (const receipt of receipts) {
+    if (Object.prototype.hasOwnProperty.call(receipt, 'operationId')) {
+      if (receipt.operationId !== operationId) {
+        throw new Error('correction receipt operationId does not match request');
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(receipt, 'state')) {
+      if (typeof receipt.state !== 'string' || !CORRECTION_TERMINAL_STATES.has(receipt.state)) {
+        throw new Error('correction receipt has no automatic terminal state');
+      }
+      hasTerminalState = true;
+    }
+  }
+  if (!hasTerminalState) throw new Error('correction receipt has no automatic terminal state');
+  return value;
+}
+
+function readLegacyMigrationTerminal(value) {
+  if (!isPlainObject(value)) throw new Error('invalid legacy migration receipt');
+  const run = isPlainObject(value.run) ? value.run : null;
+  const state = value.state ?? run?.state;
+  if (typeof state !== 'string' || !LEGACY_MIGRATION_TERMINAL_STATES.has(state)) {
+    throw new Error('legacy migration has no automatic terminal state');
   }
   return value;
 }
@@ -445,6 +784,108 @@ export function validateRecallMemoryResponse(value) {
   return { status: value.status, memories };
 }
 
+function validateAskEvidence(value, seenIds) {
+  if (!Array.isArray(value) || value.length > MAX_ASK_EVIDENCE_ITEMS) return null;
+  const items = [];
+  let totalChars = 0;
+  for (const evidence of value) {
+    if (
+      !hasExactKeys(evidence, ['id', 'summary']) ||
+      !isString(evidence.id, MAX_ASK_EVIDENCE_ID_CHARS) ||
+      evidence.id !== evidence.id.trim() ||
+      seenIds.has(evidence.id) ||
+      !isString(evidence.summary, MAX_ASK_EVIDENCE_SUMMARY_CHARS)
+    ) {
+      return null;
+    }
+    totalChars += evidence.id.length + evidence.summary.length;
+    if (totalChars > MAX_ASK_EVIDENCE_TOTAL_CHARS) return null;
+    seenIds.add(evidence.id);
+    items.push({ id: evidence.id, summary: evidence.summary });
+  }
+  return { items, totalChars };
+}
+
+/**
+ * A proposed question is still only a read result.  Validate the entire
+ * bounded projection before the host can decide to speak it, and keep the
+ * low-confidence/conflict reasons coupled to their exact evidence shape.
+ */
+export function validateMemoryAskResponse(value) {
+  if (!hasExactKeys(value, ['proposal', 'status'])) return null;
+  if (value.status === 'none') {
+    return value.proposal === null ? { status: 'none', proposal: null } : null;
+  }
+  if (value.status !== 'proposed' || !isPlainObject(value.proposal)) return null;
+  const proposal = value.proposal;
+  if (
+    !hasExactKeys(proposal, [
+      'cognitionId',
+      'content',
+      'contradictEvidence',
+      'credStatus',
+      'effectiveConfidence',
+      'kind',
+      'question',
+      'reason',
+      'storedConfidence',
+      'supportEvidence',
+    ]) ||
+    !isString(proposal.cognitionId, 200) ||
+    proposal.cognitionId !== proposal.cognitionId.trim() ||
+    !isString(proposal.content, MAX_ASK_CONTENT_CHARS) ||
+    !isString(proposal.question, MAX_ASK_QUESTION_CHARS) ||
+    proposal.question !== proposal.question.trim() ||
+    !Number.isInteger(proposal.storedConfidence) ||
+    proposal.storedConfidence < 0 ||
+    proposal.storedConfidence > 1000 ||
+    !Number.isInteger(proposal.effectiveConfidence) ||
+    proposal.effectiveConfidence < 0 ||
+    proposal.effectiveConfidence > 1000 ||
+    !isString(proposal.credStatus, MAX_RECALL_CRED_STATUS_CHARS)
+  ) {
+    return null;
+  }
+  const lowConfidence =
+    proposal.kind === 'hypothesis' &&
+    proposal.reason === 'low_confidence' &&
+    ['candidate', 'low'].includes(proposal.credStatus);
+  const unresolvedConflict =
+    proposal.kind === 'conflict' &&
+    proposal.reason === 'unresolved_conflict' &&
+    proposal.credStatus === 'conflicted';
+  if (!lowConfidence && !unresolvedConflict) return null;
+
+  const seenIds = new Set();
+  const support = validateAskEvidence(proposal.supportEvidence, seenIds);
+  const contradict = validateAskEvidence(proposal.contradictEvidence, seenIds);
+  if (
+    !support ||
+    !contradict ||
+    support.items.length === 0 ||
+    support.totalChars + contradict.totalChars > MAX_ASK_EVIDENCE_TOTAL_CHARS ||
+    (lowConfidence && contradict.items.length !== 0) ||
+    (unresolvedConflict && contradict.items.length === 0)
+  ) {
+    return null;
+  }
+  return {
+    status: 'proposed',
+    proposal: {
+      cognitionId: proposal.cognitionId,
+      kind: proposal.kind,
+      reason: proposal.reason,
+      content: proposal.content,
+      question: proposal.question,
+      supportEvidence: support.items,
+      contradictEvidence: contradict.items,
+      storedConfidence: proposal.storedConfidence,
+      effectiveConfidence: proposal.effectiveConfidence,
+      credStatus: proposal.credStatus,
+    },
+  };
+}
+
 /**
  * Keep the published 1.x TurnRecord shape while making actual 2.0 prompt
  * injection inspectable.  A 2.0 item deliberately has no invented score.
@@ -471,31 +912,24 @@ export function mergeRecallForRecord(oneXRecall, twoXReplyMemory) {
 
 function sanitizeProxyBody(route, body) {
   const raw = body && typeof body === 'object' ? body : {};
-  if (route === 'decision') {
-    if (
-      !isString(raw.reviewId, 200) ||
-      !isString(raw.runId, 200) ||
-      !isString(raw.resultHash, 256) ||
-      !['accept', 'reject'].includes(raw.decision)
-    ) {
-      throw new Error('无效的候选记忆决定。');
-    }
-    return {
-      reviewId: raw.reviewId,
-      runId: raw.runId,
-      resultHash: raw.resultHash,
-      decision: raw.decision,
-    };
-  }
   if (route === 'query') {
     if (!isString(raw.query?.trim(), 1200)) throw new Error('查询不能为空且不能超过 1200 字。');
     return { query: raw.query.trim() };
   }
   if (route === 'correction') {
-    if (!isString(raw.cognitionId, 200) || !isString(raw.correctionText?.trim(), 4000)) {
-      throw new Error('纠正需要有效的记忆 ID 与不超过 4000 字的内容。');
+    if (
+      !isString(raw.operationId, 200) ||
+      raw.operationId !== raw.operationId.trim() ||
+      !isString(raw.cognitionId, 200) ||
+      !isString(raw.correctionText?.trim(), 4000)
+    ) {
+      throw new Error('纠正需要稳定 operationId、有效的记忆 ID 与不超过 4000 字的内容。');
     }
-    return { cognitionId: raw.cognitionId, correctionText: raw.correctionText.trim() };
+    return {
+      operationId: raw.operationId,
+      cognitionId: raw.cognitionId,
+      correctionText: raw.correctionText.trim(),
+    };
   }
   throw new Error('不允许的 Next 请求。');
 }
@@ -515,28 +949,62 @@ export function createNextBridge({
   if (typeof fetchImpl !== 'function') throw new Error('当前 Node 运行时不支持 fetch。');
   const timeouts = readNextBridgeTimeouts({ statusTimeoutMs, operationTimeoutMs });
 
-  async function request(path, { method = 'GET', body, timeoutMs } = {}) {
+  async function request(
+    path,
+    {
+      method = 'GET',
+      body,
+      timeoutMs,
+      headers: extraHeaders,
+      responseReader = readBoundedJsonResponse,
+    } = {},
+  ) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const headers = { Origin: origin };
+      const headers = { Origin: origin, ...extraHeaders };
       const init = { method, headers, signal: controller.signal };
       if (body !== undefined) {
         headers['Content-Type'] = 'application/json';
         init.body = JSON.stringify(body);
       }
       const response = await fetchImpl(`${origin}${path}`, init);
-      if (!response?.ok) return safeFailure('unavailable', 'NEXT_HTTP_UNAVAILABLE');
+      if (!response?.ok) {
+        const status = Number(response?.status);
+        return Number.isInteger(status) && status >= 400 && status < 500
+          ? safeFailure('failed', 'NEXT_HTTP_REQUEST_REJECTED')
+          : safeFailure('unavailable', 'NEXT_HTTP_UNAVAILABLE');
+      }
       try {
-        return { status: 'ok', value: await readBoundedJsonResponse(response) };
+        return { status: 'ok', value: await responseReader(response) };
       } catch {
-        return safeFailure('failed', 'NEXT_INVALID_RESPONSE');
+        // A 2xx response can arrive only after the remote handler has already
+        // applied its World change.  If its body is truncated, oversized, or
+        // otherwise unreadable, delivery is ambiguous rather than a safe
+        // terminal rejection.  Retain and retry the exact operation request.
+        return safeFailure('unavailable', 'NEXT_INVALID_RESPONSE');
       }
     } catch {
       return safeFailure('unavailable', 'NEXT_UNAVAILABLE');
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async function stagePreparedMemoryTurn(input) {
+    let payload;
+    try {
+      payload = sanitizePreparedAdapterMemoryTurn(input);
+    } catch {
+      return safeFailure('failed', 'NEXT_INVALID_LOCAL_TURN');
+    }
+    return request('/api/adapter-memory-turns', {
+      method: 'POST',
+      body: payload,
+      timeoutMs: timeouts.operationTimeoutMs,
+      headers: { Accept: 'application/vnd.memoweft.adapter-receipt+json' },
+      responseReader: readAdapterReceiptResponse,
+    });
   }
 
   return Object.freeze({
@@ -550,12 +1018,9 @@ export function createNextBridge({
       } catch {
         return safeFailure('failed', 'NEXT_INVALID_LOCAL_TURN');
       }
-      return request('/api/adapter-memory-turns', {
-        method: 'POST',
-        body: payload,
-        timeoutMs: timeouts.operationTimeoutMs,
-      });
+      return stagePreparedMemoryTurn(payload);
     },
+    stagePreparedMemoryTurn,
     async stageLegacyMemory(input) {
       let body;
       try {
@@ -567,6 +1032,8 @@ export function createNextBridge({
         method: 'POST',
         body,
         timeoutMs: timeouts.operationTimeoutMs,
+        responseReader: async (response) =>
+          readLegacyMigrationTerminal(await readBoundedJsonResponse(response)),
       });
     },
     async recallMemory(query) {
@@ -588,6 +1055,22 @@ export function createNextBridge({
         ? { status: 'ok', value }
         : safeFailure('failed', 'NEXT_INVALID_RECALL_RESPONSE');
     },
+    async proposeMemoryAsk(query) {
+      let body;
+      try {
+        body = { query: sanitizeRecallQuery(query) };
+      } catch {
+        return safeFailure('failed', 'NEXT_INVALID_ASK_QUERY');
+      }
+      const result = await request('/api/memory-asks', {
+        method: 'POST',
+        body,
+        timeoutMs: timeouts.statusTimeoutMs,
+      });
+      if (result.status !== 'ok') return result;
+      const value = validateMemoryAskResponse(result.value);
+      return value ? { status: 'ok', value } : safeFailure('failed', 'NEXT_INVALID_ASK_RESPONSE');
+    },
     getStatus() {
       return request('/api/status', { timeoutMs: timeouts.statusTimeoutMs });
     },
@@ -596,17 +1079,6 @@ export function createNextBridge({
     },
     getMemoryRuns() {
       return request('/api/memory-runs', { timeoutMs: timeouts.statusTimeoutMs });
-    },
-    decideMemory(body) {
-      try {
-        return request('/api/memory-decisions', {
-          method: 'POST',
-          body: sanitizeProxyBody('decision', body),
-          timeoutMs: timeouts.operationTimeoutMs,
-        });
-      } catch {
-        return Promise.resolve(safeFailure('failed', 'NEXT_INVALID_REQUEST'));
-      }
     },
     queryMemory(body) {
       try {
@@ -620,15 +1092,19 @@ export function createNextBridge({
       }
     },
     correctMemory(body) {
+      let payload;
       try {
-        return request('/api/memory-corrections', {
-          method: 'POST',
-          body: sanitizeProxyBody('correction', body),
-          timeoutMs: timeouts.operationTimeoutMs,
-        });
+        payload = sanitizeProxyBody('correction', body);
       } catch {
         return Promise.resolve(safeFailure('failed', 'NEXT_INVALID_REQUEST'));
       }
+      return request('/api/memory-corrections', {
+        method: 'POST',
+        body: payload,
+        timeoutMs: timeouts.operationTimeoutMs,
+        responseReader: async (response) =>
+          readCorrectionTerminal(await readBoundedJsonResponse(response), payload.operationId),
+      });
     },
   });
 }

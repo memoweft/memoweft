@@ -12,7 +12,7 @@ kept distinct so later code can explain *how* the current view was reached.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Iterable, Literal, Mapping, cast
 
 from ..clock import parse_iso_ms
@@ -25,7 +25,12 @@ from .graph import MemoryWorldGraph
 from .model import MemoryTarget, Perspective, WorldCognition, WorldEvent
 
 
-EvolutionKind = Literal["relationship_state", "event_link", "cognition_change"]
+EvolutionKind = Literal[
+    "relationship_state",
+    "relationship_successor",
+    "event_link",
+    "cognition_change",
+]
 EvolutionRelation = Literal[
     "active",
     "strained",
@@ -45,6 +50,7 @@ EvolutionRelation = Literal[
     "contradicts",
     "reaffirms",
     "disagrees_with",
+    "reestablished",
 ]
 
 _RELATIONSHIP_STATES = frozenset(
@@ -123,6 +129,7 @@ class WorldEvolutionPlan:
         *,
         superseded_cognition_ids: frozenset[str] = frozenset(),
         known_transition_ids: frozenset[str] = frozenset(),
+        ended_relationship_ids: frozenset[str] = frozenset(),
     ) -> MemoryWorldGraph:
         """Validate the complete plan, then return its isolated graph preview."""
 
@@ -146,8 +153,13 @@ class WorldEvolutionPlan:
         )
 
         known_ids = _validated_string_set(known_transition_ids, "known_transition_ids")
+        ended_relationships = _validated_string_set(
+            ended_relationship_ids,
+            "ended_relationship_ids",
+        )
         superseded = _validated_string_set(superseded_cognition_ids, "superseded_cognition_ids")
         new_event_ids = {item.id for item in self.delta.new_events}
+        new_relationship_ids = {item.id for item in self.delta.new_relationships}
         new_cognition_ids = {item.id for item in self.delta.new_cognitions}
         plan_evidence_ids = set(self.delta.source_evidence_ids)
         seen_step_ids: set[str] = set()
@@ -171,6 +183,16 @@ class WorldEvolutionPlan:
 
             if step.kind == "event_link":
                 self._validate_event_link(step, path, preview, new_event_ids, issues)
+            elif step.kind == "relationship_successor":
+                self._validate_relationship_successor(
+                    step,
+                    path,
+                    base,
+                    preview,
+                    new_relationship_ids,
+                    ended_relationships,
+                    issues,
+                )
             elif step.kind == "relationship_state":
                 self._validate_relationship_state(
                     step,
@@ -203,6 +225,58 @@ class WorldEvolutionPlan:
         if issues:
             raise WorldEvolutionValidationError(tuple(issues))
         return preview
+
+    @staticmethod
+    def _validate_relationship_successor(
+        step: EvolutionStep,
+        path: str,
+        base: MemoryWorldGraph,
+        preview: MemoryWorldGraph,
+        new_relationship_ids: set[str],
+        ended_relationship_ids: set[str],
+        issues: list[str],
+    ) -> None:
+        """Validate one append-only ended -> re-established relationship edge."""
+
+        if step.relation != "reestablished":
+            issues.append(path + ".relation.invalid_for_relationship_successor")
+        if step.subject.kind != "relationship":
+            issues.append(path + ".subject.relationship.required")
+        if len(step.predecessor_ids) != 1 or len(step.successor_ids) != 1:
+            issues.append(path + ".relationship.cardinality")
+            return
+        predecessor_id = step.predecessor_ids[0]
+        successor_id = step.successor_ids[0]
+        predecessor = base.relationships.get(predecessor_id)
+        successor = preview.relationships.get(successor_id)
+        if predecessor is None:
+            issues.append(path + ".predecessor.dangling")
+        if successor is None:
+            issues.append(path + ".successor.dangling")
+        if successor_id not in new_relationship_ids:
+            issues.append(path + ".successor.not_new")
+        if step.subject != MemoryTarget("relationship", successor_id):
+            issues.append(path + ".subject.successor_mismatch")
+        if predecessor_id == successor_id:
+            issues.append(path + ".relationship.same_id")
+        if predecessor is None or successor is None:
+            return
+        if _relationship_identity(predecessor) != _relationship_identity(successor):
+            issues.append(path + ".relationship.identity_mismatch")
+        if (
+            predecessor.id not in ended_relationship_ids
+            and not _relationship_has_ended(
+                predecessor,
+                step.effective_at,
+                path,
+                issues,
+            )
+        ):
+            issues.append(path + ".predecessor.not_ended")
+        if not _relationship_is_current(successor, step.effective_at, path, issues):
+            issues.append(path + ".successor.not_current")
+        if successor.valid_from != step.effective_at:
+            issues.append(path + ".successor.valid_from_mismatch")
 
     @staticmethod
     def _validate_event_link(
@@ -515,6 +589,7 @@ def _validate_versioned_evidence_change(
         or successor.scope != prior.scope
         or successor.valid_at != prior.valid_at
         or successor.invalid_at != prior.invalid_at
+        or successor.structured_claim != prior.structured_claim
     ):
         issues.append(path + ".successor.version_shape.mismatch")
     relation: EvidenceRelation = "contradict" if step.relation == "contradicts" else "support"
@@ -566,6 +641,49 @@ def _target_exists(graph: MemoryWorldGraph, target: MemoryTarget) -> bool:
     return False
 
 
+def _relationship_identity(relationship: Any) -> tuple[str, str, str, bool]:
+    source = relationship.source_entity_id
+    target = relationship.target_entity_id
+    if relationship.bidirectional and target < source:
+        source, target = target, source
+    return (
+        source,
+        target,
+        " ".join(relationship.relation_type.strip().casefold().split()),
+        relationship.bidirectional,
+    )
+
+
+def _relationship_has_ended(
+    relationship: Any,
+    effective_at: str,
+    path: str,
+    issues: list[str],
+) -> bool:
+    if relationship.status == "ended":
+        return True
+    if relationship.valid_to is None:
+        return False
+    ended_ms = _iso_ms(relationship.valid_to, path + ".predecessor.valid_to", issues)
+    effective_ms = _iso_ms(effective_at, path + ".effective_at", issues)
+    return ended_ms is not None and effective_ms is not None and ended_ms <= effective_ms
+
+
+def _relationship_is_current(
+    relationship: Any,
+    effective_at: str,
+    path: str,
+    issues: list[str],
+) -> bool:
+    if relationship.status not in {None, "active"} or relationship.valid_to is not None:
+        return False
+    if relationship.valid_from is None:
+        return True
+    started_ms = _iso_ms(relationship.valid_from, path + ".successor.valid_from", issues)
+    effective_ms = _iso_ms(effective_at, path + ".effective_at", issues)
+    return started_ms is not None and effective_ms is not None and started_ms <= effective_ms
+
+
 def _validated_string_set(values: Iterable[str], name: str) -> set[str]:
     try:
         items = tuple(values)
@@ -608,6 +726,166 @@ def superseding_cognition_pairs(plan: WorldEvolutionPlan) -> tuple[tuple[str, st
     return tuple(pairs)
 
 
+def relationship_successor_pairs(
+    steps: Iterable[AcceptedEvolutionStep] | Iterable[EvolutionStep],
+) -> tuple[tuple[str, str], ...]:
+    """Return accepted predecessor -> successor relationship lineage edges."""
+
+    pairs: list[tuple[str, str]] = []
+    for item in steps:
+        step = item.step if isinstance(item, AcceptedEvolutionStep) else item
+        if (
+            step.kind == "relationship_successor"
+            and step.relation == "reestablished"
+            and len(step.predecessor_ids) == 1
+            and len(step.successor_ids) == 1
+        ):
+            pairs.append((step.predecessor_ids[0], step.successor_ids[0]))
+    return tuple(pairs)
+
+
+def accepted_historical_relationship_ids(
+    accepted_steps: Iterable[AcceptedEvolutionStep],
+) -> frozenset[str]:
+    """Project relationship IDs displaced or explicitly ended by accepted steps."""
+
+    accepted = tuple(accepted_steps)
+    historical = {
+        predecessor_id
+        for predecessor_id, _ in relationship_successor_pairs(accepted)
+    }
+    latest_state: dict[str, AcceptedEvolutionStep] = {}
+    for item in accepted:
+        step = item.step
+        if step.kind != "relationship_state" or step.subject.kind != "relationship":
+            continue
+        prior = latest_state.get(step.subject.id)
+        if prior is None or (item.revision, step.id) > (
+            prior.revision,
+            prior.step.id,
+        ):
+            latest_state[step.subject.id] = item
+    historical.update(
+        relationship_id
+        for relationship_id, item in latest_state.items()
+        if item.step.relation == "ended"
+    )
+    return frozenset(historical)
+
+
+def historical_relationship_ids(
+    graph: MemoryWorldGraph,
+    accepted_steps: Iterable[AcceptedEvolutionStep],
+) -> frozenset[str]:
+    """Project the append-only graph into its non-current relationship IDs."""
+
+    accepted = tuple(accepted_steps)
+    historical = {
+        predecessor_id
+        for predecessor_id, _ in relationship_successor_pairs(accepted)
+    }
+    latest_state: dict[str, AcceptedEvolutionStep] = {}
+    for item in accepted:
+        step = item.step
+        if step.kind != "relationship_state" or step.subject.kind != "relationship":
+            continue
+        prior = latest_state.get(step.subject.id)
+        if prior is None or (item.revision, step.id) > (
+            prior.revision,
+            prior.step.id,
+        ):
+            latest_state[step.subject.id] = item
+    historical.update(
+        relationship_id
+        for relationship_id, item in latest_state.items()
+        if item.step.relation == "ended"
+    )
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    historical.update(
+        relationship.id
+        for relationship in graph.relationships.values()
+        if relationship.id not in latest_state
+        and (
+            relationship.status == "ended"
+            or (
+                relationship.valid_to is not None
+                and (
+                    valid_to := _try_iso_ms(relationship.valid_to)
+                ) is not None
+                and valid_to <= now_ms
+            )
+        )
+    )
+    return frozenset(historical)
+
+
+def current_relationship_ids(
+    graph: MemoryWorldGraph,
+    accepted_steps: Iterable[AcceptedEvolutionStep],
+) -> frozenset[str]:
+    """Project relationships current now, with accepted evolution as authority."""
+
+    accepted = tuple(accepted_steps)
+    permanently_historical = set(
+        accepted_historical_relationship_ids(accepted)
+    )
+    accepted_successors = {
+        successor_id
+        for _, successor_id in relationship_successor_pairs(accepted)
+    }
+    latest_state: dict[str, AcceptedEvolutionStep] = {}
+    for item in accepted:
+        step = item.step
+        if step.kind != "relationship_state" or step.subject.kind != "relationship":
+            continue
+        prior = latest_state.get(step.subject.id)
+        if prior is None or (item.revision, step.id) > (
+            prior.revision,
+            prior.step.id,
+        ):
+            latest_state[step.subject.id] = item
+    at_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    current: set[str] = set()
+    for relationship in graph.relationships.values():
+        if relationship.id in permanently_historical:
+            continue
+        if relationship.id in accepted_successors or relationship.id in latest_state:
+            current.add(relationship.id)
+            continue
+        if relationship.status not in {None, "active"}:
+            continue
+        valid_from = (
+            _try_iso_ms(relationship.valid_from)
+            if relationship.valid_from is not None
+            else None
+        )
+        valid_to = (
+            _try_iso_ms(relationship.valid_to)
+            if relationship.valid_to is not None
+            else None
+        )
+        if relationship.valid_from is not None and valid_from is None:
+            continue
+        if relationship.valid_to is not None and valid_to is None:
+            continue
+        if valid_from is not None and valid_from > at_ms:
+            continue
+        if valid_to is not None and valid_to <= at_ms:
+            continue
+        current.add(relationship.id)
+    return frozenset(current)
+
+
+def _try_iso_ms(value: str) -> int | None:
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parse_iso_ms(value)
+
+
 def evolution_plan_to_data(plan: WorldEvolutionPlan) -> dict[str, object]:
     """Encode a plan into the closed canonical shape stored in a review row."""
 
@@ -617,19 +895,7 @@ def evolution_plan_to_data(plan: WorldEvolutionPlan) -> dict[str, object]:
 
     return {
         "delta": _delta_to_data(plan.delta),
-        "steps": [
-            {
-                "id": step.id,
-                "kind": step.kind,
-                "relation": step.relation,
-                "subject": {"kind": step.subject.kind, "id": step.subject.id},
-                "predecessor_ids": list(step.predecessor_ids),
-                "successor_ids": list(step.successor_ids),
-                "effective_at": step.effective_at,
-                "evidence_ids": list(step.evidence_ids),
-            }
-            for step in plan.steps
-        ],
+        "steps": [evolution_step_to_data(step) for step in plan.steps],
         "cognition_updates": [_cognition_to_data(item) for item in plan.cognition_updates],
     }
 
@@ -650,47 +916,10 @@ def evolution_plan_from_data(raw: Mapping[str, object]) -> WorldEvolutionPlan:
         raise WorldEvolutionValidationError(("plan.shape.invalid",))
     from .loop import _cognition_from_data, _delta_from_data
 
-    steps: list[EvolutionStep] = []
-    expected_step_fields = {
-        "id",
-        "kind",
-        "relation",
-        "subject",
-        "predecessor_ids",
-        "successor_ids",
-        "effective_at",
-        "evidence_ids",
-    }
-    for index, item in enumerate(steps_raw):
-        path = f"plan.steps[{index}]"
-        if not isinstance(item, Mapping) or set(item) != expected_step_fields:
-            raise WorldEvolutionValidationError((path + ".fields.invalid",))
-        subject_raw = item["subject"]
-        if not isinstance(subject_raw, Mapping) or set(subject_raw) != {"kind", "id"}:
-            raise WorldEvolutionValidationError((path + ".subject.invalid",))
-        predecessor_ids = item["predecessor_ids"]
-        successor_ids = item["successor_ids"]
-        evidence_ids = item["evidence_ids"]
-        scalar_values = (item["id"], item["kind"], item["relation"], item["effective_at"], subject_raw["kind"], subject_raw["id"])
-        if any(type(value) is not str for value in scalar_values):
-            raise WorldEvolutionValidationError((path + ".scalar.invalid",))
-        if any(
-            not isinstance(values, list) or any(type(value) is not str for value in values)
-            for values in (predecessor_ids, successor_ids, evidence_ids)
-        ):
-            raise WorldEvolutionValidationError((path + ".ids.invalid",))
-        steps.append(
-            EvolutionStep(
-                cast(str, item["id"]),
-                cast(EvolutionKind, item["kind"]),
-                cast(EvolutionRelation, item["relation"]),
-                MemoryTarget(cast(Any, subject_raw["kind"]), cast(str, subject_raw["id"])),
-                tuple(cast(list[str], predecessor_ids)),
-                tuple(cast(list[str], successor_ids)),
-                cast(str, item["effective_at"]),
-                tuple(cast(list[str], evidence_ids)),
-            )
-        )
+    steps = [
+        evolution_step_from_data(item, path=f"plan.steps[{index}]")
+        for index, item in enumerate(steps_raw)
+    ]
     try:
         updates = tuple(
             _cognition_from_data(cast(Mapping[str, object], item))
@@ -702,6 +931,76 @@ def evolution_plan_from_data(raw: Mapping[str, object]) -> WorldEvolutionPlan:
     if len(updates) != len(updates_raw):
         raise WorldEvolutionValidationError(("plan.cognition_updates.invalid",))
     return WorldEvolutionPlan(_delta_from_data(delta_raw), tuple(steps), updates)
+
+
+def evolution_step_to_data(step: EvolutionStep) -> dict[str, object]:
+    """Encode one closed evolution edge for a hash-bound proposal payload."""
+
+    if not isinstance(step, EvolutionStep):
+        raise TypeError("step must be an EvolutionStep")
+    return {
+        "id": step.id,
+        "kind": step.kind,
+        "relation": step.relation,
+        "subject": {"kind": step.subject.kind, "id": step.subject.id},
+        "predecessor_ids": list(step.predecessor_ids),
+        "successor_ids": list(step.successor_ids),
+        "effective_at": step.effective_at,
+        "evidence_ids": list(step.evidence_ids),
+    }
+
+
+def evolution_step_from_data(
+    raw: object,
+    *,
+    path: str = "step",
+) -> EvolutionStep:
+    """Decode one closed evolution edge without granting it write authority."""
+
+    expected_fields = {
+        "id",
+        "kind",
+        "relation",
+        "subject",
+        "predecessor_ids",
+        "successor_ids",
+        "effective_at",
+        "evidence_ids",
+    }
+    if not isinstance(raw, Mapping) or set(raw) != expected_fields:
+        raise WorldEvolutionValidationError((path + ".fields.invalid",))
+    subject_raw = raw["subject"]
+    if not isinstance(subject_raw, Mapping) or set(subject_raw) != {"kind", "id"}:
+        raise WorldEvolutionValidationError((path + ".subject.invalid",))
+    predecessor_ids = raw["predecessor_ids"]
+    successor_ids = raw["successor_ids"]
+    evidence_ids = raw["evidence_ids"]
+    scalar_values = (
+        raw["id"],
+        raw["kind"],
+        raw["relation"],
+        raw["effective_at"],
+        subject_raw["kind"],
+        subject_raw["id"],
+    )
+    if any(type(value) is not str for value in scalar_values):
+        raise WorldEvolutionValidationError((path + ".scalar.invalid",))
+    if any(
+        not isinstance(values, list)
+        or any(type(value) is not str for value in values)
+        for values in (predecessor_ids, successor_ids, evidence_ids)
+    ):
+        raise WorldEvolutionValidationError((path + ".ids.invalid",))
+    return EvolutionStep(
+        cast(str, raw["id"]),
+        cast(EvolutionKind, raw["kind"]),
+        cast(EvolutionRelation, raw["relation"]),
+        MemoryTarget(cast(Any, subject_raw["kind"]), cast(str, subject_raw["id"])),
+        tuple(cast(list[str], predecessor_ids)),
+        tuple(cast(list[str], successor_ids)),
+        cast(str, raw["effective_at"]),
+        tuple(cast(list[str], evidence_ids)),
+    )
 
 
 def project_relationship_state(
@@ -862,8 +1161,14 @@ __all__ = [
     "WorldEvolutionValidationError",
     "evolution_plan_from_data",
     "evolution_plan_to_data",
+    "evolution_step_from_data",
+    "evolution_step_to_data",
+    "accepted_historical_relationship_ids",
+    "current_relationship_ids",
+    "historical_relationship_ids",
     "project_cognition_lifecycle",
     "project_relationship_state",
+    "relationship_successor_pairs",
     "relationship_event_chain",
     "superseding_cognition_pairs",
 ]

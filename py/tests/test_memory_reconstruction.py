@@ -56,6 +56,32 @@ def _specific_experience_world(
     return graph
 
 
+def test_future_relationship_and_its_cognition_are_not_current_or_synthetic_history() -> None:
+    """Read-time temporal eligibility must not turn future memory into history."""
+
+    graph = MemoryWorldGraph(PersonalWorld("world:future", "person:owner"))
+    graph.add_entity(Entity("person:owner", "world:future", "person", "Owner"))
+    graph.add_entity(Entity("person:future-friend", "world:future", "person", "Future Friend"))
+    relationship = Relationship(
+        "relationship:future", "world:future", "person:owner", "person:future-friend", "friend",
+        bidirectional=True, valid_from="2999-01-01T00:00:00+00:00",
+    )
+    graph.add_relationship(relationship)
+    graph.add_cognition(WorldCognition(
+        "cog:future-relationship", "world:future", MemoryTarget("relationship", relationship.id),
+        "Owner and Future Friend will be friends.", "fact", "stated", 600, "limited",
+        Perspective("entity", ("person:owner",)), (EvidenceLink("e:future", "support"),),
+    ))
+
+    result = reconstruct_memory("What is my relationship with Future Friend?", graph)
+
+    assert result.status == "resolved"
+    assert result.relationship_ids == ()
+    assert result.current_cognition_ids == ()
+    assert result.historical_cognition_ids == ()
+    assert result.historical_relationship_ids == ()
+
+
 def test_experience_detail_query_prefers_specific_event_over_generic_category_entity() -> None:
     cases = (
         (

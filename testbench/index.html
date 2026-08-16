@@ -1489,8 +1489,8 @@
         flex-direction: column;
         gap: var(--sp-2);
       }
-      /* 2.0 accepted world: one card per stable entity.  Candidate material
-         deliberately does not share these classes or this rendering path. */
+      /* 2.0 formal world: one card per stable entity.  Processing and review
+         observations deliberately do not share this rendering path. */
       .next-entity-card {
         margin: var(--sp-2) 0;
       }
@@ -2975,7 +2975,7 @@
             ></span
             >正式记忆与迁移线索
           </div>
-          <div class="sp-sub">只有你接受的 2.0 候选才是正式记忆；1.0 内容仅供迁移</div>
+          <div class="sp-sub">2.0 会在后台验证并形成可追溯的个人记忆世界；1.0 内容仅供迁移</div>
         </div>
         <span class="spacer"></span>
         <button class="sp-close" onclick="closeMem()" title="关闭">✕</button>
@@ -2984,20 +2984,21 @@
         <div class="ux-hero" style="margin-bottom: var(--sp-5)">
           <p style="text-align: left; max-width: none">
             你像平时一样<span class="accent">聊天、随口提一点自己</span
-            >，它会把值得保留的内容提出为候选；只有你接受后，才会写进下面的<span class="accent"
-              >正式记忆</span
+            >，它会在后台验证可保留的内容，并把结果和证据显示在下面的<span class="accent"
+              >个人记忆世界</span
             >。
           </p>
         </div>
 
-        <!-- 唯一正式记忆：只有 2.0 接受后的当前世界能在这里出现。 -->
+        <!-- 唯一正式记忆：只显示经验证自动形成的当前世界。 -->
         <div class="ux-card" id="nextWorldCard">
           <div class="ux-card-head">
             <span class="dot"></span>
-            <span class="ttl">正式记忆</span>
+            <span class="ttl">个人记忆世界</span>
           </div>
           <p class="ux-card-sub">
-            这里只有你接受后写入的当前世界；候选、旧版整理线索和聊天原话都不会自动变成正式记忆。
+            这里只显示通过
+            Evidence、身份和语义验证后自动形成的当前世界；原话和旧版整理线索本身不会直接变成世界事实。
           </p>
           <div id="nextWorldStatus" class="evmeta">正在读取 2.0 世界…</div>
           <details class="acc" open>
@@ -3015,16 +3016,8 @@
             </div>
           </details>
           <details class="acc">
-            <summary><span class="chev">▸</span><span class="acc-ttl">待决定</span></summary>
-            <div class="acc-body">
-              <div id="nextWorldPending" class="ux-list">
-                <span class="empty">没有等待决定的 2.0 候选。</span>
-              </div>
-            </div>
-          </details>
-          <details class="acc">
             <summary>
-              <span class="chev">▸</span><span class="acc-ttl">问问已接受的 2.0 记忆</span>
+              <span class="chev">▸</span><span class="acc-ttl">问问当前 2.0 记忆世界</span>
             </summary>
             <div class="acc-body">
               <input id="nextMemoryQuery" placeholder="例如：我平时怎么安排休息？" />
@@ -3034,7 +3027,7 @@
           </details>
         </div>
 
-        <!-- 1.x 不再是正式记忆：默认收起，只能从已有原话产生一个待决定的 2.0 候选。 -->
+        <!-- 1.x 不再是正式记忆：默认收起，只能从已有原话触发一次后台迁移处理。 -->
         <details class="acc" id="legacyMigrationSource">
           <summary>
             <span class="chev">▸</span
@@ -3042,7 +3035,7 @@
           </summary>
           <div class="acc-body">
             <p class="ux-card-sub">
-              这是旧版从原话整理出的兼容线索，只读、不参与正式召回。你可以用对应原话生成一个正式候选，再自己决定是否接受。
+              这是旧版从原话整理出的兼容线索，只读、不参与正式召回。你可以用对应原话触发一次后台迁移处理；结果会连同证据显示在聊天中。
             </p>
             <div id="uxCogList" class="ux-list">
               <div class="ux-empty"><span class="big">🫧</span>还没有可迁移的 1.0 线索。</div>
@@ -3490,7 +3483,7 @@
     <footer>
       每轮自动落盘 → <code id="logfile">logs/run-*.jsonl</code> ｜ 执行 Agent 直接读此文件 +
       <code>testbench-evidence.db</code>
-      调整。后端为真实逻辑（原话 Evidence、2.0 候选审核、正式召回与纠正）。
+      调整。后端为真实逻辑（原话 Evidence、2.0 自动形成、正式召回与纠正）。
     </footer>
 
     <!-- toast 宿主（右下角轻提示，JS 往里塞、几秒自动移除） -->
@@ -3537,15 +3530,16 @@
         <!-- 参数旋钮：renderCfgKnobs 直接把 47 项按 group 渲进 #cfgKnobs，每个 group 包成一个默认折叠的 <details class="acc">。 -->
         <div id="cfgKnobs"><span class="empty">进入「调试」后加载…</span></div>
 
-        <!-- 1.0 兼容备份 / 迁移：只处理旧版库，不包含 2.0 accepted world。 -->
+        <!-- 1.0 兼容备份 / 迁移：只处理旧版库，不包含 2.0 个人记忆世界。 -->
         <div class="acc" style="border-color: var(--line); margin-bottom: var(--sp-3)">
           <div style="padding: 12px var(--sp-4)">
             <div style="font-weight: 600; margin-bottom: 6px">
               📦 1.0 兼容备份 / 迁移 · 旧版便携包
             </div>
             <div class="evmeta" style="margin-bottom: 10px">
-              这里只导出 1.0 兼容库里的原话、经历片段、旧理解条目和溯源链；<b>不包含 2.0 正式记忆</b
-              >。导入也只回到 1.0 兼容来源，不能绕过 2.0 候选审核。<br />
+              这里只导出 1.0 兼容库里的原话、经历片段、旧理解条目和溯源链；<b
+                >不包含 2.0 个人记忆世界</b
+              >。导入也只回到 1.0 兼容来源，不能绕过 2.0 的 Evidence 与语义验证。<br />
               <b>向量检索索引不进包</b>；需要时仅在 1.0 调试模式重建。
             </div>
             <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap">
@@ -3974,7 +3968,7 @@
         if (mask) mask.classList.remove('show');
         if (panel) panel.classList.remove('show');
       }
-      // 更新胶囊上的计数：只数当前 2.0 已接受世界的真实记录；基础 owner 实体不算记忆。
+      // 更新胶囊上的计数：只数当前 2.0 世界的真实记录；基础 owner 实体不算记忆。
       function updateMemPillCount() {
         const el = $('memPillN');
         if (!el) return;
@@ -3984,7 +3978,7 @@
           (memory.relationships || []).length +
           (memory.events || []).length +
           (memory.cognitions || []).length;
-        el.textContent = n > 0 ? '正式记忆 ' + n + ' 件' : '还没有正式记忆';
+        el.textContent = n > 0 ? '个人记忆 ' + n + ' 件' : '还没有个人记忆';
       }
 
       // ── 友好版·就地软编辑一条认知（替代浏览器 prompt）：只把 .txt 换成输入框，回车存 / Esc / 点走取消 ──
@@ -4144,9 +4138,7 @@
             domEl('span', 'ux-tag', enumText(TYPE_CN, c.contentType)),
             domEl('span', 'spacer'),
           );
-          const migrate = button('用原话生成正式候选', () =>
-            stageLegacyCognitionMigration(c, migrate),
-          );
+          const migrate = button('用原话处理迁移', () => stageLegacyCognitionMigration(c, migrate));
           foot.append(migrate);
           item.appendChild(foot);
           fragment.appendChild(item);
@@ -4311,7 +4303,7 @@
 
       // 旧入口保留给历史调用，但不能把 1.0 factory reset 冒充成正式记忆的全量删除。
       function userSoftReset() {
-        toast('正式记忆不能从这里整体清空；请在正式记忆中逐条纠正并决定候选。', 'warn');
+        toast('个人记忆世界不能从这里整体清空；请用你的原话逐条纠正。', 'warn');
       }
 
       function addMsg(role, text) {
@@ -4324,11 +4316,22 @@
 
       // ── MemoWeft 2.0 bridge ───────────────────────────────────────────
       // 1.x 的聊天、画像与管理仍然是原页面的主体。这个很薄的同源桥只展示
-      // Python Next 返回的“候选 → Owner 决定 → 已接受世界”，并且从不把候选
-      // 冒充成 1.x 画像或已记住的内容。
+      // Python Next 后台形成的可观察结果和当前世界；它不把解释草稿或旧来源
+      // 冒充成正式世界，也不把 Review 变成写入开关。
       let _nextWorld = null;
-      const _nextPending = new Map();
       const _nextRuns = new Map();
+      // Operation cards are deliberately independent from _renderedTurns: a
+      // chat turn is rendered once, while its asynchronous memory operation
+      // may legitimately replace the card several times.
+      const _nextOperationRows = new Map();
+      const _nextOperationFlights = new Map();
+      const _nextOperationTimers = new Map();
+      const _nextOperationTerminal = new Set();
+      // A terminal receipt and the drawer's authoritative World refresh are
+      // different facts.  Keep the latter retryable after polling finishes.
+      const _nextWorldRefreshTimers = new Map();
+      const _nextCorrectionOperations = new Map();
+      const NEXT_WORLD_REFRESH_MAX_ATTEMPTS = 3;
       function nextText(value) {
         if (value == null) return '';
         if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -4360,6 +4363,71 @@
       function nextRunId(view) {
         return view?.proposal?.runId || view?.proposal?.id || view?.run?.id || null;
       }
+      function nextSessionId(raw) {
+        const view = nextMemoryView(raw);
+        return (
+          raw?.sessionId ||
+          raw?.session_id ||
+          raw?.reviewPayload?.sessionId ||
+          raw?.review_payload?.sessionId ||
+          view.proposal?.sessionId ||
+          view.proposal?.session_id ||
+          view.proposal?.adapter?.sessionId ||
+          view.run?.sessionId ||
+          view.run?.session_id ||
+          view.run?.adapter?.sessionId ||
+          null
+        );
+      }
+      function nextOperationMarker(raw) {
+        const wrapped = raw?.nextMemory || raw || {};
+        const marker =
+          wrapped.state === 'processing'
+            ? wrapped
+            : wrapped.memoryProposal?.state === 'processing'
+              ? wrapped.memoryProposal
+              : wrapped;
+        const operationId = marker.operationId || marker.operation_id;
+        const sessionId = marker.sessionId || marker.session_id;
+        if (!operationId || !sessionId || marker.state !== 'processing') return null;
+        return {
+          operationId,
+          sessionId,
+          currentEvidenceId: marker.currentEvidenceId || marker.current_evidence_id || null,
+        };
+      }
+      function clearNextOperationUI() {
+        _nextOperationRows.clear();
+        _nextOperationTerminal.clear();
+        for (const timer of _nextOperationTimers.values()) clearTimeout(timer);
+        _nextOperationTimers.clear();
+        for (const timer of _nextWorldRefreshTimers.values()) clearTimeout(timer);
+        _nextWorldRefreshTimers.clear();
+      }
+      function nextCorrectionOperation(cognitionId, correctionText) {
+        const key = `${cognitionId}\u0000${correctionText}`;
+        let operationId = _nextCorrectionOperations.get(key);
+        if (!operationId) {
+          operationId = `testbench-correction:${globalThis.crypto.randomUUID()}`;
+          _nextCorrectionOperations.set(key, operationId);
+        }
+        return { key, operationId };
+      }
+      async function refreshNextWorldAfterApplied(operationId, sessionId, attempt = 0) {
+        if (!operationId || sessionId !== _currentSessionId) return;
+        const refreshed = await loadNextWorld({ sessionId });
+        if (refreshed || sessionId !== _currentSessionId) {
+          _nextWorldRefreshTimers.delete(operationId);
+          return;
+        }
+        if (attempt >= NEXT_WORLD_REFRESH_MAX_ATTEMPTS) return;
+        const delay = 400 * 2 ** attempt;
+        const timer = setTimeout(() => {
+          _nextWorldRefreshTimers.delete(operationId);
+          void refreshNextWorldAfterApplied(operationId, sessionId, attempt + 1);
+        }, delay);
+        _nextWorldRefreshTimers.set(operationId, timer);
+      }
       function hydrateNextMemory(raw) {
         const snapshot = raw || {};
         const snapshotView = nextMemoryView(snapshot);
@@ -4380,19 +4448,6 @@
           world: snapshot.world || liveRun.world,
         };
       }
-      function isNextPending(nextMemory) {
-        return ['candidate-ready', 'correction-pending'].includes(nextMemory?.state);
-      }
-      function hasNextPendingDecision() {
-        if ((_nextWorld?.pendingReviews || []).length) return true;
-        if (
-          [..._nextPending.values()].some((raw) =>
-            isNextPending(nextMemoryView(hydrateNextMemory(raw))),
-          )
-        )
-          return true;
-        return [..._nextRuns.values()].some((run) => isNextPending(nextMemoryView(run)));
-      }
       function nextList(items, kind) {
         const list = document.createElement('ul');
         list.className = 'ux-list';
@@ -4403,11 +4458,111 @@
         }
         return list;
       }
-      function appendNextCandidateContent(host, view) {
+      function nextProposalEntityIndex(memory) {
+        const entityIndex = new Map();
+        for (const entity of [
+          ...(_nextWorld?.memory?.entities || []),
+          ...(memory?.entities || []),
+        ]) {
+          if (entity?.id) entityIndex.set(entity.id, { entity });
+        }
+        return entityIndex;
+      }
+      function nextRelationshipObjectText(item, entityIndex) {
+        const sourceId = item?.sourceEntityId || item?.source_entity_id;
+        const targetId = item?.targetEntityId || item?.target_entity_id;
+        const source = nextEntityName(sourceId, entityIndex);
+        const target = nextEntityName(targetId, entityIndex);
+        const arrow = item?.bidirectional === true ? '↔' : '→';
+        const relationType = item?.relationType || item?.relation_type || '未命名关系';
+        return `${source} ${arrow} ${target}（${relationType}）`;
+      }
+      function nextOwnerRelationshipEvaluationText(value, relationship, entityIndex) {
+        return `Owner 对 ${nextRelationshipObjectText(relationship, entityIndex)} 的评价：${value || '未返回评价'}`;
+      }
+      function nextEventObjectText(item, entityIndex) {
+        const participants = (item?.participants || item?.participantEntityIds || [])
+          .map((participant) =>
+            nextEntityName(
+              typeof participant === 'string' ? participant : participant?.entity_id,
+              entityIndex,
+            ),
+          )
+          .filter(Boolean);
+        const related = (item?.related_entity_ids || item?.objectEntityIds || [])
+          .map((entityId) => nextEntityName(entityId, entityIndex))
+          .filter(Boolean);
+        return [
+          item?.summary ||
+            item?.event_type ||
+            item?.eventType ||
+            item?.eventId ||
+            item?.id ||
+            '未命名事件',
+          item?.occurred_at || item?.occurredAt
+            ? `发生于 ${item.occurred_at || item.occurredAt}`
+            : null,
+          participants.length ? `参与：${participants.join('、')}` : null,
+          related.length ? `相关对象：${related.join('、')}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+      }
+      function nextOwnerEventEvaluationText(value, event, entityIndex) {
+        return `Owner 对 ${nextEventObjectText(event, entityIndex)} 的评价：${value || '未返回评价'}`;
+      }
+      function nextClaimObservationText(claim, entityIndex) {
+        const kind = claim?.kind || claim?.statementKind || 'claim';
+        if (claim?.kind === 'evaluation' && claim?.object?.kind === 'relationship') {
+          const value = claim?.value?.text || claim?.text || '未返回评价';
+          return `陈述：评价 · ${nextOwnerRelationshipEvaluationText(value, claim.object, entityIndex)}`;
+        }
+        if (claim?.kind === 'evaluation' && claim?.object?.kind === 'event') {
+          const value = claim?.value?.text || claim?.text || '未返回评价';
+          return `陈述：评价 · ${nextOwnerEventEvaluationText(value, claim.object, entityIndex)}`;
+        }
+        return `陈述：${kind} · ${claim?.text || claim?.value?.text || '未返回陈述'}`;
+      }
+      function appendNextClaimObservation(host, view) {
         const proposal = view.proposal || {};
+        const rawCognitionReplacements =
+          proposal.cognitionReplacements || view.run.cognitionReplacements || [];
+        const cognitionReplacements = Array.isArray(rawCognitionReplacements)
+          ? rawCognitionReplacements
+          : [];
+        if (cognitionReplacements.length) {
+          const detail = document.createElement('details');
+          const summary = document.createElement('summary');
+          summary.textContent = '结构化认知纠正';
+          detail.appendChild(summary);
+          for (const replacement of cognitionReplacements) {
+            const before = replacement?.before || {};
+            const after = replacement?.after || {};
+            const target = after?.target || before?.target || {};
+            const targetText = `${target?.kind || '未知目标'}：${target?.id || '未返回'}`;
+            const beforeValue = before?.structured_claim?.value ?? before?.content ?? '未返回';
+            const afterValue = after?.structured_claim?.value ?? after?.content ?? '未返回';
+            const evidenceId =
+              replacement?.evidenceId || replacement?.evidence_id || '未知 Evidence';
+            const item = document.createElement('div');
+            item.className = 'next-evidence-change';
+            item.append(
+              domEl('div', 'evmeta', `目标：${targetText} · Evidence：${evidenceId}`),
+              domEl('strong', '', '纠正前（历史，只作对照，不是当前值）'),
+              domEl('div', 'evmeta', `结构值：${beforeValue}`),
+              domEl('div', 'evmeta', before?.content || ''),
+              domEl('strong', '', '纠正后（本轮应用后的当前值）'),
+              domEl('div', 'evmeta', `结构值：${afterValue}`),
+              domEl('div', 'evmeta', after?.content || ''),
+            );
+            detail.appendChild(item);
+          }
+          host.appendChild(detail);
+          return;
+        }
         const correction = proposal.correction || {};
         const manual = proposal.candidateCorrection || {};
-        if (view.state === 'correction-pending') {
+        if (proposal.correction || manual.content || view.state === 'applied-correction') {
           const before = document.createElement('div');
           const priorText =
             (correction.supersededCognitions || []).map(nextText).join('；') ||
@@ -4421,6 +4576,7 @@
           return;
         }
         const memory = proposal.candidateMemory || proposal.memory || {};
+        const entityIndex = nextProposalEntityIndex(memory);
         const labels = {
           entities: '实体',
           relationships: '关系',
@@ -4431,10 +4587,80 @@
         for (const key of Object.keys(labels)) {
           const items = memory[key] || [];
           if (!items.length) continue;
-          host.appendChild(nextList(items, labels[key]));
+          if (key === 'cognitions') {
+            const list = document.createElement('ul');
+            list.className = 'ux-list';
+            for (const item of items) {
+              const row = document.createElement('li');
+              const details = [
+                item?.cred_status ? `状态：${item.cred_status}` : null,
+                Number.isFinite(item?.confidence) ? `置信：${item.confidence}` : null,
+                ...(item?.sources || []).map((source) => {
+                  const evidenceId = source?.evidence_id || source?.evidenceId || '未知 Evidence';
+                  const relation = source?.relation || 'unknown';
+                  return `Evidence：${evidenceId} · relation：${relation}`;
+                }),
+              ].filter(Boolean);
+              row.textContent = `认知：${nextText(item)}${details.length ? ` · ${details.join(' · ')}` : ''}`;
+              list.appendChild(row);
+            }
+            host.appendChild(list);
+          } else {
+            host.appendChild(nextList(items, labels[key]));
+          }
           count += items.length;
         }
-        if (!count) host.appendChild(domEl('div', 'evmeta', '本轮没有可展示的候选正文。'));
+        const claims = proposal.claims?.claims || proposal.claims || [];
+        const claimItems = Array.isArray(claims) ? claims : [];
+        if (claimItems.length) {
+          const claimList = document.createElement('ul');
+          claimList.className = 'ux-list';
+          for (const claim of claimItems) {
+            const row = document.createElement('li');
+            row.textContent = nextClaimObservationText(claim, entityIndex);
+            claimList.appendChild(row);
+          }
+          host.appendChild(claimList);
+          count += claimItems.length;
+        }
+        const rawCognitionEvidenceChanges =
+          proposal.cognitionEvidenceChanges || view.run.cognitionEvidenceChanges || [];
+        const cognitionEvidenceChanges = Array.isArray(rawCognitionEvidenceChanges)
+          ? rawCognitionEvidenceChanges
+          : [];
+        if (cognitionEvidenceChanges.length) {
+          const detail = document.createElement('details');
+          const summary = document.createElement('summary');
+          summary.textContent = '同一 cognition 的 Evidence 变化';
+          detail.appendChild(summary);
+          for (const change of cognitionEvidenceChanges) {
+            const before = change?.before || {};
+            const after = change?.after || {};
+            const cognitionId = change?.cognitionId || change?.cognition_id || '未知 cognition';
+            const relation = change?.relation || 'unknown';
+            const evidenceId = change?.evidenceId || change?.evidence_id || '未知 Evidence';
+            const item = document.createElement('div');
+            item.className = 'next-evidence-change';
+            item.append(
+              domEl('div', 'evmeta', `cognition：${cognitionId}`),
+              domEl('div', 'evmeta', `relation：${relation} · Evidence：${evidenceId}`),
+              domEl(
+                'div',
+                'evmeta',
+                `此前（仅作为变化对照，不是当前值）：confidence ${before?.confidence ?? '未返回'} · cred_status ${before?.cred_status ?? before?.credStatus ?? '未返回'}`,
+              ),
+              domEl(
+                'div',
+                'evmeta',
+                `本轮应用后：confidence ${after?.confidence ?? '未返回'} · cred_status ${after?.cred_status ?? after?.credStatus ?? '未返回'}`,
+              ),
+            );
+            detail.appendChild(item);
+          }
+          host.appendChild(detail);
+          count += cognitionEvidenceChanges.length;
+        }
+        if (!count) host.appendChild(domEl('div', 'evmeta', '本轮没有返回可展示的已验证陈述。'));
       }
       function appendNextCandidateContext(host, view) {
         const proposal = view.proposal || {};
@@ -4452,6 +4678,12 @@
         if (perspective.kind === 'entity' && (perspective.entityIds || []).includes('entity:owner'))
           lines.push('视角：Owner（这是 Owner 对该对象的陈述）');
         if (lines.length) host.appendChild(domEl('div', 'evmeta', lines.join(' · ')));
+        const provenance = proposal.provenance || proposal.sources || proposal.evidence || [];
+        const provenanceIds = (Array.isArray(provenance) ? provenance : [provenance])
+          .map((item) => item?.evidence_id || item?.evidenceId || item?.id || item)
+          .filter(Boolean);
+        if (provenanceIds.length)
+          host.appendChild(domEl('div', 'evmeta', `Provenance：${provenanceIds.join('、')}`));
       }
       function appendNextClarification(host, view) {
         const clarification = view.run.clarification || view.proposal.clarification || {};
@@ -4459,7 +4691,7 @@
           domEl(
             'div',
             'evmeta',
-            clarification.message || '当前指代不能唯一绑定到已接受对象，请先说明你指的是哪一个。',
+            clarification.message || '当前指代不能唯一绑定到已知对象，请先说明你指的是哪一个。',
           ),
         );
         const names = Array.isArray(clarification.candidateEntityNames)
@@ -4505,58 +4737,43 @@
       }
       function registerNextMemory(nextMemory) {
         const view = nextMemoryView(nextMemory);
-        const runId = view.proposal.runId || view.proposal.id || view.run.id;
-        if (isNextPending(view) && runId) _nextPending.set(runId, view.raw);
-        if (['accepted', 'rejected'].includes(view.state) && runId) _nextPending.delete(runId);
-        renderNextPending();
         return view;
       }
-      function appendNextMemoryTurn(nextMemory) {
+      function renderNextMemoryTurn(row, nextMemory) {
         const hydrated = hydrateNextMemory(nextMemory);
         const view = registerNextMemory(hydrated);
-        const row = document.createElement('div');
-        row.className = 'msg dla next-memory-turn';
+        const marker = nextOperationMarker(nextMemory);
+        row.replaceChildren();
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
         const title = domEl('strong', '', 'MemoWeft 2.0 记忆判断');
         bubble.appendChild(title);
         const status = domEl('div', 'evmeta');
         const labels = {
-          'candidate-ready': '等待你决定：以下是候选，还没有记住。',
-          'correction-pending': '等待你决定：这是一条纠正候选，还没有写入。',
-          'no-candidate': '本轮没有形成候选记忆。',
+          processing: '正在根据这轮原话验证并形成个人记忆世界；聊天可以继续。',
+          applied: '已通过验证并自动写入当前 2.0 记忆世界。',
+          'applied-correction': '已通过验证并自动应用这条纠正到当前 2.0 记忆世界。',
+          'no-change': '本轮没有符合长期形成条件的 World Change。',
+          'no-candidate': '本轮没有符合长期形成条件的 World Change。',
           'clarification-required':
             '需要澄清：程序不能确定你指的是哪一个对象，因此没有猜测或写入。',
           'out-of-scope':
             '本轮内容当前不在这项能力的写入范围内；没有形成候选，也没有改变正式记忆。',
           failed: '本轮 2.0 提取失败，但聊天不受影响。',
           unavailable: 'MemoWeft 2.0 暂不可用；聊天与 1.0 兼容来源仍可使用。',
-          accepted: '这轮候选已接受并写入 2.0 世界。',
-          rejected: '这轮候选已忽略，2.0 世界没有变化。',
+          'candidate-ready': '兼容记录仍在处理中；不会要求你批准才能形成记忆。',
+          'correction-pending': '兼容纠正记录仍在处理中；不会要求你批准才能形成记忆。',
+          accepted: '历史记录：此变化已写入 2.0 世界。',
+          rejected: '历史记录：此变化没有改变 2.0 世界。',
         };
         status.textContent = labels[view.state] || `2.0 状态：${view.state}`;
         bubble.appendChild(status);
-        if (
-          ['candidate-ready', 'correction-pending', 'accepted', 'rejected'].includes(view.state)
-        ) {
-          if (view.state === 'candidate-ready') appendNextCandidateContext(bubble, view);
-          appendNextCandidateContent(bubble, view);
+        if (['applied', 'applied-correction', 'accepted'].includes(view.state)) {
+          appendNextCandidateContext(bubble, view);
+          appendNextClaimObservation(bubble, view);
         }
         if (view.state === 'clarification-required') appendNextClarification(bubble, view);
-        if (isNextPending(view)) {
-          const reviewId = view.proposal.reviewId || view.run.reviewId;
-          const runId = view.proposal.runId || view.proposal.id || view.run.id;
-          const resultHash = view.proposal.resultHash || view.run.resultHash;
-          if (reviewId && runId && resultHash) {
-            const actions = document.createElement('div');
-            actions.className = 'button-row';
-            actions.append(
-              button('接受记忆', () => decideNextMemory(view.raw, 'accept', row), 'primary'),
-            );
-            actions.append(button('忽略这次', () => decideNextMemory(view.raw, 'reject', row)));
-            bubble.appendChild(actions);
-          }
-        } else if (view.failure) {
+        if (view.failure) {
           bubble.appendChild(
             domEl(
               'div',
@@ -4565,20 +4782,115 @@
             ),
           );
         }
-        appendNextEvidence(bubble, view);
+        if (view.state !== 'processing') appendNextEvidence(bubble, view);
         row.appendChild(bubble);
+        if (marker) {
+          _nextOperationRows.set(marker.operationId, row);
+          void pollNextMemoryOperation(marker);
+        }
+      }
+      function appendNextMemoryTurn(nextMemory, context = {}) {
+        // Callers pass the session and turn they have already verified.  Do
+        // not place a delayed old-session marker into the current transcript.
+        if (context.sessionId && context.sessionId !== _currentSessionId) return;
+        const marker = nextOperationMarker(nextMemory);
+        // JSONL intentionally keeps its original processing marker.  Once the
+        // operation reached a durable ready/failed result in this session,
+        // repeated history polls must not append or repaint that card.
+        if (marker && _nextOperationTerminal.has(marker.operationId)) return;
+        if (
+          marker &&
+          (marker.sessionId !== _currentSessionId ||
+            (context.sessionId && marker.sessionId !== context.sessionId))
+        )
+          return;
+        const existing = marker && _nextOperationRows.get(marker.operationId);
+        if (existing) {
+          renderNextMemoryTurn(existing, nextMemory);
+          return;
+        }
+        const row = document.createElement('div');
+        row.className = 'msg dla next-memory-turn';
+        renderNextMemoryTurn(row, nextMemory);
         $('chat').appendChild(row);
         $('chat').scrollTop = $('chat').scrollHeight;
       }
+      async function pollNextMemoryOperation(marker) {
+        const { operationId, sessionId, currentEvidenceId } = marker;
+        if (!operationId || !sessionId || sessionId !== _currentSessionId) return;
+        if (_nextOperationTimers.has(operationId)) return;
+        if (_nextOperationFlights.has(operationId)) return _nextOperationFlights.get(operationId);
+        const flight = (async () => {
+          try {
+            const query = new URLSearchParams({ sessionId, operationId });
+            const response = await fetch('/api/next/memory-operations?' + query.toString());
+            const result = await response.json();
+            // A request identity is not enough. Verify the response identity
+            // and the currently visible session together after every await.
+            if (
+              result.operationId !== operationId ||
+              result.sessionId !== sessionId ||
+              _currentSessionId !== sessionId
+            )
+              return;
+            if (!response.ok || result.state === 'failed') {
+              const row = _nextOperationRows.get(operationId);
+              if (row)
+                renderNextMemoryTurn(row, {
+                  operationId,
+                  sessionId,
+                  currentEvidenceId,
+                  state: 'failed',
+                  memoryFailure: { kind: result.code || 'memory-operation-failed' },
+                });
+              _nextOperationTerminal.add(operationId);
+              return;
+            }
+            if (result.state === 'ready') {
+              const row = _nextOperationRows.get(operationId);
+              const readyMemory = result.nextMemory || {};
+              if (row)
+                renderNextMemoryTurn(row, {
+                  ...readyMemory,
+                  operationId,
+                  sessionId,
+                  currentEvidenceId,
+                });
+              _nextOperationTerminal.add(operationId);
+              // The operation receipt is observation only.  On automatic Apply,
+              // re-read the sole authoritative World rather than trusting an
+              // operation/history snapshot to update the memory drawer.
+              if (nextMemoryView(readyMemory).state === 'applied')
+                void refreshNextWorldAfterApplied(operationId, sessionId);
+              return;
+            }
+            if (result.state === 'pending') {
+              const timer = setTimeout(() => {
+                _nextOperationTimers.delete(operationId);
+                void pollNextMemoryOperation(marker);
+              }, 700);
+              _nextOperationTimers.set(operationId, timer);
+            }
+          } catch (error) {
+            // Transient operation status failures do not erase a safe cached
+            // marker or turn it into a failed memory decision.
+            const timer = setTimeout(() => {
+              _nextOperationTimers.delete(operationId);
+              void pollNextMemoryOperation(marker);
+            }, 1000);
+            _nextOperationTimers.set(operationId, timer);
+          } finally {
+            _nextOperationFlights.delete(operationId);
+          }
+        })();
+        _nextOperationFlights.set(operationId, flight);
+        return flight;
+      }
       async function stageLegacyCognitionMigration(cognition, buttonEl) {
         if (!cognition?.id || !buttonEl || buttonEl.disabled) return;
-        if (hasNextPendingDecision()) {
-          toast('请先在“待决定”里接受或忽略当前候选，再迁移下一条 1.0 线索。', 'warn');
-          return;
-        }
         const originalLabel = buttonEl.textContent;
         buttonEl.disabled = true;
-        buttonEl.textContent = '正在根据原话生成候选…';
+        buttonEl.textContent = '正在根据原话处理…';
         try {
           const response = await fetch('/api/next/legacy-cognition-migrations', {
             method: 'POST',
@@ -4587,24 +4899,26 @@
           });
           const result = await response.json();
           if (!response.ok || result.error) {
-            throw Error(result.error || '无法生成正式候选');
+            throw Error(result.error || '无法处理这条迁移原话');
           }
           const nextMemory = result.nextMemory || result;
           const view = nextMemoryView(nextMemory);
           appendNextMemoryTurn(nextMemory);
           await loadNextMemoryRuns();
-          renderNextPending();
-          if (isNextPending(view)) {
-            toast('已根据原话生成正式候选；请在聊天中的候选卡决定是否接受。', 'ok');
+          if (view.state === 'applied') {
+            await loadNextWorld();
+            toast('已根据原话验证并写入当前 2.0 记忆世界。', 'ok');
+          } else if (view.state === 'clarification-required') {
+            toast('需要澄清后才能形成记忆；当前世界没有变化。', 'warn');
           } else if (view.state === 'no-candidate') {
-            toast('原话没有形成正式候选，已如实显示，正式记忆没有变化。', 'warn');
+            toast('原话没有形成 World Change，当前世界没有变化。', 'warn');
           } else if (view.state === 'failed') {
-            toast('根据原话生成候选失败，正式记忆没有变化。', 'danger');
+            toast('根据原话处理失败，当前世界没有变化。', 'danger');
           } else {
-            toast('迁移结果已显示；正式记忆尚未因此自动变化。', 'info');
+            toast('迁移正在后台完成；结果会显示在聊天中。', 'info');
           }
         } catch (error) {
-          toast('无法生成正式候选：' + nextText(error.message || error), 'danger');
+          toast('无法处理迁移原话：' + nextText(error.message || error), 'danger');
         } finally {
           buttonEl.disabled = false;
           buttonEl.textContent = originalLabel;
@@ -4621,72 +4935,42 @@
         }
         const originalLabel = buttonEl.textContent;
         buttonEl.disabled = true;
-        buttonEl.textContent = '正在生成纠正候选…';
+        buttonEl.textContent = '正在验证纠正…';
+        const { operationId } = nextCorrectionOperation(cognition.id, text);
         try {
           const response = await fetch('/api/next/memory-corrections', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cognitionId: cognition.id, correctionText }),
+            body: JSON.stringify({ operationId, cognitionId: cognition.id, correctionText }),
           });
           const result = await response.json();
           if (!response.ok || result.error) {
-            throw Error(result.error || '无法生成纠正候选');
+            throw Error(result.error || '无法验证这条纠正');
           }
           const nextMemory = result.nextMemory || result;
           const view = nextMemoryView(nextMemory);
           appendNextMemoryTurn(nextMemory);
           await loadNextMemoryRuns();
-          renderNextPending();
-          toast(
-            isNextPending(view)
-              ? '已生成纠正候选；接受前不会改动正式记忆。'
-              : '纠正结果已显示；正式记忆尚未因此自动变化。',
-            isNextPending(view) ? 'ok' : 'warn',
-          );
+          if (view.state === 'applied' || view.state === 'applied-correction') {
+            await loadNextWorld();
+            toast('纠正已通过验证并自动应用到当前世界。', 'ok');
+          } else if (view.state === 'clarification-required') {
+            toast('纠正目标或含义需要澄清；当前世界没有变化。', 'warn');
+          } else {
+            toast('纠正结果已显示；当前世界没有变化。', 'warn');
+          }
         } catch (error) {
-          toast('无法生成纠正候选：' + nextText(error.message || error), 'danger');
+          toast(
+            '纠正结果暂不明确；可以用相同原话重试。' + nextText(error.message || error),
+            'danger',
+          );
         } finally {
+          // A response may be lost after the bridge has committed.  Always
+          // re-read the authority, while the per-request operationId makes a
+          // same-text retry exactly replayable.
+          await loadNextWorld();
           buttonEl.disabled = false;
           buttonEl.textContent = originalLabel;
-        }
-      }
-      async function decideNextMemory(raw, decision, row) {
-        const view = nextMemoryView(raw);
-        const reviewId = view.proposal.reviewId || view.run.reviewId;
-        const runId = view.proposal.runId || view.proposal.id || view.run.id;
-        const resultHash = view.proposal.resultHash || view.run.resultHash;
-        if (!reviewId || !runId || !resultHash || !isNextPending(view)) return;
-        const buttons = row.querySelectorAll('button');
-        buttons.forEach((button) => {
-          button.disabled = true;
-        });
-        try {
-          const response = await fetch('/api/next/memory-decisions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reviewId, runId, resultHash, decision }),
-          });
-          const result = await response.json();
-          if (!response.ok || result.error) throw Error(result.error || '2.0 决定没有完成');
-          view.proposal.state = decision === 'accept' ? 'accepted' : 'rejected';
-          _nextPending.delete(runId);
-          if (result.world) renderNextWorld(result.world);
-          await loadNextMemoryRuns();
-          renderNextPending();
-          row.replaceWith(
-            Object.assign(document.createElement('div'), { className: 'msg dla next-memory-turn' }),
-          );
-          appendNextMemoryTurn(view.raw);
-        } catch (error) {
-          buttons.forEach((button) => {
-            button.disabled = false;
-          });
-          const note = domEl(
-            'div',
-            'evmeta',
-            '无法处理这次 2.0 候选：' + nextText(error.message || error),
-          );
-          row.querySelector('.bubble').appendChild(note);
         }
       }
       function nextOwnerCognition(item) {
@@ -4722,7 +5006,19 @@
       }
       function buildAcceptedEntityIndex(memory) {
         const entityIndex = new Map();
-        const unbound = { cognitions: [], relationships: [], events: [] };
+        const relationshipById = new Map(
+          (memory?.relationships || []).filter((item) => item?.id).map((item) => [item.id, item]),
+        );
+        const eventById = new Map(
+          (memory?.events || []).filter((item) => item?.id).map((item) => [item.id, item]),
+        );
+        const unbound = {
+          cognitions: [],
+          relationshipCognitions: [],
+          eventCognitions: [],
+          relationships: [],
+          events: [],
+        };
         for (const entity of memory?.entities || []) {
           if (!entity?.id) continue;
           entityIndex.set(entity.id, { entity, cognitions: [], relationships: [], events: [] });
@@ -4731,7 +5027,15 @@
           const targetId = cognition?.target?.kind === 'entity' ? cognition.target.id : null;
           const bundle = targetId ? entityIndex.get(targetId) : null;
           if (bundle) bundle.cognitions.push(cognition);
-          else unbound.cognitions.push(cognition);
+          else if (cognition?.target?.kind === 'relationship') {
+            const relationship = relationshipById.get(cognition.target.id);
+            if (relationship) unbound.relationshipCognitions.push({ cognition, relationship });
+            else unbound.cognitions.push(cognition);
+          } else if (cognition?.target?.kind === 'event') {
+            const event = eventById.get(cognition.target.id);
+            if (event) unbound.eventCognitions.push({ cognition, event });
+            else unbound.cognitions.push(cognition);
+          } else unbound.cognitions.push(cognition);
         }
         for (const relationship of memory?.relationships || []) {
           const endpoints = new Set([
@@ -4763,11 +5067,11 @@
         }
         return { entityIndex, unbound };
       }
-      function appendAcceptedCognitionDetail(host, cognition, entityIndex) {
+      function appendAcceptedCognitionDetail(host, cognition, entityIndex, summaryText = null) {
         const fact = document.createElement('details');
         fact.className = 'next-entity-fact';
         const summary = document.createElement('summary');
-        summary.textContent = cognition?.content || '未命名认知';
+        summary.textContent = summaryText || cognition?.content || '未命名认知';
         fact.appendChild(summary);
         const status = [
           formatNextPerspective(cognition?.perspective, entityIndex),
@@ -4776,9 +5080,11 @@
           Number.isFinite(cognition?.confidence) ? `置信：${cognition.confidence}` : null,
         ].filter(Boolean);
         fact.appendChild(domEl('div', 'evmeta', status.join(' · ') || '没有额外状态。'));
-        const evidence = (cognition?.sources || [])
-          .map((source) => source?.evidence_id || source?.evidenceId)
-          .filter(Boolean);
+        const evidence = (cognition?.sources || []).map((source) => {
+          const evidenceId = source?.evidence_id || source?.evidenceId || '未知 Evidence';
+          const relation = source?.relation || 'unknown';
+          return `${evidenceId}（relation：${relation}）`;
+        });
         fact.appendChild(
           domEl(
             'div',
@@ -4818,14 +5124,14 @@
         body.appendChild(domEl('div', 'evmeta', `稳定实体 ID：${entity.id}`));
         if ((entity.aliases || []).length)
           body.appendChild(domEl('div', 'evmeta', `别名：${entity.aliases.join('、')}`));
-        appendAcceptedEntitySection(body, '当前属性', '尚无已接受属性。', (section) => {
+        appendAcceptedEntitySection(body, '当前属性', '尚无已验证属性。', (section) => {
           if (!bundle.cognitions.length) return false;
           bundle.cognitions.forEach((item) =>
             appendAcceptedCognitionDetail(section, item, entityIndex),
           );
           return true;
         });
-        appendAcceptedEntitySection(body, '关系', '尚无已接受关系。', (section) => {
+        appendAcceptedEntitySection(body, '关系', '尚无已验证关系。', (section) => {
           if (!bundle.relationships.length) return false;
           for (const relationship of bundle.relationships) {
             const source = nextEntityName(relationship.source_entity_id, entityIndex);
@@ -4840,16 +5146,20 @@
           }
           return true;
         });
-        appendAcceptedEntitySection(body, '参与事件', '尚无已接受事件。', (section) => {
+        appendAcceptedEntitySection(body, '参与事件', '尚无已验证事件。', (section) => {
           if (!bundle.events.length) return false;
           for (const event of bundle.events) {
             const participants = (event.participants || [])
               .map((participant) => nextEntityName(participant?.entity_id, entityIndex))
               .filter(Boolean);
+            const relatedEntities = (event.related_entity_ids || [])
+              .map((entityId) => nextEntityName(entityId, entityIndex))
+              .filter(Boolean);
             const detail = [
               event.summary || event.event_type || event.id,
               event.occurred_at ? `发生于 ${event.occurred_at}` : null,
               participants.length ? `参与：${participants.join('、')}` : null,
+              relatedEntities.length ? `相关对象：${relatedEntities.join('、')}` : null,
             ].filter(Boolean);
             section.appendChild(domEl('div', 'evmeta', detail.join(' · ')));
           }
@@ -4860,19 +5170,45 @@
       }
       function renderUnboundAcceptedContent(unbound, entityIndex) {
         const total =
-          unbound.cognitions.length + unbound.relationships.length + unbound.events.length;
+          unbound.cognitions.length +
+          unbound.relationshipCognitions.length +
+          unbound.eventCognitions.length +
+          unbound.relationships.length +
+          unbound.events.length;
         if (!total) return null;
         const detail = document.createElement('details');
         detail.className = 'acc next-entity-card';
         const summary = document.createElement('summary');
         summary.append(
           domEl('span', 'chev', '▸'),
-          domEl('span', 'acc-ttl', '其他已接受内容'),
+          domEl('span', 'acc-ttl', '其他已验证内容'),
           domEl('span', 'acc-count', String(total)),
         );
         detail.appendChild(summary);
         const body = document.createElement('div');
         body.className = 'acc-body';
+        if (unbound.relationshipCognitions.length) {
+          body.appendChild(domEl('div', 'next-entity-section-title', 'Owner 对当前关系的评价'));
+          unbound.relationshipCognitions.forEach(({ cognition, relationship }) =>
+            appendAcceptedCognitionDetail(
+              body,
+              cognition,
+              entityIndex,
+              nextOwnerRelationshipEvaluationText(cognition?.content, relationship, entityIndex),
+            ),
+          );
+        }
+        if (unbound.eventCognitions.length) {
+          body.appendChild(domEl('div', 'next-entity-section-title', 'Owner 对当前事件的评价'));
+          unbound.eventCognitions.forEach(({ cognition, event }) =>
+            appendAcceptedCognitionDetail(
+              body,
+              cognition,
+              entityIndex,
+              nextOwnerEventEvaluationText(cognition?.content, event, entityIndex),
+            ),
+          );
+        }
         if (unbound.cognitions.length) {
           body.appendChild(domEl('div', 'next-entity-section-title', '未绑定实体的认知'));
           unbound.cognitions.forEach((item) =>
@@ -4923,7 +5259,7 @@
         ownerHost.replaceChildren(
           owner
             ? renderAcceptedEntityCard(owner, entityIndex)
-            : domEl('span', 'empty', '还没有接受关于你的 2.0 记忆。'),
+            : domEl('span', 'empty', '还没有形成关于你的 2.0 记忆。'),
         );
         otherHost.replaceChildren();
         otherEntities.forEach((bundle) =>
@@ -4932,72 +5268,50 @@
         const unboundContent = renderUnboundAcceptedContent(unbound, entityIndex);
         if (unboundContent) otherHost.appendChild(unboundContent);
         if (!otherEntities.length && !unboundContent)
-          otherHost.appendChild(domEl('span', 'empty', '还没有接受其他 2.0 实体或未绑定内容。'));
+          otherHost.appendChild(domEl('span', 'empty', '还没有形成其他 2.0 实体或未绑定内容。'));
         const status = $('nextWorldStatus');
         if (status)
           status.textContent =
             _nextWorld?.revision != null
-              ? `当前 2.0 世界：第 ${_nextWorld.revision} 版，只显示已接受内容。`
+              ? `当前 2.0 世界：第 ${_nextWorld.revision} 版，只显示已验证形成的内容。`
               : '2.0 世界暂不可用。';
         updateMemPillCount();
       }
-      function renderNextPending() {
-        const host = $('nextWorldPending');
-        if (!host) return;
-        host.replaceChildren();
-        const pending = [..._nextPending.entries()].flatMap(([runId, raw]) => {
-          const hydrated = hydrateNextMemory(raw);
-          const view = nextMemoryView(hydrated);
-          if (!isNextPending(view)) {
-            _nextPending.delete(runId);
-            return [];
-          }
-          return [hydrated];
-        });
-        const pendingReviews = _nextWorld?.pendingReviews || [];
-        if (!pending.length && !pendingReviews.length) {
-          host.appendChild(domEl('span', 'empty', '没有等待决定的 2.0 候选。'));
-          return;
-        }
-        for (const raw of pending) {
-          const view = nextMemoryView(raw);
-          host.appendChild(
-            domEl(
-              'div',
-              'evmeta',
-              `候选：${nextText(view.proposal.title || view.proposal.id || view.state)}`,
-            ),
-          );
-        }
-        for (const review of pendingReviews)
-          host.appendChild(domEl('div', 'evmeta', `等待复核：${nextText(review)}`));
-      }
-      async function loadNextWorld() {
+      async function loadNextWorld(context = {}) {
+        const requestedSessionId = context.sessionId || null;
         try {
           const response = await fetch('/api/next/memory-world');
           const world = await response.json();
           if (!response.ok || world.error) throw Error(world.error || '2.0 世界不可用');
+          if (requestedSessionId && requestedSessionId !== _currentSessionId) return false;
           renderNextWorld(world);
-          renderNextPending();
+          return true;
         } catch (error) {
+          if (requestedSessionId && requestedSessionId !== _currentSessionId) return false;
           const status = $('nextWorldStatus');
           if (status) status.textContent = 'MemoWeft 2.0 暂不可用；聊天与 1.0 兼容来源仍可使用。';
+          return false;
         }
       }
       async function loadNextMemoryRuns() {
+        const requestedSessionId = _currentSessionId;
+        if (!requestedSessionId) return false;
         try {
           const response = await fetch('/api/next/memory-runs');
           const payload = await response.json();
           if (!response.ok || payload.error || !Array.isArray(payload.runs))
             throw Error(payload.error || '2.0 运行记录不可用');
+          if (_currentSessionId !== requestedSessionId) return false;
           const latest = new Map();
-          for (const run of payload.runs) if (run?.id) latest.set(run.id, run);
+          for (const run of payload.runs) {
+            if (run?.id && nextSessionId(run) === requestedSessionId) latest.set(run.id, run);
+          }
           _nextRuns.clear();
           latest.forEach((run, runId) => _nextRuns.set(runId, run));
           return true;
         } catch (error) {
-          // 旧 JSONL 快照仍可安全回放；2.0 bridge 缺席时绝不妨碍 1.x。
-          _nextRuns.clear();
+          // A short outage must not make a known safe cache disappear or
+          // re-enable an already pending decision in another session.
           return false;
         }
       }
@@ -5006,7 +5320,7 @@
         const resultHost = $('nextMemoryQueryResult');
         const query = input?.value.trim();
         if (!query) return;
-        resultHost.textContent = '正在召回已接受的 2.0 记忆…';
+        resultHost.textContent = '正在召回当前 2.0 记忆世界…';
         try {
           const response = await fetch('/api/next/memory-queries', {
             method: 'POST',
@@ -5018,7 +5332,7 @@
           resultHost.textContent =
             result.answer ||
             (result.status === 'no_memory'
-              ? '没有找到相关的已接受 2.0 记忆。'
+              ? '没有找到相关的当前 2.0 记忆。'
               : '本次没有生成回答。');
           if (result.world) renderNextWorld(result.world);
         } catch (error) {
@@ -5135,6 +5449,13 @@
         // send.  A response that arrives after a session switch is data for
         // that old conversation, never a message for the newly opened one.
         const requestSessionId = _currentSessionId;
+        // Stable across an ambiguous browser retry of this one click.  The
+        // server/Evidence store binds the background operation to this exact
+        // user turn; a new click gets a new identity.
+        const originId =
+          typeof globalThis.crypto?.randomUUID === 'function'
+            ? `testbench-chat:${globalThis.crypto.randomUUID()}`
+            : `testbench-chat:${Date.now()}:${Math.random().toString(36).slice(2)}`;
         el.value = '';
         el.disabled = true;
         _sending = true;
@@ -5157,6 +5478,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               text,
+              originId,
               ...(requestSessionId ? { sessionId: requestSessionId } : {}),
             }),
           });
@@ -5175,7 +5497,10 @@
             if (d.record && d.record.turn != null) _renderedTurns.add(d.record.turn); // 手动发的记下 turn，避免 pollChat 重复渲染
             renderXray(d.record);
             const nextMemory = d.nextMemory || d.record.nextMemory;
-            appendNextMemoryTurn(nextMemory || { state: 'unavailable' });
+            appendNextMemoryTurn(nextMemory || { state: 'unavailable' }, {
+              sessionId: responseSessionId,
+              turn: d.record?.turn,
+            });
             loadNextWorld();
             if (d.logFile) $('logfile').textContent = d.logFile;
             loadSessions(); // 发出首句后本会话才进入列表；刷新轮数与高亮状态
@@ -5197,8 +5522,7 @@
         try {
           const r = await fetch('/api/reset', { method: 'POST' }).then((x) => x.json());
           _renderedTurns.clear();
-          _nextPending.clear();
-          renderNextPending();
+          clearNextOperationUI();
           _currentSessionId = r.sessionId || null; // 更新当前会话，供模式切换时判断会话归属
           _beforeDevSession = null; // 用户明确新建会话后，不再恢复之前记录的用户会话
           $('chat').innerHTML = '';
@@ -5219,7 +5543,7 @@
           okText: '清空聊天记录',
           okKind: 'danger',
           bodyHtml:
-            '这会清空左侧的<b>全部聊天会话</b>和当前聊天窗口，并建立一段空白会话。<br><br><b>正式记忆不会删除</b>：已经接受的 2.0 世界、1.0 兼容记忆和配置都会保留。',
+            '这会清空左侧的<b>全部聊天会话</b>和当前聊天窗口，并建立一段空白会话。<br><br><b>正式记忆不会删除</b>：已验证形成的 2.0 个人记忆世界、1.0 兼容记忆和配置都会保留。',
           warnLine: '旧聊天日志会在本机改名归档，不再参与聊天上下文。',
           onOk: doClearChatHistory,
         });
@@ -5236,20 +5560,19 @@
             return;
           }
           _renderedTurns.clear();
-          _nextPending.clear();
           _nextRuns.clear();
-          renderNextPending();
+          clearNextOperationUI();
           _currentSessionId = result.currentId || null;
           _beforeDevSession = null;
           localStorage.removeItem(DEV_SESSION_KEY);
           if ($('chat')) $('chat').innerHTML = '';
           if ($('xray'))
             $('xray').innerHTML =
-              '<div class="empty" style="padding:8px 0;">聊天记录已清空；正式记忆保持不变。</div>';
+              '<div class="empty" style="padding:8px 0;">聊天记录已清空；个人记忆世界保持不变。</div>';
           if (window._mode !== 'user') applyMode('user');
           await loadSessions();
           await loadNextWorld();
-          toast(`已清空 ${result.archivedCount || 0} 段聊天记录；正式记忆保持不变`, 'ok', 4500);
+          toast(`已清空 ${result.archivedCount || 0} 段聊天记录；个人记忆世界保持不变`, 'ok', 4500);
         } catch (error) {
           toast('清空聊天记录失败：' + String(error), 'danger');
         } finally {
@@ -5343,8 +5666,7 @@
             return;
           }
           _renderedTurns.clear();
-          _nextPending.clear();
-          renderNextPending();
+          clearNextOperationUI();
           _currentSessionId = d.sessionId || id;
           $('chat').innerHTML = '';
           if ($('xray'))
@@ -5355,7 +5677,8 @@
             if (t.turn != null) _renderedTurns.add(t.turn); // 记下已渲染 turn，避免 pollChat 重复渲染
             addMsg('user', t.userInput);
             if (t.reply) addMsg('dla', t.reply);
-            if (t.nextMemory) appendNextMemoryTurn(t.nextMemory);
+            if (t.nextMemory)
+              appendNextMemoryTurn(t.nextMemory, { sessionId: _currentSessionId, turn: t.turn });
           }
           loadNextWorld();
           if (toUser) applyMode('user'); // 回到聊天正门
@@ -5429,7 +5752,7 @@
       }
 
       // ── 1.0 兼容数据恢复出厂（二次确认 → POST /api/factory-reset → 刷新各视图）──
-      // 跟 resetCfg（恢复默认参数、只还原旋钮）是两个独立动作。它不包含正式 2.0 记忆。
+      // 跟 resetCfg（恢复默认参数、只还原旋钮）是两个独立动作。它不包含 2.0 个人记忆世界。
       function factoryReset() {
         showConfirm({
           icon: '🗑',
@@ -5437,7 +5760,7 @@
           okText: '我确定，永久删除',
           okKind: 'danger',
           bodyHtml:
-            '这会永久删除 1.0 兼容来源中的<b>原话、整理片段与旧版理解</b>。<br><br><b>不含正式记忆</b>：已接受的 2.0 世界不会被这个入口删除。参数旋钮也不受影响（那是「恢复默认参数」管的）。',
+            '这会永久删除 1.0 兼容来源中的<b>原话、整理片段与旧版理解</b>。<br><br><b>不含个人记忆世界</b>：已验证形成的 2.0 世界不会被这个入口删除。参数旋钮也不受影响（那是「恢复默认参数」管的）。',
           warnLine: '删除 1.0 兼容数据后无法恢复，请确认这不是误操作。',
           onOk: doFactoryReset,
         });
@@ -7153,11 +7476,14 @@
           ).then((x) => x.json());
           if (d.sessionId !== sessionId || _currentSessionId !== sessionId) return;
           for (const t of d.turns || []) {
-            if (_renderedTurns.has(t.turn)) continue;
-            _renderedTurns.add(t.turn);
-            addMsg('user', t.userInput);
-            if (t.reply) addMsg('dla', t.reply);
-            if (t.nextMemory) appendNextMemoryTurn(t.nextMemory);
+            // _renderedTurns owns only chat text. Revisit a known turn's
+            // operation marker so the same card can advance in place.
+            if (!_renderedTurns.has(t.turn)) {
+              _renderedTurns.add(t.turn);
+              addMsg('user', t.userInput);
+              if (t.reply) addMsg('dla', t.reply);
+            }
+            if (t.nextMemory) appendNextMemoryTurn(t.nextMemory, { sessionId, turn: t.turn });
           }
         } catch (e) {}
       }

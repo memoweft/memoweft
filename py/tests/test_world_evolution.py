@@ -7,7 +7,8 @@ from hashlib import sha256
 import pytest
 
 from memoweft.confidence import compute_confidence, derive_cred_status
-from memoweft.types import ConfidenceInputs, EvidenceLink
+from memoweft.types import ConfidenceInputs, ContentType, EvidenceLink, FormedBy
+from typing import cast
 from memoweft.world import (
     AcceptedEvolutionStep,
     ClaimSpan,
@@ -21,6 +22,7 @@ from memoweft.world import (
     PersonalWorld,
     Perspective,
     Relationship,
+    StructuredClaim,
     WorldCognition,
     WorldDelta,
     WorldEvent,
@@ -43,12 +45,17 @@ RELATIONSHIP_ID = "relationship:yun-friend-x"
 
 def _score(content_type: str, formed_by: str, support: int, contradict: int) -> tuple[int, str]:
     confidence = compute_confidence(
-        ConfidenceInputs(content_type, formed_by, support, contradict)  # type: ignore[arg-type]
+        ConfidenceInputs(
+            cast(ContentType, content_type),
+            cast(FormedBy, formed_by),
+            support,
+            contradict,
+        )
     )
     return confidence, derive_cred_status(
         confidence,
         contradict,
-        content_type,  # type: ignore[arg-type]
+        cast(ContentType, content_type),
         support_count=support,
     )
 
@@ -354,6 +361,54 @@ def test_contradiction_updates_same_cognition_and_recomputes_confidence() -> Non
     assert preview.cognitions[prior.id] == updated
     assert updated.confidence < prior.confidence
     assert superseding_cognition_pairs(plan) == ()
+
+
+def test_cognition_evidence_change_cannot_rewrite_the_structured_proposition() -> None:
+    graph = _relationship_graph()
+    prior = replace(
+        _cognition(
+            "cog:structured-evaluation",
+            MemoryTarget("relationship", RELATIONSHIP_ID),
+            "The owner considers this relationship reliable.",
+            "e:evaluation",
+        ),
+        structured_claim=StructuredClaim(
+            "evaluation",
+            value="reliable",
+            polarity="assert",
+            epistemic_status="asserted",
+        ),
+    )
+    graph.add_cognition(prior)
+    prior_claim = prior.structured_claim
+    assert prior_claim is not None
+    confidence, status = _score(prior.content_type, prior.formed_by, 1, 1)
+    rewritten = replace(
+        prior,
+        confidence=confidence,
+        cred_status=status,  # type: ignore[arg-type]
+        sources=prior.sources + (EvidenceLink("e:opposes", "contradict"),),
+        structured_claim=replace(prior_claim, value="unreliable"),
+    )
+    plan = WorldEvolutionPlan(
+        WorldDelta(WORLD_ID, ("e:opposes",)),
+        (
+            EvolutionStep(
+                "evolution:structured-evaluation:contradiction",
+                "cognition_change",
+                "contradicts",
+                prior.target,
+                (prior.id,),
+                (prior.id,),
+                "2026-06-05T09:00:00+08:00",
+                ("e:opposes",),
+            ),
+        ),
+        cognition_updates=(rewritten,),
+    )
+
+    with pytest.raises(WorldEvolutionValidationError, match="version_shape.mismatch"):
+        plan.apply_to(graph, {"e:evaluation", "e:opposes"})
 
 
 def test_perspective_disagreement_keeps_both_cognitions_current() -> None:

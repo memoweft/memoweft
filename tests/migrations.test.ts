@@ -85,11 +85,11 @@ test('降级防护：库版本高于本代码支持的最新版 → 拒绝打开
   const { dir, cleanup } = tempDir();
   try {
     const path = join(dir, 'future.db');
-    // 造"未来版本建的库"：先 openStores 建个【有效 schema】的正常库，再把 user_version 手动顶到远高于 latest。
+    // 造 v7 的"未来版本库"：先建有效 schema，再把 user_version 手动升到当前 v6 之后。
     openStores(path).close();
     {
       const db = new DatabaseSync(path);
-      db.exec(`PRAGMA user_version = ${LATEST_SCHEMA_VERSION + 6}`);
+      db.exec('PRAGMA user_version = 7');
       db.close();
     }
     assert.throws(() => openStores(path), /高于当前 MemoWeft|newer/i, '旧代码打开未来库应抛错');
@@ -173,7 +173,7 @@ test('v2：rc.1 撤回台账对应的 cognition 与关联行会整体删除，�
     const db = new DatabaseSync(path);
     try {
       const result = runMigrations(db, { dbPath: path, fresh: false });
-      assert.deepEqual(result.applied, [2, 3, 4]);
+      assert.deepEqual(result.applied, [2, 3, 4, 5, 6]);
       assert.equal(result.to, LATEST_SCHEMA_VERSION);
       assert.ok(result.backupPath && existsSync(result.backupPath), 'v2 数据迁移前留下备份');
       assert.equal(
@@ -225,12 +225,14 @@ test('v3：现有 v2 主库新增 2.0 world/identity 表，1.0 数据原样保�
 
     const upgraded = openStores(path);
     try {
-      assert.equal(uv(upgraded.db), 4);
+      assert.equal(uv(upgraded.db), 6);
       assert.equal(upgraded.evidenceStore.get(evidence.id)?.rawContent, '保留的 1.0 数据');
       const tables = new Set(
         (
           upgraded.db
-            .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+            .prepare(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+            )
             .all() as Array<{ name: string }>
         ).map((row) => row.name),
       );
@@ -260,7 +262,7 @@ test('v3 world 数据经 v4 演化合同 stamp 后逐字保留', () => {
       "INSERT INTO evidence_ledger(id, content, payload_json) VALUES ('e:kept', 'kept evidence', '{\"id\":\"e:kept\"}')",
     );
     seed.db.exec(
-      "INSERT INTO proposals(id, kind, base_revision, result_hash, payload_json, status) " +
+      'INSERT INTO proposals(id, kind, base_revision, result_hash, payload_json, status) ' +
         "VALUES ('review:kept', 'addition', 0, 'sha256:kept', '{\"delta\":{},\"evidence\":[]}', 'reject')",
     );
     const before = seed.db
@@ -273,7 +275,7 @@ test('v3 world 数据经 v4 演化合同 stamp 后逐字保留', () => {
 
     const upgraded = openStores(path);
     try {
-      assert.equal(uv(upgraded.db), 4);
+      assert.equal(uv(upgraded.db), 6);
       const after = upgraded.db
         .prepare(
           'SELECT id, kind, base_revision, result_hash, payload_json, review_payload_json, status FROM proposals',
@@ -290,6 +292,119 @@ test('v3 world 数据经 v4 演化合同 stamp 后逐字保留', () => {
       );
     } finally {
       upgraded.close();
+    }
+  } finally {
+    cleanup();
+  }
+});
+
+test('v4 product_bundle 数据经 v5 successor 演化合同 stamp 后逐字保留', () => {
+  const { dir, cleanup } = tempDir();
+  try {
+    const path = join(dir, 'v4-product-bundle.db');
+    const seed = openStores(path);
+    seed.db.exec(
+      "INSERT INTO evidence_ledger(id, content, payload_json) VALUES ('e:v5-kept', 'kept evidence', '{\"id\":\"e:v5-kept\"}')",
+    );
+    seed.db.exec(
+      'INSERT INTO proposals(id, kind, base_revision, result_hash, payload_json, status) ' +
+        "VALUES ('review:v5-kept', 'product_bundle', 7, 'sha256:v5-kept', '{\"productBundle\":{\"relationshipEvolutionSteps\":[{\"kind\":\"successor\"}]}}', 'accept')",
+    );
+    const before = seed.db
+      .prepare(
+        'SELECT id, kind, base_revision, result_hash, payload_json, review_payload_json, status FROM proposals',
+      )
+      .get();
+    seed.db.exec('PRAGMA user_version = 4');
+    seed.close();
+
+    const upgraded = openStores(path);
+    try {
+      assert.equal(uv(upgraded.db), 6);
+      assert.deepEqual(
+        upgraded.db
+          .prepare(
+            'SELECT id, kind, base_revision, result_hash, payload_json, review_payload_json, status FROM proposals',
+          )
+          .get(),
+        before,
+      );
+      assert.deepEqual(
+        {
+          ...(upgraded.db
+            .prepare('SELECT id, content, payload_json FROM evidence_ledger')
+            .get() as Record<string, unknown>),
+        },
+        { id: 'e:v5-kept', content: 'kept evidence', payload_json: '{"id":"e:v5-kept"}' },
+      );
+    } finally {
+      upgraded.close();
+    }
+  } finally {
+    cleanup();
+  }
+});
+
+test('v5 product_bundle cognition Evidence update 数据经 v6 合同 stamp 后 rows/bytes 不变', () => {
+  const { dir, cleanup } = tempDir();
+  try {
+    const path = join(dir, 'v5-cognition-evidence-update.db');
+    const evidencePayload = '{"id":"e:v6-kept","metadata":{"occurred_at":"2026-08-13T12:00:00Z"}}';
+    const proposalPayload =
+      '{"cognition_updates":[{"id":"cog:v6-kept","sources":[' +
+      '{"evidence_id":"e:v6-kept","relation":"support"}]}],' +
+      '"delta":{"source_evidence_ids":["e:v6-kept"]},' +
+      '"evolution_steps":[{"kind":"cognition_change","relation":"reaffirms"}]}';
+    const reviewPayload = '{"display":"再次确认","confidence_before":600,"confidence_after":640}';
+    const seed = openStores(path);
+    seed.db
+      .prepare('INSERT INTO evidence_ledger(id, content, payload_json) VALUES (?, ?, ?)')
+      .run('e:v6-kept', '李华很可靠。', evidencePayload);
+    seed.db
+      .prepare(
+        'INSERT INTO proposals(id, kind, base_revision, result_hash, payload_json, ' +
+          "review_payload_json, status) VALUES (?, 'product_bundle', 8, ?, ?, ?, 'accept')",
+      )
+      .run('review:v6-kept', 'sha256:v6-kept', proposalPayload, reviewPayload);
+    const evidenceSql =
+      'SELECT id, content, payload_json, typeof(payload_json) AS payload_type, ' +
+      'length(CAST(payload_json AS BLOB)) AS payload_bytes, ' +
+      "hex(CAST(payload_json AS BLOB)) AS payload_hex FROM evidence_ledger WHERE id = 'e:v6-kept'";
+    const proposalSql =
+      'SELECT id, kind, base_revision, result_hash, payload_json, review_payload_json, status, ' +
+      'typeof(payload_json) AS payload_type, length(CAST(payload_json AS BLOB)) AS payload_bytes, ' +
+      'hex(CAST(payload_json AS BLOB)) AS payload_hex, ' +
+      'hex(CAST(review_payload_json AS BLOB)) AS review_payload_hex ' +
+      "FROM proposals WHERE id = 'review:v6-kept'";
+    const before = {
+      evidence: { ...(seed.db.prepare(evidenceSql).get() as Record<string, unknown>) },
+      proposal: { ...(seed.db.prepare(proposalSql).get() as Record<string, unknown>) },
+      schema: schemaSignature(seed.db),
+    };
+    seed.db.exec('PRAGMA user_version = 5');
+    seed.close();
+
+    const db = new DatabaseSync(path);
+    try {
+      const result = runMigrations(db, { dbPath: path, fresh: false });
+      assert.equal(
+        MIGRATIONS.find((migration) => migration.version === 6)?.name,
+        'product-bundle-cognition-evidence-update-payload-contract',
+      );
+      assert.deepEqual(result.applied, [6]);
+      assert.equal(result.from, 5);
+      assert.equal(result.to, 6);
+      assert.equal(uv(db), 6);
+      assert.deepEqual(
+        {
+          evidence: { ...(db.prepare(evidenceSql).get() as Record<string, unknown>) },
+          proposal: { ...(db.prepare(proposalSql).get() as Record<string, unknown>) },
+          schema: schemaSignature(db),
+        },
+        before,
+      );
+    } finally {
+      db.close();
     }
   } finally {
     cleanup();
@@ -385,7 +500,8 @@ test('迁移抛错 → 整段回滚，版本号不变、库不留半迁移', () 
     const db = new DatabaseSync(path);
     try {
       assert.throws(
-        () => runMigrations(db, { dbPath: path, fresh: false, migrations: [...MIGRATIONS, badNext] }),
+        () =>
+          runMigrations(db, { dbPath: path, fresh: false, migrations: [...MIGRATIONS, badNext] }),
         /boom/,
       );
       assert.equal(uv(db), LATEST_SCHEMA_VERSION, '版本号仍是当前版本（未升）');

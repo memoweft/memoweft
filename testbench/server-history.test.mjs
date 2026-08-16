@@ -38,16 +38,86 @@ test('large concurrent chat-history responses stay bounded and an aborted client
       status: 'ok',
       memoryProposal: {
         id: `memory-run-${index + 1}`,
-        state: 'candidate-ready',
+        state: 'applied',
         resultHash: `sha256:result-${index + 1}`,
         candidateMemory,
         evidence: [{ evidenceId: `evidence-${index + 1}`, text: '她很温柔' }],
+        cognitionEvidenceChanges: [
+          {
+            cognitionId: 'cognition:gentle',
+            relation: 'contradicts',
+            evidenceId: `evidence-${index + 1}`,
+            before: {
+              id: 'cognition:gentle',
+              content: '她很温柔',
+              confidence: 600,
+              cred_status: 'limited',
+              sources: [{ evidence_id: 'evidence:prior', relation: 'support' }],
+            },
+            after: {
+              id: 'cognition:gentle',
+              content: '她很温柔',
+              confidence: 480,
+              cred_status: 'conflicted',
+              sources: [
+                { evidence_id: 'evidence:prior', relation: 'support' },
+                { evidence_id: `evidence-${index + 1}`, relation: 'contradict' },
+              ],
+            },
+          },
+        ],
+        cognitionReplacements: [
+          {
+            priorCognitionId: 'cognition:evaluation:prior',
+            successorCognitionId: 'cognition:evaluation:replacement',
+            relation: 'corrects',
+            evidenceId: `evidence-${index + 1}`,
+            before: {
+              id: 'cognition:evaluation:prior',
+              world_id: 'world:owner',
+              target: { kind: 'relationship', id: 'relationship:lihua-xinggang' },
+              content: '我觉得这段支持很可靠',
+              content_type: 'fact',
+              formed_by: 'stated',
+              confidence: 760,
+              cred_status: 'limited',
+              perspective: { kind: 'entity', holder_entity_ids: ['entity:owner'] },
+              sources: [{ evidence_id: 'evidence:prior', relation: 'support' }],
+              structured_claim: {
+                statement_kind: 'evaluation',
+                predicate: null,
+                value: '很可靠',
+                polarity: 'assert',
+                epistemic_status: 'asserted',
+              },
+            },
+            after: {
+              id: 'cognition:evaluation:replacement',
+              world_id: 'world:owner',
+              target: { kind: 'relationship', id: 'relationship:lihua-xinggang' },
+              content: '我觉得这段支持不可靠',
+              content_type: 'fact',
+              formed_by: 'stated',
+              confidence: 760,
+              cred_status: 'limited',
+              perspective: { kind: 'entity', holder_entity_ids: ['entity:owner'] },
+              sources: [{ evidence_id: `evidence-${index + 1}`, relation: 'support' }],
+              structured_claim: {
+                statement_kind: 'evaluation',
+                predicate: null,
+                value: '不可靠',
+                polarity: 'assert',
+                epistemic_status: 'asserted',
+              },
+            },
+          },
+        ],
       },
-      pipeline: [{ name: 'Review', state: 'awaiting-owner', detail: '等待 Owner 决定。' }],
+      pipeline: [{ name: 'Apply', state: 'applied', detail: '已自动写入当前 World。' }],
       world: { memory: { cognitions: [{ content: worldMarker }] } },
       run: {
         id: `memory-run-${index + 1}`,
-        state: 'candidate-ready',
+        state: 'applied',
         resultHash: `sha256:result-${index + 1}`,
         candidateMemory,
         world: { memory: { cognitions: [{ content: worldMarker }] } },
@@ -121,6 +191,8 @@ test('large concurrent chat-history responses stay bounded and an aborted client
       candidateContent: summary.memoryProposal.candidateMemory.cognitions[0].content,
       runId: summary.memoryProposal.id,
       resultHash: summary.memoryProposal.resultHash,
+      cognitionEvidenceChange: summary.memoryProposal.cognitionEvidenceChanges?.[0],
+      cognitionReplacement: summary.memoryProposal.cognitionReplacements?.[0],
       turnCount: payload.turns.length,
     }));
     process.exit(0);
@@ -153,5 +225,71 @@ test('large concurrent chat-history responses stay bounded and an aborted client
   assert.equal(result.candidateContent, '她很温柔');
   assert.equal(result.runId, 'memory-run-1');
   assert.equal(result.resultHash, 'sha256:result-1');
+  assert.deepEqual(result.cognitionEvidenceChange, {
+    cognitionId: 'cognition:gentle',
+    relation: 'contradicts',
+    evidenceId: 'evidence-1',
+    before: {
+      id: 'cognition:gentle',
+      content: '她很温柔',
+      confidence: 600,
+      cred_status: 'limited',
+      sources: [{ evidence_id: 'evidence:prior', relation: 'support' }],
+    },
+    after: {
+      id: 'cognition:gentle',
+      content: '她很温柔',
+      confidence: 480,
+      cred_status: 'conflicted',
+      sources: [
+        { evidence_id: 'evidence:prior', relation: 'support' },
+        { evidence_id: 'evidence-1', relation: 'contradict' },
+      ],
+    },
+  });
+  assert.deepEqual(result.cognitionReplacement, {
+    priorCognitionId: 'cognition:evaluation:prior',
+    successorCognitionId: 'cognition:evaluation:replacement',
+    relation: 'corrects',
+    evidenceId: 'evidence-1',
+    before: {
+      id: 'cognition:evaluation:prior',
+      world_id: 'world:owner',
+      target: { kind: 'relationship', id: 'relationship:lihua-xinggang' },
+      content: '我觉得这段支持很可靠',
+      content_type: 'fact',
+      formed_by: 'stated',
+      confidence: 760,
+      cred_status: 'limited',
+      perspective: { kind: 'entity', holder_entity_ids: ['entity:owner'] },
+      sources: [{ evidence_id: 'evidence:prior', relation: 'support' }],
+      structured_claim: {
+        statement_kind: 'evaluation',
+        predicate: null,
+        value: '很可靠',
+        polarity: 'assert',
+        epistemic_status: 'asserted',
+      },
+    },
+    after: {
+      id: 'cognition:evaluation:replacement',
+      world_id: 'world:owner',
+      target: { kind: 'relationship', id: 'relationship:lihua-xinggang' },
+      content: '我觉得这段支持不可靠',
+      content_type: 'fact',
+      formed_by: 'stated',
+      confidence: 760,
+      cred_status: 'limited',
+      perspective: { kind: 'entity', holder_entity_ids: ['entity:owner'] },
+      sources: [{ evidence_id: 'evidence-1', relation: 'support' }],
+      structured_claim: {
+        statement_kind: 'evaluation',
+        predicate: null,
+        value: '不可靠',
+        polarity: 'assert',
+        epistemic_status: 'asserted',
+      },
+    },
+  });
   assert.equal(result.turnCount, 5);
 });

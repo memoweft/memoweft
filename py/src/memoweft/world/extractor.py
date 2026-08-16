@@ -1227,7 +1227,9 @@ def _candidate_bound_third_party_entity_id(
     This does not accept identity or mutate the base.  It only recognizes that
     one proposed person is uniquely linked to the Owner and that an exact
     carried user claim about the unresolved pronoun targets that same person.
-    The candidate remains subject to the ordinary Owner review.
+    The candidate remains subject to the ordinary program validation and
+    transaction boundary.  A diagnostic Review may display it, but is not its
+    product write authority.
     """
 
     if (
@@ -1501,7 +1503,7 @@ def _minimalize_mixed_subject_naming_candidate(
     narrowly recognized mixed-subject shape, trusted code may remove those
     optional semantic-role objects.  It never invents content, a person, or a
     relationship: every retained record already exists in the decoded candidate
-    and remains pending Owner review.
+    and remains subject to program validation before automatic Apply.
     """
 
     if (

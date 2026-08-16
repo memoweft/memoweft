@@ -11,6 +11,9 @@ dependencies = [
     "httpx>=0.27", # OpenAI 兼容端点 HTTP 客户端(同步 httpx.Client;不引 SDK,同 TS 精神)
 ]
 
+[project.entry-points."hermes_agent.memory_providers"]
+memoweft = "memoweft.integrations.hermes.entrypoint:register"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
@@ -41,4 +44,4 @@ typeCheckingMode = "strict"
 [tool.mypy]
 python_version = "3.11"
 strict = true
-mypy_path = ["src", "../next-lab"]
+mypy_path = ["src"]

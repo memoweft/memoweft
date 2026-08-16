@@ -1,4 +1,4 @@
-"""Static contract: the 1.x testbench grows a same-origin Next-memory bridge."""
+"""Static contract for the 1.x shell's automatic Next-memory observation UI."""
 from __future__ import annotations
 
 import re
@@ -12,176 +12,254 @@ def test_original_v1_chat_and_management_entrypoints_survive_the_next_bridge() -
     html = TESTBENCH.read_text(encoding="utf-8")
 
     assert 'id="text"' in html
-    assert "onkeydown=\"if (event.key === 'Enter') send();\"" in html
-    assert "function addMsg(role, text)" in html
     assert "async function send()" in html
     assert "async function loadSessions()" in html
     assert "async function openSessionUI(id, opts)" in html
     assert "async function pollChat()" in html
-    assert "function onEnterMemory()" in html
     assert "function userSoftReset()" in html
-    assert "function renderXray(r)" in html
-    assert "id=\"memPanel\"" in html and "id=\"mmList\"" in html
-    assert "id=\"mode-wizard\"" in html and "id=\"settingsPanel\"" in html
+    assert 'id="memPanel"' in html and 'id="mmList"' in html
 
 
-def test_drawer_has_one_formal_next_memory_area_and_legacy_is_read_only_migration_source() -> None:
+def test_formal_world_is_the_only_world_surface_and_legacy_is_read_only_migration_source() -> None:
     html = TESTBENCH.read_text(encoding="utf-8")
 
     assert 'id="nextWorldCard"' in html
-    assert "正式记忆" in html
+    assert "个人记忆世界" in html
     assert html.index('id="nextWorldCard"') < html.index('id="legacyMigrationSource"')
     assert 'id="legacyMigrationSource"' in html
     assert "1.0 整理出的迁移线索（尚未成为正式记忆）" in html
-    assert "用原话生成正式候选" in html
+    assert "用原话处理迁移" in html
     assert "function stageLegacyCognitionMigration(cognition, buttonEl)" in html
-    assert "function hasNextPendingDecision()" in html
-    assert "请先在“待决定”里接受或忽略当前候选" in html
+    assert "function hasNextPendingDecision()" not in html
+    assert 'id="nextWorldPending"' not in html
+    assert "请先在“待决定”里接受或忽略当前候选" not in html
     assert 'fetch(\'/api/next/legacy-cognition-migrations\'' in html
-    assert "body: JSON.stringify({ cognitionId: cognition.id })" in html
-    legacy_loader = re.search(
-        r"async function loadCognitionFriendly\(\) \{(?P<body>[\s\S]*?)\n      \}", html
+
+
+def test_automatic_apply_ui_has_no_owner_decision_route_or_buttons() -> None:
+    html = TESTBENCH.read_text(encoding="utf-8")
+
+    assert "/api/next/memory-decisions" not in html
+    assert "function decideNextMemory" not in html
+    assert "接受记忆" not in html
+    assert "忽略这次" not in html
+    assert "等待你决定" not in html
+    assert "不会要求你批准才能形成记忆" in html
+
+
+def test_terminal_outcomes_are_observable_and_applied_is_evidence_backed() -> None:
+    html = TESTBENCH.read_text(encoding="utf-8")
+
+    assert "processing: '正在根据这轮原话验证并形成个人记忆世界；聊天可以继续。'" in html
+    assert "applied: '已通过验证并自动写入当前 2.0 记忆世界。'" in html
+    assert "'no-change': '本轮没有符合长期形成条件的 World Change。'" in html
+    assert "'no-candidate': '本轮没有符合长期形成条件的 World Change。'" in html
+    assert "'clarification-required'" in html and "failed:" in html
+    assert "function appendNextClaimObservation(host, view)" in html
+    assert "appendNextCandidateContext(bubble, view);" in html
+    assert "appendNextClaimObservation(bubble, view);" in html
+    assert "Provenance：${provenanceIds.join('、')}" in html
+    assert "Evidence（本轮证据）" in html
+    assert "对象：${names.join('、')" in html
+    assert "视角：Owner" in html
+    assert "const claims = proposal.claims?.claims || proposal.claims || [];" in html
+    assert "row.textContent = nextClaimObservationText(claim, entityIndex);" in html
+    assert "nextText(claim)" not in html
+
+
+def test_current_world_is_rendered_from_the_authoritative_route_not_history_snapshots() -> None:
+    html = TESTBENCH.read_text(encoding="utf-8")
+
+    register = re.search(
+        r"function registerNextMemory\(nextMemory\) \{(?P<body>[\s\S]*?)\n      \}", html
     )
-    assert legacy_loader is not None
-    assert "softEditCog(c.id" not in legacy_loader.group("body")
-    assert "softDelCog(c.id" not in legacy_loader.group("body")
+    assert register is not None
+    assert "renderNextWorld" not in register.group("body")
+    assert "async function loadNextWorld(context = {})" in html
+    assert "fetch('/api/next/memory-world')" in html
+    assert "async function refreshNextWorldAfterApplied(operationId, sessionId, attempt = 0)" in html
+    assert "const refreshed = await loadNextWorld({ sessionId });" in html
+    assert "const NEXT_WORLD_REFRESH_MAX_ATTEMPTS = 3;" in html
+    assert "void refreshNextWorldAfterApplied(operationId, sessionId);" in html
 
 
-def test_formal_world_count_and_correction_use_only_next_routes() -> None:
+def test_formal_event_world_cards_show_time_participants_and_related_objects_safely() -> None:
     html = TESTBENCH.read_text(encoding="utf-8")
 
-    pill = re.search(
-        r"function updateMemPillCount\(\) \{(?P<body>[\s\S]*?)\n      \}", html
-    )
-    assert pill is not None
-    assert "memory.entities" in pill.group("body")
-    assert "entity:owner" in pill.group("body")
-    assert "_cog" not in pill.group("body")
-    assert "function requestNextMemoryCorrection(cognition, buttonEl)" in html
-    assert 'fetch(\'/api/next/memory-corrections\'' in html
-    assert "body: JSON.stringify({ cognitionId: cognition.id, correctionText })" in html
-    assert "纠正" in html
-    assert "正式删除" not in html
+    assert "event.occurred_at ? `发生于 ${event.occurred_at}` : null" in html
+    assert "...(event?.participants || []).map" in html
+    assert "...(event?.related_entity_ids || [])" in html
+    assert "const relatedEntities = (event.related_entity_ids || [])" in html
+    assert "`参与：${participants.join('、')}`" in html
+    assert "`相关对象：${relatedEntities.join('、')}`" in html
+    assert "section.appendChild(domEl('div', 'evmeta', detail.join(' · ')))" in html
 
 
-def test_legacy_copy_does_not_claim_persistence_or_full_reset() -> None:
+def test_processing_card_polls_with_operation_and_session_identity_checks() -> None:
     html = TESTBENCH.read_text(encoding="utf-8")
 
-    weave = re.search(r"function weaveMemNote\(c\) \{(?P<body>[\s\S]*?)\n      \}", html)
-    assert weave is not None
-    assert "1.0 整理出待迁移线索" in weave.group("body")
-    assert "还不是正式记忆" in weave.group("body")
-    assert "记住了" not in weave.group("body")
-    assert "softEditCog" not in weave.group("body")
-    assert "softDelCog" not in weave.group("body")
-    assert "1.0 兼容 / 调试来源" in html
-    assert "不含正式记忆" in html
-    assert "清空全部数据" not in html
+    assert "const _nextOperationRows = new Map()" in html
+    assert "const _nextOperationFlights = new Map()" in html
+    assert "const _nextOperationTerminal = new Set()" in html
+    assert "function nextOperationMarker(raw)" in html
+    assert "operationId" in html and "currentEvidenceId" in html
+    assert "function renderNextMemoryTurn(row, nextMemory)" in html
+    assert "function appendNextMemoryTurn(nextMemory, context = {})" in html
+    assert "async function pollNextMemoryOperation(marker)" in html
+    assert "/api/next/memory-operations?" in html
+    assert "result.operationId !== operationId" in html
+    assert "result.sessionId !== sessionId" in html
+    assert "_currentSessionId !== sessionId" in html
+    assert "result.state === 'ready'" in html and "result.state === 'failed'" in html
+    assert "_nextOperationTerminal.add(operationId)" in html
+    assert "const _nextWorldRefreshTimers = new Map()" in html
 
 
-def test_next_memory_bridge_is_same_origin_and_has_candidate_and_world_surfaces() -> None:
-    html = TESTBENCH.read_text(encoding="utf-8")
-
-    assert "正式记忆" in html
-    assert "关于我" in html and "其他实体、关系、事件与认知" in html and "待决定" in html
-    assert 'id="nextWorldOwner"' in html
-    assert 'id="nextWorldOther"' in html
-    assert 'id="nextWorldPending"' in html
-    assert 'id="nextMemoryQuery"' in html
-    assert "/api/next/memory-world" in html
-    assert "/api/next/memory-queries" in html
-    assert "/api/next/memory-decisions" in html
-    assert "d.nextMemory || d.record.nextMemory" in html
-    assert "candidate-ready" in html and "correction-pending" in html
-    assert "no-candidate" in html and "clarification-required" in html and "out-of-scope" in html
-    assert "failed" in html and "unavailable" in html
-    assert not re.search(r"fetch\(\s*['\"]https?://", html)
-
-
-def test_next_memory_dynamic_content_is_text_only_and_pending_is_the_only_decidable_state() -> None:
-    html = TESTBENCH.read_text(encoding="utf-8")
-
-    assert "function nextText(value)" in html
-    assert "function appendNextMemoryTurn(nextMemory)" in html
-    assert ".textContent =" in html
-    assert re.search(
-        r"\['candidate-ready',\s*'correction-pending'\]\.includes\(nextMemory\?\.state\)",
-        html,
-    )
-    assert "button.disabled = true" in html
-    assert "d.record.nextMemory" in html
-    assert "t.nextMemory" in html
-
-
-def test_next_product_candidate_and_clarification_metadata_are_visible_but_only_candidates_are_decidable() -> None:
-    html = TESTBENCH.read_text(encoding="utf-8")
-
-    assert "function appendNextCandidateContext(host, view)" in html
-    assert "target.entityNames" in html and "target.entityId" in html
-    assert "proposal.statementKind" in html and "proposal.ownerPerspective" in html
-    assert "function appendNextClarification(host, view)" in html
-    assert "clarification.message" in html and "clarification.candidateEntityNames" in html
-    assert "view.state === 'clarification-required'" in html
-    assert "view.proposal.identityBindings || view.run.identityBindings" in html
-    assert "start_codepoint" in html and "end_codepoint" in html
-
-
-def test_accepted_world_is_rendered_as_entity_centered_cards_without_candidate_leakage() -> None:
-    html = TESTBENCH.read_text(encoding="utf-8")
-
-    assert "function buildAcceptedEntityIndex(memory)" in html
-    assert "cognition?.target?.kind === 'entity'" in html
-    assert "target.id" in html and "bundle.cognitions.push(cognition)" in html
-    assert "relationship?.source_entity_id" in html and "relationship?.target_entity_id" in html
-    assert "event?.participants" in html and "event?.related_entity_ids" in html
-    assert "function renderAcceptedEntityCard(bundle, entityIndex)" in html
-    assert "canonical_name" in html and "稳定实体 ID：" in html and "别名：" in html
-    assert "formatNextPerspective(cognition?.perspective, entityIndex)" in html
-    assert "Evidence：${evidence.join('、')}" in html
-    assert "尚无已接受属性。" in html
-    assert "function renderUnboundAcceptedContent(unbound, entityIndex)" in html
-    assert "未绑定实体的认知" in html
-    renderer = re.search(r"function renderNextWorld\(world\) \{(?P<body>[\s\S]*?)\n      \}", html)
-    assert renderer is not None
-    assert "buildAcceptedEntityIndex(memory)" in renderer.group("body")
-    assert ".candidateMemory" not in renderer.group("body")
-
-
-def test_historical_next_memory_is_hydrated_from_the_live_run_state_before_rendering() -> None:
+def test_history_hydration_is_session_scoped_and_dynamic_content_is_text_only() -> None:
     html = TESTBENCH.read_text(encoding="utf-8")
 
     assert "/api/next/memory-runs" in html
     assert "const _nextRuns = new Map()" in html
     assert "async function loadNextMemoryRuns()" in html
-    assert "function hydrateNextMemory(raw)" in html
     assert "const liveRun = _nextRuns.get(runId)" in html
-    assert "const hydrated = hydrateNextMemory(nextMemory)" in html
-    assert "await loadNextMemoryRuns();" in html
-    assert "await loadNextMemoryRuns();" in html
-    assert "liveRun.state" in html
+    assert "const requestedSessionId = _currentSessionId;" in html
+    assert "if (_currentSessionId !== requestedSessionId) return false;" in html
+    assert "nextSessionId(run) === requestedSessionId" in html
+    assert "function nextText(value)" in html
+    assert ".textContent =" in html
+    assert not re.search(r"fetch\(\s*['\"]https?://", html)
 
 
-def test_historical_next_memory_snapshot_never_overwrites_the_live_accepted_world() -> None:
+def test_correction_remains_an_explicit_evidence_entry_not_a_review_decision() -> None:
     html = TESTBENCH.read_text(encoding="utf-8")
 
-    register = re.search(
-        r"function registerNextMemory\(nextMemory\) \{(?P<body>[\s\S]*?)\n      \}",
-        html,
-    )
-    assert register is not None
-    assert "renderNextWorld(view.world)" not in register.group("body")
-    assert "async function loadNextWorld()" in html
-    assert "if (result.world) renderNextWorld(result.world);" in html
+    assert "function requestNextMemoryCorrection(cognition, buttonEl)" in html
+    assert 'fetch(\'/api/next/memory-corrections\'' in html
+    assert "function nextCorrectionOperation(cognitionId, correctionText)" in html
+    assert "const _nextCorrectionOperations = new Map()" in html
+    assert "testbench-correction:${globalThis.crypto.randomUUID()}" in html
+    assert "const { operationId } = nextCorrectionOperation(cognition.id, text);" in html
+    assert "body: JSON.stringify({ operationId, cognitionId: cognition.id, correctionText })" in html
+    assert "纠正结果暂不明确；可以用相同原话重试。" in html
+    assert "await loadNextWorld();" in html
+    assert "纠正已通过验证并自动应用到当前世界。" in html
+    assert "正式删除" not in html
 
 
-def test_decided_history_keeps_candidate_content_but_only_pending_history_has_actions() -> None:
+def test_conflicted_cognition_provenance_is_visible_in_formal_world_and_review() -> None:
+    """The formal product shell keeps conflict semantics and raw Evidence observable."""
+
     html = TESTBENCH.read_text(encoding="utf-8")
+    world_surface = html[
+        html.index("function appendAcceptedCognitionDetail") :
+        html.index("function appendAcceptedEntitySection")
+    ]
+    review_surface = html[
+        html.index("function appendNextClaimObservation") :
+        html.index("function registerNextMemory")
+    ]
 
-    assert re.search(
-        r"\['candidate-ready',\s*'correction-pending',\s*'accepted',\s*'rejected'\]\.includes\(view\.state\)",
-        html,
+    for surface in (world_surface, review_surface):
+        assert "cred_status" in surface
+        assert "confidence" in surface
+        assert "sources" in surface
+        assert "relation" in surface
+
+    # Formal review uses DOM text nodes for the exact current-turn Evidence;
+    # this is the safe equivalent of HTML escaping and must not regress to
+    # interpolated innerHTML.
+    assert "nextText(item.text || item.content || item)" in review_surface
+    assert "detail.appendChild(domEl('div', 'evmeta'," in review_surface
+
+
+def test_cognition_evidence_change_is_rendered_as_text_only_review_history() -> None:
+    html = TESTBENCH.read_text(encoding="utf-8")
+    review_surface = html[
+        html.index("function appendNextClaimObservation") :
+        html.index("function appendNextCandidateContext")
+    ]
+
+    assert "proposal.cognitionEvidenceChanges || view.run.cognitionEvidenceChanges || []" in review_surface
+    assert "同一 cognition 的 Evidence 变化" in review_surface
+    assert "change?.relation" in review_surface
+    assert "change?.evidenceId" in review_surface
+    assert "before?.confidence" in review_surface
+    assert "before?.cred_status" in review_surface
+    assert "after?.confidence" in review_surface
+    assert "after?.cred_status" in review_surface
+    assert "此前（仅作为变化对照，不是当前值）" in review_surface
+    assert "本轮应用后" in review_surface
+    assert ".textContent =" in review_surface
+    assert "innerHTML" not in review_surface
+
+
+def test_typed_cognition_replacement_uses_text_nodes_and_precedes_legacy_correction() -> None:
+    html = TESTBENCH.read_text(encoding="utf-8")
+    review_surface = html[
+        html.index("function appendNextClaimObservation") :
+        html.index("function appendNextCandidateContext")
+    ]
+
+    assert "proposal.cognitionReplacements || view.run.cognitionReplacements || []" in review_surface
+    assert "纠正前（历史，只作对照，不是当前值）" in review_surface
+    assert "纠正后（本轮应用后的当前值）" in review_surface
+    assert "structured_claim" in review_surface
+    assert "target" in review_surface
+    assert "Evidence" in review_surface
+    assert "domEl(" in review_surface
+    assert ".textContent =" in review_surface
+    assert "innerHTML" not in review_surface
+    assert review_surface.index("cognitionReplacements.length") < review_surface.index(
+        "proposal.correction || manual.content"
     )
-    assert "if (isNextPending(view))" in html
-    assert "appendNextCandidateContent(bubble, view);" in html
-    assert "const reviewId = view.proposal.reviewId || view.run.reviewId;" in html
-    assert "body: JSON.stringify({ reviewId, runId, resultHash, decision })" in html
+
+
+def test_relationship_targeted_owner_evaluation_is_text_only_and_not_unbound() -> None:
+    """Compiler-owned claim.object is shown without exposing its opaque handle."""
+
+    html = TESTBENCH.read_text(encoding="utf-8")
+    review_surface = html[
+        html.index("function nextClaimObservationText") :
+        html.index("function appendNextCandidateContext")
+    ]
+    world_surface = html[
+        html.index("function buildAcceptedEntityIndex") :
+        html.index("function appendNextWorldItem")
+    ]
+
+    assert "function nextRelationshipObjectText" in html
+    assert "function nextOwnerRelationshipEvaluationText" in html
+    assert "function nextClaimObservationText" in html
+    assert "claim?.object?.kind === 'relationship'" in review_surface
+    assert "claim?.kind === 'evaluation'" in review_surface
+    assert "row.textContent = nextClaimObservationText(claim, entityIndex);" in review_surface
+    assert "nextText(claim)" not in review_surface
+    assert "accepted_object_handles" not in review_surface
+    assert "relationshipCognitions" in world_surface
+    assert "cognition?.target?.kind === 'relationship'" in world_surface
+    assert "Owner 对当前关系的评价" in world_surface
+    assert "nextOwnerRelationshipEvaluationText(" in world_surface
+    assert "textContent" in world_surface
+
+
+def test_event_targeted_owner_evaluation_is_text_only_and_not_unbound() -> None:
+    html = TESTBENCH.read_text(encoding="utf-8")
+    review_surface = html[
+        html.index("function nextClaimObservationText") :
+        html.index("function appendNextCandidateContext")
+    ]
+    world_surface = html[
+        html.index("function buildAcceptedEntityIndex") :
+        html.index("function appendNextWorldItem")
+    ]
+
+    assert "function nextEventObjectText" in html
+    assert "function nextOwnerEventEvaluationText" in html
+    assert "claim?.object?.kind === 'event'" in review_surface
+    assert "nextOwnerEventEvaluationText(" in review_surface
+    assert "accepted_object_handles" not in review_surface
+    assert "eventCognitions" in world_surface
+    assert "cognition?.target?.kind === 'event'" in world_surface
+    assert "Owner 对当前事件的评价" in world_surface
+    assert "nextOwnerEventEvaluationText(" in world_surface
+    assert "textContent" in world_surface

@@ -1,6 +1,6 @@
-"""SQLite 持久化 schema，与 TypeScript store 的完整新库结构保持一致。
+"""SQLite 持久化 schema。
 
-共享 parity 资产验证 fresh :memory: 库与 openStores 的等效结构：
+共享 parity 资产只验证 Python 与 TypeScript 仍共享的 1.x 表结构：
   evidence            ← src/evidence/store.ts
   event/event_evidence← src/event/store.ts
   cognition/…evidence ← src/cognition/store.ts
@@ -13,12 +13,17 @@
 
 注:preceding_ai_context / asked_at / archived_at / muted_at 在 TS 里 fresh 库由 SCHEMA 常量直接带全,
   旧数据库由各 store 的 migrate() 补列；Python 新建数据库时直接按 SCHEMA 建立完整列集。
-LATEST_SCHEMA_VERSION = 4(store/migrations.ts);新库 user_version 盖 4。
+
+从 v7 起 Hermes 使用的 MemoWeft 库是 Python-owned：TypeScript/shared parity 仍停在 v6，
+Python v7 以独立 ``application_id`` 和 durable World Job 物理表明确区分，不能混用。
 """
 from __future__ import annotations
 
-#: PRAGMA user_version，与 TS LATEST_SCHEMA_VERSION 保持一致。
-SCHEMA_VERSION = 4
+#: Python-owned SQLite 文件标识（ASCII ``MWPY``）。v6 旧库尚未设置，v7 migration 会原子盖入。
+PYTHON_APPLICATION_ID = 0x4D575059
+
+#: Python-owned ``PRAGMA user_version``。TypeScript/shared parity 的版本仍为 6。
+SCHEMA_VERSION = 14
 
 #: 幂等的建表与索引 DDL；shared/parity/schema.json 验证列序、NOT NULL、DEFAULT 与主键契约。
 BASE_SCHEMA_SQL: tuple[str, ...] = (
@@ -151,6 +156,19 @@ MEMORY_LOOP_SCHEMA_SQL: tuple[str, ...] = (
   review_payload_json TEXT,
   status              TEXT NOT NULL CHECK(status IN ('pending', 'accept', 'reject'))
 )""",
+    # A terminal decision is an immutable historical fact.  ``proposals`` only
+    # retains a mutable status, so it cannot by itself tell a retry which world
+    # revision/hash the original decision committed after later decisions move
+    # the current world forward.
+    """CREATE TABLE IF NOT EXISTS proposal_decision_receipts (
+  proposal_id          TEXT PRIMARY KEY,
+  offered_result_hash  TEXT NOT NULL,
+  effective_decision   TEXT NOT NULL CHECK(effective_decision IN ('accept', 'reject')),
+  world_revision       INTEGER NOT NULL CHECK(world_revision >= 0),
+  snapshot_hash        TEXT NOT NULL,
+  decided_at           TEXT NOT NULL,
+  receipt_hash         TEXT NOT NULL
+)""",
     """CREATE TABLE IF NOT EXISTS cognition_transitions (
   id                         TEXT PRIMARY KEY,
   prior_cognition_id         TEXT NOT NULL UNIQUE,
@@ -177,5 +195,434 @@ IDENTITY_SCHEMA_SQL: tuple[str, ...] = (
 #: 2.0 的完整追加结构。
 WORLD_SCHEMA_SQL: tuple[str, ...] = MEMORY_LOOP_SCHEMA_SQL + IDENTITY_SCHEMA_SQL
 
-#: 完整当前 schema；新库一次性创建，旧库由版本化迁移补齐 WORLD_SCHEMA_SQL。
-SCHEMA_SQL: tuple[str, ...] = BASE_SCHEMA_SQL + WORLD_SCHEMA_SQL
+#: Python v7 durable World Job。它不属于 TypeScript parity，也不能追加进冻结的 v3
+#: ``WORLD_SCHEMA_SQL`` migration 来源；v6 -> v7 只执行这一组 DDL。
+WORLD_JOB_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE memory_world_job (
+  job_id                    TEXT    PRIMARY KEY,
+  job_schema_version        INTEGER NOT NULL CHECK(job_schema_version = 1),
+  boundary_event_id         TEXT    NOT NULL,
+  boundary_payload_hash     TEXT    NOT NULL,
+  boundary_schema_version   INTEGER NOT NULL CHECK(boundary_schema_version >= 1),
+  provider_name             TEXT    NOT NULL,
+  parent_session_id         TEXT    NOT NULL,
+  result_session_id         TEXT    NOT NULL,
+  boundary_mode             TEXT    NOT NULL CHECK(boundary_mode IN ('in_place', 'rotation')),
+  formal_target_json        TEXT    NOT NULL,
+  formal_target_hash        TEXT    NOT NULL,
+  subject_id                TEXT    NOT NULL,
+  host_id                   TEXT    NOT NULL,
+  evidence_ids_json         TEXT    NOT NULL,
+  state                     TEXT    NOT NULL CHECK(state IN (
+                              'pending', 'processing', 'applied',
+                              'no_change', 'retry', 'dead'
+                            )),
+  attempts                  INTEGER NOT NULL DEFAULT 0 CHECK(attempts >= 0),
+  next_attempt_at           TEXT,
+  claim_owner               TEXT,
+  claim_token               TEXT,
+  claimed_at                TEXT,
+  lease_expires_at          TEXT,
+  heartbeat_at              TEXT,
+  fencing_generation        INTEGER NOT NULL DEFAULT 0 CHECK(fencing_generation >= 0),
+  model_dispatch_started_at TEXT,
+  model_completed_at        TEXT,
+  model_task                TEXT,
+  model_provider            TEXT,
+  model_name                TEXT,
+  model_usage_json          TEXT,
+  model_result_json         TEXT,
+  model_result_hash         TEXT,
+  world_result_json         TEXT,
+  result_hash               TEXT,
+  delivery_receipt_json     TEXT    NOT NULL,
+  delivery_receipt_hash     TEXT    NOT NULL,
+  created_at                TEXT    NOT NULL,
+  completed_at              TEXT,
+  last_error_type           TEXT,
+  CHECK (
+    (
+      state = 'processing'
+      AND claim_owner IS NOT NULL
+      AND claim_token IS NOT NULL
+      AND claimed_at IS NOT NULL
+      AND lease_expires_at IS NOT NULL
+      AND heartbeat_at IS NOT NULL
+    )
+    OR
+    (
+      state <> 'processing'
+      AND claim_owner IS NULL
+      AND claim_token IS NULL
+      AND lease_expires_at IS NULL
+    )
+  ),
+  CHECK (
+    (state IN ('applied', 'no_change', 'dead') AND completed_at IS NOT NULL)
+    OR
+    (state IN ('pending', 'processing', 'retry') AND completed_at IS NULL)
+  )
+)""",
+    """CREATE UNIQUE INDEX ux_memory_world_job_boundary_event
+ON memory_world_job(boundary_event_id)""",
+    """CREATE INDEX ix_memory_world_job_ready
+ON memory_world_job(next_attempt_at, created_at, job_id)
+WHERE state IN ('pending', 'retry')""",
+    """CREATE INDEX ix_memory_world_job_expired
+ON memory_world_job(lease_expires_at, created_at, job_id)
+WHERE state = 'processing'""",
+)
+
+#: 列序是 store/worker 与 schema validation 的闭合契约；JSON 字段由代码 canonicalize，
+#: 不依赖所有部署环境都具备 SQLite JSON1。
+MEMORY_WORLD_JOB_COLUMNS: tuple[str, ...] = (
+    "job_id",
+    "job_schema_version",
+    "boundary_event_id",
+    "boundary_payload_hash",
+    "boundary_schema_version",
+    "provider_name",
+    "parent_session_id",
+    "result_session_id",
+    "boundary_mode",
+    "formal_target_json",
+    "formal_target_hash",
+    "subject_id",
+    "host_id",
+    "evidence_ids_json",
+    "state",
+    "attempts",
+    "next_attempt_at",
+    "claim_owner",
+    "claim_token",
+    "claimed_at",
+    "lease_expires_at",
+    "heartbeat_at",
+    "fencing_generation",
+    "model_dispatch_started_at",
+    "model_completed_at",
+    "model_task",
+    "model_provider",
+    "model_name",
+    "model_usage_json",
+    "model_result_json",
+    "model_result_hash",
+    "world_result_json",
+    "result_hash",
+    "delivery_receipt_json",
+    "delivery_receipt_hash",
+    "created_at",
+    "completed_at",
+    "last_error_type",
+)
+
+#: v6 Python-owned 物理 marker。特别是 ``proposal_decision_receipts`` 不存在于 TS v6。
+PYTHON_V6_REQUIRED_SCHEMA_OBJECTS = frozenset(
+    {
+        "evidence",
+        "event",
+        "event_evidence",
+        "cognition",
+        "cognition_evidence",
+        "evidence_retraction",
+        "management_log",
+        "interaction_context",
+        "semantic_resolution",
+        "memory_state",
+        "evidence_ledger",
+        "proposals",
+        "proposal_decision_receipts",
+        "cognition_transitions",
+        "identity_state",
+        "ux_evidence_origin",
+        "ix_evidence_occurred",
+        "ix_event_subject",
+        "ix_evev_event",
+        "ix_cognition_subject",
+        "ix_cogev_cog",
+        "ix_evret_cog",
+        "ix_mgmt_target",
+        "ix_ictx_subject",
+        "ix_ictx_conversation",
+        "ix_ictx_hash",
+        "ix_semres_evidence",
+    }
+)
+
+WORLD_JOB_SCHEMA_OBJECTS = frozenset(
+    {
+        "memory_world_job",
+        "ux_memory_world_job_boundary_event",
+        "ix_memory_world_job_ready",
+        "ix_memory_world_job_expired",
+    }
+)
+#: Python v8 per-row raw-content hash binding for boundary evidence. Python-owned
+#: (not TS parity), keeps the frozen 1.x ``evidence`` table untouched; the formal
+#: batch compiler re-verifies the hash before the model call and again before
+#: Apply, so a worker can never interpret text that differs from the bytes the
+#: boundary actually accepted.
+BOUNDARY_EVIDENCE_CONTENT_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE boundary_evidence_content (
+  evidence_id      TEXT    PRIMARY KEY,
+  raw_content_hash TEXT    NOT NULL
+)""",
+)
+
+#: 列序是 boundary_store/worker 与 schema validation 的闭合契约。
+BOUNDARY_EVIDENCE_CONTENT_COLUMNS: tuple[str, ...] = (
+    "evidence_id",
+    "raw_content_hash",
+)
+
+BOUNDARY_EVIDENCE_CONTENT_SCHEMA_OBJECTS = frozenset(
+    {
+        "boundary_evidence_content",
+    }
+)
+
+#: Python v9 first-class Entity + Relationship World objects (V3 window).
+#: Python-owned (not TS parity); frozen 1.x tables and v3 WORLD_SCHEMA_SQL stay
+#: untouched.  ``entity`` is the open-type mention→identity anchor (deterministic
+#: id from canonical_name → same-name re-mention is idempotent, same-name
+#: conflicts are structurally zero-write); ``relationship`` is a first-class
+#: owner-perspective relationship row with its own evidence chain.
+ENTITY_RELATIONSHIP_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE entity (
+  id             TEXT    PRIMARY KEY,
+  world_id       TEXT    NOT NULL,
+  kind           TEXT    NOT NULL,
+  canonical_name TEXT    NOT NULL,
+  invalid_at     TEXT,
+  created_at     TEXT    NOT NULL,
+  updated_at     TEXT    NOT NULL,
+  aliases_json   TEXT    NOT NULL DEFAULT '[]'
+)""",
+    """CREATE UNIQUE INDEX ux_entity_world_name
+ON entity(world_id, canonical_name) WHERE invalid_at IS NULL""",
+    """CREATE TABLE relationship (
+  id               TEXT    PRIMARY KEY,
+  world_id         TEXT    NOT NULL,
+  source_entity_id TEXT    NOT NULL,
+  target_entity_id TEXT    NOT NULL,
+  relation_type    TEXT    NOT NULL,
+  content          TEXT    NOT NULL,
+  formed_by        TEXT    NOT NULL,
+  confidence       INTEGER NOT NULL,
+  cred_status      TEXT    NOT NULL,
+  invalid_at       TEXT,
+  created_at       TEXT    NOT NULL,
+  updated_at       TEXT    NOT NULL
+)""",
+    "CREATE INDEX ix_relationship_world ON relationship(world_id)",
+    "CREATE INDEX ix_relationship_target ON relationship(target_entity_id)",
+    """CREATE TABLE relationship_evidence (
+  relationship_id TEXT NOT NULL,
+  evidence_id     TEXT NOT NULL,
+  relation        TEXT NOT NULL
+)""",
+    "CREATE INDEX ix_relev_rel ON relationship_evidence(relationship_id)",
+)
+
+#: 列序是 schema validation 的闭合契约。aliases_json 必须位于末尾：
+#: 迁移路径用 ALTER ADD COLUMN（只能追加），新鲜 CREATE 与其列序一致。
+ENTITY_COLUMNS: tuple[str, ...] = (
+    "id",
+    "world_id",
+    "kind",
+    "canonical_name",
+    "invalid_at",
+    "created_at",
+    "updated_at",
+    "aliases_json",
+)
+
+RELATIONSHIP_COLUMNS: tuple[str, ...] = (
+    "id",
+    "world_id",
+    "source_entity_id",
+    "target_entity_id",
+    "relation_type",
+    "content",
+    "formed_by",
+    "confidence",
+    "cred_status",
+    "invalid_at",
+    "created_at",
+    "updated_at",
+)
+
+ENTITY_RELATIONSHIP_SCHEMA_OBJECTS = frozenset(
+    {
+        "entity",
+        "ux_entity_world_name",
+        "relationship",
+        "ix_relationship_world",
+        "ix_relationship_target",
+        "relationship_evidence",
+        "ix_relev_rel",
+    }
+)
+
+#: Python v10 targeted-cognition sidecar: the frozen 1.x ``cognition`` table
+#: stays untouched; rows exist only for cognitions whose semantic target is a
+#: third-party entity (absent row == owner_self target, preserving V1/V2/V3
+#: semantics).  Mirrors the v8 content-binding sidecar precedent.  v14 adds
+#: ``perspective_entity_id`` (V5 perspective-holder slice, Owner decision
+#: 2026-08-16): absent == owner_self holder.  The column is LAST so
+#: ALTER-migrated v10 tables have the identical column order.
+COGNITION_TARGET_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE cognition_target (
+  cognition_id         TEXT PRIMARY KEY,
+  target_entity_id     TEXT NOT NULL,
+  perspective_entity_id TEXT
+)""",
+    "CREATE INDEX ix_cogtarget_target ON cognition_target(target_entity_id)",
+)
+
+COGNITION_TARGET_ALTER_V14_SQL: tuple[str, ...] = (
+    "ALTER TABLE cognition_target ADD COLUMN perspective_entity_id TEXT",
+)
+
+COGNITION_TARGET_COLUMNS: tuple[str, ...] = (
+    "cognition_id",
+    "target_entity_id",
+    "perspective_entity_id",
+)
+
+COGNITION_TARGET_SCHEMA_OBJECTS = frozenset(
+    {
+        "cognition_target",
+        "ix_cogtarget_target",
+    }
+)
+
+#: Python v11 alias-merge DDL: ``entity.aliases_json`` (v9 Python-owned table
+#: — additive column migration, existing rows default to '[]').  The frozen
+#: 1.x tables stay untouched.
+ENTITY_ALIAS_SCHEMA_SQL: tuple[str, ...] = (
+    "ALTER TABLE entity ADD COLUMN aliases_json TEXT NOT NULL DEFAULT '[]'",
+)
+
+#: Python v13 retraction shape (used by the v12 migration step AND fresh
+#: creates): adds ``prior_event_id`` for event retracts (Owner decision
+#: 2026-08-16: events support retract; correct stays later).  The column is
+#: LAST in the CREATE so ALTER-migrated v12 tables have the identical column
+#: order (ALTER only appends).
+RETRACTION_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE retraction (
+  id                   TEXT PRIMARY KEY,
+  prior_cognition_id   TEXT,
+  prior_relationship_id TEXT,
+  reason               TEXT NOT NULL,
+  revision             INTEGER NOT NULL,
+  created_at           TEXT NOT NULL,
+  prior_event_id       TEXT
+)""",
+    "CREATE INDEX ix_retraction_prior ON retraction(prior_cognition_id, prior_relationship_id)",
+)
+
+RETRACTION_ALTER_V13_SQL: tuple[str, ...] = (
+    "ALTER TABLE retraction ADD COLUMN prior_event_id TEXT",
+)
+
+RETRACTION_COLUMNS: tuple[str, ...] = (
+    "id",
+    "prior_cognition_id",
+    "prior_relationship_id",
+    "reason",
+    "revision",
+    "created_at",
+    "prior_event_id",
+)
+
+RETRACTION_SCHEMA_OBJECTS = frozenset(
+    {
+        "retraction",
+        "ix_retraction_prior",
+    }
+)
+
+#: Python v13 first-class World Event (authority §2.3/§4.3): readable narrative
+#: + queryable participants/objects/time/provenance.  The frozen 1.x ``event``
+#: table stays untouched; this is a separate Python-owned object.
+WORLD_EVENT_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE world_event (
+  id                TEXT    PRIMARY KEY,
+  world_id          TEXT    NOT NULL,
+  content           TEXT    NOT NULL,
+  occurred_at       TEXT,
+  time_expression   TEXT,
+  participants_json TEXT    NOT NULL DEFAULT '[]',
+  objects_json      TEXT    NOT NULL DEFAULT '[]',
+  formed_by         TEXT    NOT NULL,
+  confidence        INTEGER NOT NULL,
+  cred_status       TEXT    NOT NULL,
+  invalid_at        TEXT,
+  created_at        TEXT    NOT NULL,
+  updated_at        TEXT    NOT NULL
+)""",
+    "CREATE INDEX ix_world_event_world ON world_event(world_id)",
+    "CREATE INDEX ix_world_event_occurred ON world_event(occurred_at)",
+    """CREATE TABLE world_event_evidence (
+  world_event_id TEXT NOT NULL,
+  evidence_id    TEXT NOT NULL,
+  relation       TEXT NOT NULL
+)""",
+    "CREATE INDEX ix_wev_evidence ON world_event_evidence(world_event_id)",
+)
+
+WORLD_EVENT_COLUMNS: tuple[str, ...] = (
+    "id",
+    "world_id",
+    "content",
+    "occurred_at",
+    "time_expression",
+    "participants_json",
+    "objects_json",
+    "formed_by",
+    "confidence",
+    "cred_status",
+    "invalid_at",
+    "created_at",
+    "updated_at",
+)
+
+WORLD_EVENT_SCHEMA_OBJECTS = frozenset(
+    {
+        "world_event",
+        "ix_world_event_world",
+        "ix_world_event_occurred",
+        "world_event_evidence",
+        "ix_wev_evidence",
+    }
+)
+
+CURRENT_REQUIRED_SCHEMA_OBJECTS = (
+    PYTHON_V6_REQUIRED_SCHEMA_OBJECTS
+    | WORLD_JOB_SCHEMA_OBJECTS
+    | BOUNDARY_EVIDENCE_CONTENT_SCHEMA_OBJECTS
+    | ENTITY_RELATIONSHIP_SCHEMA_OBJECTS
+    | COGNITION_TARGET_SCHEMA_OBJECTS
+    | RETRACTION_SCHEMA_OBJECTS
+    | WORLD_EVENT_SCHEMA_OBJECTS
+)
+
+#: Fresh Python schema。旧 v3/v6 DDL 保持冻结，v7 追加 WORLD_JOB_SCHEMA_SQL，
+#: v8 追加 BOUNDARY_EVIDENCE_CONTENT_SCHEMA_SQL，v9 追加 ENTITY_RELATIONSHIP_SCHEMA_SQL，
+#: v10 追加 COGNITION_TARGET_SCHEMA_SQL（v14 形状），v11 追加 ENTITY_ALIAS_SCHEMA_SQL，
+#: v12 追加 RETRACTION_SCHEMA_SQL（v13 形状），v13 追加 RETRACTION_ALTER_V13_SQL +
+#: WORLD_EVENT_SCHEMA_SQL，v14 追加 COGNITION_TARGET_ALTER_V14_SQL。
+CURRENT_WORLD_SCHEMA_SQL: tuple[str, ...] = (
+    WORLD_SCHEMA_SQL
+    + WORLD_JOB_SCHEMA_SQL
+    + BOUNDARY_EVIDENCE_CONTENT_SCHEMA_SQL
+    + ENTITY_RELATIONSHIP_SCHEMA_SQL
+    + COGNITION_TARGET_SCHEMA_SQL
+    + RETRACTION_SCHEMA_SQL
+    + WORLD_EVENT_SCHEMA_SQL
+)
+CURRENT_SCHEMA_SQL: tuple[str, ...] = BASE_SCHEMA_SQL + CURRENT_WORLD_SCHEMA_SQL
+
+#: 兼容既有 import；它现在明确表示 Python 当前 schema，而不是 TS parity schema。
+SCHEMA_SQL: tuple[str, ...] = CURRENT_SCHEMA_SQL

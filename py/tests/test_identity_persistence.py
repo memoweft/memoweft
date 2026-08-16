@@ -14,6 +14,7 @@ from memoweft.world.identity_review import (
     EntityIdentityDelta,
     IdentityEvidence,
     IdentityReviewStateError,
+    _graph_hash,
 )
 from memoweft.world.identity_store import (
     IdentityPersistenceConflictError,
@@ -24,7 +25,14 @@ from memoweft.world.identity_store import (
     sync_identity_graph,
 )
 from memoweft.world.loop import EvidenceRecord, MemoryLoop, _graph_json
-from memoweft.world.model import Entity, PersonalWorld
+from memoweft.world.model import (
+    Entity,
+    MemoryTarget,
+    PersonalWorld,
+    Perspective,
+    StructuredClaim,
+    WorldCognition,
+)
 
 
 def _graph() -> MemoryWorldGraph:
@@ -52,6 +60,35 @@ def _evidence(
         "user",
         content,
     )
+
+
+def test_identity_graph_hash_preserves_legacy_none_structured_claim_and_hashes_values() -> None:
+    graph = _graph()
+    graph.add_cognition(
+        WorldCognition(
+            "cognition:ana",
+            "w",
+            MemoryTarget("entity", "a"),
+            "Ana likes tea.",
+            "fact",
+            "stated",
+            600,
+            "limited",
+            Perspective("entity", ("owner",)),
+        )
+    )
+
+    legacy_hash = _graph_hash(graph)
+
+    # This is the v1 persisted-hash vector from before WorldCognition grew an
+    # optional structured_claim field.  `None` must not invalidate old rows.
+    assert legacy_hash == "cce66477bc9958eab7e82abd4fd3552fc11e8a639f2e249fed49806d0dc95be3"
+
+    graph.cognitions["cognition:ana"] = replace(
+        graph.cognitions["cognition:ana"],
+        structured_claim=StructuredClaim("attribute", "favorite_drink", "tea"),
+    )
+    assert _graph_hash(graph) != legacy_hash
 
 
 def test_empty_database_bootstraps_one_hash_bound_graph_reference(

@@ -116,6 +116,24 @@ export const MIGRATIONS: Migration[] = [
       // treating every non-addition proposal as a correction.
     },
   },
+  {
+    version: 5,
+    name: 'relationship-successor-evolution-payload-contract',
+    up: () => {
+      // No DDL: v5 marks that product_bundle payloads may carry closed
+      // relationship successor evolution steps. Existing rows remain byte-for-byte
+      // unchanged; older code must reject this database rather than misread them.
+    },
+  },
+  {
+    version: 6,
+    name: 'product-bundle-cognition-evidence-update-payload-contract',
+    up: () => {
+      // No DDL: v6 marks that product_bundle payloads may carry a closed
+      // same-cognition Evidence update. Existing rows and payload bytes remain
+      // unchanged; older code must reject this database rather than misread them.
+    },
+  },
 ];
 
 /** 当前代码支持的最新 schema 版本。 */

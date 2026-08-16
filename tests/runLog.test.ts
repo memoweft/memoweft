@@ -64,15 +64,44 @@ test('Next bridge 结果可随新轮落盘，旧日志没有该字段仍可读�
     assert.equal(writtenWithNext.nextMemory?.status, 'ok');
     assert.equal(writtenWithNext.nextMemory?.run?.id, 'memory-run-1');
 
+    const processing = log.appendTurn({
+      userInput: '后台整理',
+      nextMemory: {
+        status: 'ok',
+        state: 'processing',
+        operationId: 'testbench:s-processing:evidence-1',
+        sessionId: 's-processing',
+        currentEvidenceId: 'evidence-1',
+      },
+    } as Partial<TurnRecord>) as TurnRecord & {
+      nextMemory?: {
+        state?: string;
+        operationId?: string;
+        sessionId?: string;
+        currentEvidenceId?: string;
+      };
+    };
+    assert.deepEqual(processing.nextMemory, {
+      status: 'ok',
+      state: 'processing',
+      operationId: 'testbench:s-processing:evidence-1',
+      sessionId: 's-processing',
+      currentEvidenceId: 'evidence-1',
+    });
+
     // 旧记录没有 nextMemory 是正常兼容形态，不需要迁移历史 jsonl。
     const old = log.appendTurn({ userInput: '旧兼容' });
     assert.equal((old as TurnRecord & { nextMemory?: unknown }).nextMemory, undefined);
-    const recent = log.readRecent(2);
+    const recent = log.readRecent(3);
     assert.equal(
       (recent[0] as TurnRecord & { nextMemory?: { status: string } })?.nextMemory?.status,
       'ok',
     );
-    assert.equal((recent[1] as TurnRecord & { nextMemory?: unknown })?.nextMemory, undefined);
+    assert.equal(
+      (recent[1] as TurnRecord & { nextMemory?: { state?: string } })?.nextMemory?.state,
+      'processing',
+    );
+    assert.equal((recent[2] as TurnRecord & { nextMemory?: unknown })?.nextMemory, undefined);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

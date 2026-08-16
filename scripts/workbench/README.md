@@ -2,7 +2,7 @@
 
 This launcher runs the existing MemoWeft 1.0 testbench at `http://127.0.0.1:7888` as the single browser host, with the local MemoWeft Next backend on port `7891` and the managed local model on port `8012`.
 
-The original chat, sessions, cloud/local model configuration, 1.x profile organizer, memory manager, backup/import, and debug tools stay in the testbench. MemoWeft Next is connected only through the allowlisted loopback bridge for candidate review, accept/reject, the accepted world, recall, and correction.
+The original chat, sessions, cloud/local model configuration, 1.x profile organizer, memory manager, backup/import, and debug tools stay in the testbench. MemoWeft Next is connected only through the allowlisted loopback bridge for Evidence interpretation, validated automatic World Change, Personal Memory World observation, recall, and correction. Review is an observation and correction surface, not an accept/reject write gate.
 
 Node.js 24 or newer is required because the source testbench imports `.ts` files directly and uses `node:sqlite`. Startup validates the resolved `node.exe` before creating workbench state or starting either dependency.
 

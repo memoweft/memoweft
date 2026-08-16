@@ -2027,7 +2027,19 @@ def _snapshot(graph: MemoryWorldGraph) -> IdentityGraphSnapshot:
 
 
 def _graph_hash(graph: MemoryWorldGraph) -> str:
-    return _hash_value({"v": "identity-graph-v1", "world": _value(graph.world), "entities": [_value(item) for item in sorted(graph.entities.values(), key=lambda item: item.id)], "relationships": [_value(item) for item in sorted(graph.relationships.values(), key=lambda item: item.id)], "events": [_value(item) for item in sorted(graph.events.values(), key=lambda item: item.id)], "cognitions": [_value(item) for item in sorted(graph.cognitions.values(), key=lambda item: item.id)]})
+    return _hash_value({"v": "identity-graph-v1", "world": _value(graph.world), "entities": [_value(item) for item in sorted(graph.entities.values(), key=lambda item: item.id)], "relationships": [_value(item) for item in sorted(graph.relationships.values(), key=lambda item: item.id)], "events": [_value(item) for item in sorted(graph.events.values(), key=lambda item: item.id)], "cognitions": [_graph_hash_cognition_value(item) for item in sorted(graph.cognitions.values(), key=lambda item: item.id)]})
+
+
+def _graph_hash_cognition_value(cognition: WorldCognition) -> dict[str, Any]:
+    """Preserve v1 hashes for legacy cognitions without structured semantics."""
+
+    value = _value(cognition)
+    assert isinstance(value, dict)
+    return {
+        key: item
+        for key, item in value.items()
+        if key != "structured_claim" or item is not None
+    }
 
 
 def _pending_preview_value(pending: PendingIdentityReview) -> dict[str, Any]:

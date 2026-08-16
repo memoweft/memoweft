@@ -1303,6 +1303,8 @@ class WorldDelta:
                 self._validate_required_str(f"{path}.aliases[{index}]", alias, issues)
         elif isinstance(record, Relationship):
             self._validate_required_str(path + ".relation_type", record.relation_type, issues)
+            if type(record.bidirectional) is not bool:
+                issues.append(path + ".bidirectional.invalid")
             self._validate_optional_str(path + ".status", record.status, issues)
             self._validate_optional_str(path + ".valid_from", record.valid_from, issues)
             self._validate_optional_str(path + ".valid_to", record.valid_to, issues)
