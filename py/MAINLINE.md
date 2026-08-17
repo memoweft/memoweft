@@ -47,4 +47,10 @@ integrations 链内实现，而不是把保险层模块接上生产。
    （关系端点、事件参与者/对象、定向属性实体）；权限门 fail-closed（无可见
    Evidence 链的 World 行不注入/不导出）；DSH export 过滤 `allow_local_read=0`
    的 Evidence 与依赖它的认知。
-3. portable bundle v3（entity / relationship / world_event 可导出）。
+3. ~~portable bundle v3（entity / relationship / world_event 可导出）~~ **已完成
+   （2026-08-17）**：`BUNDLE_SCHEMA_VERSION = 3`——`portable/builder.py` 从正式
+   World 表导出完整 v3 bundle（2.0 对象含 aliases/participants/objects/时间/
+   provenance 链接 + cognitionTargets），`validate.py` 闭包校验（worldId 单
+   subject、端点/证据引用、snake↔camel 归一），`import_bundle(world_db=…)`
+   幂等导入（同 id 全等跳过、冲突整包 fail-closed 零写入）；v2 bundle 完全前向
+   兼容（不告警），parity 版本消息随 v3 推进。

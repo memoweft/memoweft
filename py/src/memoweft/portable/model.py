@@ -6,8 +6,10 @@ from typing import Literal
 
 #: 便携包格式标记。
 BUNDLE_FORMAT = "memoweft-bundle"
-#: 便携包结构版本；v2 新增 interactionContexts 与 semanticResolutions。
-BUNDLE_SCHEMA_VERSION = 2
+#: 便携包结构版本；v2 新增 interactionContexts 与 semanticResolutions，
+#: v3 新增 2.0 World 对象（entities / relationships / worldEvents 及其
+#: provenance 链接、cognitionTargets），v2 bundle 仍按旧结构原样可导。
+BUNDLE_SCHEMA_VERSION = 3
 
 #: 导入模式:dryRun 只算不写 / merge 实际写入。
 ImportMode = Literal["dryRun", "merge"]
@@ -24,6 +26,12 @@ class ImportCounts:
     cognition_evidence: int = 0
     interaction_contexts: int = 0
     semantic_resolutions: int = 0
+    entities: int = 0
+    relationships: int = 0
+    world_events: int = 0
+    relationship_evidence: int = 0
+    world_event_evidence: int = 0
+    cognition_targets: int = 0
 
 
 @dataclass(slots=True)
@@ -33,6 +41,9 @@ class ImportDuplicates:
     evidence: int = 0
     events: int = 0
     cognitions: int = 0
+    entities: int = 0
+    relationships: int = 0
+    world_events: int = 0
 
 
 @dataclass(slots=True)

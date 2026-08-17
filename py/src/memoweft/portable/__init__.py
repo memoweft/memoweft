@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+from .builder import MEMOWEFT_VERSION, build_bundle
 from .importer import import_bundle
 from .model import (
     BUNDLE_FORMAT,
@@ -18,6 +19,7 @@ from .validate import ValidateResult, validate_bundle
 __all__ = [
     "BUNDLE_FORMAT",
     "BUNDLE_SCHEMA_VERSION",
+    "MEMOWEFT_VERSION",
     "ValidateResult",
     "validate_bundle",
     "ImportCounts",
@@ -25,4 +27,5 @@ __all__ = [
     "ImportMode",
     "ImportPlan",
     "import_bundle",
+    "build_bundle",
 ]

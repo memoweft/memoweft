@@ -10,6 +10,8 @@ dryRun:只算不写。
 """
 from __future__ import annotations
 
+import json
+import sqlite3
 from typing import Any, Optional
 
 from ..config import resolve_lang
@@ -77,6 +79,227 @@ def _same_string_multiset(left: list[str], right: list[str]) -> bool:
     return sorted(left) == sorted(right)
 
 
+def _canonical_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _to_snake_members(members: Any) -> list[dict[str, str]]:
+    """bundle camelCase 参与者/对象 → 库内 snake_case 契约。"""
+    out: list[dict[str, str]] = []
+    for member in members or []:
+        if isinstance(member, dict) and isinstance(member.get("canonicalName"), str):
+            out.append(
+                {
+                    "canonical_name": str(member["canonicalName"]),
+                    "kind": str(member.get("kind") or "thing"),
+                }
+            )
+    return out
+
+
+def _plan_world_import(
+    world_db: Optional[sqlite3.Connection],
+    data: dict[str, Any],
+    plan: ImportPlan,
+    lang: str,
+) -> dict[str, Any]:
+    """Plan the 2.0 World sections (entities/relationships/worldEvents + links).
+
+    Collision rule mirrors the 1.0 contract: a same-id row is a safe duplicate
+    only when the complete row is identical; any difference rejects the whole
+    bundle (fail-closed, zero writes).  Returns the rows to insert, keyed for
+    the write phase.
+    """
+    world: dict[str, Any] = {
+        "entities": [],
+        "relationships": [],
+        "world_events": [],
+        "relationship_evidence": [],
+        "world_event_evidence": [],
+        "cognition_targets": [],
+    }
+    present = any(
+        data.get(key) is not None
+        for key in (
+            "entities",
+            "relationships",
+            "relationshipEvidence",
+            "worldEvents",
+            "worldEventEvidence",
+            "cognitionTargets",
+        )
+    )
+    if not present:
+        return world
+    if world_db is None:
+        plan.warnings.append(
+            "World sections skipped: no world_db connection provided"
+            if lang == "en"
+            else "World 段未导入：未提供 world_db 连接"
+        )
+        return world
+
+    def collision_guard(
+        table: str, row_id: str, expected: dict[str, object]
+    ) -> bool:
+        columns = tuple(expected.keys())
+        existing = world_db.execute(
+            f"SELECT {', '.join(columns)} FROM {table} WHERE id = ?", (row_id,)
+        ).fetchone()
+        if existing is None:
+            return True  # 可插入
+        if tuple(existing) == tuple(expected[column] for column in columns):
+            return False  # 完全相同 → 幂等跳过
+        plan.errors.append(
+            f"{table} {row_id} collides with a different target record; import rejected"
+            if lang == "en"
+            else f"{table} {row_id} 与目标库同 id 记录不一致，拒绝导入"
+        )
+        return False
+
+    def link_insert_list(
+        link_table: str,
+        columns: tuple[str, ...],
+        bundle_links: Any,
+        mapping: dict[str, object],
+    ) -> list[tuple[object, ...]]:
+        new_links: list[tuple[object, ...]] = []
+        for link in bundle_links or []:
+            values = tuple(link[mapping[column]] for column in columns)
+            clauses: list[str] = []
+            params: list[object] = []
+            for column, value in zip(columns, values):
+                if value is None:
+                    clauses.append(f"{column} IS NULL")
+                else:
+                    clauses.append(f"{column} = ?")
+                    params.append(value)
+            existing = world_db.execute(
+                f"SELECT 1 FROM {link_table} WHERE {' AND '.join(clauses)}",
+                params,
+            ).fetchone()
+            if existing is None:
+                new_links.append(values)
+        return new_links
+
+    for item in data.get("entities") or []:
+        expected = {
+            "id": item["id"],
+            "world_id": item["worldId"],
+            "kind": item["kind"],
+            "canonical_name": item["canonicalName"],
+            "aliases_json": _canonical_json(item.get("aliases") or []),
+            "invalid_at": item.get("invalidAt"),
+            "created_at": item["createdAt"],
+            "updated_at": item["updatedAt"],
+        }
+        if collision_guard("entity", item["id"], expected):
+            world["entities"].append(
+                (
+                    expected["id"],
+                    expected["world_id"],
+                    expected["kind"],
+                    expected["canonical_name"],
+                    expected["aliases_json"],
+                    expected["invalid_at"],
+                    expected["created_at"],
+                    expected["updated_at"],
+                )
+            )
+    for item in data.get("relationships") or []:
+        expected = {
+            "id": item["id"],
+            "world_id": item["worldId"],
+            "source_entity_id": item["sourceEntityId"],
+            "target_entity_id": item["targetEntityId"],
+            "relation_type": item["relationType"],
+            "content": item["content"],
+            "formed_by": item["formedBy"],
+            "confidence": item["confidence"],
+            "cred_status": item["credStatus"],
+            "invalid_at": item.get("invalidAt"),
+            "created_at": item["createdAt"],
+            "updated_at": item["updatedAt"],
+        }
+        if collision_guard("relationship", item["id"], expected):
+            world["relationships"].append(
+                (
+                    expected["id"],
+                    expected["world_id"],
+                    expected["source_entity_id"],
+                    expected["target_entity_id"],
+                    expected["relation_type"],
+                    expected["content"],
+                    expected["formed_by"],
+                    expected["confidence"],
+                    expected["cred_status"],
+                    expected["invalid_at"],
+                    expected["created_at"],
+                    expected["updated_at"],
+                )
+            )
+    for item in data.get("worldEvents") or []:
+        expected = {
+            "id": item["id"],
+            "world_id": item["worldId"],
+            "content": item["content"],
+            "occurred_at": item.get("occurredAt"),
+            "time_expression": item.get("timeExpression"),
+            "participants_json": _canonical_json(
+                _to_snake_members(item.get("participants"))
+            ),
+            "objects_json": _canonical_json(_to_snake_members(item.get("objects"))),
+            "formed_by": item["formedBy"],
+            "confidence": item["confidence"],
+            "cred_status": item["credStatus"],
+            "invalid_at": item.get("invalidAt"),
+            "created_at": item["createdAt"],
+            "updated_at": item["updatedAt"],
+        }
+        if collision_guard("world_event", item["id"], expected):
+            world["world_events"].append(
+                (
+                    expected["id"],
+                    expected["world_id"],
+                    expected["content"],
+                    expected["occurred_at"],
+                    expected["time_expression"],
+                    expected["participants_json"],
+                    expected["objects_json"],
+                    expected["formed_by"],
+                    expected["confidence"],
+                    expected["cred_status"],
+                    expected["invalid_at"],
+                    expected["created_at"],
+                    expected["updated_at"],
+                )
+            )
+
+    world["relationship_evidence"] = link_insert_list(
+        "relationship_evidence",
+        ("relationship_id", "evidence_id", "relation"),
+        data.get("relationshipEvidence"),
+        {"relationship_id": "relationshipId", "evidence_id": "evidenceId", "relation": "relation"},
+    )
+    world["world_event_evidence"] = link_insert_list(
+        "world_event_evidence",
+        ("world_event_id", "evidence_id", "relation"),
+        data.get("worldEventEvidence"),
+        {"world_event_id": "worldEventId", "evidence_id": "evidenceId", "relation": "relation"},
+    )
+    world["cognition_targets"] = link_insert_list(
+        "cognition_target",
+        ("cognition_id", "target_entity_id", "perspective_entity_id"),
+        data.get("cognitionTargets"),
+        {
+            "cognition_id": "cognitionId",
+            "target_entity_id": "targetEntityId",
+            "perspective_entity_id": "perspectiveEntityId",
+        },
+    )
+    return world
+
+
 def import_bundle(
     bundle: Any,
     *,
@@ -87,8 +310,14 @@ def import_bundle(
     semantic_resolution_store: SqliteSemanticResolutionStore,
     transaction: Optional[Transaction] = None,
     mode: ImportMode = "merge",
+    world_db: Optional[sqlite3.Connection] = None,
 ) -> ImportPlan:
-    """按共享便携包契约生成并执行导入计划。"""
+    """按共享便携包契约生成并执行导入计划。
+
+    v3 起 2.0 World 段（entity/relationship/world_event）经 ``world_db``
+    写入 Python-owned 表；``world_db`` 必须与各 store 共用同一连接（随
+    transaction 原子提交）。不提供时 World 段跳过并告警，1.0 核心照常导入。
+    """
     lang = resolve_lang()
     validation = validate_bundle(bundle)
     plan = ImportPlan(
@@ -159,6 +388,12 @@ def import_bundle(
                 if lang == "zh"
                 else f"cognition {cognition['id']} collides with different target content or provenance links; import rejected"
             )
+    if plan.errors:
+        plan.valid = False
+        return plan
+
+    # ── v3：2.0 World 段（entity/relationship/world_event + 链接；碰撞同样整包 fail-closed）──
+    world = _plan_world_import(world_db, data, plan, lang)
     if plan.errors:
         plan.valid = False
         return plan
@@ -304,6 +539,12 @@ def import_bundle(
         evidence=len(new_evidence), events=len(new_events), cognitions=len(new_cognitions),
         event_evidence=event_evidence_count, cognition_evidence=cognition_evidence_count,
         interaction_contexts=len(new_interaction_contexts), semantic_resolutions=len(new_semantic_resolutions),
+        entities=len(world["entities"]),
+        relationships=len(world["relationships"]),
+        world_events=len(world["world_events"]),
+        relationship_evidence=len(world["relationship_evidence"]),
+        world_event_evidence=len(world["world_event_evidence"]),
+        cognition_targets=len(world["cognition_targets"]),
     )
 
     if mode == "dryRun":
@@ -323,6 +564,48 @@ def import_bundle(
             interaction_context_store.insert(_to_interaction_context(c))
         for r in new_semantic_resolutions:
             semantic_resolution_store.insert(_to_semantic_resolution(r))
+        if world_db is not None:
+            for values in world["entities"]:
+                world_db.execute(
+                    "INSERT INTO entity (id, world_id, kind, canonical_name, "
+                    "aliases_json, invalid_at, created_at, updated_at) "
+                    "VALUES (?,?,?,?,?,?,?,?)",
+                    values,
+                )
+            for values in world["relationships"]:
+                world_db.execute(
+                    "INSERT INTO relationship (id, world_id, source_entity_id, "
+                    "target_entity_id, relation_type, content, formed_by, "
+                    "confidence, cred_status, invalid_at, created_at, updated_at) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    values,
+                )
+            for values in world["world_events"]:
+                world_db.execute(
+                    "INSERT INTO world_event (id, world_id, content, occurred_at, "
+                    "time_expression, participants_json, objects_json, formed_by, "
+                    "confidence, cred_status, invalid_at, created_at, updated_at) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    values,
+                )
+            for values in world["relationship_evidence"]:
+                world_db.execute(
+                    "INSERT INTO relationship_evidence (relationship_id, evidence_id, relation) "
+                    "VALUES (?,?,?)",
+                    values,
+                )
+            for values in world["world_event_evidence"]:
+                world_db.execute(
+                    "INSERT INTO world_event_evidence (world_event_id, evidence_id, relation) "
+                    "VALUES (?,?,?)",
+                    values,
+                )
+            for values in world["cognition_targets"]:
+                world_db.execute(
+                    "INSERT INTO cognition_target (cognition_id, target_entity_id, "
+                    "perspective_entity_id) VALUES (?,?,?)",
+                    values,
+                )
 
     try:
         if transaction is not None:

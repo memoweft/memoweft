@@ -20,12 +20,17 @@ from .model import BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION
 #   CRED_STATUSES 逐一对齐）。content_type 认【完整 8 值】含 hypothesis/trend——导入的是已落库认知，
 #   可能由 attribute/trends 产出这两类，不能只认 consolidate 收的那 6 个。
 _CONTENT_TYPES = frozenset(
-    ("fact", "preference", "goal", "project", "state", "trait", "hypothesis", "trend")
+    (
+        "fact", "preference", "goal", "project", "state", "trait", "hypothesis", "trend",
+        # 2.0 hermes 链的 statement_kind 直接进 content_type
+        "attribute", "naming", "relationship", "alias", "event",
+    )
 )
 _FORMED_BY = frozenset(("stated", "observed", "ruled", "confirmed", "inferred"))
 _CRED_STATUSES = frozenset(("candidate", "low", "limited", "stable", "conflicted", "contested"))
 _SOURCE_KINDS = frozenset(("spoken", "inferred", "observed", "tool"))
 _EVIDENCE_RELATIONS = frozenset(("support", "contradict"))
+_WORLD_FORMED_BY = frozenset(("stated", "confirmed"))
 _VISIBLE_TURN_ROLES = frozenset(("user", "assistant", "tool"))
 _RESPONSE_ACTS = frozenset(("affirm", "negate", "select", "elaborate", "ask", "none", "other"))
 _PROMPT_ACTS = frozenset(("propose", "ask", "state", "none", "other"))
@@ -34,6 +39,8 @@ _ASSERTION_STRENGTHS = frozenset(("explicit", "weak", "none"))
 _ISO_DATE_TIME = re.compile(
     r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})$"
 )
+#: 2.0 world_event.occurred_at 是日期粒度（YYYY-MM-DD，adapter 合同）。
+_ISO_DATE_ONLY = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
 
 
 @dataclass(slots=True)
@@ -87,6 +94,22 @@ def _parseable_date(value: Any) -> bool:
     return True
 
 
+def _parseable_world_date(value: Any) -> bool:
+    """Full ISO datetime OR date-only (YYYY-MM-DD, the world_event contract)."""
+    if _parseable_date(value):
+        return True
+    if not isinstance(value, str):
+        return False
+    match = _ISO_DATE_ONLY.fullmatch(value)
+    if match is None:
+        return False
+    try:
+        datetime(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+    except ValueError:
+        return False
+    return True
+
+
 def validate_bundle(bundle: Any) -> ValidateResult:
     errors: list[str] = []
     warnings: list[str] = []
@@ -112,7 +135,9 @@ def validate_bundle(bundle: Any) -> ValidateResult:
         errors.append("schemaVersion is missing or not a number")
     elif sv > BUNDLE_SCHEMA_VERSION:
         errors.append(f"schemaVersion={_num(sv)} is higher than the {BUNDLE_SCHEMA_VERSION} supported by this version (upgrade MemoWeft before importing)")
-    elif sv < BUNDLE_SCHEMA_VERSION:
+    elif sv < 2:
+        # v2 bundle 在 v3 下完全前向兼容（World 段可选），导入行为不变 → 不告警。
+        # 只有更早结构（无 interactionContexts/semanticResolutions 语义）才提示。
         warnings.append(f"schemaVersion={_num(sv)} is lower than the current {BUNDLE_SCHEMA_VERSION} (importing with the old structure)")
     sid = b.get("subjectId", _MISSING)
     if not isinstance(sid, str) or sid == "":
@@ -414,6 +439,199 @@ def validate_bundle(bundle: Any) -> ValidateResult:
                     invalid_field("semanticResolution", record_id, field)
             if not _nullable_string(value.get("requiredContext")):
                 invalid_field("semanticResolution", record_id, "requiredContext")
+
+    # ── v3：2.0 World 对象段（可选；仅在 schemaVersion == 3 且键存在时校验）──
+    # entity/relationship/world_event 是 Python-owned 2.0 对象：世界 ID 必须等于
+    # bundle subjectId（单 subject 边界），链接与端点必须能在包内闭包解析。
+    _world_section_names = (
+        "entities",
+        "relationships",
+        "relationshipEvidence",
+        "worldEvents",
+        "worldEventEvidence",
+        "cognitionTargets",
+    )
+    world_sections_present = any(name in data for name in _world_section_names)
+    if world_sections_present and sv != BUNDLE_SCHEMA_VERSION:
+        warnings.append(
+            f"World sections are only supported by schemaVersion {BUNDLE_SCHEMA_VERSION}; ignored"
+        )
+    elif world_sections_present:
+        entity_list = data.get("entities")
+        relationship_list = data.get("relationships")
+        relationship_evidence_list = data.get("relationshipEvidence")
+        world_event_list = data.get("worldEvents")
+        world_event_evidence_list = data.get("worldEventEvidence")
+        cognition_target_list = data.get("cognitionTargets")
+        for name, arr in (
+            ("entities", entity_list),
+            ("relationships", relationship_list),
+            ("relationshipEvidence", relationship_evidence_list),
+            ("worldEvents", world_event_list),
+            ("worldEventEvidence", world_event_evidence_list),
+            ("cognitionTargets", cognition_target_list),
+        ):
+            if not isinstance(arr, list):
+                errors.append(f"data.{name} should be an array")
+
+        entity_ids: set[str] = set()
+        if isinstance(entity_list, list):
+            for entity in entity_list:
+                if not isinstance(entity, dict) or not _non_empty_string(entity.get("id")):
+                    errors.append("data.entities has an element with a missing id")
+                    continue
+                entity_id = entity["id"]
+                if entity_id in entity_ids:
+                    errors.append("data.entities has duplicate ids")
+                entity_ids.add(entity_id)
+                if entity.get("worldId") != sid:
+                    errors.append(f"entity {entity_id} worldId({_js_stringify(entity.get('worldId', _MISSING))}) does not match the bundle")
+                if not _non_empty_string(entity.get("kind")):
+                    invalid_field("entity", entity_id, "kind")
+                if not _non_empty_string(entity.get("canonicalName")):
+                    invalid_field("entity", entity_id, "canonicalName")
+                aliases = entity.get("aliases", _MISSING)
+                if aliases is not _MISSING and (
+                    not isinstance(aliases, list)
+                    or any(not isinstance(a, str) or a == "" for a in aliases)
+                ):
+                    invalid_field("entity", entity_id, "aliases")
+                for field in ("createdAt", "updatedAt"):
+                    if not _parseable_date(entity.get(field)):
+                        invalid_field("entity", entity_id, field)
+                invalid_at = entity.get("invalidAt", _MISSING)
+                if invalid_at is not _MISSING and invalid_at is not None and not _parseable_date(invalid_at):
+                    invalid_field("entity", entity_id, "invalidAt")
+
+        def _world_record_checks(
+            record_list: Any, name: str, ids: set[str], entity_index: set[str]
+        ) -> None:
+            for record in record_list:
+                if not isinstance(record, dict) or not _non_empty_string(record.get("id")):
+                    errors.append(f"data.{name} has an element with a missing id")
+                    continue
+                record_id = record["id"]
+                if record_id in ids:
+                    errors.append(f"data.{name} has duplicate ids")
+                ids.add(record_id)
+                if record.get("worldId") != sid:
+                    errors.append(f"{name[:-1]} {record_id} worldId({_js_stringify(record.get('worldId', _MISSING))}) does not match the bundle")
+                if not _non_empty_string(record.get("content")):
+                    invalid_field(name[:-1], record_id, "content")
+                if record.get("formedBy") not in _WORLD_FORMED_BY:
+                    invalid_field(name[:-1], record_id, "formedBy")
+                confidence = record.get("confidence", _MISSING)
+                if (
+                    not isinstance(confidence, (int, float))
+                    or isinstance(confidence, bool)
+                    or not math.isfinite(confidence)
+                    or not float(confidence).is_integer()
+                    or confidence < 0
+                    or confidence > 1000
+                ):
+                    invalid_field(name[:-1], record_id, "confidence")
+                if record.get("credStatus") not in _CRED_STATUSES:
+                    invalid_field(name[:-1], record_id, "credStatus")
+                for field in ("createdAt", "updatedAt"):
+                    if not _parseable_date(record.get(field)):
+                        invalid_field(name[:-1], record_id, field)
+                invalid_at = record.get("invalidAt", _MISSING)
+                if invalid_at is not _MISSING and invalid_at is not None and not _parseable_date(invalid_at):
+                    invalid_field(name[:-1], record_id, "invalidAt")
+                if name == "relationships":
+                    source = record.get("sourceEntityId")
+                    target = record.get("targetEntityId")
+                    if not _non_empty_string(source) or not _non_empty_string(target):
+                        invalid_field("relationship", record_id, "sourceEntityId/targetEntityId")
+                    else:
+                        if source not in entity_index or target not in entity_index:
+                            errors.append(
+                                f"relationship {record_id} references a non-existent entity: {source}/{target}"
+                            )
+                        if source == target:
+                            errors.append(f"relationship {record_id} endpoints must differ")
+                    if not _non_empty_string(record.get("relationType")):
+                        invalid_field("relationship", record_id, "relationType")
+                if name == "worldEvents":
+                    occurred_at = record.get("occurredAt", _MISSING)
+                    if occurred_at is not _MISSING and occurred_at is not None and not _parseable_world_date(occurred_at):
+                        invalid_field("worldEvent", record_id, "occurredAt")
+                    if not _nullable_string(record.get("timeExpression")):
+                        invalid_field("worldEvent", record_id, "timeExpression")
+                    for field in ("participants", "objects"):
+                        members = record.get(field, _MISSING)
+                        if members is _MISSING:
+                            continue
+                        if not isinstance(members, list) or any(
+                            not isinstance(m, dict)
+                            or not _non_empty_string(m.get("canonicalName"))
+                            or not _non_empty_string(m.get("kind"))
+                            for m in members
+                        ):
+                            invalid_field("worldEvent", record_id, field)
+
+        relationship_ids: set[str] = set()
+        if isinstance(relationship_list, list):
+            _world_record_checks(relationship_list, "relationships", relationship_ids, entity_ids)
+        world_event_ids: set[str] = set()
+        if isinstance(world_event_list, list):
+            _world_record_checks(world_event_list, "worldEvents", world_event_ids, entity_ids)
+
+        def _world_link_checks(
+            link_list: Any, name: str, id_field: str, index: set[str]
+        ) -> None:
+            seen: set[tuple[object, ...]] = set()
+            for link in link_list:
+                if not isinstance(link, dict):
+                    errors.append(f"data.{name} has an invalid link")
+                    continue
+                target_id = link.get(id_field)
+                evidence_id = link.get("evidenceId")
+                relation = link.get("relation")
+                if not _non_empty_string(target_id) or not _non_empty_string(evidence_id):
+                    errors.append(f"data.{name} has an invalid endpoint")
+                    continue
+                if target_id not in index:
+                    errors.append(f"{name} references a non-existent {id_field}: {target_id}")
+                if evidence_id not in evidence_ids:
+                    errors.append(f"{name} references a non-existent evidence: {evidence_id}")
+                if relation not in _EVIDENCE_RELATIONS:
+                    invalid_field(name, f"{target_id}/{evidence_id}", "relation")
+                key = (target_id, evidence_id, str(relation))
+                if key in seen:
+                    errors.append(f"data.{name} has duplicate link: {target_id}/{evidence_id}/{relation}")
+                seen.add(key)
+
+        if isinstance(relationship_evidence_list, list):
+            _world_link_checks(
+                relationship_evidence_list, "relationshipEvidence", "relationshipId", relationship_ids
+            )
+        if isinstance(world_event_evidence_list, list):
+            _world_link_checks(
+                world_event_evidence_list, "worldEventEvidence", "worldEventId", world_event_ids
+            )
+
+        if isinstance(cognition_target_list, list):
+            seen_targets: set[str] = set()
+            for target in cognition_target_list:
+                if not isinstance(target, dict) or not _non_empty_string(target.get("cognitionId")):
+                    errors.append("data.cognitionTargets has an invalid endpoint")
+                    continue
+                cognition_id = target["cognitionId"]
+                if cognition_id in seen_targets:
+                    errors.append("data.cognitionTargets has duplicate cognitionId")
+                seen_targets.add(cognition_id)
+                if cognition_id not in cognition_ids:
+                    errors.append(f"cognitionTarget references a non-existent cognition: {cognition_id}")
+                target_entity_id = target.get("targetEntityId")
+                if not _non_empty_string(target_entity_id) or target_entity_id not in entity_ids:
+                    errors.append(f"cognitionTarget {cognition_id} references a non-existent target entity")
+                perspective = target.get("perspectiveEntityId")
+                if perspective is not None:
+                    if not isinstance(perspective, str) or perspective == "":
+                        invalid_field("cognitionTarget", cognition_id, "perspectiveEntityId")
+                    elif perspective not in entity_ids:
+                        errors.append(f"cognitionTarget {cognition_id} references a non-existent perspective entity")
 
     return ValidateResult(len(errors) == 0, errors, warnings)
 

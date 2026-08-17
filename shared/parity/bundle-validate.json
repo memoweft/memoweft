@@ -517,7 +517,7 @@
       },
       "expected": {
         "errors": [
-          "schemaVersion=99 is higher than the 2 supported by this version (upgrade MemoWeft before importing)"
+          "schemaVersion=99 is higher than the 3 supported by this version (upgrade MemoWeft before importing)"
         ],
         "valid": false,
         "warnings": []
@@ -648,7 +648,7 @@
         "errors": [],
         "valid": true,
         "warnings": [
-          "schemaVersion=1 is lower than the current 2 (importing with the old structure)"
+          "schemaVersion=1 is lower than the current 3 (importing with the old structure)"
         ]
       },
       "label": "schemaVersion-lower"
