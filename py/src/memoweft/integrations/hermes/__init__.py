@@ -29,7 +29,7 @@ import math
 from pathlib import Path
 import sqlite3
 import threading
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Optional, Sequence
 
 from .boundary_store import (
     HermesBoundaryEvidenceCandidate,
@@ -70,6 +70,18 @@ _CONTINUATION_MARKERS = frozenset(
     }
 )
 _BOUNDARY_MODES = frozenset({"in_place", "rotation"})
+
+
+def _optional_lang(value: Any) -> Optional[str]:
+    """Normalize an optional language pin; anything invalid fails closed to
+    auto-detection (never crashes provider initialization)."""
+    if value in ("zh", "en"):
+        return value
+    if value is not None:
+        logger.warning(
+            "MemoWeft lang pin ignored (must be 'zh' or 'en'): %r", value
+        )
+    return None
 _BOUNDARY_EVENT_PREFIX = "hermes-compression-boundary-v1"
 _BOUNDARY_KEYS = frozenset(
     {
@@ -536,7 +548,9 @@ class HermesMemoWeftRuntime:
         if callable(route):
             from .batch_adapter import HermesBatchAdapterProcessor
 
-            processor = HermesBatchAdapterProcessor(str(db_path), route)
+            processor = HermesBatchAdapterProcessor(
+                str(db_path), route, lang=_optional_lang(kwargs.get("lang"))
+            )
         self._world_worker = WorldJobWorker(db_path, processor=processor)
         # Recovery is asynchronous: provider initialization must not delay a
         # Hermes turn, and the default processor remains model- and World-free.

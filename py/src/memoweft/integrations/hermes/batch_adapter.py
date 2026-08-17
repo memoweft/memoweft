@@ -114,6 +114,24 @@ def _hash_text(value: str) -> str:
 #: Longest first so "我们"/"咱们" win over the bare "我"/"咱" suffix match.
 _FIRST_PERSON_PREFIXES = ("咱们", "我们", "俺们", "本人", "我", "咱", "俺")
 
+#: English first-person tokens replaced at slice start (lowercased matching,
+#: word boundary implied by the trailing space).  The replacement casing is the
+#: exact contract taught to the model ("The user" / "The user's").
+_EN_FIRST_PERSON = (
+    ("i ", "The user "),
+    ("we ", "The user "),
+    ("my ", "The user's "),
+    ("our ", "The user's "),
+    ("mine ", "The user's "),
+    ("me ", "The user "),
+    ("us ", "The user "),
+    ("myself ", "The user "),
+)
+
+
+def _has_cjk(text: str) -> bool:
+    return any("\u4e00" <= ch <= "\u9fff" for ch in text)
+
 #: Trailing sentence punctuation ignored when comparing a proposition with its
 #: verbatim anchor (the model may or may not copy the final full stop).
 _END_PUNCTUATION = "。！？!?~～，,；;：:、 "
@@ -210,12 +228,19 @@ def _stated_normalize(span_text: str) -> str:
     "我喜欢喝茉莉花茶" -> proposition "用户喜欢喝茉莉花茶").  A first-person
     prefix becomes "用户"; a slice with no subject at all gets "用户" prepended
     (subject-less Chinese statements are natural: "喜欢喝茉莉花茶").
+
+    English (Owner-approved §4.12 rule-localization): the verbatim contract —
+    English utterances carry their own subject, so no rewriting applies and the
+    user's exact words anchor the memory ("I like jasmine tea" stays "I like
+    jasmine tea").  Chinese slices keep the byte-identical legacy behavior.
     """
     text = span_text.strip()
     for prefix in _FIRST_PERSON_PREFIXES:
         if text.startswith(prefix):
             return ("用户" + text[len(prefix):]).strip()
     if "用户" not in text:
+        if not _has_cjk(text):
+            return text  # English: verbatim, no subject rewrite
         text = "用户" + text
     return text.strip()
 
@@ -225,6 +250,8 @@ def _stated_normalize_no_subject_prepend(span_text: str) -> str:
 
     The proposition's subject is the third-party entity itself ("小王是女生"),
     so no "用户" subject is prepended — the entity name anchors the subject.
+    English slices are already verbatim under the English contract, so this is
+    the identity for them.
     """
     text = span_text.strip()
     for prefix in _FIRST_PERSON_PREFIXES:
@@ -274,7 +301,11 @@ def _confirm_normalize(claim: str) -> str:
                 break
         if not stripped:
             break
-    return text.replace("您", "用户").replace("妳", "用户").replace("你", "用户").strip()
+    text = text.replace("您", "用户").replace("妳", "用户").replace("你", "用户").strip()
+    # English claims keep their wording (verbatim contract): the user's
+    # confirmation anchors the assistant's exact claim, minus question tails
+    # already stripped above — no pronoun rewriting for English.
+    return text
 
 
 def _confirm_claim_is_proposition(claim: str) -> bool:
@@ -654,6 +685,260 @@ _SYSTEM_PROMPT = (
     "（事件改口同样必须 action=correct + 旧事件 id，**绝不**用 form 另存）\n"
 )
 
+#: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
+#: Semantically equivalent to _SYSTEM_PROMPT; the worked examples are the same
+#: cases in English with correctly recomputed codepoint spans.
+_SYSTEM_PROMPT_EN = (
+    "You are MemoWeft 2.0's batch interpreter. The input contains: the current "
+    "formal World's cognition list (id/content/statement_kind), a "
+    "current_entities list (id/canonical_name/kind/aliases), a "
+    "current_relationships list (id/content/relation_type/source_entity_id/"
+    "target_entity_id), a current_events list (id/content/occurred_at/"
+    "time_expression), and several verbatim user Evidence utterances from one "
+    "compression boundary (each has a unique id and original text, possibly "
+    "with assistant preceding context).\n"
+    "Your task is to output exactly one JSON object: either 1 to 5 stable "
+    "cognitions, or no_change, or clarification_required (when identity or "
+    "meaning cannot be uniquely resolved, with a question), or out_of_scope "
+    "(understood but outside the formal contract, with a note). "
+    "**Output ONLY JSON — no explanations, no chain of thought, no extra "
+    "text.**\n"
+    '{"schema_version":8,"result":"no_change"}\n'
+    '{"schema_version":8,"result":"cognitions","cognitions":[<item>, ...]}'
+    " (1..5 items)\n"
+    '{"schema_version":8,"result":"clarification_required","question":"…"}\n'
+    '{"schema_version":8,"result":"out_of_scope","note":"…"}\n'
+    "Item shape (statement_kind decides the extra fields):\n"
+    '{"action":"form","target":"owner_self",'
+    '"statement_kind":"attribute"|"preference"|"naming"|"relationship"|"alias"|'
+    '"event","formed_by":"stated"|"confirmed","proposition":"…",'
+    '"supports":[{"evidence_id":"...","start":0,"end":16}],'
+    '"corrects_cognition_id":"...","assistant_claim":"...",'
+    '"entity":{"canonical_name":"…","kind":"person"},'
+    '"perspective_holder":{"canonical_name":"…","kind":"person"},'
+    '"alias_of":{"canonical_name":"…","kind":"person"},'
+    '"target_entity":{"canonical_name":"…","kind":"person"},'
+    '"source_entity":{"canonical_name":"…","kind":"person"},'
+    '"relation_type":"girlfriend","corrects_relationship_id":"...",'
+    '"retract":true,"contradicts_cognition_id":"...",'
+    '"participants":[{"canonical_name":"…","kind":"person"}],'
+    '"objects":[{"canonical_name":"…","kind":"place"}],'
+    '"occurred_at":"2026-08-15","time_expression":"yesterday",'
+    '"corrects_event_id":"..."}\n'
+    "Rules:\n"
+    "1. Only process: the user's own stable attributes/preferences; "
+    "third-party **identity-class stable attributes** (gender/age/occupation/"
+    "location etc.; one-off or situational content does not count); the user's "
+    "naming of third parties; stable relationships between the user and a "
+    "third party or between third parties; explicit equivalence of two names "
+    "for one person stated by the user (e.g. \"Yangyang is Xiaoyang\"). "
+    "**Never produce evaluations of anyone (\"plays games really well\" and "
+    "the like)**; events, one-off facts and vague content are never produced. "
+    "Review the Evidence one by one; produce everything that is definite (at "
+    "most 5 per boundary; routines/commutes/schedules and other stable habits "
+    "count as stable attributes or preferences and may be produced; wishes/"
+    "expectations (\"want to own…\" \"hope to…\"), emotions and opinions are "
+    "not produced). **Do NOT split a single claim into fragments — a reason "
+    "clause (\"because…\", \"so…\") stays inside its item; two INDEPENDENT "
+    "claims in one utterance are separate items, each proposition equal to "
+    "its own verbatim slice.**\n"
+    "2. supports.evidence_id must come from the input; start/end are Unicode "
+    "codepoint offsets and text[start:end] must equal the evidence verbatim; "
+    "slices only take the user's own words (assistant context is never "
+    "Evidence).\n"
+    "3. action=form: form or restate (a restatement auto-merges into the same "
+    "ID's support chain); use correct ONLY when the user explicitly says an "
+    "old memory is wrong and gives a new value (attribute/preference use "
+    "corrects_cognition_id; relationship replacement uses "
+    "corrects_relationship_id). An explicit retraction with no new value (see "
+    "rule 13) uses correct+retract; mere disagreement or doubt about the same "
+    "proposition (see rule 14) uses contradict. **When you see explicit "
+    "correction signals such as \"actually… not… is…\", \"I misremembered\", "
+    "\"change it\", \"that doesn't count\", you MUST correct/retract the old "
+    "memory — never form a second copy with form**.\n"
+    "4. formed_by=stated: the proposition must equal one support slice "
+    "verbatim — English needs no subject rewriting (the user's exact words "
+    "anchor the memory; a trailing period is optional). No other rewriting, "
+    "adding or deleting.\n"
+    "5. formed_by=confirmed: only for attribute/preference when the assistant "
+    "proposed a proposition and the user confirmed it briefly (no negation). "
+    "assistant_claim must be a verbatim substring of the context; the "
+    "proposition equals the claim with discourse particles and question tails "
+    "removed (no pronoun rewriting). The "
+    "assistant guessing right is never Evidence by itself.\n"
+    "6. naming: propositions like \"My friend is called Wang\" "
+    "(stated); entity.canonical_name must be a verbatim substring of a slice; "
+    "kind defaults to person. Do not repeat naming when the same entity name "
+    "already exists. **\"My X is called Y\" sentences: when X is an intimate "
+    "relation word (girlfriend/boyfriend/wife/husband/partner) → emit "
+    "relationship (see rule 7); when X is a descriptor (best friend/"
+    "classmate/colleague/roommate…) → emit naming. \"Named X\" is always "
+    "naming. A sentence like \"X is the kitten/dog I <got/bought> from…, "
+    "because…, so I named it X\" is ONE pet naming (kind=animal) whose "
+    "proposition equals the ENTIRE sentence — never split it into fragments "
+    "and never emit a relationship for a pet.**\n"
+    "7. relationship: propositions like \"My girlfriend is called Li\" or "
+    "\"Wang is Yang's girlfriend\" (stated, the user's own wording; "
+    "\"my girlfriend is called Li\" = the subject is "
+    "the user → omit source_entity); relation_type is open (girlfriend/friend/"
+    "colleague…); target_entity.canonical_name must be verbatim in the "
+    "proposition. When the subject is the user, **omit** source_entity; when "
+    "the subject is a third party, source_entity.canonical_name must be "
+    "verbatim in the proposition. The two endpoints must not be the same "
+    "name. **An existing relationship of the same type from the same source "
+    "does not block: record exactly what the user said and let them coexist "
+    "(only an explicit correction uses correct, see rule 8)**.\n"
+    "8. relationship replacement (correct): ONLY when the user explicitly "
+    "corrects an existing relationship and gives a new one (e.g. \"Actually "
+    "Wang is not Yang's girlfriend, she is Li's girlfriend\") use "
+    "action=correct with corrects_relationship_id copied verbatim from the "
+    "**old** relationship's id in current_relationships; relation_type/"
+    "target_entity/source_entity describe the **new** relationship per rule 7; "
+    "formed_by only stated. **The proposition must equal the supporting slice "
+    "verbatim** (it may contain \"not/actually\" correction wording — do not "
+    "distill it into a rewritten sentence). **Using form for the new "
+    "relationship would leave the old one current — two conflicting rows — "
+    "which is a wrong state; you MUST use correct**.\n"
+    "9. alias (explicit equivalence): ONLY when the user explicitly says two "
+    "names are the same person (e.g. \"Yangyang is Xiaoyang\") and **both "
+    "names are in current_entities**. Give one name in entity and the other "
+    "in alias_of (order does not matter; the system canonicalizes to the "
+    "earlier-formed name); both names must be verbatim in the proposition and "
+    "in a slice; formed_by only stated. Mere similarity, abbreviations or "
+    "guessed references are NOT alias.\n"
+    "10. Third-party identity attributes: statement_kind=attribute with "
+    "entity (e.g. proposition \"Wang is a girl\", entity.canonical_name="
+    "\"Wang\" verbatim in the slice and proposition; the proposition must "
+    "equal the slice itself, with no subject rewriting). "
+    "An attribute without entity is the user's own attribute.\n"
+    "11. Within one boundary: propositions are mutually distinct; corrects/"
+    "contradicts targets are mutually distinct; two namings must not share a "
+    "name; uncertain/ambiguous/unlockable → do not produce that item; if "
+    "identity or meaning truly cannot be resolved, emit a whole-batch "
+    "clarification_required.\n"
+    "12. JSON hygiene: optional fields that are not needed "
+    "(corrects_cognition_id, corrects_relationship_id, corrects_event_id, "
+    "contradicts_cognition_id, retract, assistant_claim, entity, alias_of, "
+    "source_entity, target_entity, relation_type, participants, objects, "
+    "occurred_at, time_expression, perspective_holder) MUST be **fully "
+    "omitted** — never empty strings or null. target is fixed \"owner_self\" "
+    "(omittable; missing means owner_self; any other value rejects the whole "
+    "batch).\n"
+    "13. retract (explicit retraction, no new value): when the user explicitly "
+    "says a formed memory is wrong and to retract/delete/forget it (e.g. "
+    "\"delete that one\", \"stop remembering that I like coffee\", \"Wang is "
+    "not Yang's girlfriend\" with **no new value**) → action=correct + "
+    "retract:true + corrects_cognition_id (or corrects_relationship_id from "
+    "current_relationships for relationships). The proposition must equal the "
+    "retraction slice verbatim; "
+    "carry no new-value fields; naming cannot be retracted (name fixes go "
+    "through alias).\n"
+    "14. contradict (disagree/doubt, without saying \"wrong\"): ONLY when the "
+    "user expresses an opposite opinion or doubt about an **already formed** "
+    "attribute/preference and does NOT say the memory is wrong or give a new "
+    "value, use action=contradict + contradicts_cognition_id (the "
+    "corresponding id in current_cognitions); the proposition equals the "
+    "opposing slice verbatim. **The disagreeing statement is ONLY a "
+    "contradict anchor — never emit it as a new form/cognition, and never "
+    "correct or retract the memory it disagrees with.** "
+    "Relationships and third-party attributes do not support contradict "
+    "(relationship negation goes through rule 13 retract). When correct/"
+    "retract/contradict cannot be told apart → do not produce that item.\n"
+    "15. event (happened/confirmed events, V7): user-stated events that "
+    "happened (with narrative/time/participants/objects) use "
+    "statement_kind=event (stated). participants lists the third-party "
+    "entities involved (names verbatim in the proposition, kind defaults to "
+    "person; \"The user\" may stand for the user themselves), objects lists "
+    "the objects/places involved (kind e.g. place/thing). Names must be in "
+    "the proposition; omit a list when there are no definite entities. Time: "
+    "when a concrete date can be determined, occurred_at uses YYYY-MM-DD "
+    "(e.g. \"yesterday\" resolves to a date) and the time phrase goes "
+    "verbatim into time_expression; when the date cannot be resolved, omit "
+    "**both** fields (the event still forms). Not-yet-happened/uncertain/"
+    "vague content is not produced. **The proposition must equal the "
+    "supporting slice verbatim — including \"last weekend/yesterday\" time "
+    "words, not a single character added, deleted or rewritten** (if the "
+    "slice is \"Last weekend I went to Nanjing with Wang\", the proposition "
+    "must be exactly that). Event retraction (\"that never happened/forget "
+    "it\") uses correct+retract+corrects_event_id; event replacement (the old "
+    "event was wrong and a new narrative is given, e.g. \"Actually last "
+    "weekend I did not go to Nanjing — I went to Hangzhou\") uses "
+    "correct+corrects_event_id (the **old** event's id from current_events, "
+    "copied verbatim) + the new event's participants/objects/occurred_at/"
+    "time_expression (same event field contract, proposition = the new "
+    "narrative verbatim slice); events do not support contradict. **Using "
+    "form for a replacement would leave the old event current — two "
+    "conflicting rows — which is a wrong state; you MUST use correct**.\n"
+    "16. perspective holder (third-party perspective, V8): ONLY when the user "
+    "relays a **third party's** identity-class stable attribute/preference "
+    "about another third party or about the user (e.g. \"Wang says Li is "
+    "Gen Z\" \"Wang says I don't like sports\"), use attribute/preference + "
+    "entity = the person being described (name verbatim in the proposition) "
+    "+ perspective_holder = the speaker (third-party name, verbatim in the "
+    "proposition; **not** \"The user\"; the speaker must not equal the "
+    "described person). The user's own stated attributes/preferences must "
+    "**not** carry perspective_holder (those are owner_self). Third-party "
+    "perspective **evaluations** (\"Wang says Li is amazing\") are still "
+    "never produced.\n"
+    "17. clarification_required: when the user is clearly stating something "
+    "to remember but the identity or meaning cannot be uniquely resolved "
+    "(unlockable) and you produce no item, emit a whole-batch "
+    "clarification_required; question is a one-sentence clarification in the "
+    "conversation language (<=100 chars, ask only the most critical "
+    "ambiguity). out_of_scope: when you understood the content but it is "
+    "outside the current formal contract (not an attributable stable "
+    "attribute/preference/naming/relationship/event) and the user clearly "
+    "asked to remember it, emit a whole-batch out_of_scope; note is a "
+    "one-sentence explanation (<=100 chars). Both are zero World writes; "
+    "unrelated chitchat/emotions/opinions/evaluations still use no_change — "
+    "do not overuse these two results.\n"
+    "Examples:\n"
+    '{"schema_version":8,"result":"cognitions","cognitions":['
+    '{"action":"form","target":"owner_self","statement_kind":"naming",'
+    '"formed_by":"stated","proposition":"My friend is called Wang",'
+    '"entity":{"canonical_name":"Wang","kind":"person"},'
+    '"supports":[{"evidence_id":"ev1","start":0,"end":24}]}]}\n'
+    '{"schema_version":8,"result":"cognitions","cognitions":['
+    '{"action":"form","target":"owner_self","statement_kind":"relationship",'
+    '"formed_by":"stated","proposition":"My girlfriend is called Li",'
+    '"target_entity":{"canonical_name":"Li","kind":"person"},'
+    '"relation_type":"girlfriend",'
+    '"supports":[{"evidence_id":"ev2","start":0,"end":26}]}]}'
+    " (both \"my girlfriend is called Li\" and \"my girlfriend is Li\" are "
+    "this relationship: no source_entity)\n"
+    '{"schema_version":8,"result":"cognitions","cognitions":['
+    '{"action":"correct","target":"owner_self","statement_kind":"relationship",'
+    '"formed_by":"stated","proposition":"Actually Wang is not Yang\'s girlfriend, she is Li\'s girlfriend",'
+    '"corrects_relationship_id":"<the old relationship id from current_relationships>",'
+    '"source_entity":{"canonical_name":"Wang","kind":"person"},'
+    '"target_entity":{"canonical_name":"Li","kind":"person"},'
+    '"relation_type":"girlfriend",'
+    '"supports":[{"evidence_id":"ev3","start":0,"end":62}]}]}'
+    " (replacement MUST use action=correct + the old relationship id, **never** form)\n"
+    '{"schema_version":8,"result":"cognitions","cognitions":['
+    '{"action":"correct","target":"owner_self","statement_kind":"event",'
+    '"formed_by":"stated","proposition":"Actually last weekend I went to Hangzhou, not Nanjing",'
+    '"corrects_event_id":"<likewise the old event id from the world event list>",'
+    '"participants":[],'
+    '"objects":[{"canonical_name":"Hangzhou","kind":"place"}],'
+    '"supports":[{"evidence_id":"ev4","start":0,"end":53}]}]}'
+    " (event replacement likewise MUST use action=correct + the old event id, **never** form)\n"
+    '{"schema_version":8,"result":"cognitions","cognitions":['
+    '{"action":"form","target":"owner_self","statement_kind":"naming",'
+    '"formed_by":"stated","proposition":"Erwu is the kitten I bought from someone back in my hometown, because her birthday is February 5th, so I named her Erwu",'
+    '"entity":{"canonical_name":"Erwu","kind":"animal"},'
+    '"supports":[{"evidence_id":"ev5","start":0,"end":119}]}]}'
+    " (one long pet sentence = ONE naming with the full sentence as the "
+    "proposition; never split it and never emit a relationship for a pet)\n"
+    '{"schema_version":8,"result":"cognitions","cognitions":['
+    '{"action":"contradict","target":"owner_self","statement_kind":"preference",'
+    '"formed_by":"stated","proposition":"Coffee actually doesn\'t taste good",'
+    '"contradicts_cognition_id":"<the existing cognition id from current_cognitions>",'
+    '"supports":[{"evidence_id":"ev6","start":0,"end":34}]}]}'
+    " (disagreement = contradict only; the disagreeing words never become a "
+    "new memory and the old memory stays current)\n"
+)
+
 
 def _user_payload(
     current_cognitions: list[dict[str, object]],
@@ -674,6 +959,35 @@ def _user_payload(
     )
 
 
+def _boundary_language(
+    db: sqlite3.Connection, job: ClaimedWorldJob, explicit: Optional[str]
+) -> str:
+    """Deterministic prompt-language choice for one boundary.
+
+    An explicit "zh"/"en" wins; otherwise the boundary's Evidence decides by
+    majority script: CJK characters vs ASCII letters (tie → zh, the legacy
+    default).  Zero-config for the Hermes chain; hosts that know the user's
+    language may pin it explicitly.
+    """
+    if explicit in ("zh", "en"):
+        return explicit
+    cjk = 0
+    latin = 0
+    for evidence_id in job.evidence_ids():
+        row = db.execute(
+            "SELECT raw_content FROM evidence WHERE id = ?", (evidence_id,)
+        ).fetchone()
+        if row is None:
+            continue
+        for ch in str(row[0]):
+            code = ord(ch)
+            if 0x4E00 <= code <= 0x9FFF:
+                cjk += 1
+            elif ch.isascii() and ch.isalpha():
+                latin += 1
+    return "zh" if cjk >= latin else "en"
+
+
 class HermesBatchAdapterProcessor:
     """V3 formal batch adapter (see module docstring)."""
 
@@ -685,10 +999,14 @@ class HermesBatchAdapterProcessor:
         route: OneShotRoute,
         *,
         clock: Clock = system_clock,
+        lang: Optional[str] = None,
     ) -> None:
+        if lang not in (None, "zh", "en"):
+            raise ValueError("lang must be None, 'zh' or 'en'")
         self._db_path = db_path
         self._route = route
         self._clock = clock
+        self._lang = lang
 
     # ── entry point ────────────────────────────────────────────────────────
 
@@ -826,8 +1144,13 @@ class HermesBatchAdapterProcessor:
         entities = self._current_entities_payload(job, db)
         relationships = self._current_relationships_payload(job, db)
         events = self._current_events_payload(job, db)
+        prompt = (
+            _SYSTEM_PROMPT
+            if _boundary_language(db, job, self._lang) == "zh"
+            else _SYSTEM_PROMPT_EN
+        )
         messages = [
-            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "system", "content": prompt},
             {
                 "role": "user",
                 "content": _user_payload(
@@ -4028,6 +4351,13 @@ def _repair_spans(
         # Subject-less prepend-anchored statements ("用户刷视频…") also match
         # the bare slice ("刷视频…") in the raw evidence.
         candidates.append(proposition[len("用户"):])
+    if proposition.startswith("The user"):
+        for token, replacement in _EN_FIRST_PERSON:
+            if proposition.startswith(replacement):
+                candidates.append(token.rstrip().capitalize() + proposition[len(replacement):])
+        # English subject-less prepend-anchored statements also match the bare
+        # slice in the raw evidence.
+        candidates.append(proposition[len("The user "):])
     repaired = []
     for evidence_id, start, end, slice_text in parsed:
         keep = True

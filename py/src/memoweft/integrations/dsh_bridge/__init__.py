@@ -520,7 +520,10 @@ class DshMemoWeftRuntime:
             route = default_one_shot_route()
         processor = None
         if callable(route):
-            processor = HermesBatchAdapterProcessor(str(db_path), route)
+            lang = kwargs.get("lang")
+            if lang not in (None, "zh", "en"):
+                raise DshBoundaryError("lang must be None, 'zh' or 'en'")
+            processor = HermesBatchAdapterProcessor(str(db_path), route, lang=lang)
         self._world_worker = WorldJobWorker(db_path, processor=processor)
         self._world_worker.start()
         self._enabled = True
