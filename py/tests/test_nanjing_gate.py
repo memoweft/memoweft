@@ -21,7 +21,7 @@ from memoweft.world.model import (
     WorldCognition,
     WorldEvent,
 )
-from memoweft.world.nanjing_gate import (
+from support.nanjing_gate import (
     NANJING_GATE_CONTRACT_VERSION,
     NanjingGateObservation,
     NanjingGateReport,

@@ -4,6 +4,9 @@ The evaluator intentionally knows the *meaning* of the frozen scenario, but
 does not know extraction-generated object ids.  It is a pure in-memory check:
 callers provide the authoritative evidence allowlist and evidence roles, then
 record the returned immutable report with their experiment result.
+
+Relocated from ``memoweft.world`` to ``py/tests/support`` (MAINLINE.md step A,
+2026-08-17): frozen-corpus regression gate, test facility only.
 """
 from __future__ import annotations
 
@@ -13,11 +16,11 @@ from hashlib import sha256
 import re
 import unicodedata
 
-from ..confidence import compute_confidence, derive_cred_status
-from ..types import ConfidenceInputs, EvidenceLink
-from .delta import ClaimSpan, FormationContentBinding, FormationSourceTrace, FormationTrace
-from .graph import MemoryWorldGraph
-from .model import (
+from memoweft.confidence import compute_confidence, derive_cred_status
+from memoweft.types import ConfidenceInputs, EvidenceLink
+from memoweft.world.delta import ClaimSpan, FormationContentBinding, FormationSourceTrace, FormationTrace
+from memoweft.world.graph import MemoryWorldGraph
+from memoweft.world.model import (
     Entity,
     EventFacet,
     EventParticipant,
@@ -28,7 +31,7 @@ from .model import (
     WorldCognition,
     WorldEvent,
 )
-from .semantics import is_interpersonal_conflict_type
+from memoweft.world.semantics import is_interpersonal_conflict_type
 
 
 @dataclass(frozen=True, slots=True)

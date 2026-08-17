@@ -2,6 +2,9 @@
 
 This is deliberately a local, graph-only evaluator.  It does not inspect raw
 Evidence content, call a model, or write to the supplied graph.
+
+Relocated from ``memoweft.world`` to ``py/tests/support`` (MAINLINE.md step A,
+2026-08-17): frozen-corpus regression gate, test facility only.
 """
 from __future__ import annotations
 
@@ -10,9 +13,9 @@ from typing import Callable
 
 from memoweft.types import EvidenceLink
 
-from .evolution import AcceptedEvolutionStep, EvolutionStep
-from .graph import MemoryWorldGraph
-from .model import (
+from memoweft.world.evolution import AcceptedEvolutionStep, EvolutionStep
+from memoweft.world.graph import MemoryWorldGraph
+from memoweft.world.model import (
     Entity,
     EventFacet,
     EventParticipant,
@@ -23,7 +26,7 @@ from .model import (
     WorldCognition,
     WorldEvent,
 )
-from .recall import CognitionLineage, reconstruct_memory, render_answer_context
+from memoweft.world.recall import CognitionLineage, reconstruct_memory, render_answer_context
 
 
 GATE5_PROTOCOL_ID = "gate5-memory-reconstruction-engineering@1"
@@ -163,7 +166,7 @@ def _nanjing_graph(*, prefix: str = "", reverse: bool = False) -> MemoryWorldGra
 
 
 def _semantic_digest(result: object, graph: MemoryWorldGraph) -> tuple[object, ...]:
-    from .recall import MemoryReconstruction
+    from memoweft.world.recall import MemoryReconstruction
     assert isinstance(result, MemoryReconstruction) and result.primary_anchor is not None
     return (result.status, graph.events[result.primary_anchor.target.id].summary, tuple(sorted(graph.entities[item].canonical_name for item in result.entity_ids)), tuple(sorted(graph.cognitions[item].content for item in result.current_cognition_ids)))
 

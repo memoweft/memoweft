@@ -8,8 +8,8 @@ from typing import cast
 
 import pytest
 
-import memoweft.world.entity_continuity_gate as gate
-from memoweft.world.entity_continuity_gate import (
+import support.entity_continuity_gate as gate
+from support.entity_continuity_gate import (
     Gate2CorpusError,
     evaluate_entity_continuity_gate,
     evaluate_gate2_corpus,

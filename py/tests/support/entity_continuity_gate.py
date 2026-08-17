@@ -4,6 +4,9 @@ The gate deliberately exercises the public review/authority boundary.  In
 particular, every resolution under test travels through an authority-issued
 ``resolution_context`` and ``EntityReferenceResolver.resolve_context``; it
 never treats caller-built resolver history as identity authority.
+
+Relocated from ``memoweft.world`` to ``py/tests/support`` (MAINLINE.md step A,
+2026-08-17): frozen-corpus regression gate, test facility only.
 """
 from __future__ import annotations
 
@@ -13,9 +16,9 @@ import json
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
-from .entity_resolution import EntityReferenceResolution, EntityReferenceResolver
-from .graph import MemoryWorldGraph
-from .identity_review import (
+from memoweft.world.entity_resolution import EntityReferenceResolution, EntityReferenceResolver
+from memoweft.world.graph import MemoryWorldGraph
+from memoweft.world.identity_review import (
     BindingAssignment,
     EntityIdentityDelta,
     EntityReferenceLocator,
@@ -27,7 +30,7 @@ from .identity_review import (
     SplitSuccessor,
     VerifiedReferenceMention,
 )
-from .model import (
+from memoweft.world.model import (
     Entity,
     EventFacet,
     EventParticipant,

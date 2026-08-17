@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from memoweft.world.recall_gate import GATE5_PROTOCOL_ID, evaluate_gate5_memory_reconstruction
+from support.recall_gate import GATE5_PROTOCOL_ID, evaluate_gate5_memory_reconstruction
 
 
 def test_gate5_fixed_engineering_predicates_pass() -> None:

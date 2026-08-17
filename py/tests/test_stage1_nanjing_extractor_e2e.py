@@ -12,7 +12,7 @@ from memoweft.world.delta import WorldDelta
 from memoweft.world.extractor import ConversationTurn, WorldExtractor
 from memoweft.world.graph import MemoryWorldGraph
 from memoweft.world.model import Entity, PersonalWorld
-from memoweft.world.nanjing_gate import NanjingGateReport, evaluate_nanjing_gate
+from support.nanjing_gate import NanjingGateReport, evaluate_nanjing_gate
 
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "next" / "golden-001-nanjing"

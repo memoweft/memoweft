@@ -328,19 +328,6 @@ class MemoryView:
             if relationship.id in historical
         )
 
-    @property
-    def historical_cognitions(self) -> tuple[WorldCognition, ...]:
-        historical_relationships = {item.id for item in self.historical_relationships}
-        return tuple(
-            cognition
-            for cognition_id, cognition in self.graph.cognitions.items()
-            if cognition_id in self.superseded_cognition_ids
-            or (
-                cognition.target.kind == "relationship"
-                and cognition.target.id in historical_relationships
-            )
-        )
-
 
 @dataclass(frozen=True, slots=True)
 class MemoryAnswer:
