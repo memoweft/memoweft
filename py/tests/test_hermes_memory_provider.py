@@ -396,7 +396,8 @@ def test_existing_legacy_database_is_rejected_without_schema_mutation(tmp_path: 
 
 
 def _synthetic_v7_source(tmp_path: Path) -> Path:
-    """Build a physical v7 database: current schema minus the v8-v10 tables."""
+    """Build a physical v7 database: current schema minus the v8-v10 tables
+    and the v15 terminal observability columns (added after v7)."""
     db_path = tmp_path / "memoweft" / "memoweft.sqlite3"
     db_path.parent.mkdir()
     db = open_db(str(db_path))
@@ -408,6 +409,8 @@ def _synthetic_v7_source(tmp_path: Path) -> Path:
     db.execute("DROP TABLE relationship_evidence")
     db.execute("DROP TABLE relationship")
     db.execute("DROP TABLE entity")
+    db.execute("ALTER TABLE memory_world_job DROP COLUMN terminal_detail")
+    db.execute("ALTER TABLE memory_world_job DROP COLUMN terminal_state")
     db.execute("PRAGMA user_version = 7")
     db.close()
     return db_path

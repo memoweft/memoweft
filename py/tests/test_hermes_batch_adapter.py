@@ -110,6 +110,90 @@ def test_model_no_change_persists_model_and_zero_world_writes(tmp_path: Path) ->
         db.close()
 
 
+def test_model_clarification_required_is_zero_write_with_terminal_state(tmp_path: Path) -> None:
+    """AUTHORITY §3: 模型提出身份/含义无法唯一解析 → clarification_required
+    终态、零 World 写入、question 可观察。"""
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    script: list[Any] = [
+        {
+            "content": json.dumps(
+                {
+                    "schema_version": 8,
+                    "result": "clarification_required",
+                    "question": "你说的\"他\"是指小王还是小杨？",
+                }
+            ),
+            "model": "deepseek-v4-flash",
+        }
+    ]
+    processed = _run(db_path, clock, script)
+    assert processed == 1
+    row = _job(db_path)
+    assert row["state"] == "no_change"  # 运输机语义：零写入已结算
+    assert row["terminal_state"] == "clarification_required"
+    assert row["terminal_detail"] == "你说的\"他\"是指小王还是小杨？"
+    world = json.loads(str(row["world_result_json"]))
+    assert world["reason"] == "model_clarification_required"
+    assert world["display"] == "你说的\"他\"是指小王还是小杨？"
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 0
+        assert db.execute("SELECT COUNT(*) FROM memory_state").fetchone()[0] == 0
+    finally:
+        db.close()
+
+
+def test_model_out_of_scope_is_zero_write_with_terminal_state(tmp_path: Path) -> None:
+    """AUTHORITY §3: 理解但超出正式合同 → out_of_scope 终态、零 World 写入。"""
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    script: list[Any] = [
+        {
+            "content": json.dumps(
+                {
+                    "schema_version": 8,
+                    "result": "out_of_scope",
+                    "note": "这是临时日程，不属于稳定属性/偏好/命名/关系/事件",
+                }
+            ),
+            "model": "deepseek-v4-flash",
+        }
+    ]
+    processed = _run(db_path, clock, script)
+    assert processed == 1
+    row = _job(db_path)
+    assert row["state"] == "no_change"
+    assert row["terminal_state"] == "out_of_scope"
+    assert "临时日程" in str(row["terminal_detail"])
+    world = json.loads(str(row["world_result_json"]))
+    assert world["reason"] == "model_out_of_scope"
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 0
+    finally:
+        db.close()
+
+
+def test_model_bad_question_fails_closed_as_invalid_model_result(tmp_path: Path) -> None:
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    script: list[Any] = [
+        {
+            "content": json.dumps(
+                {"schema_version": 8, "result": "clarification_required", "question": 123}
+            ),
+            "model": "deepseek-v4-flash",
+        }
+    ]
+    processed = _run(db_path, clock, script)
+    assert processed == 1
+    row = _job(db_path)
+    assert row["state"] == "no_change"
+    assert row["terminal_state"] == "no_change"
+    assert json.loads(str(row["world_result_json"]))["reason"] == "invalid_model_result"
+
+
 def test_one_cognition_applies_atomically_with_ledger_and_revision(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()

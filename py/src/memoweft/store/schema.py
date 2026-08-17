@@ -23,7 +23,7 @@ from __future__ import annotations
 PYTHON_APPLICATION_ID = 0x4D575059
 
 #: Python-owned ``PRAGMA user_version``。TypeScript/shared parity 的版本仍为 6。
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 
 #: 幂等的建表与索引 DDL；shared/parity/schema.json 验证列序、NOT NULL、DEFAULT 与主键契约。
 BASE_SCHEMA_SQL: tuple[str, ...] = (
@@ -240,6 +240,8 @@ WORLD_JOB_SCHEMA_SQL: tuple[str, ...] = (
   created_at                TEXT    NOT NULL,
   completed_at              TEXT,
   last_error_type           TEXT,
+  terminal_state            TEXT,
+  terminal_detail           TEXT,
   CHECK (
     (
       state = 'processing'
@@ -314,6 +316,19 @@ MEMORY_WORLD_JOB_COLUMNS: tuple[str, ...] = (
     "created_at",
     "completed_at",
     "last_error_type",
+    "terminal_state",
+    "terminal_detail",
+)
+
+#: v15 adds AUTHORITY §3 terminal observability to the World Job: the transport
+#: ``state`` machine stays closed, while ``terminal_state`` records the five
+#: observable terminals (applied / no_change / clarification_required /
+#: out_of_scope / failed) and ``terminal_detail`` carries the human-facing
+#: clarification question or out-of-scope note.  Both columns are LAST in the
+#: CREATE so ALTER-migrated tables have the identical column order.
+WORLD_JOB_ALTER_V15_SQL: tuple[str, ...] = (
+    "ALTER TABLE memory_world_job ADD COLUMN terminal_state TEXT",
+    "ALTER TABLE memory_world_job ADD COLUMN terminal_detail TEXT",
 )
 
 #: v6 Python-owned 物理 marker。特别是 ``proposal_decision_receipts`` 不存在于 TS v6。

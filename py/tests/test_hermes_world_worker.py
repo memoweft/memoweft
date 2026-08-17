@@ -491,6 +491,7 @@ def test_fixed_attempt_budget_dead_letters_fourth_predispatch_failure(
     assert worker.run_until_quiescent(max_jobs=1) == 1
     row = _job(db_path)
     assert row["state"] == "dead"
+    assert row["terminal_state"] == "failed"  # AUTHORITY §3：事务/权威失败
     assert row["attempts"] == 4
     assert row["last_error_type"] == "max_attempts_exhausted"
     assert len(processor.calls) == 4

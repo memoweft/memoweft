@@ -32,6 +32,11 @@ _NO_ELIGIBLE_REASON = "no_eligible_user_evidence"
 _CURRENT_JOB_STATES = frozenset(
     {"pending", "processing", "applied", "no_change", "retry", "dead"}
 )
+#: AUTHORITY §3 terminals persisted in ``memory_world_job.terminal_state``.
+#: NULL is legal on non-terminal (pending/processing/retry) and legacy rows.
+_CURRENT_TERMINAL_STATES = frozenset(
+    {"applied", "no_change", "clarification_required", "out_of_scope", "failed"}
+)
 _FORMAL_TARGET_KEYS = frozenset(
     {
         "boundary_schema_version",
@@ -557,8 +562,8 @@ class HermesBoundaryStore:
               formal_target_hash, subject_id, host_id, evidence_ids_json, state,
               attempts, next_attempt_at, fencing_generation, model_task,
               world_result_json, result_hash, delivery_receipt_json,
-              delivery_receipt_hash, created_at, completed_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+              delivery_receipt_hash, created_at, completed_at, terminal_state
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 receipt.job_id,
                 _JOB_SCHEMA_VERSION,
@@ -585,6 +590,7 @@ class HermesBoundaryStore:
                 receipt.receipt_hash,
                 receipt.accepted_at,
                 receipt.accepted_at if is_no_change else None,
+                "no_change" if is_no_change else None,
             ),
         )
 
@@ -621,6 +627,7 @@ class HermesBoundaryStore:
         job_id = row["job_id"]
         current_state = row["state"]
         created_at = row["created_at"]
+        terminal_state = row["terminal_state"] if "terminal_state" in row.keys() else None
         if (
             not isinstance(event_id, str)
             or not event_id
@@ -632,6 +639,10 @@ class HermesBoundaryStore:
             or current_state not in _CURRENT_JOB_STATES
             or not isinstance(created_at, str)
             or not created_at
+            or (
+                terminal_state is not None
+                and terminal_state not in _CURRENT_TERMINAL_STATES
+            )
         ):
             raise BoundaryReceiptIntegrityError("Stored World Job has an invalid shape")
 

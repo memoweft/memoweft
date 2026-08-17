@@ -566,10 +566,11 @@ def test_correction_merge_collision_is_zero_write(tmp_path: Path) -> None:
     )
     row = _job(db_path, job_id="job-3")
     assert row["state"] == "no_change"
-    assert (
-        json.loads(str(row["world_result_json"]))["reason"]
-        == "correction_merge_ambiguous"
-    )
+    assert row["terminal_state"] == "clarification_required"
+    world = json.loads(str(row["world_result_json"]))
+    assert world["reason"] == "correction_merge_ambiguous"
+    assert "澄清" in str(world.get("display"))
+    assert row["terminal_detail"] == world["display"]
     rows = _cognitions(db_path)
     assert rows[prior_id][5] is None  # still current, untouched
 

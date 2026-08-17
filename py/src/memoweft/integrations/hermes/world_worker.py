@@ -41,8 +41,26 @@ WORLD_JOB_LOOP_ERROR_RETRY_SECONDS = 1.0
 JobState = Literal[
     "pending", "processing", "applied", "no_change", "retry", "dead"
 ]
-ProcessorState = Literal["applied", "no_change", "retry", "dead"]
+ProcessorState = Literal[
+    "applied",
+    "no_change",
+    "clarification_required",
+    "out_of_scope",
+    "retry",
+    "dead",
+]
 Clock = Callable[[], datetime]
+
+#: AUTHORITY §3 terminal (observable outcome) recorded for each terminal
+#: transport state; non-terminal (retry/pending/processing) rows keep NULL.
+TERMINAL_BY_STATE: Mapping[str, str | None] = {
+    "applied": "applied",
+    "no_change": "no_change",
+    "clarification_required": "clarification_required",
+    "out_of_scope": "out_of_scope",
+    "dead": "failed",
+    "retry": None,
+}
 
 _ERROR_CODE = re.compile(r"^[a-z][a-z0-9_.-]{0,127}$")
 
@@ -196,9 +214,15 @@ class WorldJobResult:
     model_name: str | None = None
     model_usage: Mapping[str, object] | None = None
     model_result: Mapping[str, object] | None = None
+    display: str | None = None
 
     def __post_init__(self) -> None:
         _validate_error_code(self.reason)
+        if self.display is not None:
+            if not isinstance(self.display, str) or not self.display.strip():
+                raise ValueError("display must be a non-empty string when present")
+            if len(self.display) > 500:
+                raise ValueError("display exceeds 500 characters")
 
     @classmethod
     def applied(
@@ -236,6 +260,52 @@ class WorldJobResult:
             state="no_change",
             reason=reason,
             world_result=world_result,
+            model_provider=model_provider,
+            model_name=model_name,
+            model_usage=model_usage,
+            model_result=model_result,
+        )
+
+    @classmethod
+    def clarification_required(
+        cls,
+        reason: str,
+        *,
+        display: str | None = None,
+        model_provider: str | None = None,
+        model_name: str | None = None,
+        model_usage: Mapping[str, object] | None = None,
+        model_result: Mapping[str, object] | None = None,
+    ) -> WorldJobResult:
+        """AUTHORITY §3: identity or meaning could not be uniquely resolved.
+        Zero World writes; ``display`` carries the clarifying question."""
+        return cls(
+            state="clarification_required",
+            reason=reason,
+            display=display,
+            model_provider=model_provider,
+            model_name=model_name,
+            model_usage=model_usage,
+            model_result=model_result,
+        )
+
+    @classmethod
+    def out_of_scope(
+        cls,
+        reason: str,
+        *,
+        display: str | None = None,
+        model_provider: str | None = None,
+        model_name: str | None = None,
+        model_usage: Mapping[str, object] | None = None,
+        model_result: Mapping[str, object] | None = None,
+    ) -> WorldJobResult:
+        """AUTHORITY §3: understood but outside the current formal contract.
+        Zero World writes; ``display`` carries the one-line note."""
+        return cls(
+            state="out_of_scope",
+            reason=reason,
+            display=display,
             model_provider=model_provider,
             model_name=model_name,
             model_usage=model_usage,
@@ -348,6 +418,8 @@ def _outcome_json(result: WorldJobResult) -> str:
     }
     if result.world_result is not None:
         payload["result"] = dict(result.world_result)
+    if result.display is not None:
+        payload["display"] = result.display
     return _canonical_json(payload)
 
 
@@ -516,6 +588,7 @@ class WorldJobStore:
         cursor = db.execute(
             f"""UPDATE {WORLD_JOB_TABLE}
                    SET state = 'dead',
+                       terminal_state = 'failed',
                        next_attempt_at = NULL,
                        claim_owner = NULL,
                        claim_token = NULL,
@@ -553,6 +626,7 @@ class WorldJobStore:
         cursor = db.execute(
             f"""UPDATE {WORLD_JOB_TABLE}
                    SET state = 'dead',
+                       terminal_state = 'failed',
                        next_attempt_at = NULL,
                        claim_owner = NULL,
                        claim_token = NULL,
@@ -893,6 +967,16 @@ class WorldJobStore:
                         self._now()
                         + timedelta(seconds=self.policy.retry_delay(attempts))
                     )
+            # The transport ``state`` column stays the closed six-value machine
+            # (CHECK constraint); clarification_required / out_of_scope settle as
+            # transport no_change and carry their AUTHORITY §3 terminal in
+            # ``terminal_state``.  Computed AFTER the max-attempts upgrade so a
+            # retried job that exhausts its budget settles as dead, not retry.
+            transport_state = (
+                effective.state
+                if effective.state in ("applied", "no_change", "retry", "dead")
+                else "no_change"
+            )
 
             world_json = _outcome_json(effective)
             model_result_json: str | None = None
@@ -932,7 +1016,9 @@ class WorldJobStore:
                            world_result_json = ?,
                            result_hash = ?,
                            completed_at = ?,
-                           last_error_type = ?
+                           last_error_type = ?,
+                           terminal_state = ?,
+                           terminal_detail = ?
                      WHERE job_id = ?
                        AND state = 'processing'
                        AND claim_owner = ?
@@ -940,7 +1026,7 @@ class WorldJobStore:
                        AND fencing_generation = ?
                        AND lease_expires_at > ?""",
                 (
-                    effective.state,
+                    transport_state,
                     next_attempt_at,
                     int(model_completed),
                     now_text,
@@ -958,6 +1044,8 @@ class WorldJobStore:
                     persisted_result_hash,
                     completed_at,
                     error_type,
+                    TERMINAL_BY_STATE.get(effective.state) if terminal else None,
+                    result.display if terminal else None,
                     claim.job_id,
                     claim.claim_owner,
                     claim.claim_token,

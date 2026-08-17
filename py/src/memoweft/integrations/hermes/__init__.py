@@ -58,6 +58,8 @@ _SUMMARY_PREFIXES = (
     "[CONTEXT COMPACTION — REFERENCE ONLY]",
     "[CONTEXT SUMMARY]:",
 )
+#: World Job column contract before v15 (no terminal observability columns).
+_MEMORY_WORLD_JOB_COLUMNS_PRE_V15 = MEMORY_WORLD_JOB_COLUMNS[:-2]
 _CONTINUATION_MARKERS = frozenset(
     {
         "Continue from the compressed conversation context above. "
@@ -331,7 +333,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
         db.execute("PRAGMA query_only = ON")
         version = int(db.execute("PRAGMA user_version").fetchone()[0])
         app_id = int(db.execute("PRAGMA application_id").fetchone()[0])
-        if version not in {6, 7, 8, 9, 10, 11, 12, 13, SCHEMA_VERSION}:
+        if version not in {6, 7, 8, 9, 10, 11, 12, 13, 14, SCHEMA_VERSION}:
             raise IncompatibleDatabaseError(
                 "Existing MemoWeft database is not a supported Python schema version"
             )
@@ -339,7 +341,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
             raise IncompatibleDatabaseError(
                 "Existing Python v6 database has an incompatible application id"
             )
-        if version in {7, 8, 9, 10, 11, 12, 13, SCHEMA_VERSION} and app_id != PYTHON_APPLICATION_ID:
+        if version in {7, 8, 9, 10, 11, 12, 13, 14, SCHEMA_VERSION} and app_id != PYTHON_APPLICATION_ID:
             raise IncompatibleDatabaseError(
                 "Existing Python database has an incompatible application id"
             )
@@ -351,7 +353,16 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing MemoWeft database has an incompatible physical schema"
                 )
-        if version in {7, 8, 9, 10, 11, 12, 13, SCHEMA_VERSION}:
+        if version in {7, 8, 9, 10, 11, 12, 13, 14}:
+            job_columns = tuple(
+                str(row[1])
+                for row in db.execute('PRAGMA table_info("memory_world_job")')
+            )
+            if job_columns != _MEMORY_WORLD_JOB_COLUMNS_PRE_V15:
+                raise IncompatibleDatabaseError(
+                    "Existing Python database has an incompatible World Job schema"
+                )
+        if version == SCHEMA_VERSION:
             job_columns = tuple(
                 str(row[1])
                 for row in db.execute('PRAGMA table_info("memory_world_job")')
@@ -360,7 +371,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible World Job schema"
                 )
-        if version in {8, 9, 10, 11, 12, 13, SCHEMA_VERSION}:
+        if version in {8, 9, 10, 11, 12, 13, 14, SCHEMA_VERSION}:
             content_columns = tuple(
                 str(row[1])
                 for row in db.execute('PRAGMA table_info("boundary_evidence_content")')
@@ -369,7 +380,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible content-binding schema"
                 )
-        if version in {9, 10, 11, 12, 13, SCHEMA_VERSION}:
+        if version in {9, 10, 11, 12, 13, 14, SCHEMA_VERSION}:
             relationship_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("relationship")')
             )

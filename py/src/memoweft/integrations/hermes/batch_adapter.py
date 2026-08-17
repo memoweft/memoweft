@@ -26,7 +26,7 @@ import json
 import logging
 import re
 import sqlite3
-from typing import Any, Callable, Mapping, Optional
+from typing import Any, Callable, Literal, Mapping, Optional
 
 from ...clock import Clock, system_clock, to_iso_z
 from ...store.driver import BUSY_TIMEOUT_MS
@@ -473,6 +473,16 @@ class _CompiledBatch:
     envelope_version: int = INTERPRETATION_SCHEMA_VERSION
 
 
+@dataclass(frozen=True, slots=True)
+class _CompiledOutcome:
+    """Compile result: a batch to apply, or a zero-write AUTHORITY §3 terminal."""
+
+    batch: Optional[_CompiledBatch]
+    reason: str
+    terminal: Literal["no_change", "clarification_required", "out_of_scope"] = "no_change"
+    display: Optional[str] = None
+
+
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
@@ -482,11 +492,15 @@ _SYSTEM_PROMPT = (
     "source_entity_id/target_entity_id）、current_events 列表（id/content/"
     "occurred_at/time_expression）、一个压缩边界内的若干条用户原话 Evidence"
     "（每条有唯一 id 和原文 text，可能附带 assistant preceding context）。\n"
-    "你的任务是只输出一个 JSON 对象：要么描述 1 到 5 条稳定认知，要么 no_change。"
+    "你的任务是只输出一个 JSON 对象：要么描述 1 到 5 条稳定认知，要么 no_change，"
+    "要么 clarification_required（身份/含义无法唯一解析时，附 question），要么 "
+    "out_of_scope（理解但超出正式合同时，附 note）。"
     "**只输出 JSON，不要任何解释、不要思考过程、不要多余文字。**\n"
     '{"schema_version":8,"result":"no_change"}\n'
     '{"schema_version":8,"result":"cognitions","cognitions":[<item>, ...]}'
     "（1..5 个 item）\n"
+    '{"schema_version":8,"result":"clarification_required","question":"…"}\n'
+    '{"schema_version":8,"result":"out_of_scope","note":"…"}\n'
     "item 形状（statement_kind 决定额外字段）：\n"
     '{"action":"form","target":"owner_self",'
     '"statement_kind":"attribute"|"preference"|"naming"|"relationship"|"alias"|'
@@ -557,7 +571,8 @@ _SYSTEM_PROMPT = (
     "本身，只有第一人称才换\"用户\"，**不要**给第三方命题补\"用户\"主语）。不带 entity "
     "的 attribute 才是用户本人属性。\n"
     "11. 同一边界内：命题互异；corrects/contradicts 目标互异；两个 naming 不得同名；"
-    "不确定/歧义/锁不定 → 不产出该 item 或整批 no_change。\n"
+    "不确定/歧义/锁不定 → 不产出该 item；实在无法唯一解析身份/含义时整批 "
+    "clarification_required。\n"
     "12. JSON 卫生：不需要的可选字段（corrects_cognition_id、corrects_relationship_id、"
     "corrects_event_id、contradicts_cognition_id、retract、assistant_claim、entity、"
     "alias_of、source_entity、target_entity、relation_type、participants、objects、"
@@ -600,6 +615,13 @@ _SYSTEM_PROMPT = (
     "说话人=被陈述对象也不行）。用户自己说的稳定属性/偏好**不要**带 "
     "perspective_holder（那才是 owner_self）。第三方视角的**评价**（\"小王说小李"
     "很厉害\"）仍一律不产出。\n"
+    "17. clarification_required：用户明显在陈述需要记住的内容，但身份或含义无法"
+    "唯一解析（锁不定）且不产出任何 item 时，整批输出 clarification_required，"
+    "question 是一句话中文澄清问题（≤100 字，只问最关键的歧义）。out_of_scope："
+    "理解了内容但超出当前正式合同（不属于可归属的稳定属性/偏好/命名/关系/事件）"
+    "且用户明显要求记忆时，整批输出 out_of_scope，note 是一句话中文说明（≤100 "
+    "字）。两者都零 World 写入；无关的闲聊/情绪/观点/评价仍用 no_change，不要"
+    "滥用这两个结果。\n"
     "示例：\n"
     '{"schema_version":8,"result":"cognitions","cognitions":['
     '{"action":"form","target":"owner_self","statement_kind":"naming",'
@@ -697,11 +719,27 @@ class HermesBatchAdapterProcessor:
             "model_result": payload,
         }
 
-        batch, reason = self._compile(str(payload.get("content") or ""), job, db)
+        try:
+            compiled = self._compile(str(payload.get("content") or ""), job, db)
+        except _ZeroWriteError as exc:
+            return WorldJobResult.no_change(str(exc), **model_kwargs)
+        batch = compiled.batch
         if batch is None:
-            return WorldJobResult.no_change(reason, **model_kwargs)
+            if compiled.terminal == "clarification_required":
+                return WorldJobResult.clarification_required(
+                    compiled.reason, display=compiled.display, **model_kwargs
+                )
+            if compiled.terminal == "out_of_scope":
+                return WorldJobResult.out_of_scope(
+                    compiled.reason, display=compiled.display, **model_kwargs
+                )
+            return WorldJobResult.no_change(compiled.reason, **model_kwargs)
         try:
             applied, outcome = self._apply_atomically(db, job, batch)
+        except _ClarificationError as exc:
+            return WorldJobResult.clarification_required(
+                str(exc), display=exc.display, **model_kwargs
+            )
         except _ZeroWriteError as exc:
             return WorldJobResult.no_change(str(exc), **model_kwargs)
         if not applied or outcome is None:
@@ -924,50 +962,75 @@ class HermesBatchAdapterProcessor:
 
     def _compile(
         self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection
-    ) -> tuple[Optional[_CompiledBatch], str]:
+    ) -> _CompiledOutcome:
         try:
             data = json.loads(content)
         except (TypeError, ValueError):
-            return None, "invalid_model_result"
+            return _CompiledOutcome(None, "invalid_model_result")
         if not isinstance(data, dict):
-            return None, "invalid_model_result"
+            return _CompiledOutcome(None, "invalid_model_result")
         schema_version = data.get("schema_version")
         if schema_version == LEGACY_INTERPRETATION_SCHEMA_VERSION:
-            return self._compile_legacy(data, job, db)
+            batch, reason = self._compile_legacy(data, job, db)
+            return _CompiledOutcome(batch, reason)
         if schema_version == LEGACY_V2_INTERPRETATION_SCHEMA_VERSION:
-            return self._compile_batch(data, job, db, extended_kinds=False)
+            batch, reason = self._compile_batch(data, job, db, extended_kinds=False)
+            return _CompiledOutcome(batch, reason)
         if schema_version == LEGACY_V3_INTERPRETATION_SCHEMA_VERSION:
-            return self._compile_batch(
+            batch, reason = self._compile_batch(
                 data, job, db, extended_kinds=True, third_party=False
             )
+            return _CompiledOutcome(batch, reason)
         if schema_version == LEGACY_V4_INTERPRETATION_SCHEMA_VERSION:
-            return self._compile_batch(
+            batch, reason = self._compile_batch(
                 data, job, db, extended_kinds=True, third_party=True
             )
+            return _CompiledOutcome(batch, reason)
         if schema_version == LEGACY_V5_INTERPRETATION_SCHEMA_VERSION:
-            return self._compile_batch(
+            batch, reason = self._compile_batch(
                 data, job, db, extended_kinds=True, third_party=True,
                 alias_support=True,
             )
+            return _CompiledOutcome(batch, reason)
         if schema_version == LEGACY_V6_INTERPRETATION_SCHEMA_VERSION:
-            return self._compile_batch(
+            batch, reason = self._compile_batch(
                 data, job, db, extended_kinds=True, third_party=True,
                 alias_support=True, retract_support=True,
                 contradict_support=True,
             )
+            return _CompiledOutcome(batch, reason)
         if schema_version == LEGACY_V7_INTERPRETATION_SCHEMA_VERSION:
-            return self._compile_batch(
+            batch, reason = self._compile_batch(
                 data, job, db, extended_kinds=True, third_party=True,
                 alias_support=True, retract_support=True,
                 contradict_support=True, event_support=True,
             )
+            return _CompiledOutcome(batch, reason)
         if schema_version != INTERPRETATION_SCHEMA_VERSION:
-            return None, "invalid_model_result"
-        return self._compile_batch(
+            return _CompiledOutcome(None, "invalid_model_result")
+        # Current v8 envelope: the model may also propose the two AUTHORITY §3
+        # zero-write terminals (clarification_required / out_of_scope).
+        result = data.get("result")
+        if result == "clarification_required":
+            return _CompiledOutcome(
+                None,
+                "model_clarification_required",
+                terminal="clarification_required",
+                display=_model_display(data.get("question")),
+            )
+        if result == "out_of_scope":
+            return _CompiledOutcome(
+                None,
+                "model_out_of_scope",
+                terminal="out_of_scope",
+                display=_model_display(data.get("note")),
+            )
+        batch, reason = self._compile_batch(
             data, job, db, extended_kinds=True, third_party=True,
             alias_support=True, retract_support=True, contradict_support=True,
             event_support=True, perspective_support=True,
         )
+        return _CompiledOutcome(batch, reason)
 
     def _compile_legacy(
         self,
@@ -3613,7 +3676,10 @@ class HermesBatchAdapterProcessor:
             (new_id, prior_id),
         ).fetchone()
         if colliding is not None:
-            raise _ZeroWriteError("correction_merge_ambiguous")
+            raise _ClarificationError(
+                "correction_merge_ambiguous",
+                "有两个当前认知都可能是这次纠正的目标，需要你澄清指的是哪一个",
+            )
         cursor = db.execute(
             "UPDATE cognition SET invalid_at = ?, updated_at = ? "
             "WHERE id = ? AND invalid_at IS NULL AND archived_at IS NULL",
@@ -4037,6 +4103,29 @@ def _parse_supports(
 
 class _ZeroWriteError(Exception):
     """Compiler/validation refusal: zero World writes, settle as no_change."""
+
+
+class _ClarificationError(_ZeroWriteError):
+    """Compiler-detected identity/meaning ambiguity: zero World writes, settle
+    as clarification_required (AUTHORITY §3). ``display`` carries the human
+    clarifying question."""
+
+    def __init__(self, reason: str, display: str) -> None:
+        super().__init__(reason)
+        self.display = display
+
+
+def _model_display(value: object) -> Optional[str]:
+    """Validate the model-supplied question/note (optional, ≤500 chars)."""
+
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise _ZeroWriteError("invalid_model_result")
+    stripped = value.strip()
+    if not stripped or len(stripped) > 500:
+        raise _ZeroWriteError("invalid_model_result")
+    return stripped
 
 
 def _ensure_support_link(

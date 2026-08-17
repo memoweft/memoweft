@@ -33,6 +33,7 @@ from .schema import (
     SCHEMA_VERSION,
     WORLD_EVENT_COLUMNS,
     WORLD_EVENT_SCHEMA_SQL,
+    WORLD_JOB_ALTER_V15_SQL,
     WORLD_JOB_SCHEMA_SQL,
     WORLD_SCHEMA_SQL,
 )
@@ -182,18 +183,20 @@ def _validate_current_schema(db: sqlite3.Connection) -> None:
         raise IncompatibleSchemaError(
             "Current Python database has an incompatible application_id"
         )
-    # ``entity``, ``retraction`` and ``cognition_target`` are excluded from
-    # the exact SQL-text fingerprint: their columns were added via ALTER
-    # TABLE (v11/v13/v14), and SQLite keeps the original CREATE text in
-    # sqlite_master for ALTER-mutated tables, so a migrated table can never
-    # match the fresh CREATE text.  Their closed contracts are the column
-    # ORDER (checked below) plus object existence — both are still enforced.
+    # ``entity``, ``retraction``, ``cognition_target`` and ``memory_world_job``
+    # are excluded from the exact SQL-text fingerprint: their columns were
+    # added via ALTER TABLE (v11/v13/v14/v15), and SQLite keeps the original
+    # CREATE text in sqlite_master for ALTER-mutated tables, so a migrated
+    # table can never match the fresh CREATE text.  Their closed contracts are
+    # the column ORDER (checked below) plus object existence — both are still
+    # enforced.
     _require_schema_definitions(
         db,
         {
             name: sql
             for name, sql in _CURRENT_EXPECTED_SCHEMA_SQL.items()
-            if name not in ("entity", "retraction", "cognition_target")
+            if name
+            not in ("entity", "retraction", "cognition_target", "memory_world_job")
         },
         label="Current Python",
     )
@@ -373,6 +376,21 @@ def _migrate(db: sqlite3.Connection, current: int) -> None:
                 }
                 if "perspective_entity_id" not in columns:
                     for statement in COGNITION_TARGET_ALTER_V14_SQL:
+                        db.execute(statement)
+            elif version == 15:
+                # v15 adds AUTHORITY §3 terminal observability to the World
+                # Job (clarification_required/out_of_scope split from
+                # no_change).  Fresh v15 CREATEs already carry the columns;
+                # older tables get the guarded ALTER (column order closed:
+                # both appended LAST).
+                columns = {
+                    str(row[1])
+                    for row in db.execute(
+                        "PRAGMA table_info(memory_world_job)"
+                    ).fetchall()
+                }
+                if "terminal_state" not in columns:
+                    for statement in WORLD_JOB_ALTER_V15_SQL:
                         db.execute(statement)
             db.execute(f"PRAGMA user_version = {version}")
             db.execute("COMMIT")

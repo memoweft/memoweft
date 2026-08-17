@@ -35,7 +35,11 @@ integrations 链内实现，而不是把保险层模块接上生产。
 
 ## 后续工程（按序自主施工）
 
-1. 五终态在 Hermes 生产链的表达（clarification-required / out-of-scope 现折叠进
-   no_change）。
+1. ~~五终态在 Hermes 生产链的表达~~ **已完成（2026-08-17，schema v15）**：
+   `memory_world_job.terminal_state/terminal_detail` 承载 AUTHORITY §3 五终态
+   （applied / no_change / clarification_required / out_of_scope / failed），
+   模型可提出 clarification_required（附 question）与 out_of_scope（附 note），
+   编译器歧义（correction_merge_ambiguous）归 clarification_required；
+   运输 state 列保持六值闭环，控制台展示终态徽章与澄清/说明文本。
 2. DSH 桥对象图召回 + `allow_local_read` 权限门 + export 权限过滤。
 3. portable bundle v3（entity / relationship / world_event 可导出）。
