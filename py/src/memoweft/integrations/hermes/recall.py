@@ -18,6 +18,8 @@ model-free, and byte-stable.
 
 from __future__ import annotations
 
+import json
+import sqlite3
 from typing import Any, Iterable, Mapping, Sequence, cast
 
 #: Minimum Dice bigram-overlap score for a claim to be recalled.
@@ -28,6 +30,13 @@ MAX_ITEMS = 5
 MAX_OUTPUT_CHARS = 600
 
 _PREFIX = "记忆"
+
+#: Evidence-link tables keyed by World row kind (permission gate).
+_LINK_TABLES: dict[str, tuple[str, str]] = {
+    "cognition": ("cognition_evidence", "cognition_id"),
+    "relationship": ("relationship_evidence", "relationship_id"),
+    "event": ("world_event_evidence", "world_event_id"),
+}
 
 #: Owner-approved small deterministic category table (query-side expansion
 #: only; formation is untouched).  Category word → member names.  Matched as
@@ -69,7 +78,11 @@ def _score_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[Mappin
     scored: list[tuple[float, int, str, str]] = []
     for row in rows:
         content = str(row["content"])
-        content_bigrams = _bigrams(content)
+        # Graph-aware matching: score against the composed match text
+        # (content + entity names/aliases) while the output stays the
+        # canonical content.
+        match_text = str(row.get("match_text") or content)
+        content_bigrams = _bigrams(match_text)
         if not content_bigrams:
             continue
         common = len(query_bigrams & content_bigrams)
@@ -117,3 +130,147 @@ def format_recall(items: Sequence[Mapping[str, object]]) -> str:
     if len(text) > MAX_OUTPUT_CHARS:
         text = text[:MAX_OUTPUT_CHARS].rstrip() + "…"
     return text
+
+
+# ── graph-aware, permission-gated shared recall ─────────────────────────────
+
+
+def _entity_names(db: sqlite3.Connection, world_id: str, entity_id: str) -> tuple[str, ...]:
+    """Canonical name + aliases of one current entity (order-stable, deduped)."""
+    row = db.execute(
+        "SELECT canonical_name, aliases_json FROM entity "
+        "WHERE id = ? AND world_id = ? AND invalid_at IS NULL",
+        (entity_id, world_id),
+    ).fetchone()
+    if row is None:
+        return ()
+    names: list[str] = [str(row[0])]
+    try:
+        aliases = json.loads(str(row[1]) or "[]")
+    except ValueError:
+        aliases = []
+    if isinstance(aliases, list):
+        for alias in aliases:
+            if isinstance(alias, str) and alias:
+                names.append(alias)
+    return tuple(dict.fromkeys(names))
+
+
+def _graph_match_text(
+    db: sqlite3.Connection,
+    world_id: str,
+    kind: str,
+    row_id: str,
+    content: str,
+) -> str:
+    """Compose the searchable text: canonical content + entity names/aliases
+    reachable from the row's graph endpoints (relationship endpoints, event
+    participants/objects, targeted-attribute entity)."""
+    parts: list[str] = [content]
+    if kind == "relationship":
+        row = db.execute(
+            "SELECT source_entity_id, target_entity_id FROM relationship WHERE id = ?",
+            (row_id,),
+        ).fetchone()
+        if row is not None:
+            for entity_id in (row[0], row[1]):
+                parts.extend(_entity_names(db, world_id, str(entity_id)))
+    elif kind == "event":
+        row = db.execute(
+            "SELECT participants_json, objects_json FROM world_event WHERE id = ?",
+            (row_id,),
+        ).fetchone()
+        if row is not None:
+            for column in (row[0], row[1]):
+                try:
+                    decoded = json.loads(str(column) or "[]")
+                except ValueError:
+                    continue
+                if not isinstance(decoded, list):
+                    continue
+                for item in decoded:
+                    if isinstance(item, str) and item:
+                        parts.append(item)
+                    elif isinstance(item, Mapping) and isinstance(
+                        item.get("canonical_name"), str
+                    ):
+                        parts.append(str(item["canonical_name"]))
+    elif kind == "cognition":
+        row = db.execute(
+            "SELECT target_entity_id FROM cognition_target WHERE cognition_id = ?",
+            (row_id,),
+        ).fetchone()
+        if row is not None and row[0] is not None:
+            parts.extend(_entity_names(db, world_id, str(row[0])))
+    return " ".join(dict.fromkeys(part for part in parts if part))
+
+
+def _world_row_visible(db: sqlite3.Connection, kind: str, row_id: str) -> bool:
+    """Permission gate: a World row is recallable only when it has at least one
+    Evidence link and every linked Evidence row allows local reads
+    (fail-closed: unproven permission means invisible)."""
+    table, column = _LINK_TABLES[kind]
+    linked = db.execute(
+        f"SELECT evidence_id FROM {table} WHERE {column} = ?", (row_id,)
+    ).fetchall()
+    if not linked:
+        return False
+    ids = [str(row[0]) for row in linked]
+    placeholders = ",".join("?" for _ in ids)
+    rows = db.execute(
+        f"SELECT allow_local_read FROM evidence WHERE id IN ({placeholders})", ids
+    ).fetchall()
+    return len(rows) == len(ids) and all(int(row[0]) == 1 for row in rows)
+
+
+def recall_world_text(
+    db: sqlite3.Connection, subject_id: str, query: str
+) -> tuple[str, int]:
+    """Graph-aware, permission-gated deterministic Recall over the accepted
+    World.  Shared by the Hermes and DSH/WeftMate production chains.
+
+    Read-only connection expected (caller opens ``mode=ro``); zero writes,
+    zero model calls; any failure fails closed to ("", 0).
+    """
+    try:
+        cognitions = db.execute(
+            "SELECT id, content, confidence FROM cognition "
+            "WHERE subject_id = ? "
+            "AND invalid_at IS NULL AND archived_at IS NULL AND muted_at IS NULL",
+            (subject_id,),
+        ).fetchall()
+        relationships = db.execute(
+            "SELECT id, content, confidence FROM relationship "
+            "WHERE world_id = ? AND invalid_at IS NULL",
+            (subject_id,),
+        ).fetchall()
+        events = db.execute(
+            "SELECT id, content, confidence FROM world_event "
+            "WHERE world_id = ? AND invalid_at IS NULL",
+            (subject_id,),
+        ).fetchall()
+        items: list[dict[str, object]] = []
+        for kind, rows in (
+            ("cognition", cognitions),
+            ("relationship", relationships),
+            ("event", events),
+        ):
+            for row in rows:
+                row_id = str(row[0])
+                if not _world_row_visible(db, kind, row_id):
+                    continue
+                content = str(row[1])
+                items.append(
+                    {
+                        "id": row_id,
+                        "content": content,
+                        "confidence": int(row[2]),
+                        "match_text": _graph_match_text(
+                            db, subject_id, kind, row_id, content
+                        ),
+                    }
+                )
+        hits = match_cognitions(query, items)
+        return format_recall(hits), len(hits)
+    except sqlite3.Error:
+        return "", 0

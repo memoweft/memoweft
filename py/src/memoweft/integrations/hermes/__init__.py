@@ -37,7 +37,7 @@ from .boundary_store import (
     HermesBoundaryStore,
     ValidatedHermesBoundary,
 )
-from .recall import format_recall, match_cognitions
+from .recall import recall_world_text
 from .world_worker import WorldJobWorker
 from ...store import open_db
 from ...store.schema import (
@@ -754,39 +754,11 @@ class HermesMemoWeftRuntime:
         except sqlite3.Error:
             return ""
         try:
-            rows = db.execute(
-                "SELECT id, content, confidence FROM cognition "
-                "WHERE subject_id = ? "
-                "AND invalid_at IS NULL AND archived_at IS NULL AND muted_at IS NULL",
-                (self._ingestor.subject_id,),
-            ).fetchall()
-            relationship_rows = db.execute(
-                "SELECT id, content, confidence FROM relationship "
-                "WHERE world_id = ? AND invalid_at IS NULL",
-                (self._ingestor.subject_id,),
-            ).fetchall()
-            world_event_rows = db.execute(
-                "SELECT id, content, confidence FROM world_event "
-                "WHERE world_id = ? AND invalid_at IS NULL",
-                (self._ingestor.subject_id,),
-            ).fetchall()
-            items = match_cognitions(
-                query,
-                [
-                    {"id": str(r[0]), "content": str(r[1]), "confidence": int(r[2])}
-                    for r in rows
-                ]
-                + [
-                    {"id": str(r[0]), "content": str(r[1]), "confidence": int(r[2])}
-                    for r in relationship_rows
-                ]
-                + [
-                    {"id": str(r[0]), "content": str(r[1]), "confidence": int(r[2])}
-                    for r in world_event_rows
-                ],
+            text, count = recall_world_text(
+                db, self._ingestor.subject_id, query
             )
-            self._last_recall_count = len(items)
-            return format_recall(items)
+            self._last_recall_count = count
+            return text
         except sqlite3.Error:
             return ""
         finally:

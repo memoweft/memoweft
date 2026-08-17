@@ -214,6 +214,20 @@ def test_prefetch_recalls_world_events(tmp_path: Path) -> None:
             "'上周末', '[]', '[]', 'stated', 600, 'limited', NULL, 't', 't')",
             (subject,),
         )
+        # Permission gate (v15 recall): the row must carry a visible Evidence
+        # link to be recallable — complete the physical fixture.
+        db.execute(
+            "INSERT OR IGNORE INTO evidence (id, subject_id, source_kind, host_id, "
+            "occurred_at, recorded_at, raw_content, summary, allow_local_read, "
+            "allow_cloud_read, allow_inference) VALUES "
+            "('ev-we', ?, 'spoken', 'hermes:test', 't', 't', "
+            "'上周末我和小王去了南京', '上周末我和小王去了南京', 1, 1, 1)",
+            (subject,),
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO world_event_evidence "
+            "(world_event_id, evidence_id, relation) VALUES ('we-1', 'ev-we', 'support')"
+        )
         db.commit()
         db.close()
         text = runtime.prefetch("上周末去了哪里", session_id="sess")

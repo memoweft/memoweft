@@ -41,5 +41,10 @@ integrations 链内实现，而不是把保险层模块接上生产。
    模型可提出 clarification_required（附 question）与 out_of_scope（附 note），
    编译器歧义（correction_merge_ambiguous）归 clarification_required；
    运输 state 列保持六值闭环，控制台展示终态徽章与澄清/说明文本。
-2. DSH 桥对象图召回 + `allow_local_read` 权限门 + export 权限过滤。
+2. ~~DSH 桥对象图召回 + `allow_local_read` 权限门 + export 权限过滤~~ **已完成
+   （2026-08-17）**：共享实现落在 `integrations/hermes/recall.py`（不引入
+   `memoweft.world`），Hermes 与 DSH 两条生产链同用——实体名/别名进匹配面
+   （关系端点、事件参与者/对象、定向属性实体）；权限门 fail-closed（无可见
+   Evidence 链的 World 行不注入/不导出）；DSH export 过滤 `allow_local_read=0`
+   的 Evidence 与依赖它的认知。
 3. portable bundle v3（entity / relationship / world_event 可导出）。

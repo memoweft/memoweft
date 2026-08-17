@@ -37,7 +37,7 @@ from ..hermes.boundary_store import (
     HermesBoundaryStore,
     ValidatedHermesBoundary,
 )
-from ..hermes.recall import format_recall, match_cognitions
+from ..hermes.recall import _world_row_visible, recall_world_text
 from ..hermes.world_worker import WorldJobWorker
 from ...store import open_db
 
@@ -567,7 +567,12 @@ class DshMemoWeftRuntime:
         return receipt
 
     def prefetch(self, query: str, *, session_id: str = "") -> dict[str, object]:
-        """Deterministic read-only Recall (zero model calls, zero writes)."""
+        """Deterministic read-only Recall (zero model calls, zero writes).
+
+        Shares the Hermes graph-aware, permission-gated implementation: entity
+        names/aliases participate in matching; rows whose Evidence disallows
+        local reads are never injected.
+        """
 
         del session_id
         self._last_recall_count = 0
@@ -579,30 +584,9 @@ class DshMemoWeftRuntime:
         except sqlite3.Error:
             return {"text": "", "count": 0}
         try:
-            rows = db.execute(
-                "SELECT id, content, confidence FROM cognition "
-                "WHERE subject_id = ? "
-                "AND invalid_at IS NULL AND archived_at IS NULL AND muted_at IS NULL",
-                (self._ingestor.subject_id,),
-            ).fetchall()
-            relationship_rows = db.execute(
-                "SELECT id, content, confidence FROM relationship "
-                "WHERE world_id = ? AND invalid_at IS NULL",
-                (self._ingestor.subject_id,),
-            ).fetchall()
-            world_event_rows = db.execute(
-                "SELECT id, content, confidence FROM world_event "
-                "WHERE world_id = ? AND invalid_at IS NULL",
-                (self._ingestor.subject_id,),
-            ).fetchall()
-            items = match_cognitions(
-                query,
-                [{"id": str(r[0]), "content": str(r[1]), "confidence": int(r[2])} for r in rows]
-                + [{"id": str(r[0]), "content": str(r[1]), "confidence": int(r[2])} for r in relationship_rows]
-                + [{"id": str(r[0]), "content": str(r[1]), "confidence": int(r[2])} for r in world_event_rows],
-            )
-            self._last_recall_count = len(items)
-            return {"text": format_recall(items), "count": len(items)}
+            text, count = recall_world_text(db, self._ingestor.subject_id, query)
+            self._last_recall_count = count
+            return {"text": text, "count": count}
         except sqlite3.Error:
             return {"text": "", "count": 0}
         finally:
@@ -661,7 +645,9 @@ class DshMemoWeftRuntime:
             db.close()
 
     def export_world(self) -> dict[str, object]:
-        """Read-only export: World rows plus supporting Evidence with provenance (raw text kept)."""
+        """Read-only export: World rows plus supporting Evidence with provenance
+        (raw text kept).  Permission-gated: Evidence rows that disallow local
+        reads and World rows whose Evidence is not visible are excluded."""
 
         if not self._enabled or self._ingestor is None:
             return {"cognitions": [], "evidence": []}
@@ -685,6 +671,7 @@ class DshMemoWeftRuntime:
                     "AND c.invalid_at IS NULL AND c.archived_at IS NULL AND c.muted_at IS NULL "
                     "ORDER BY c.created_at, c.id", (subject,),
                 ).fetchall()
+                if _world_row_visible(db, "cognition", str(r[0]))
             ]
             evidence = [
                 {
@@ -693,7 +680,8 @@ class DshMemoWeftRuntime:
                 }
                 for r in db.execute(
                     "SELECT id, raw_content, origin_id, source_kind, host_id, occurred_at FROM evidence "
-                    "WHERE subject_id = ? ORDER BY recorded_at, id", (subject,),
+                    "WHERE subject_id = ? AND allow_local_read = 1 ORDER BY recorded_at, id",
+                    (subject,),
                 ).fetchall()
             ]
             return {"cognitions": cognitions, "evidence": evidence}
