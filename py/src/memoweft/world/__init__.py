@@ -1,7 +1,11 @@
-"""Experimental MemoWeft Next personal-memory-world primitives.
+"""MemoWeft world prototype engine — parity insurance layer, never production.
 
-This package is intentionally separate from the TypeScript-parity kernel while
-we validate the second-generation memory model.
+The production mainline lives in ``memoweft.integrations`` (Hermes + DSH
+bridge) and never imports this package. This package keeps the 1.0
+capability-inheritance claims verifiable: decay/asking/conflict/correction
+parity and regression tests drive these modules; Golden regression gates have
+been relocated to ``py/tests/support/``. See ``py/MAINLINE.md`` (Owner
+decision 先C后A, 2026-08-17).
 """
 
 from .graph import MemoryWorldGraph, WorldSlice
