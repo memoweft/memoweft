@@ -25,7 +25,7 @@ import type { EvidenceLink } from '../cognition/model.ts';
 import { isEvidenceTombstoned } from '../evidence/tombstoneRegistry.ts';
 import { validateBundle } from './validateBundle.ts';
 import { resolveLang } from '../config.ts';
-import type { ImportMode, ImportPlan, MemoryBundle } from './model.ts';
+import { derivePlanIds, type ImportMode, type ImportPlan, type MemoryBundle } from './model.ts';
 
 function sameEvidence(
   left: MemoryBundle['data']['evidence'][number],
@@ -101,10 +101,94 @@ export interface ImportDeps {
   semanticResolutionStore: SemanticResolutionStore;
   /** 可选事务器：merge 的写入包进一个事务，中途失败整体回滚，避免污染库。 */
   transaction?: Transaction;
+  /** Adapter for Python-owned v4 World/history/tombstone sections. The
+   * TypeScript 1.x stores remain the base Evidence/Event/Cognition engine;
+   * hosts that persist v4-only sections must plan/apply them here so nothing
+   * is silently dropped. */
+  portableV4?: PortableV4Adapter;
+}
+
+export interface PortableV4AdapterPlan {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  conflicts: Array<{ kind: string; id: string; code: string }>;
+  counts: Partial<ImportPlan['counts']>;
+  duplicates: Partial<ImportPlan['duplicates']>;
+  writeSet: Record<string, string[]>;
+}
+
+export interface PortableV4Adapter {
+  plan(bundle: MemoryBundle, targetSubjectId: string): PortableV4AdapterPlan;
+  apply(bundle: MemoryBundle, targetSubjectId: string): void;
 }
 
 export interface ImportOptions {
   mode: ImportMode;
+  targetSubjectId?: string;
+  targetWorldRevision?: number;
+  targetSnapshotHash?: string;
+}
+
+function remapSubject(bundle: MemoryBundle, targetSubjectId: string): MemoryBundle {
+  const remapped = structuredClone(bundle);
+  remapped.subjectId = targetSubjectId;
+  for (const item of remapped.data.evidence) item.subjectId = targetSubjectId;
+  for (const item of remapped.data.events) item.subjectId = targetSubjectId;
+  for (const item of remapped.data.cognitions) item.subjectId = targetSubjectId;
+  for (const item of remapped.data.interactionContexts ?? []) item.subjectId = targetSubjectId;
+  for (const item of remapped.data.entities ?? []) item.worldId = targetSubjectId;
+  for (const item of remapped.data.relationships ?? []) item.worldId = targetSubjectId;
+  for (const item of remapped.data.worldEvents ?? []) item.worldId = targetSubjectId;
+  for (const item of remapped.data.worldItemLifecycle ?? []) item.subjectId = targetSubjectId;
+  return remapped;
+}
+
+function hasAdapterOwnedV4Data(bundle: MemoryBundle): boolean {
+  const data = bundle.data;
+  return (
+    data.evidence.some((item) => item.deletedAt != null) ||
+    [
+      data.entities,
+      data.entityEvidence,
+      data.relationships,
+      data.relationshipEvidence,
+      data.worldEvents,
+      data.worldEventEvidence,
+      data.cognitionTargets,
+      data.retractions,
+      data.cognitionTransitions,
+      data.worldItemLifecycle,
+    ].some((section) => (section?.length ?? 0) > 0)
+  );
+}
+
+function finalizeV4Plan(plan: ImportPlan, writeSet: Record<string, string[]>): void {
+  const normalizedWriteSet = Object.fromEntries(
+    Object.entries(writeSet)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, values]) => [name, [...values].sort()]),
+  );
+  plan.wouldAdvanceRevision = Object.values(plan.counts).some((value) => (value ?? 0) > 0);
+  const payload = {
+    planVersion: 1,
+    bundleId: plan.bundleId,
+    sourceSubjectId: plan.sourceSubjectId,
+    targetSubjectId: plan.targetSubjectId,
+    targetWorldRevision: plan.targetWorldRevision,
+    targetSnapshotHash: plan.targetSnapshotHash,
+    valid: plan.valid,
+    conflicts: plan.conflicts ?? [],
+    warnings: plan.warnings,
+    counts: plan.counts,
+    duplicates: plan.duplicates,
+    writeSet: normalizedWriteSet,
+    wouldAdvanceRevision: plan.wouldAdvanceRevision,
+  };
+  const ids = derivePlanIds(payload);
+  plan.planHash = ids.planHash;
+  plan.commandId = ids.commandId;
+  plan.receiptId = ids.receiptId;
 }
 
 export function importBundle(
@@ -122,6 +206,10 @@ export function importBundle(
   const lang = resolveLang();
 
   const validation = validateBundle(bundle);
+  const isV4 = bundle.schemaVersion === 4;
+  const sourceSubjectId = bundle.sourceSubjectId ?? bundle.subjectId;
+  const targetSubjectId = opts.targetSubjectId ?? sourceSubjectId;
+  const effectiveBundle = isV4 ? remapSubject(bundle, targetSubjectId) : bundle;
   const plan: ImportPlan = {
     mode: opts.mode,
     valid: validation.valid,
@@ -135,12 +223,65 @@ export function importBundle(
       cognitionEvidence: 0,
       interactionContexts: 0,
       semanticResolutions: 0,
+      ...(isV4
+        ? {
+            entities: 0,
+            entityEvidence: 0,
+            relationships: 0,
+            worldEvents: 0,
+            relationshipEvidence: 0,
+            worldEventEvidence: 0,
+            cognitionTargets: 0,
+            retractions: 0,
+            cognitionTransitions: 0,
+            worldItemLifecycle: 0,
+            evidenceTombstones: 0,
+          }
+        : {}),
     },
-    duplicates: { evidence: 0, events: 0, cognitions: 0 },
+    duplicates: {
+      evidence: 0,
+      events: 0,
+      cognitions: 0,
+      ...(isV4
+        ? {
+            entities: 0,
+            relationships: 0,
+            worldEvents: 0,
+            retractions: 0,
+            cognitionTransitions: 0,
+            worldItemLifecycle: 0,
+          }
+        : {}),
+    },
+    ...(isV4
+      ? {
+          bundleId: bundle.bundleId,
+          sourceSubjectId,
+          targetSubjectId,
+          targetWorldRevision: opts.targetWorldRevision ?? 0,
+          targetSnapshotHash: opts.targetSnapshotHash ?? '',
+          conflicts: [],
+        }
+      : {}),
   };
-  if (!validation.valid) return plan; // 结构/引用错 → 绝不写库
+  if (!validation.valid) {
+    if (isV4) finalizeV4Plan(plan, {});
+    return plan; // 结构/引用错 → 绝不写库
+  }
 
-  const data = bundle.data;
+  if (isV4 && hasAdapterOwnedV4Data(effectiveBundle) && !deps.portableV4) {
+    plan.valid = false;
+    plan.errors.push(
+      lang === 'zh'
+        ? 'Portable v4 的 World、历史或墓碑数据需要 portableV4 adapter，拒绝静默丢段'
+        : 'Portable v4 World, history, or tombstone data requires a portableV4 adapter; refusing to silently drop sections',
+    );
+    finalizeV4Plan(plan, {});
+    return plan;
+  }
+
+  const data = effectiveBundle.data;
   const unconsolidatedSet = new Set(data.unconsolidatedEventIds ?? []);
 
   // 同 id 只有在【完整实体 + 自有关系】完全相同时才是安全幂等。若内容、授权或溯源
@@ -167,6 +308,11 @@ export function importBundle(
           ? `evidence ${evidence.id} 与目标库同 id 记录内容或授权不一致，拒绝导入`
           : `evidence ${evidence.id} collides with a different target record; import rejected`,
       );
+      plan.conflicts?.push({
+        kind: 'evidence',
+        id: evidence.id,
+        code: 'same_id_different_content',
+      });
     }
   }
   for (const event of data.events) {
@@ -189,6 +335,11 @@ export function importBundle(
           ? `event ${event.id} 与目标库同 id 事件的内容、证据关系或消化状态不一致，拒绝导入`
           : `event ${event.id} collides with different target content, evidence links, or consolidation state; import rejected`,
       );
+      plan.conflicts?.push({
+        kind: 'event',
+        id: event.id,
+        code: 'same_id_different_content',
+      });
     }
   }
   for (const cognition of data.cognitions) {
@@ -206,10 +357,16 @@ export function importBundle(
           ? `cognition ${cognition.id} 与目标库同 id 认知的内容或溯源关系不一致，拒绝导入`
           : `cognition ${cognition.id} collides with different target content or provenance links; import rejected`,
       );
+      plan.conflicts?.push({
+        kind: 'cognition',
+        id: cognition.id,
+        code: 'same_id_different_content',
+      });
     }
   }
   if (plan.errors.length > 0) {
     plan.valid = false;
+    if (isV4) finalizeV4Plan(plan, {});
     return plan;
   }
 
@@ -363,6 +520,14 @@ export function importBundle(
     return true;
   });
 
+  const adapterPlan =
+    isV4 && deps.portableV4 ? deps.portableV4.plan(effectiveBundle, targetSubjectId) : undefined;
+  if (adapterPlan) {
+    plan.errors.push(...adapterPlan.errors);
+    plan.warnings.push(...adapterPlan.warnings);
+    plan.conflicts?.push(...adapterPlan.conflicts);
+  }
+
   plan.counts = {
     evidence: newEvidence.length,
     events: newEvents.length,
@@ -371,7 +536,68 @@ export function importBundle(
     cognitionEvidence: cognitionEvidenceCount,
     interactionContexts: newInteractionContexts.length,
     semanticResolutions: newSemanticResolutions.length,
+    ...(isV4
+      ? {
+          entities: adapterPlan?.counts.entities ?? 0,
+          entityEvidence: adapterPlan?.counts.entityEvidence ?? 0,
+          relationships: adapterPlan?.counts.relationships ?? 0,
+          worldEvents: adapterPlan?.counts.worldEvents ?? 0,
+          relationshipEvidence: adapterPlan?.counts.relationshipEvidence ?? 0,
+          worldEventEvidence: adapterPlan?.counts.worldEventEvidence ?? 0,
+          cognitionTargets: adapterPlan?.counts.cognitionTargets ?? 0,
+          retractions: adapterPlan?.counts.retractions ?? 0,
+          cognitionTransitions: adapterPlan?.counts.cognitionTransitions ?? 0,
+          worldItemLifecycle: adapterPlan?.counts.worldItemLifecycle ?? 0,
+          evidenceTombstones: adapterPlan?.counts.evidenceTombstones ?? 0,
+        }
+      : {}),
   };
+
+  if (adapterPlan) {
+    plan.duplicates = {
+      ...plan.duplicates,
+      entities: adapterPlan.duplicates.entities ?? 0,
+      relationships: adapterPlan.duplicates.relationships ?? 0,
+      worldEvents: adapterPlan.duplicates.worldEvents ?? 0,
+      retractions: adapterPlan.duplicates.retractions ?? 0,
+      cognitionTransitions: adapterPlan.duplicates.cognitionTransitions ?? 0,
+      worldItemLifecycle: adapterPlan.duplicates.worldItemLifecycle ?? 0,
+    };
+  }
+
+  plan.valid = plan.errors.length === 0 && (adapterPlan?.valid ?? true);
+  const writeSet: Record<string, string[]> = {
+    evidence: evidenceToInsert.map((item) => item.id),
+    events: newEvents.map((item) => item.id),
+    cognitions: newCognitions.map((item) => item.id),
+    eventEvidence: [...eventEvidenceOf.entries()].flatMap(([eventId, evidenceIds]) =>
+      evidenceIds.map((evidenceId) => `${eventId}/${evidenceId}`),
+    ),
+    cognitionEvidence: [...cognitionSourcesOf.entries()].flatMap(([cognitionId, links]) =>
+      links.map((link) => `${cognitionId}/${link.evidenceId}/${link.relation}`),
+    ),
+    interactionContexts: newInteractionContexts.map((item) => item.id),
+    semanticResolutions: newSemanticResolutions.map((item) => item.id),
+    ...(isV4
+      ? {
+          entities: [],
+          entityEvidence: [],
+          relationships: [],
+          worldEvents: [],
+          relationshipEvidence: [],
+          worldEventEvidence: [],
+          cognitionTargets: [],
+          retractions: [],
+          cognitionTransitions: [],
+          worldItemLifecycle: [],
+          evidenceTombstones: [],
+        }
+      : {}),
+    ...(adapterPlan?.writeSet ?? {}),
+  };
+  if (isV4) finalizeV4Plan(plan, writeSet);
+
+  if (!plan.valid) return plan;
 
   if (opts.mode === 'dryRun') return plan; // 只算不写
 
@@ -389,6 +615,7 @@ export function importBundle(
     //   永不进 consolidate 白名单（结构墙）；semantic_resolution 通过 evidence_id 关联（弱引用，无外键）。
     for (const c of newInteractionContexts) interactionContextStore.insert(c);
     for (const r of newSemanticResolutions) semanticResolutionStore.insert(r);
+    if (isV4 && deps.portableV4) deps.portableV4.apply(effectiveBundle, targetSubjectId);
   };
   // 事务优先（openStores 提供）：中途抛错整体回滚，库不留残。无事务无法回滚——把异常收进 plan.errors 并提示，
   // 将写入错误转换为 ImportPlan 警告，以保持结构化返回契约；常见的重复 id 已由 validateBundle 提前拦截。

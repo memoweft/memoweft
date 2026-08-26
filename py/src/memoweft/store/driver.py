@@ -15,6 +15,7 @@ from .schema import (
     BASE_SCHEMA_SQL,
     BOUNDARY_EVIDENCE_CONTENT_COLUMNS,
     BOUNDARY_EVIDENCE_CONTENT_SCHEMA_SQL,
+    CLARIFICATION_SCHEMA_SQL,
     COGNITION_TARGET_ALTER_V14_SQL,
     COGNITION_TARGET_COLUMNS,
     COGNITION_TARGET_SCHEMA_SQL,
@@ -24,6 +25,7 @@ from .schema import (
     ENTITY_COLUMNS,
     ENTITY_RELATIONSHIP_SCHEMA_SQL,
     MEMORY_WORLD_JOB_COLUMNS,
+    PORTABLE_IMPORT_RECEIPT_SCHEMA_SQL,
     PYTHON_APPLICATION_ID,
     PYTHON_V6_REQUIRED_SCHEMA_OBJECTS,
     RELATIONSHIP_COLUMNS,
@@ -31,6 +33,8 @@ from .schema import (
     RETRACTION_COLUMNS,
     RETRACTION_SCHEMA_SQL,
     SCHEMA_VERSION,
+    TERMINAL_OUTCOME_SCHEMA_SQL,
+    TRUST_COMMAND_SCHEMA_SQL,
     WORLD_EVENT_COLUMNS,
     WORLD_EVENT_SCHEMA_SQL,
     WORLD_JOB_ALTER_V15_SQL,
@@ -392,6 +396,33 @@ def _migrate(db: sqlite3.Connection, current: int) -> None:
                 if "terminal_state" not in columns:
                     for statement in WORLD_JOB_ALTER_V15_SQL:
                         db.execute(statement)
+            elif version == 16:
+                # v16 adds a separate immutable five-terminal outcome and its
+                # independently recoverable host-delivery ledger.  This is
+                # a forward-only cutover: pre-v16 terminal jobs stay byte-for-
+                # byte intact and receive no fabricated outcome because their
+                # exact terminal-time revision was not persisted. Every
+                # terminal transition executed after v16 writes its outcome in
+                # the owning transaction.
+                for statement in TERMINAL_OUTCOME_SCHEMA_SQL:
+                    db.execute(statement)
+            elif version == 17:
+                # v17 adds subject-bound Trust commands, immutable receipts,
+                # and one cross-kind archive/mute lifecycle sidecar. Existing
+                # World/Evidence bytes are preserved; no command is fabricated.
+                for statement in TRUST_COMMAND_SCHEMA_SQL:
+                    db.execute(statement)
+            elif version == 18:
+                # v18 adds the durable clarification request/answer/closure
+                # lifecycle. Existing outcomes and World rows are preserved;
+                # no historical clarification is fabricated.
+                for statement in CLARIFICATION_SCHEMA_SQL:
+                    db.execute(statement)
+            elif version == 19:
+                # v19 adds the immutable Portable v4 apply receipt. No World
+                # row is backfilled and no historical import is fabricated.
+                for statement in PORTABLE_IMPORT_RECEIPT_SCHEMA_SQL:
+                    db.execute(statement)
             db.execute(f"PRAGMA user_version = {version}")
             db.execute("COMMIT")
         except BaseException as exc:

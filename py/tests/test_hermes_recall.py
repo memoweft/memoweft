@@ -137,6 +137,112 @@ def test_match_cognitions_is_deterministic_and_thresholded() -> None:
     assert match_cognitions("今天天气如何", rows) == []
 
 
+def test_match_cognitions_uses_explicit_natural_language_cues_without_long_query_dilution() -> None:
+    rows = [
+        {
+            "id": "c-free",
+            "content": "用户是向往自由本身的",
+            "confidence": 640,
+            "match_text": "用户是向往自由本身的 云",
+        },
+        {
+            "id": "c-coffee",
+            "content": "用户平时喜欢喝咖啡",
+            "confidence": 640,
+        },
+    ]
+
+    query = "关于“云”和“自由”，你记得我什么？"
+    first = match_cognitions(query, rows)
+    second = match_cognitions(query, rows)
+
+    assert [item["id"] for item in first] == ["c-free"]
+    assert second == first
+    assert [
+        item["id"]
+        for item in match_cognitions(
+            "这是全新会话。请回答：关于云和自由，你记得我什么？", rows
+        )
+    ] == ["c-free"]
+    owner_weixin_query = "关于云和自由你还记得什么？"
+    owner_first = match_cognitions(owner_weixin_query, rows)
+    owner_second = match_cognitions(owner_weixin_query, rows)
+    assert [item["id"] for item in owner_first] == ["c-free"]
+    assert owner_second == owner_first
+    assert [
+        item["id"] for item in match_cognitions("关于咖啡你还记得什么？", rows)
+    ] == ["c-coffee"]
+    assert match_cognitions("关于路况你还记得什么？", rows) == []
+    assert match_cognitions("你还记得什么？", rows) == []
+    assert match_cognitions("关于路况，你记得我什么？", rows) == []
+
+
+def test_match_cognitions_ignores_wrapper_phrases_and_entity_substrings() -> None:
+    rows = [
+        {
+            "id": "c-answer-style",
+            "content": "用户要求回答简洁",
+            "confidence": 640,
+        },
+        {
+            "id": "c-cloud",
+            "content": "用户偏好晨跑",
+            "confidence": 640,
+            "match_text": "用户偏好晨跑 云",
+            "anchors": ("云",),
+        },
+        {
+            "id": "c-xiaowang",
+            "content": "小王很守时",
+            "confidence": 640,
+            "anchors": ("小王",),
+        },
+    ]
+
+    assert match_cognitions("请回答今天的安排", rows) == []
+    assert match_cognitions("请回答：今天天气如何？", rows) == []
+    assert match_cognitions("云计算行业趋势", rows) == []
+    assert match_cognitions("小王子的故事", rows) == []
+    assert [item["id"] for item in match_cognitions("关于云你还记得什么？", rows)] == [
+        "c-cloud"
+    ]
+    assert [item["id"] for item in match_cognitions("小王最近怎么样？", rows)] == [
+        "c-xiaowang"
+    ]
+
+
+def test_match_cognitions_can_fall_back_to_a_linked_entity_name() -> None:
+    rows = [
+        {
+            "id": "c-mother",
+            "content": "妈妈是个善良的人",
+            "confidence": 640,
+            "anchors": ("妈妈",),
+        },
+        {
+            "id": "c-friend",
+            "content": "小王很守时",
+            "confidence": 640,
+            "anchors": ("小王",),
+        },
+    ]
+
+    assert [
+        item["id"] for item in match_cognitions("你觉得我妈妈人怎么样", rows)
+    ] == ["c-mother"]
+
+
+def test_match_cognitions_uses_known_entity_terms_without_inference() -> None:
+    rows = [
+        {"id": "c-mother", "content": "妈妈是个善良的人", "confidence": 640},
+        {"id": "c-coffee", "content": "用户喜欢咖啡", "confidence": 640},
+    ]
+
+    assert [
+        item["id"] for item in match_cognitions("你觉得我妈妈人怎么样", rows)
+    ] == ["c-mother"]
+
+
 def test_category_expansion_is_fallback_only_and_deterministic() -> None:
     """Owner decision 2026-08-16 (fallback-only): a category word expands to
     member names ONLY when the direct bigram match produced zero hits."""

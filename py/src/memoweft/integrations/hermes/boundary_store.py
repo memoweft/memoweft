@@ -22,6 +22,7 @@ from typing import Literal, Mapping, Sequence, cast
 from ...clock import Clock, system_clock, to_iso_z
 from ...store.evidence import SqliteEvidenceStore
 from ...types import EvidenceInput
+from .terminal_outcome import persist_terminal_outcome_in_transaction
 
 
 InitialJobState = Literal["pending", "no_change"]
@@ -323,78 +324,9 @@ class HermesBoundaryStore:
         self, boundary: ValidatedHermesBoundary
     ) -> HermesBoundaryDeliveryReceipt:
         """Atomically persist Evidence, one World Job, and its first receipt."""
-
-        _validate_boundary(boundary)
-        formal_target_json = _canonical_json(
-            _formal_target_data(boundary.formal_target)
-        )
-        formal_target_hash = _sha256_text(formal_target_json)
-        evidence_manifest_hash = _sha256_text(
-            _canonical_json(_candidate_manifest_data(boundary.evidence))
-        )
-
         self._db.execute("BEGIN IMMEDIATE")
         try:
-            existing = self._job_by_event(boundary.event_id)
-            if existing is not None:
-                stored_job = self._stored_job(existing)
-                if (
-                    stored_job.payload_hash != boundary.payload_hash
-                    or stored_job.formal_target_json != formal_target_json
-                    or stored_job.formal_target_hash != formal_target_hash
-                    or stored_job.evidence_manifest_hash != evidence_manifest_hash
-                ):
-                    raise BoundaryReplayMismatchError(
-                        "Hermes boundary event_id is bound to a different payload or target"
-                    )
-                self._db.execute("COMMIT")
-                return stored_job.receipt
-
-            evidence_ids, stored, skipped = self._write_evidence(
-                boundary.evidence,
-                target=boundary.formal_target,
-            )
-            accepted_at = to_iso_z(self._clock())
-            initial_state: InitialJobState = (
-                "pending" if boundary.evidence else "no_change"
-            )
-            reason = None if boundary.evidence else _NO_ELIGIBLE_REASON
-            job_id = "memory-world-job-" + _sha256_text(
-                _canonical_json(
-                    [
-                        "memory_world_job_v1",
-                        boundary.event_id,
-                        boundary.payload_hash,
-                        formal_target_hash,
-                        evidence_manifest_hash,
-                    ]
-                )
-            )
-            receipt = self._build_delivery_receipt(
-                boundary=boundary,
-                formal_target_hash=formal_target_hash,
-                evidence_manifest_hash=evidence_manifest_hash,
-                job_id=job_id,
-                job_state=initial_state,
-                reason=reason,
-                stored=stored,
-                skipped=skipped,
-                evidence_count=len(evidence_ids),
-                accepted_at=accepted_at,
-            )
-            receipt_json = _canonical_json(_receipt_data(receipt))
-            if _sha256_text(receipt_json) != receipt.receipt_hash:
-                raise BoundaryReceiptIntegrityError(
-                    "New Hermes delivery receipt hash is inconsistent"
-                )
-            self._insert_job(
-                boundary=boundary,
-                formal_target_json=formal_target_json,
-                formal_target_hash=formal_target_hash,
-                evidence_ids=evidence_ids,
-                receipt=receipt,
-                receipt_json=receipt_json,
-            )
+            receipt = self.accept_in_transaction(boundary)
             self._db.execute("COMMIT")
             return receipt
         except BaseException:
@@ -403,6 +335,91 @@ class HermesBoundaryStore:
             except sqlite3.Error:
                 pass
             raise
+
+    def accept_in_transaction(
+        self, boundary: ValidatedHermesBoundary
+    ) -> HermesBoundaryDeliveryReceipt:
+        """Persist/replay a boundary inside an existing caller transaction.
+
+        N6 uses this entry point so clarification state, answer Evidence, the
+        content binding, and one follow-up Job share a single commit. Existing
+        callers keep using :meth:`accept`, which remains the transaction owner.
+        """
+
+        if not self._db.in_transaction:
+            raise BoundaryStoreInputError(
+                "Hermes boundary caller-owned transaction is required"
+            )
+        _validate_boundary(boundary)
+        formal_target_json = _canonical_json(
+            _formal_target_data(boundary.formal_target)
+        )
+        formal_target_hash = _sha256_text(formal_target_json)
+        evidence_manifest_hash = _sha256_text(
+            _canonical_json(_candidate_manifest_data(boundary.evidence))
+        )
+        existing = self._job_by_event(boundary.event_id)
+        if existing is not None:
+            stored_job = self._stored_job(existing)
+            if (
+                stored_job.payload_hash != boundary.payload_hash
+                or stored_job.formal_target_json != formal_target_json
+                or stored_job.formal_target_hash != formal_target_hash
+                or stored_job.evidence_manifest_hash != evidence_manifest_hash
+            ):
+                raise BoundaryReplayMismatchError(
+                    "Hermes boundary event_id is bound to a different payload or target"
+                )
+            return stored_job.receipt
+
+        evidence_ids, stored, skipped = self._write_evidence(
+            boundary.evidence,
+            target=boundary.formal_target,
+        )
+        accepted_at = to_iso_z(self._clock())
+        initial_state: InitialJobState = (
+            "pending" if boundary.evidence else "no_change"
+        )
+        reason = None if boundary.evidence else _NO_ELIGIBLE_REASON
+        job_id = "memory-world-job-" + _sha256_text(
+            _canonical_json(
+                [
+                    "memory_world_job_v1",
+                    boundary.event_id,
+                    boundary.payload_hash,
+                    formal_target_hash,
+                    evidence_manifest_hash,
+                ]
+            )
+        )
+        receipt = self._build_delivery_receipt(
+            boundary=boundary,
+            formal_target_hash=formal_target_hash,
+            evidence_manifest_hash=evidence_manifest_hash,
+            job_id=job_id,
+            job_state=initial_state,
+            reason=reason,
+            stored=stored,
+            skipped=skipped,
+            evidence_count=len(evidence_ids),
+            accepted_at=accepted_at,
+        )
+        receipt_json = _canonical_json(_receipt_data(receipt))
+        if _sha256_text(receipt_json) != receipt.receipt_hash:
+            raise BoundaryReceiptIntegrityError(
+                "New Hermes delivery receipt hash is inconsistent"
+            )
+        self._insert_job(
+            boundary=boundary,
+            formal_target_json=formal_target_json,
+            formal_target_hash=formal_target_hash,
+            evidence_ids=evidence_ids,
+            receipt=receipt,
+            receipt_json=receipt_json,
+        )
+        if initial_state == "no_change":
+            persist_terminal_outcome_in_transaction(self._db, job_id)
+        return receipt
 
     def _write_evidence(
         self,

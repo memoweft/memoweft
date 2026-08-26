@@ -1,8 +1,10 @@
-"""Experimental Python parity implementation for MemoWeft.
+"""MemoWeft Python 2.0 Core candidate.
 
-The stable top-level exports are currently limited to the rule kernel. Additional
-storage, portable-bundle, and write-path modules are verified inside the monorepo
-but do not yet form a feature-complete public Python SDK.
+The production Core integrations coexist with a parity-insurance layer, while the
+top-level public facade remains intentionally limited to the rule kernel. This is
+not a feature-complete general-purpose SDK: the Memory Experience product form has
+not yet formed or received a version, and this identity does not claim Beta, GA,
+release, or publication.
 """
 from __future__ import annotations
 

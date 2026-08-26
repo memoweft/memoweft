@@ -148,6 +148,7 @@ def test_event_forms_with_participants_objects_and_time(tmp_path: Path) -> None:
     )
     row = _job(db_path)
     assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 1
     item = outcome["cognitions"][0]
@@ -178,6 +179,50 @@ def test_event_forms_with_participants_objects_and_time(tmp_path: Path) -> None:
         assert kinds == {"小王": "person", "南京": "place"}
         assert db.execute(
             "SELECT COUNT(*) FROM world_event_evidence"
+        ).fetchone()[0] == 1
+    finally:
+        db.close()
+
+
+def test_exact_event_replay_repairs_participant_and_object_entities(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    event = _v7_item(
+        "昨天我和小王去了南京", (0, 10),
+        participants=[{"canonical_name": "小王", "kind": "person"}],
+        objects=[{"canonical_name": "南京", "kind": "place"}],
+        occurred_at="2026-08-15",
+        time_expression="昨天",
+    )
+    _run(
+        db_path, clock, [_model(_batch(event))], ("evidence-1",),
+        lambda path: _set_evidence(path, "evidence-1", _RAW_EVENT),
+        job_id="job-1",
+    )
+    participant_id = entity_id_for("owner", "小王")
+    object_id = entity_id_for("owner", "南京")
+    db = sqlite3.connect(db_path, isolation_level=None)
+    try:
+        db.execute("DELETE FROM entity WHERE id IN (?, ?)", (participant_id, object_id))
+    finally:
+        db.close()
+
+    _run(db_path, clock, [_model(_batch(event))], ("evidence-1",), job_id="job-2")
+
+    row = _job(db_path, job_id="job-2")
+    outcome = json.loads(str(row["world_result_json"]))
+    assert row["state"] == "applied"
+    assert outcome["world_revision"] == 2
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute(
+            "SELECT COUNT(*) FROM entity WHERE id IN (?, ?)",
+            (participant_id, object_id),
+        ).fetchone()[0] == 2
+        assert db.execute(
+            "SELECT COUNT(*) FROM terminal_outcome WHERE job_id = 'job-2'"
         ).fetchone()[0] == 1
     finally:
         db.close()

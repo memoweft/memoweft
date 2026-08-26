@@ -16,6 +16,7 @@ from memoweft.store.driver import IncompatibleSchemaError, application_id
 from memoweft.store.schema import (
     ENTITY_COLUMNS,
     MEMORY_WORLD_JOB_COLUMNS,
+    PORTABLE_IMPORT_RECEIPT_COLUMNS,
     PYTHON_APPLICATION_ID,
     SCHEMA_VERSION,
 )
@@ -52,10 +53,16 @@ def _schema_signature(db: sqlite3.Connection) -> tuple[tuple[object, ...], ...]:
 
 def _drop_current_python_tables_and_stamp_legacy(db: sqlite3.Connection, version: int) -> None:
     """已有旧测试的 synthetic downgrade helper；移除 Python-owned 物理表后盖旧版本。"""
+    db.execute("DROP TABLE portable_import_receipt")
+    db.execute("DROP TABLE clarification")
+    db.execute("DROP TABLE trust_command_receipt")
+    db.execute("DROP TABLE trust_command")
+    db.execute("DROP TABLE world_item_lifecycle")
     db.execute("DROP TABLE world_event_evidence")
     db.execute("DROP TABLE world_event")
     db.execute("DROP TABLE retraction")
     db.execute("DROP TABLE cognition_target")
+    db.execute("DROP TABLE terminal_outcome")
     db.execute("DROP TABLE memory_world_job")
     db.execute("DROP TABLE boundary_evidence_content")
     db.execute("DROP TABLE relationship_evidence")
@@ -115,6 +122,15 @@ def test_schema_matches_ts() -> None:
         assert tuple(
             column["name"] for column in _table_info(db, "memory_world_job")
         ) == MEMORY_WORLD_JOB_COLUMNS
+        assert {
+            "outcome_id",
+            "job_id",
+            "terminal_state",
+            "delivery_state",
+            "claim_token",
+        } <= {
+            column["name"] for column in _table_info(db, "terminal_outcome")
+        }
         indexes = {
             str(row[0])
             for row in db.execute(
@@ -127,6 +143,17 @@ def test_schema_matches_ts() -> None:
             "ix_memory_world_job_ready",
             "ix_memory_world_job_expired",
         } <= indexes
+        terminal_outcome_indexes = {
+            str(row[0])
+            for row in db.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type = 'index' AND tbl_name = 'terminal_outcome'"
+            ).fetchall()
+        }
+        assert {
+            "ix_terminal_outcome_ready",
+            "ix_terminal_outcome_expired",
+        } <= terminal_outcome_indexes
     finally:
         db.close()
 
@@ -219,7 +246,20 @@ def test_v10_legacy_entity_text_migrates_and_validates(tmp_path: Any) -> None:
                     "ix_world_event_occurred",
                     "world_event_evidence",
                     "ix_wev_evidence",
-                )
+                    "terminal_outcome",
+                    "ix_terminal_outcome_ready",
+                    "ix_terminal_outcome_expired",
+                    "trust_command",
+                    "ix_trust_command_subject",
+                    "trust_command_receipt",
+                        "world_item_lifecycle",
+                        "ix_world_item_lifecycle_current",
+                        "clarification",
+                        "ix_clarification_session_state",
+                        "ix_clarification_follow_up",
+                        "portable_import_receipt",
+                        "ix_portable_import_receipt_target",
+                    )
             ]
         finally:
             fresh.close()
@@ -448,6 +488,308 @@ def test_existing_current_db_missing_world_job_fails_closed_without_self_heal(
         assert raw.execute(
             "SELECT 1 FROM sqlite_master "
             "WHERE type = 'table' AND name = 'memory_world_job'"
+        ).fetchone() is None
+    finally:
+        raw.close()
+
+
+def test_real_v15_to_v16_adds_terminal_outcome_and_converges_with_fresh_schema(
+    tmp_path: Path,
+) -> None:
+    """A genuine v15 file has the Python marker and every pre-v16 object."""
+
+    path = tmp_path / "real-v15.sqlite3"
+    v15 = open_db(str(path))
+    try:
+        world_result_json = '{"reason":"historical_no_change","schema_version":1,"state":"no_change"}'
+        v15.execute(
+            """INSERT INTO memory_world_job (
+                 job_id, job_schema_version, boundary_event_id,
+                 boundary_payload_hash, boundary_schema_version, provider_name,
+                 parent_session_id, result_session_id, boundary_mode,
+                 formal_target_json, formal_target_hash, subject_id, host_id,
+                 evidence_ids_json, state, attempts, world_result_json,
+                 result_hash, delivery_receipt_json, delivery_receipt_hash,
+                 created_at, completed_at, terminal_state
+               ) VALUES (
+                 'historical-terminal-job', 1, 'historical-boundary',
+                 ?, 1, 'memoweft', 'parent-session', 'result-session',
+                 'in_place', '{}', ?, 'subject-1', 'hermes:test', '[]',
+                 'no_change', 1, ?, ?, '{}', ?, ?, ?, 'no_change'
+               )""",
+            (
+                "b" * 64,
+                sha256(b"{}").hexdigest(),
+                world_result_json,
+                sha256(world_result_json.encode()).hexdigest(),
+                sha256(b"{}").hexdigest(),
+                "2026-08-24T12:00:00.000Z",
+                "2026-08-24T12:00:01.000Z",
+            ),
+        )
+        historical_job = v15.execute(
+            "SELECT * FROM memory_world_job WHERE job_id = 'historical-terminal-job'"
+        ).fetchone()
+        assert historical_job is not None
+        v15.execute("DROP TABLE portable_import_receipt")
+        v15.execute("DROP TABLE terminal_outcome")
+        v15.execute("DROP TABLE clarification")
+        v15.execute("DROP TABLE trust_command_receipt")
+        v15.execute("DROP TABLE trust_command")
+        v15.execute("DROP TABLE world_item_lifecycle")
+        v15.execute("PRAGMA user_version = 15")
+        assert application_id(v15) == PYTHON_APPLICATION_ID
+        assert user_version(v15) == 15
+    finally:
+        v15.close()
+
+    migrated = open_db(str(path))
+    try:
+        assert user_version(migrated) == SCHEMA_VERSION
+        assert migrated.execute(
+            "SELECT * FROM memory_world_job WHERE job_id = 'historical-terminal-job'"
+        ).fetchone() == historical_job
+        assert migrated.execute("SELECT COUNT(*) FROM terminal_outcome").fetchone() == (0,)
+        assert tuple(
+            str(row[1]) for row in migrated.execute("PRAGMA table_info(terminal_outcome)")
+        ) == (
+            "outcome_id", "schema_version", "job_id", "boundary_event_id",
+            "provider_name", "subject_id", "parent_session_id", "result_session_id",
+            "terminal_state", "terminal_detail", "world_revision", "world_result_json",
+            "result_hash", "occurred_at", "delivery_state", "attempts",
+            "next_attempt_at", "claim_owner", "claim_token", "lease_expires_at",
+            "heartbeat_at", "delivered_at", "last_error",
+        )
+        migrated_signature = _schema_signature(migrated)
+    finally:
+        migrated.close()
+
+    fresh = open_db(str(tmp_path / "fresh-v16.sqlite3"))
+    try:
+        assert _schema_signature(fresh) == migrated_signature
+    finally:
+        fresh.close()
+
+
+def test_v16_schema_migration_failure_rolls_back_version_and_partial_objects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "v16-failure.sqlite3"
+    v15 = open_db(str(path))
+    try:
+        v15.execute("DROP TABLE portable_import_receipt")
+        v15.execute("DROP TABLE terminal_outcome")
+        v15.execute("DROP TABLE clarification")
+        v15.execute("DROP TABLE trust_command_receipt")
+        v15.execute("DROP TABLE trust_command")
+        v15.execute("DROP TABLE world_item_lifecycle")
+        v15.execute("PRAGMA user_version = 15")
+        assert user_version(v15) == 15
+        assert application_id(v15) == PYTHON_APPLICATION_ID
+    finally:
+        v15.close()
+    before = path.read_bytes()
+
+    monkeypatch.setattr(
+        store_driver,
+        "TERMINAL_OUTCOME_SCHEMA_SQL",
+        (
+            "CREATE TABLE stage16_partial (id TEXT PRIMARY KEY)",
+            "CREATE INDEX ix_stage16_partial ON stage16_partial(id)",
+            "THIS IS NOT VALID SQLITE",
+        ),
+    )
+    with pytest.raises(RuntimeError, match="Migration v16 failed and was rolled back"):
+        open_db(str(path))
+
+    assert path.read_bytes() == before
+    raw = sqlite3.connect(path)
+    try:
+        assert user_version(raw) == 15
+        assert application_id(raw) == PYTHON_APPLICATION_ID
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'stage16_partial'"
+        ).fetchone() is None
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'ix_stage16_partial'"
+        ).fetchone() is None
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'terminal_outcome'"
+        ).fetchone() is None
+    finally:
+        raw.close()
+
+
+@pytest.mark.parametrize(
+    "damage", ("DROP TABLE terminal_outcome", "ALTER TABLE terminal_outcome ADD COLUMN damaged TEXT")
+)
+def test_current_v16_missing_or_damaged_terminal_outcome_fails_closed_without_self_heal(
+    tmp_path: Path, damage: str
+) -> None:
+    path = tmp_path / "damaged-v16-terminal-outcome.sqlite3"
+    db = open_db(str(path))
+    try:
+        db.execute(damage)
+        assert user_version(db) == SCHEMA_VERSION
+        assert application_id(db) == PYTHON_APPLICATION_ID
+    finally:
+        db.close()
+    before = path.read_bytes()
+
+    with pytest.raises(IncompatibleSchemaError, match="incompatible"):
+        open_db(str(path))
+
+    assert path.read_bytes() == before
+
+
+def test_real_v17_to_v18_adds_clarification_and_converges_with_fresh_schema(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "real-v17.sqlite3"
+    v17 = open_db(str(path))
+    try:
+        v17.execute("DROP TABLE portable_import_receipt")
+        v17.execute("DROP TABLE clarification")
+        v17.execute("PRAGMA user_version = 17")
+        assert application_id(v17) == PYTHON_APPLICATION_ID
+        assert user_version(v17) == 17
+    finally:
+        v17.close()
+
+    migrated = open_db(str(path))
+    try:
+        assert user_version(migrated) == SCHEMA_VERSION == 19
+        assert migrated.execute("SELECT COUNT(*) FROM clarification").fetchone() == (0,)
+        migrated_signature = _schema_signature(migrated)
+    finally:
+        migrated.close()
+
+    fresh = open_db(str(tmp_path / "fresh-v18.sqlite3"))
+    try:
+        assert _schema_signature(fresh) == migrated_signature
+    finally:
+        fresh.close()
+
+
+def test_v18_schema_migration_failure_rolls_back_version_and_partial_objects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "v18-failure.sqlite3"
+    v17 = open_db(str(path))
+    try:
+        v17.execute("DROP TABLE portable_import_receipt")
+        v17.execute("DROP TABLE clarification")
+        v17.execute("PRAGMA user_version = 17")
+    finally:
+        v17.close()
+    before = path.read_bytes()
+
+    monkeypatch.setattr(
+        store_driver,
+        "CLARIFICATION_SCHEMA_SQL",
+        (
+            "CREATE TABLE stage18_partial (id TEXT PRIMARY KEY)",
+            "CREATE INDEX ix_stage18_partial ON stage18_partial(id)",
+            "THIS IS NOT VALID SQLITE",
+        ),
+    )
+    with pytest.raises(RuntimeError, match="Migration v18 failed and was rolled back"):
+        open_db(str(path))
+
+    assert path.read_bytes() == before
+    raw = sqlite3.connect(path)
+    try:
+        assert user_version(raw) == 17
+        assert application_id(raw) == PYTHON_APPLICATION_ID
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'stage18_partial'"
+        ).fetchone() is None
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'ix_stage18_partial'"
+        ).fetchone() is None
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'clarification'"
+        ).fetchone() is None
+    finally:
+        raw.close()
+
+
+def test_real_v18_to_v19_adds_portable_receipt_and_converges_with_fresh_schema(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "real-v18.sqlite3"
+    v18 = open_db(str(path))
+    try:
+        v18.execute("DROP TABLE portable_import_receipt")
+        v18.execute("PRAGMA user_version = 18")
+        assert application_id(v18) == PYTHON_APPLICATION_ID
+        assert user_version(v18) == 18
+    finally:
+        v18.close()
+
+    migrated = open_db(str(path))
+    try:
+        assert user_version(migrated) == SCHEMA_VERSION == 19
+        assert migrated.execute(
+            "SELECT COUNT(*) FROM portable_import_receipt"
+        ).fetchone() == (0,)
+        assert tuple(
+            str(row[1])
+            for row in migrated.execute(
+                "PRAGMA table_info(portable_import_receipt)"
+            )
+        ) == PORTABLE_IMPORT_RECEIPT_COLUMNS
+        migrated_signature = _schema_signature(migrated)
+    finally:
+        migrated.close()
+
+    fresh = open_db(str(tmp_path / "fresh-v19.sqlite3"))
+    try:
+        assert _schema_signature(fresh) == migrated_signature
+    finally:
+        fresh.close()
+
+
+def test_v19_schema_migration_failure_rolls_back_version_and_partial_objects(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "v19-failure.sqlite3"
+    v18 = open_db(str(path))
+    try:
+        v18.execute("DROP TABLE portable_import_receipt")
+        v18.execute("PRAGMA user_version = 18")
+    finally:
+        v18.close()
+    before = path.read_bytes()
+
+    monkeypatch.setattr(
+        store_driver,
+        "PORTABLE_IMPORT_RECEIPT_SCHEMA_SQL",
+        (
+            "CREATE TABLE stage19_partial (id TEXT PRIMARY KEY)",
+            "CREATE INDEX ix_stage19_partial ON stage19_partial(id)",
+            "THIS IS NOT VALID SQLITE",
+        ),
+    )
+    with pytest.raises(RuntimeError, match="Migration v19 failed and was rolled back"):
+        open_db(str(path))
+
+    assert path.read_bytes() == before
+    raw = sqlite3.connect(path)
+    try:
+        assert user_version(raw) == 18
+        assert application_id(raw) == PYTHON_APPLICATION_ID
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'stage19_partial'"
+        ).fetchone() is None
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'ix_stage19_partial'"
+        ).fetchone() is None
+        assert raw.execute(
+            "SELECT 1 FROM sqlite_master WHERE name = 'portable_import_receipt'"
         ).fetchone() is None
     finally:
         raw.close()

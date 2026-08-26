@@ -159,6 +159,7 @@ def test_naming_forms_entity(tmp_path: Path) -> None:
     assert len(script) == 0
     row = _job(db_path)
     assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["schema_version"] == 3
     assert outcome["world_revision"] == 1
@@ -243,16 +244,94 @@ def test_naming_remention_attaches_support_and_exact_replay_is_idempotent(
     finally:
         db.close()
 
-    # Exact replay with the SAME Evidence: no new link, no bump.
+    # Exact replay with the SAME Evidence: no new link, no bump, and therefore
+    # no_change rather than a second applied World terminal.
     _run(
         db_path, clock,
         [_model(_batch(_naming("用户朋友叫小王", "小王", (0, 6), evidence_id="evidence-2")))],
         ("evidence-2",), job_id="job-3",
     )
     row3 = _job(db_path, job_id="job-3")
-    assert row3["state"] == "applied"
+    assert row3["state"] == "no_change"
+    assert row3["terminal_state"] == "no_change"
+    assert row3["terminal_detail"] == "no_world_mutation"
     outcome3 = json.loads(str(row3["world_result_json"]))
+    assert outcome3["state"] == "no_change"
+    assert outcome3["reason"] == "no_world_mutation"
     assert outcome3["world_revision"] == 2  # unchanged
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute(
+            "SELECT COUNT(*) FROM terminal_outcome WHERE job_id = 'job-3'"
+        ).fetchone()[0] == 1
+    finally:
+        db.close()
+
+
+def test_exact_naming_replay_repairs_deleted_entity_as_applied(tmp_path: Path) -> None:
+    """Entity restoration is a World mutation even when the support is exact."""
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    naming = _naming("用户朋友叫小王", "小王", (0, 6))
+    _run(
+        db_path, clock, [_model(_batch(naming))], ("evidence-1",),
+        lambda path: _set_evidence(path, "evidence-1", _RAW_FRIEND),
+        job_id="job-1",
+    )
+    db = sqlite3.connect(db_path, isolation_level=None)
+    try:
+        db.execute("DELETE FROM entity WHERE id = ?", (entity_id_for("owner", "小王"),))
+    finally:
+        db.close()
+
+    _run(db_path, clock, [_model(_batch(naming))], ("evidence-1",), job_id="job-2")
+
+    row = _job(db_path, job_id="job-2")
+    outcome = json.loads(str(row["world_result_json"]))
+    assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
+    assert outcome["world_revision"] == 2
+    assert entity_id_for("owner", "小王") in _entities(db_path)
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute(
+            "SELECT COUNT(*) FROM terminal_outcome WHERE job_id = 'job-2'"
+        ).fetchone()[0] == 1
+    finally:
+        db.close()
+
+
+def test_exact_relationship_replay_repairs_owner_and_target_entities(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    relationship = _relationship("用户的女朋友是小王", "小王", "girlfriend", (0, 8))
+    _run(
+        db_path, clock, [_model(_batch(relationship))], ("evidence-1",),
+        lambda path: _set_evidence(path, "evidence-1", _RAW_GF),
+        job_id="job-1",
+    )
+    owner_id = owner_entity_id_for("owner")
+    target_id = entity_id_for("owner", "小王")
+    db = sqlite3.connect(db_path, isolation_level=None)
+    try:
+        db.execute("DELETE FROM entity WHERE id IN (?, ?)", (owner_id, target_id))
+    finally:
+        db.close()
+
+    _run(
+        db_path, clock, [_model(_batch(relationship))], ("evidence-1",),
+        job_id="job-2",
+    )
+
+    row = _job(db_path, job_id="job-2")
+    outcome = json.loads(str(row["world_result_json"]))
+    assert row["state"] == "applied"
+    assert outcome["world_revision"] == 2
+    entities = _entities(db_path)
+    assert owner_id in entities
+    assert target_id in entities
 
 
 def test_two_namings_same_name_are_zero_write(tmp_path: Path) -> None:
@@ -359,6 +438,7 @@ def test_relationship_creates_owner_and_target_entities(tmp_path: Path) -> None:
     )
     row = _job(db_path)
     assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     item = outcome["cognitions"][0]
     assert item["statement_kind"] == "relationship"
@@ -631,7 +711,9 @@ def test_recall_reads_relationship_in_new_context(tmp_path: Path) -> None:
     payload = _batch(
         _relationship("用户的女朋友是小王", "小王", "girlfriend", (0, 8))
     )
-    payload["cognitions"][0]["supports"][0]["evidence_id"] = evidence_id
+    cognitions = cast(list[dict[str, object]], payload["cognitions"])
+    supports = cast(list[dict[str, object]], cognitions[0]["supports"])
+    supports[0]["evidence_id"] = evidence_id
     worker = WorldJobWorker(
         db_path,
         processor=HermesBatchAdapterProcessor(
@@ -672,7 +754,9 @@ def test_recall_reads_naming_in_new_context(tmp_path: Path) -> None:
     )[0]
     db.close()
     payload = _batch(_naming("用户朋友叫小王", "小王", (0, 6)))
-    payload["cognitions"][0]["supports"][0]["evidence_id"] = evidence_id
+    cognitions = cast(list[dict[str, object]], payload["cognitions"])
+    supports = cast(list[dict[str, object]], cognitions[0]["supports"])
+    supports[0]["evidence_id"] = evidence_id
     worker = WorldJobWorker(
         db_path,
         processor=HermesBatchAdapterProcessor(

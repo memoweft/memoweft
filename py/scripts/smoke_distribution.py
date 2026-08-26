@@ -47,12 +47,44 @@ def smoke_installed_wheel(wheel: Path, temp_dir: Path) -> None:
     venv.EnvBuilder(with_pip=True, clear=True).create(environment)
     python = environment / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     run(str(python), "-m", "pip", "install", str(wheel), cwd=temp_dir)
-    smoke = (
-        "import memoweft; "
-        "from memoweft.llm.prompts import prompt_versions; "
-        "assert memoweft.CONFIG.consolidation.support_step > 0; "
-        "assert len(prompt_versions()) == 8"
-    )
+    smoke = """
+import ast
+import importlib
+from importlib import metadata
+from pathlib import Path
+
+import memoweft
+from memoweft.llm.prompts import prompt_versions
+
+assert memoweft.CONFIG.consolidation.support_step > 0
+assert len(prompt_versions()) == 8
+
+entries = [
+    entry
+    for entry in metadata.distribution("memoweft").entry_points
+    if entry.group == "hermes_agent.memory_providers"
+]
+assert [(entry.name, entry.value) for entry in entries] == [
+    ("memoweft", "memoweft.integrations.hermes.entrypoint:register")
+]
+entry = entries[0]
+module_name, _, attribute_name = entry.value.partition(":")
+assert module_name == "memoweft.integrations.hermes.entrypoint"
+assert attribute_name == "register"
+module = importlib.import_module(module_name)
+tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
+assignments = {
+    target.id: node.value
+    for node in tree.body
+    if isinstance(node, ast.Assign)
+    for target in node.targets
+    if isinstance(target, ast.Name)
+}
+marker = assignments["supports_terminal_outcomes"]
+assert isinstance(marker, ast.Constant) and marker.value is True
+assert module.supports_terminal_outcomes is True
+assert callable(entry.load())
+"""
     run(str(python), "-c", smoke, cwd=temp_dir)
 
 

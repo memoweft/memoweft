@@ -43,6 +43,9 @@ const RUNS_DIR = resolve(HERE, 'runs');
 const LOCOMO_PATH = process.env.LOCOMO_PATH || resolve(HERE, 'data/locomo10.json');
 const TOP_K = 15;
 
+// Live per-QA progress: running F1 mean + ETA, printed to stderr during model runs.
+const PROGRESS = { done: 0, f1Sum: 0, total: 0, t0: Date.now() };
+
 // LoCoMo category labels; category 5 is excluded.
 const CAT_NAME = {
   1: 'multi-hop',
@@ -278,6 +281,18 @@ async function runSample(sample, llm) {
     } else {
       pred = await answer(llm, top, q.question);
       score = f1(pred, q.answer);
+      PROGRESS.done++;
+      PROGRESS.f1Sum += score;
+      const avg = PROGRESS.f1Sum / PROGRESS.done;
+      const elapsed = (Date.now() - PROGRESS.t0) / 1000;
+      const rate = PROGRESS.done / elapsed;
+      const eta = rate > 0 ? (PROGRESS.total - PROGRESS.done) / rate : 0;
+      const fmt = (s) => `${Math.floor(s / 60)}m${String(Math.floor(s % 60)).padStart(2, '0')}s`;
+      process.stderr.write(
+        `    [${PROGRESS.done}/${PROGRESS.total}] cat${q.category} ` +
+          `本题F1=${score.toFixed(2)} · 累计均值=${avg.toFixed(3)} · ` +
+          `已用${fmt(elapsed)} · 预计剩余${fmt(eta)}\n`,
+      );
     }
     rows.push({
       category: q.category,
@@ -562,6 +577,8 @@ async function main() {
   }
 
   const results = [];
+  PROGRESS.total = samples.reduce((n, s) => n + Math.min(s.qa.length, QA_LIMIT), 0);
+  PROGRESS.t0 = Date.now();
   for (const s of samples) {
     process.stderr.write(
       `  sample ${s.id}: ${s.turns.length} turns, ${Math.min(s.qa.length, QA_LIMIT)} QA…\n`,

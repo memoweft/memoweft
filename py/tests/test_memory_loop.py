@@ -2896,6 +2896,12 @@ def test_legacy_memory_loop_database_upgrades_into_the_v3_main_store(tmp_path: P
     legacy = sqlite3.connect(path, isolation_level=None)
     try:
         for table in (
+            "portable_import_receipt",
+            "clarification",
+            "world_item_lifecycle",
+            "trust_command_receipt",
+            "trust_command",
+            "terminal_outcome",
             "world_event_evidence",
             "world_event",
             "retraction",

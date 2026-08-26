@@ -152,6 +152,20 @@ def _seed_relationship(
     )
     db = sqlite3.connect(db_path, isolation_level=None)
     db.execute(
+        "INSERT OR IGNORE INTO evidence (id, subject_id, source_kind, host_id, "
+        "origin_id, occurred_at, recorded_at, raw_content, summary, "
+        "allow_local_read, allow_cloud_read, allow_inference, deleted_at) "
+        "VALUES (?, 'owner', 'spoken', 'hermes:test', ?, ?, ?, ?, ?, 1, 1, 1, NULL)",
+        (
+            evidence_id,
+            f"seed:{evidence_id}",
+            created_at,
+            created_at,
+            f"seed {evidence_id}",
+            f"seed {evidence_id}",
+        ),
+    )
+    db.execute(
         "INSERT OR IGNORE INTO relationship (id, world_id, source_entity_id, "
         "target_entity_id, relation_type, content, formed_by, confidence, "
         "cred_status, invalid_at, created_at, updated_at) VALUES (?, 'owner', "
@@ -201,6 +215,7 @@ def test_alias_merge_earlier_formed_name_is_canonical(tmp_path: Path) -> None:
     )
     row = _job(db_path)
     assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 1
     item = outcome["cognitions"][0]

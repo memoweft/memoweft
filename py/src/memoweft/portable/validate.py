@@ -14,7 +14,7 @@ from typing import Any
 
 from ..context_hash import hash_context
 from ..types import VisibleTurn
-from .model import BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION
+from .model import BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION, derive_bundle_id
 
 # cognition 字段值校验的运行时全集（与 TS cognition/model.ts 的 CONTENT_TYPES / FORMED_BY_VALUES /
 #   CRED_STATUSES 逐一对齐）。content_type 认【完整 8 值】含 hypothesis/trend——导入的是已落库认知，
@@ -144,6 +144,29 @@ def validate_bundle(bundle: Any) -> ValidateResult:
         errors.append("subjectId is missing")
     if not _parseable_date(b.get("exportedAt", _MISSING)):
         errors.append("exportedAt is invalid or missing")
+    if sv == 4:
+        if b.get("sourceSubjectId") != sid:
+            errors.append("sourceSubjectId does not match subjectId")
+        revision = b.get("worldRevision", _MISSING)
+        if (
+            not isinstance(revision, int)
+            or isinstance(revision, bool)
+            or revision < 0
+        ):
+            errors.append("worldRevision is invalid or missing")
+        if not isinstance(b.get("worldSnapshotHash"), str):
+            errors.append("worldSnapshotHash is invalid or missing")
+        bundle_id = b.get("bundleId")
+        if not isinstance(bundle_id, str) or bundle_id == "":
+            errors.append("bundleId is missing")
+        else:
+            try:
+                expected_bundle_id = derive_bundle_id(b)
+            except (TypeError, ValueError):
+                errors.append("bundleId cannot be derived from invalid JSON")
+            else:
+                if bundle_id != expected_bundle_id:
+                    errors.append("bundleId does not match the canonical bundle payload")
 
     data = b.get("data")
     if data is None or not isinstance(data, dict):
@@ -157,10 +180,12 @@ def validate_bundle(bundle: Any) -> ValidateResult:
         ("cognitions", data.get("cognitions")),
         ("cognitionEvidence", data.get("cognitionEvidence")),
     ]
+    required_array_invalid = False
     for name, arr in arrays:
         if not isinstance(arr, list):
+            required_array_invalid = True
             errors.append(f"data.{name} should be an array")
-    if errors:
+    if required_array_invalid:
         return ValidateResult(False, errors, warnings)
 
     ev_list = data["evidence"]
@@ -173,6 +198,7 @@ def validate_bundle(bundle: Any) -> ValidateResult:
         i = x.get("id") if isinstance(x, dict) else None
         return not isinstance(i, str) or i == ""
 
+    element_shape_error_start = len(errors)
     if any(bad_id(x) for x in ev_list):
         errors.append("data.evidence has an element with a missing id")
     if any(bad_id(x) for x in evt_list):
@@ -192,7 +218,7 @@ def validate_bundle(bundle: Any) -> ValidateResult:
         ):
             errors.append("data.cognitionEvidence has an invalid endpoint")
             break
-    if errors:
+    if len(errors) > element_shape_error_start:
         return ValidateResult(False, errors, warnings)
 
     evidence_ids = {e["id"] for e in ev_list}
@@ -240,7 +266,10 @@ def validate_bundle(bundle: Any) -> ValidateResult:
     cognition_subjects = {c["id"]: c.get("subjectId") for c in cog_list}
     for e in ev_list:
         if e.get("subjectId") != sid:
-            errors.append(f"evidence {e['id']} subjectId({e.get('subjectId')}) does not match the bundle({sid})")
+            errors.append(
+                f"evidence {e['id']} subjectId({e.get('subjectId')}) "
+                f"does not match the bundle({'undefined' if sid is _MISSING else sid})"
+            )
     for e in evt_list:
         if e.get("subjectId") != sid:
             errors.append(f"event {e['id']} subjectId({e.get('subjectId')}) does not match the bundle")
@@ -310,6 +339,16 @@ def validate_bundle(bundle: Any) -> ValidateResult:
         for field in ("originId", "correctsEvidenceId"):
             if not _nullable_string(e.get(field)):
                 invalid_field("evidence", e["id"], field)
+        if sv == 4:
+            deleted_at = e.get("deletedAt", _MISSING)
+            if deleted_at is _MISSING or (
+                deleted_at is not None and not _parseable_date(deleted_at)
+            ):
+                invalid_field("evidence", e["id"], "deletedAt")
+            if "precedingAiContext" in e:
+                errors.append(
+                    f"evidence {e['id']} must not export precedingAiContext"
+                )
     for e in evt_list:
         if not _non_empty_string(e.get("subjectId")):
             invalid_field("event", e["id"], "subjectId")
@@ -440,11 +479,12 @@ def validate_bundle(bundle: Any) -> ValidateResult:
             if not _nullable_string(value.get("requiredContext")):
                 invalid_field("semanticResolution", record_id, "requiredContext")
 
-    # ── v3：2.0 World 对象段（可选；仅在 schemaVersion == 3 且键存在时校验）──
+    # ── v3/v4：2.0 World 对象段（v3 reader compatibility remains active）──
     # entity/relationship/world_event 是 Python-owned 2.0 对象：世界 ID 必须等于
     # bundle subjectId（单 subject 边界），链接与端点必须能在包内闭包解析。
     _world_section_names = (
         "entities",
+        "entityEvidence",
         "relationships",
         "relationshipEvidence",
         "worldEvents",
@@ -452,12 +492,13 @@ def validate_bundle(bundle: Any) -> ValidateResult:
         "cognitionTargets",
     )
     world_sections_present = any(name in data for name in _world_section_names)
-    if world_sections_present and sv != BUNDLE_SCHEMA_VERSION:
+    if world_sections_present and isinstance(sv, (int, float)) and sv < 3:
         warnings.append(
-            f"World sections are only supported by schemaVersion {BUNDLE_SCHEMA_VERSION}; ignored"
+            "World sections are only supported by schemaVersion 3 or later; ignored"
         )
     elif world_sections_present:
         entity_list = data.get("entities")
+        entity_evidence_list = data.get("entityEvidence", [])
         relationship_list = data.get("relationships")
         relationship_evidence_list = data.get("relationshipEvidence")
         world_event_list = data.get("worldEvents")
@@ -465,6 +506,7 @@ def validate_bundle(bundle: Any) -> ValidateResult:
         cognition_target_list = data.get("cognitionTargets")
         for name, arr in (
             ("entities", entity_list),
+            ("entityEvidence", entity_evidence_list),
             ("relationships", relationship_list),
             ("relationshipEvidence", relationship_evidence_list),
             ("worldEvents", world_event_list),
@@ -606,6 +648,55 @@ def validate_bundle(bundle: Any) -> ValidateResult:
             _world_link_checks(
                 relationship_evidence_list, "relationshipEvidence", "relationshipId", relationship_ids
             )
+        if isinstance(entity_evidence_list, list):
+            seen_entity_links: set[tuple[object, ...]] = set()
+            for link in entity_evidence_list:
+                if not isinstance(link, dict):
+                    errors.append("data.entityEvidence has an invalid link")
+                    continue
+                entity_id = link.get("entityId")
+                evidence_id = link.get("evidenceId")
+                relation = link.get("relation")
+                start = link.get("start")
+                end = link.get("end")
+                if not _non_empty_string(entity_id) or not _non_empty_string(evidence_id):
+                    errors.append("data.entityEvidence has an invalid endpoint")
+                    continue
+                if entity_id not in entity_ids:
+                    errors.append(
+                        f"entityEvidence references a non-existent entityId: {entity_id}"
+                    )
+                if evidence_id not in evidence_ids:
+                    errors.append(
+                        f"entityEvidence references a non-existent evidence: {evidence_id}"
+                    )
+                if relation != "support":
+                    invalid_field(
+                        "entityEvidence", f"{entity_id}/{evidence_id}", "relation"
+                    )
+                if start is not None and (
+                    not isinstance(start, int) or isinstance(start, bool) or start < 0
+                ):
+                    invalid_field(
+                        "entityEvidence", f"{entity_id}/{evidence_id}", "start"
+                    )
+                if end is not None and (
+                    not isinstance(end, int) or isinstance(end, bool) or end < 0
+                ):
+                    invalid_field(
+                        "entityEvidence", f"{entity_id}/{evidence_id}", "end"
+                    )
+                if isinstance(start, int) and isinstance(end, int) and end < start:
+                    errors.append(
+                        f"entityEvidence {entity_id}/{evidence_id} has end before start"
+                    )
+                entity_link_key = (entity_id, evidence_id, relation, start, end)
+                if entity_link_key in seen_entity_links:
+                    errors.append(
+                        "data.entityEvidence has duplicate link: "
+                        f"{entity_id}/{evidence_id}/{relation}/{start}/{end}"
+                    )
+                seen_entity_links.add(entity_link_key)
         if isinstance(world_event_evidence_list, list):
             _world_link_checks(
                 world_event_evidence_list, "worldEventEvidence", "worldEventId", world_event_ids
@@ -632,6 +723,135 @@ def validate_bundle(bundle: Any) -> ValidateResult:
                         invalid_field("cognitionTarget", cognition_id, "perspectiveEntityId")
                     elif perspective not in entity_ids:
                         errors.append(f"cognitionTarget {cognition_id} references a non-existent perspective entity")
+
+        if sv == 4:
+            retractions = data.get("retractions")
+            transitions = data.get("cognitionTransitions")
+            lifecycle = data.get("worldItemLifecycle")
+            for name, value in (
+                ("retractions", retractions),
+                ("cognitionTransitions", transitions),
+                ("worldItemLifecycle", lifecycle),
+            ):
+                if not isinstance(value, list):
+                    errors.append(f"data.{name} should be an array")
+
+            if isinstance(retractions, list):
+                seen_retractions: set[str] = set()
+                for item in retractions:
+                    if not isinstance(item, dict) or not _non_empty_string(item.get("id")):
+                        errors.append("data.retractions has an element with a missing id")
+                        continue
+                    item_id = item["id"]
+                    if item_id in seen_retractions:
+                        errors.append("data.retractions has duplicate ids")
+                    seen_retractions.add(item_id)
+                    prior_cognition = item.get("priorCognitionId")
+                    prior_relationship = item.get("priorRelationshipId")
+                    prior_event = item.get("priorEventId")
+                    present_prior = sum(
+                        value is not None
+                        for value in (prior_cognition, prior_relationship, prior_event)
+                    )
+                    if present_prior != 1:
+                        errors.append(
+                            f"retraction {item_id} must identify exactly one prior World item"
+                        )
+                    if prior_cognition is not None and prior_cognition not in cognition_ids:
+                        errors.append(
+                            f"retraction {item_id} references a non-existent cognition: {prior_cognition}"
+                        )
+                    if prior_relationship is not None and prior_relationship not in relationship_ids:
+                        errors.append(
+                            f"retraction {item_id} references a non-existent relationship: {prior_relationship}"
+                        )
+                    if prior_event is not None and prior_event not in world_event_ids:
+                        errors.append(
+                            f"retraction {item_id} references a non-existent world event: {prior_event}"
+                        )
+                    if not _non_empty_string(item.get("reason")):
+                        invalid_field("retraction", item_id, "reason")
+                    revision = item.get("revision")
+                    if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+                        invalid_field("retraction", item_id, "revision")
+                    if not _parseable_date(item.get("createdAt")):
+                        invalid_field("retraction", item_id, "createdAt")
+
+            if isinstance(transitions, list):
+                seen_transition_ids: set[str] = set()
+                seen_prior_cognitions: set[str] = set()
+                for item in transitions:
+                    if not isinstance(item, dict) or not _non_empty_string(item.get("id")):
+                        errors.append("data.cognitionTransitions has an element with a missing id")
+                        continue
+                    item_id = item["id"]
+                    prior = item.get("priorCognitionId")
+                    replacement = item.get("replacementCognitionId")
+                    if item_id in seen_transition_ids:
+                        errors.append("data.cognitionTransitions has duplicate ids")
+                    seen_transition_ids.add(item_id)
+                    if not isinstance(prior, str) or prior not in cognition_ids:
+                        errors.append(
+                            f"cognitionTransition {item_id} references a non-existent prior cognition: {prior}"
+                        )
+                    elif prior in seen_prior_cognitions:
+                        errors.append(
+                            f"data.cognitionTransitions has duplicate priorCognitionId: {prior}"
+                        )
+                    else:
+                        seen_prior_cognitions.add(prior)
+                    if not isinstance(replacement, str) or replacement not in cognition_ids:
+                        errors.append(
+                            f"cognitionTransition {item_id} references a non-existent replacement cognition: {replacement}"
+                        )
+                    if not _non_empty_string(item.get("reason")):
+                        invalid_field("cognitionTransition", item_id, "reason")
+                    revision = item.get("revision")
+                    if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0:
+                        invalid_field("cognitionTransition", item_id, "revision")
+
+            if isinstance(lifecycle, list):
+                seen_lifecycle: set[tuple[str, str]] = set()
+                item_indexes = {
+                    "entity": entity_ids,
+                    "relationship": relationship_ids,
+                    "event": world_event_ids,
+                    "cognition": cognition_ids,
+                }
+                for item in lifecycle:
+                    if not isinstance(item, dict):
+                        errors.append("data.worldItemLifecycle has an invalid item")
+                        continue
+                    kind = item.get("objectKind")
+                    item_id = item.get("itemId")
+                    if item.get("subjectId") != sid:
+                        errors.append(
+                            f"worldItemLifecycle {kind}/{item_id} subjectId does not match the bundle"
+                        )
+                    if kind not in item_indexes or not _non_empty_string(item_id):
+                        errors.append("data.worldItemLifecycle has an invalid endpoint")
+                        continue
+                    key = (str(kind), str(item_id))
+                    if key in seen_lifecycle:
+                        errors.append(
+                            f"data.worldItemLifecycle has duplicate item: {kind}/{item_id}"
+                        )
+                    seen_lifecycle.add(key)
+                    if item_id not in item_indexes[str(kind)]:
+                        errors.append(
+                            f"worldItemLifecycle references a non-existent {kind}: {item_id}"
+                        )
+                    for field in ("archivedAt", "mutedAt"):
+                        value = item.get(field, _MISSING)
+                        if value is _MISSING or (
+                            value is not None and not _parseable_date(value)
+                        ):
+                            invalid_field("worldItemLifecycle", f"{kind}/{item_id}", field)
+                    if not _parseable_date(item.get("updatedAt")):
+                        invalid_field("worldItemLifecycle", f"{kind}/{item_id}", "updatedAt")
+
+    if sv == 4 and not world_sections_present:
+        errors.append("Portable v4 requires complete World and history sections")
 
     return ValidateResult(len(errors) == 0, errors, warnings)
 

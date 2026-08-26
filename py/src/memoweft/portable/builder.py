@@ -1,9 +1,9 @@
-"""Build a portable bundle from a live MemoWeft database (v3 shape).
+"""Build a deterministic Portable v4 bundle from a live MemoWeft database.
 
 Read-only and deterministic: the 1.0 core sections (evidence / event /
 cognition + links + interaction contexts + semantic resolutions) plus the 2.0
-World sections (entities / relationships / worldEvents with provenance links
-and cognitionTargets).  Rows are exported with their original ids and
+World sections plus durable history/currentness (tombstones, retractions,
+transitions, lifecycle and revision metadata). Rows keep their original ids and
 timestamps; raw Evidence text is preserved verbatim — portability is an
 owner-level migration tool, distinct from the permission-gated recall surface.
 """
@@ -13,7 +13,7 @@ import json
 import sqlite3
 from typing import Any
 
-from .model import BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION
+from .model import BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION, derive_bundle_id
 
 #: The MemoWeft version stamped into the bundle header.
 MEMOWEFT_VERSION = "2.0.0"
@@ -55,7 +55,7 @@ def build_bundle(
     exported_at: str,
     export_mode: str = "full",
 ) -> dict[str, Any]:
-    """Export one subject's complete portable bundle (schemaVersion 3)."""
+    """Export one subject's complete Portable v4 bundle."""
 
     evidence = [
         {
@@ -72,12 +72,13 @@ def build_bundle(
             "allowCloudRead": bool(r[10]),
             "allowInference": bool(r[11]),
             "correctsEvidenceId": None if r[12] is None else str(r[12]),
+            "deletedAt": None if r[13] is None else str(r[13]),
         }
         for r in _rows(
             db,
             "SELECT id, subject_id, source_kind, host_id, origin_id, occurred_at, "
             "recorded_at, raw_content, summary, allow_local_read, allow_cloud_read, "
-            "allow_inference, corrects_evidence_id FROM evidence "
+            "allow_inference, corrects_evidence_id, deleted_at FROM evidence "
             "WHERE subject_id = ? ORDER BY recorded_at, id",
             (subject_id,),
         )
@@ -216,6 +217,48 @@ def build_bundle(
             (subject_id,),
         )
     ]
+    entity_evidence: list[dict[str, Any]] = []
+    subject_entity_ids = {str(item["id"]) for item in entities}
+    subject_evidence_ids = {str(item["id"]) for item in evidence}
+    for content_json, payload_json in _rows(
+        db,
+        "SELECT content, payload_json FROM evidence_ledger ORDER BY id",
+    ):
+        try:
+            content = json.loads(str(content_json))
+            payload = json.loads(str(payload_json))
+        except (TypeError, ValueError):
+            continue
+        if not (
+            isinstance(content, dict)
+            and content.get("relation") == "support"
+            and isinstance(content.get("entity_id"), str)
+            and content["entity_id"] in subject_entity_ids
+            and isinstance(content.get("evidence_id"), str)
+            and content["evidence_id"] in subject_evidence_ids
+            and isinstance(payload, dict)
+            and payload.get("schema_version") == 1
+        ):
+            continue
+        start = payload.get("start")
+        end = payload.get("end")
+        entity_evidence.append(
+            {
+                "entityId": content["entity_id"],
+                "evidenceId": content["evidence_id"],
+                "relation": "support",
+                "start": start if isinstance(start, int) and not isinstance(start, bool) else None,
+                "end": end if isinstance(end, int) and not isinstance(end, bool) else None,
+            }
+        )
+    entity_evidence.sort(
+        key=lambda item: (
+            str(item["entityId"]),
+            str(item["evidenceId"]),
+            -1 if item["start"] is None else int(item["start"]),
+            -1 if item["end"] is None else int(item["end"]),
+        )
+    )
     relationships = [
         {
             "id": str(r[0]),
@@ -302,20 +345,92 @@ def build_bundle(
         )
     ]
 
+    # ── v4 durable history/currentness ──
+    retractions = [
+        {
+            "id": str(r[0]),
+            "priorCognitionId": None if r[1] is None else str(r[1]),
+            "priorRelationshipId": None if r[2] is None else str(r[2]),
+            "reason": str(r[3]),
+            "revision": int(r[4]),
+            "createdAt": str(r[5]),
+            "priorEventId": None if r[6] is None else str(r[6]),
+        }
+        for r in _rows(
+            db,
+            "SELECT id, prior_cognition_id, prior_relationship_id, reason, "
+            "revision, created_at, prior_event_id FROM retraction WHERE "
+            "prior_cognition_id IN (SELECT id FROM cognition WHERE subject_id = ?) "
+            "OR prior_relationship_id IN "
+            "(SELECT id FROM relationship WHERE world_id = ?) "
+            "OR prior_event_id IN (SELECT id FROM world_event WHERE world_id = ?) "
+            "ORDER BY revision, id",
+            (subject_id, subject_id, subject_id),
+        )
+    ]
+    cognition_transitions = [
+        {
+            "id": str(r[0]),
+            "priorCognitionId": str(r[1]),
+            "replacementCognitionId": str(r[2]),
+            "reason": str(r[3]),
+            "revision": int(r[4]),
+        }
+        for r in _rows(
+            db,
+            "SELECT id, prior_cognition_id, replacement_cognition_id, reason, "
+            "revision FROM cognition_transitions WHERE prior_cognition_id IN "
+            "(SELECT id FROM cognition WHERE subject_id = ?) OR "
+            "replacement_cognition_id IN "
+            "(SELECT id FROM cognition WHERE subject_id = ?) "
+            "ORDER BY revision, id",
+            (subject_id, subject_id),
+        )
+    ]
+    world_item_lifecycle = [
+        {
+            "subjectId": str(r[0]),
+            "objectKind": str(r[1]),
+            "itemId": str(r[2]),
+            "archivedAt": None if r[3] is None else str(r[3]),
+            "mutedAt": None if r[4] is None else str(r[4]),
+            "updatedAt": str(r[5]),
+        }
+        for r in _rows(
+            db,
+            "SELECT subject_id, object_kind, item_id, archived_at, muted_at, "
+            "updated_at FROM world_item_lifecycle WHERE subject_id = ? "
+            "ORDER BY object_kind, item_id",
+            (subject_id,),
+        )
+    ]
+    revision_row = db.execute(
+        "SELECT revision, snapshot_hash FROM memory_state WHERE singleton = 1"
+    ).fetchone()
+    world_revision = 0 if revision_row is None else int(revision_row[0])
+    world_snapshot_hash = "" if revision_row is None else str(revision_row[1])
+
     counts = {
         "evidence": len(evidence),
         "events": len(events),
         "cognitions": len(cognitions),
         "entities": len(entities),
+        "entityEvidence": len(entity_evidence),
         "relationships": len(relationships),
         "worldEvents": len(world_events),
+        "retractions": len(retractions),
+        "cognitionTransitions": len(cognition_transitions),
+        "worldItemLifecycle": len(world_item_lifecycle),
     }
-    return {
+    bundle: dict[str, Any] = {
         "format": BUNDLE_FORMAT,
         "schemaVersion": BUNDLE_SCHEMA_VERSION,
         "exportedAt": exported_at,
         "memoWeftVersion": MEMOWEFT_VERSION,
         "subjectId": subject_id,
+        "sourceSubjectId": subject_id,
+        "worldRevision": world_revision,
+        "worldSnapshotHash": world_snapshot_hash,
         "source": {"hostId": host_id, "exportMode": export_mode},
         "data": {
             "evidence": evidence,
@@ -327,11 +442,17 @@ def build_bundle(
             "interactionContexts": interaction_contexts,
             "semanticResolutions": semantic_resolutions,
             "entities": entities,
+            "entityEvidence": entity_evidence,
             "relationships": relationships,
             "relationshipEvidence": relationship_evidence,
             "worldEvents": world_events,
             "worldEventEvidence": world_event_evidence,
             "cognitionTargets": cognition_targets,
+            "retractions": retractions,
+            "cognitionTransitions": cognition_transitions,
+            "worldItemLifecycle": world_item_lifecycle,
         },
         "metadata": {"counts": counts, "notes": []},
     }
+    bundle["bundleId"] = derive_bundle_id(bundle)
+    return bundle

@@ -470,6 +470,7 @@ def test_correction_chain_replaces_the_successor(tmp_path: Path) -> None:
     )
     row = _job(db_path, job_id="job-3")
     assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 3
     db = sqlite3.connect(db_path)

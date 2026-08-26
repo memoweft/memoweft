@@ -1,0 +1,335 @@
+{
+  "$defs": {
+    "cognitionTransition": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "priorCognitionId": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "replacementCognitionId": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "revision": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "priorCognitionId",
+        "replacementCognitionId",
+        "reason",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "nonEmpty": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "nullableTimestamp": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "retraction": {
+      "additionalProperties": false,
+      "properties": {
+        "createdAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "id": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "priorCognitionId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priorEventId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priorRelationshipId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "revision": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "priorCognitionId",
+        "priorRelationshipId",
+        "priorEventId",
+        "reason",
+        "revision",
+        "createdAt"
+      ],
+      "type": "object"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "worldItemLifecycle": {
+      "additionalProperties": false,
+      "properties": {
+        "archivedAt": {
+          "$ref": "#/$defs/nullableTimestamp"
+        },
+        "itemId": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "mutedAt": {
+          "$ref": "#/$defs/nullableTimestamp"
+        },
+        "objectKind": {
+          "enum": [
+            "entity",
+            "relationship",
+            "event",
+            "cognition"
+          ]
+        },
+        "subjectId": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "updatedAt": {
+          "$ref": "#/$defs/timestamp"
+        }
+      },
+      "required": [
+        "subjectId",
+        "objectKind",
+        "itemId",
+        "archivedAt",
+        "mutedAt",
+        "updatedAt"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://memoweft.local/schema/portable-v4.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "bundleId": {
+      "pattern": "^portable:v4:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "data": {
+      "properties": {
+        "cognitionEvidence": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "cognitionTargets": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "cognitionTransitions": {
+          "items": {
+            "$ref": "#/$defs/cognitionTransition"
+          },
+          "type": "array"
+        },
+        "cognitions": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "entities": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "entityEvidence": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "eventEvidence": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "events": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "interactionContexts": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "relationshipEvidence": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "relationships": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "retractions": {
+          "items": {
+            "$ref": "#/$defs/retraction"
+          },
+          "type": "array"
+        },
+        "semanticResolutions": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "unconsolidatedEventIds": {
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          },
+          "type": "array"
+        },
+        "worldEventEvidence": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "worldEvents": {
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "worldItemLifecycle": {
+          "items": {
+            "$ref": "#/$defs/worldItemLifecycle"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "evidence",
+        "events",
+        "eventEvidence",
+        "cognitions",
+        "cognitionEvidence",
+        "unconsolidatedEventIds",
+        "interactionContexts",
+        "semanticResolutions",
+        "entities",
+        "relationships",
+        "relationshipEvidence",
+        "worldEvents",
+        "worldEventEvidence",
+        "cognitionTargets",
+        "retractions",
+        "cognitionTransitions",
+        "worldItemLifecycle"
+      ],
+      "type": "object"
+    },
+    "exportedAt": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "format": {
+      "const": "memoweft-bundle"
+    },
+    "memoWeftVersion": {
+      "$ref": "#/$defs/nonEmpty"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "schemaVersion": {
+      "const": 4
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "exportMode": {
+          "const": "full"
+        },
+        "hostId": {
+          "$ref": "#/$defs/nonEmpty"
+        }
+      },
+      "required": [
+        "hostId",
+        "exportMode"
+      ],
+      "type": "object"
+    },
+    "sourceSubjectId": {
+      "$ref": "#/$defs/nonEmpty"
+    },
+    "subjectId": {
+      "$ref": "#/$defs/nonEmpty"
+    },
+    "worldRevision": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "worldSnapshotHash": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "format",
+    "schemaVersion",
+    "bundleId",
+    "exportedAt",
+    "memoWeftVersion",
+    "subjectId",
+    "sourceSubjectId",
+    "worldRevision",
+    "worldSnapshotHash",
+    "source",
+    "data",
+    "metadata"
+  ],
+  "title": "MemoWeft Portable Memory Bundle v4",
+  "type": "object"
+}

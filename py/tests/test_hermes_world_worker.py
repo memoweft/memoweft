@@ -9,15 +9,22 @@ from pathlib import Path
 import sqlite3
 import threading
 import time
-from typing import cast
+from typing import Callable, Literal, Mapping, cast
 
 import pytest
 
+import memoweft.integrations.hermes.batch_adapter as batch_adapter_module
+import memoweft.integrations.hermes.world_worker as world_worker_module
 from memoweft.integrations.hermes.boundary_store import (
     HermesBoundaryEvidenceCandidate,
     HermesBoundaryFormalTarget,
     HermesBoundaryStore,
     ValidatedHermesBoundary,
+)
+from memoweft.integrations.hermes.batch_adapter import (
+    BatchItem,
+    HermesBatchAdapterProcessor,
+    _CompiledBatch,
 )
 from memoweft.integrations.hermes.world_worker import (
     ClaimedWorldJob,
@@ -49,6 +56,7 @@ class SequenceProcessor:
         dispatches_model: bool = False,
     ) -> None:
         self.dispatches_model = dispatches_model
+        self.model_tier: Literal["cloud", "local"] = "cloud"
         self.outcomes = list(outcomes)
         self.calls: list[tuple[str, ...]] = []
 
@@ -64,6 +72,7 @@ class SequenceProcessor:
 
 class BlockingProcessor:
     dispatches_model = False
+    model_tier: Literal["cloud", "local"] = "cloud"
 
     def __init__(self) -> None:
         self.entered = threading.Event()
@@ -201,6 +210,18 @@ def _job(path: Path, job_id: str = "job-1") -> dict[str, object]:
         db.close()
 
 
+def _terminal_outcome_count(path: Path, job_id: str = "job-1") -> int:
+    db = sqlite3.connect(path)
+    try:
+        return int(
+            db.execute(
+                "SELECT COUNT(*) FROM terminal_outcome WHERE job_id = ?", (job_id,)
+            ).fetchone()[0]
+        )
+    finally:
+        db.close()
+
+
 def _policy() -> WorldJobPolicy:
     return WorldJobPolicy(
         lease_seconds=10.0,
@@ -274,6 +295,30 @@ def test_expired_undispatched_claim_is_recovered_with_new_fence(tmp_path: Path) 
     assert store.settle(second, WorldJobResult.no_change("recovered")) is True
 
 
+def test_live_generic_applied_settlement_is_rejected_without_forging_job(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "generic-applied.sqlite3"
+    clock = MutableClock()
+    _initialize_database(db_path)
+    _insert_job(db_path, clock)
+    store = WorldJobStore(db_path, policy=_policy(), clock=clock)
+    claim = store.claim_one("worker-a")
+    assert claim is not None
+
+    with pytest.raises(
+        PermanentWorldJobError, match="applied_requires_atomic_world_mutation"
+    ):
+        store.settle(claim, WorldJobResult.applied())
+
+    row = _job(db_path)
+    assert row["state"] == "processing"
+    assert row["terminal_state"] is None
+    assert row["claim_owner"] == claim.claim_owner
+    assert row["claim_token"] == claim.claim_token
+    assert _terminal_outcome_count(db_path) == 0
+
+
 def test_expired_dispatch_marker_is_dead_and_never_redispatched(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
@@ -302,6 +347,208 @@ def test_expired_dispatch_marker_is_dead_and_never_redispatched(tmp_path: Path) 
     assert row["state"] == "dead"
     assert row["last_error_type"] == "dispatch_outcome_unknown"
     assert row["completed_at"] is not None
+    assert _terminal_outcome_count(db_path) == 1
+
+
+@pytest.mark.parametrize(
+    "starting_attempts",
+    [0, _policy().max_attempts - 1],
+    ids=["within_remote_budget", "final_remote_attempt"],
+)
+def test_expired_durable_model_checkpoint_reclaims_and_applies_without_second_route(
+    tmp_path: Path, starting_attempts: int,
+) -> None:
+    """A lease loss after checkpoint replays Apply exactly once under a new fence."""
+
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    _initialize_database(db_path)
+    _insert_job(db_path, clock, attempts=starting_attempts)
+    store = WorldJobStore(db_path, policy=_policy(), clock=clock)
+    first = store.claim_one("crashed-worker")
+    assert first is not None
+    assert store.mark_dispatch_started(first) is True
+    raw = "user Evidence evidence-1"
+    checkpoint = {
+        "content": json.dumps(
+            {
+                "schema_version": 1,
+                "result": "one_cognition",
+                "cognition": {
+                    "target": "owner_self",
+                    "statement_kind": "preference",
+                    "proposition": raw,
+                    "supports": [
+                        {"evidence_id": "evidence-1", "start": 0, "end": len(raw)}
+                    ],
+                },
+            }
+        ),
+        "model": "checkpointed-model",
+    }
+    checkpoint_processor = HermesBatchAdapterProcessor(
+        str(db_path), lambda *_args, **_kwargs: pytest.fail("route must not run")
+    )
+    db = sqlite3.connect(db_path, isolation_level=None)
+    try:
+        checkpoint_processor._persist_checkpoint(db, first, checkpoint)
+    finally:
+        db.close()
+
+    clock.advance(11.0)
+    route_calls: list[object] = []
+
+    def route(*_args: object, **_kwargs: object) -> Mapping[str, object]:
+        route_calls.append(True)
+        raise AssertionError("durable checkpoint must suppress a second route")
+
+    restarted = WorldJobWorker(
+        db_path,
+        processor=HermesBatchAdapterProcessor(str(db_path), route, clock=clock),
+        policy=_policy(),
+        clock=clock,
+        worker_id="restarted-worker",
+    )
+    assert restarted.run_until_quiescent() == 1
+    assert route_calls == []
+    row = _job(db_path)
+    assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
+    assert row["attempts"] == (
+        _policy().max_attempts
+        if starting_attempts == _policy().max_attempts - 1
+        else starting_attempts + 2
+    )
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 1
+        assert db.execute("SELECT revision FROM memory_state").fetchone()[0] == 1
+    finally:
+        db.close()
+    assert _terminal_outcome_count(db_path) == 1
+
+
+def test_applied_outcome_insert_failure_rolls_back_world_apply_revision_and_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db_path = tmp_path / "applied-terminal-outcome-rollback.sqlite3"
+    clock = MutableClock()
+    _initialize_database(db_path)
+    _insert_job(db_path, clock)
+    store = WorldJobStore(db_path, policy=_policy(), clock=clock)
+    claim = store.claim_one("worker-a")
+    assert claim is not None
+    raw = "user Evidence evidence-1"
+    batch = _CompiledBatch(
+        items=(
+            BatchItem(
+                action="form",
+                proposition=raw,
+                statement_kind="preference",
+                formed_by="stated",
+                supports=(("evidence-1", 0, len(raw), raw),),
+            ),
+        )
+    )
+
+    def fail(_db: sqlite3.Connection, _job_id: str) -> dict[str, object]:
+        raise RuntimeError("injected terminal outcome write failure")
+
+    monkeypatch.setattr(
+        batch_adapter_module, "persist_terminal_outcome_in_transaction", fail
+    )
+    processor = HermesBatchAdapterProcessor(
+        str(db_path), lambda *_args: {}, clock=clock
+    )
+    db = sqlite3.connect(db_path, isolation_level=None)
+    try:
+        with pytest.raises(RuntimeError, match="terminal outcome write failure"):
+            processor._apply_once(db, claim, batch)
+    finally:
+        db.close()
+
+    row = _job(db_path)
+    assert row["state"] == "processing"
+    assert row["terminal_state"] is None
+    assert row["claim_token"] == claim.claim_token
+    assert _terminal_outcome_count(db_path) == 0
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 0
+        assert db.execute("SELECT COUNT(*) FROM memory_state").fetchone()[0] == 0
+    finally:
+        db.close()
+
+
+def test_nonapplied_outcome_insert_failure_rolls_back_settlement_and_fence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db_path = tmp_path / "settlement-terminal-outcome-rollback.sqlite3"
+    clock = MutableClock()
+    _initialize_database(db_path)
+    _insert_job(db_path, clock)
+    store = WorldJobStore(db_path, policy=_policy(), clock=clock)
+    claim = store.claim_one("worker-a")
+    assert claim is not None
+
+    def fail(_db: sqlite3.Connection, _job_id: str) -> dict[str, object]:
+        raise RuntimeError("injected terminal outcome write failure")
+
+    monkeypatch.setattr(
+        world_worker_module, "persist_terminal_outcome_in_transaction", fail
+    )
+    with pytest.raises(RuntimeError, match="terminal outcome write failure"):
+        store.settle(claim, WorldJobResult.no_change("formal_no_change"))
+
+    row = _job(db_path)
+    assert row["state"] == "processing"
+    assert row["terminal_state"] is None
+    assert row["claim_owner"] == claim.claim_owner
+    assert row["claim_token"] == claim.claim_token
+    assert _terminal_outcome_count(db_path) == 0
+
+
+@pytest.mark.parametrize(
+    ("result", "terminal_state"),
+    (
+        (WorldJobResult.no_change("formal_no_change"), "no_change"),
+        (
+            WorldJobResult.clarification_required(
+                "ambiguous_identity", display="Which person do you mean?"
+            ),
+            "clarification_required",
+        ),
+        (
+            WorldJobResult.out_of_scope(
+                "outside_world_contract", display="Not a memory-world action."
+            ),
+            "out_of_scope",
+        ),
+    ),
+)
+def test_nonapplied_fenced_settlement_writes_exactly_one_terminal_outcome(
+    tmp_path: Path, result: WorldJobResult, terminal_state: str
+) -> None:
+    db_path = tmp_path / f"{terminal_state}-terminal-outcome.sqlite3"
+    clock = MutableClock()
+    _initialize_database(db_path)
+    _insert_job(db_path, clock)
+    store = WorldJobStore(db_path, policy=_policy(), clock=clock)
+    claim = store.claim_one("worker-a")
+    assert claim is not None
+
+    assert store.settle(claim, result) is True
+    row = _job(db_path)
+    assert row["terminal_state"] == terminal_state
+    assert _terminal_outcome_count(db_path) == 1
+    db = sqlite3.connect(db_path)
+    try:
+        outcome = db.execute(
+            "SELECT terminal_state FROM terminal_outcome WHERE job_id = ?", ("job-1",)
+        ).fetchone()
+        assert outcome == (terminal_state,)
+    finally:
+        db.close()
 
 
 def test_default_processor_is_terminal_no_change_with_zero_dispatch(tmp_path: Path) -> None:
@@ -349,7 +596,7 @@ def test_zero_eligible_evidence_never_calls_processor(tmp_path: Path) -> None:
     )
 
 
-def test_multiple_evidence_are_one_batch_and_one_dispatch(tmp_path: Path) -> None:
+def test_worker_rejects_generic_applied_after_one_model_dispatch(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     _initialize_database(db_path)
@@ -374,13 +621,30 @@ def test_multiple_evidence_are_one_batch_and_one_dispatch(tmp_path: Path) -> Non
     assert worker.run_until_quiescent() == 1
     assert processor.calls == [("evidence-1", "evidence-2")]
     row = _job(db_path)
-    assert row["state"] == "applied"
+    assert row["state"] == "dead"
+    assert row["terminal_state"] == "failed"
+    assert row["last_error_type"] == "applied_requires_atomic_world_mutation"
     assert row["model_dispatch_started_at"] is not None
     assert row["model_completed_at"] is not None
-    assert row["model_provider"] == "test-provider"
-    assert row["model_name"] == "test-model"
     assert row["model_result_hash"] is not None
     assert row["result_hash"] is not None
+    result = json.loads(cast(str, row["world_result_json"]))
+    assert result == {
+        "reason": "applied_requires_atomic_world_mutation",
+        "schema_version": 1,
+        "state": "dead",
+    }
+    assert row["result_hash"] == sha256(
+        cast(str, row["world_result_json"]).encode("utf-8")
+    ).hexdigest()
+    db = sqlite3.connect(db_path)
+    try:
+        outcome = db.execute(
+            "SELECT terminal_state FROM terminal_outcome WHERE job_id = ?", ("job-1",)
+        ).fetchone()
+        assert outcome == ("failed",)
+    finally:
+        db.close()
 
 
 def test_model_retry_result_is_dead_after_the_single_dispatch(tmp_path: Path) -> None:
@@ -437,14 +701,14 @@ def test_model_exception_is_unknown_dead_and_never_called_twice(tmp_path: Path) 
     assert len(processor.calls) == 1
 
 
-def test_predispatch_retry_uses_fixed_backoff_then_succeeds(tmp_path: Path) -> None:
+def test_predispatch_retry_uses_fixed_backoff_then_no_change(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     _initialize_database(db_path)
     _insert_job(db_path, clock)
     processor = SequenceProcessor(
         WorldJobResult.retry("adapter_not_ready"),
-        WorldJobResult.applied(),
+        WorldJobResult.no_change("adapter_no_change"),
     )
     worker = WorldJobWorker(
         db_path,
@@ -459,12 +723,30 @@ def test_predispatch_retry_uses_fixed_backoff_then_succeeds(tmp_path: Path) -> N
     assert row["next_attempt_at"] == _timestamp(clock() + timedelta(seconds=5))
     assert row["world_result_json"] is None
     assert row["result_hash"] is None
+    assert _terminal_outcome_count(db_path) == 0
     clock.advance(4.0)
     assert worker.run_until_quiescent() == 0
     clock.advance(1.0)
     assert worker.run_until_quiescent() == 1
-    assert _job(db_path)["state"] == "applied"
+    assert _job(db_path)["state"] == "no_change"
+    assert _terminal_outcome_count(db_path) == 1
     assert len(processor.calls) == 2
+
+
+@pytest.mark.parametrize(
+    ("factory", "reason"),
+    (
+        (WorldJobResult.clarification_required, "ambiguous_identity"),
+        (WorldJobResult.out_of_scope, "outside_world_contract"),
+    ),
+)
+def test_non_no_change_terminal_requires_bounded_display(
+    factory: Callable[..., WorldJobResult], reason: str
+) -> None:
+    with pytest.raises(ValueError, match="requires a non-empty display"):
+        factory(reason)
+    with pytest.raises(ValueError, match="display exceeds 500"):
+        factory(reason, display="x" * 501)
 
 
 def test_fixed_attempt_budget_dead_letters_fourth_predispatch_failure(
@@ -495,6 +777,7 @@ def test_fixed_attempt_budget_dead_letters_fourth_predispatch_failure(
     assert row["attempts"] == 4
     assert row["last_error_type"] == "max_attempts_exhausted"
     assert len(processor.calls) == 4
+    assert _terminal_outcome_count(db_path) == 1
 
 
 def test_permanent_predispatch_error_is_dead_without_retry(tmp_path: Path) -> None:

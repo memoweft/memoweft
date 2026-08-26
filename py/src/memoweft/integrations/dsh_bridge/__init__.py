@@ -37,8 +37,9 @@ from ..hermes.boundary_store import (
     HermesBoundaryStore,
     ValidatedHermesBoundary,
 )
-from ..hermes.recall import _world_row_visible, recall_world_text
+from ..hermes.recall import recall_world_text
 from ..hermes.world_worker import WorldJobWorker
+from ..trust.currentness import evidence_state, linked_evidence, world_item_visible
 from ...store import open_db
 
 logger = logging.getLogger(__name__)
@@ -498,6 +499,14 @@ class DshMemoWeftRuntime:
         return self._enabled
 
     @property
+    def subject_id(self) -> str | None:
+        return self._ingestor.subject_id if self._ingestor is not None else None
+
+    @property
+    def host_id(self) -> str | None:
+        return self._ingestor.host_id if self._ingestor is not None else None
+
+    @property
     def last_recall_count(self) -> int:
         return self._last_recall_count
 
@@ -507,7 +516,23 @@ class DshMemoWeftRuntime:
         dsh_home = Path(str(kwargs.get("dsh_home") or "."))
         platform = str(kwargs.get("platform") or "dsh")
         identity_source = str(kwargs.get("user_id") or kwargs.get("agent_identity") or "local-user")
-        subject_id = "weftmate-user-" + sha256(f"{platform}:{identity_source}".encode()).hexdigest()[:24]
+        model_tier = kwargs.get("model_tier", "cloud")
+        if model_tier not in ("cloud", "local"):
+            raise DshBoundaryError("model_tier must be 'cloud' or 'local'")
+        if "subject_id" in kwargs:
+            explicit_subject_id = kwargs["subject_id"]
+            if (
+                not isinstance(explicit_subject_id, str)
+                or not explicit_subject_id
+                or explicit_subject_id != explicit_subject_id.strip()
+                or len(explicit_subject_id) > 512
+            ):
+                raise DshBoundaryError("subject_id must be a non-empty stable identifier")
+            subject_id = explicit_subject_id
+        else:
+            subject_id = "weftmate-user-" + sha256(
+                f"{platform}:{identity_source}".encode()
+            ).hexdigest()[:24]
         db_path = dsh_home / "memoweft" / "memoweft.sqlite3"
         self._ingestor = _DshRuntimeStore(
             db_path,
@@ -523,7 +548,9 @@ class DshMemoWeftRuntime:
             lang = kwargs.get("lang")
             if lang not in (None, "zh", "en"):
                 raise DshBoundaryError("lang must be None, 'zh' or 'en'")
-            processor = HermesBatchAdapterProcessor(str(db_path), route, lang=lang)
+            processor = HermesBatchAdapterProcessor(
+                str(db_path), route, lang=lang, model_tier=model_tier
+            )
         self._world_worker = WorldJobWorker(db_path, processor=processor)
         self._world_worker.start()
         self._enabled = True
@@ -614,6 +641,7 @@ class DshMemoWeftRuntime:
                     "WHERE subject_id = ? AND invalid_at IS NULL AND archived_at IS NULL AND muted_at IS NULL "
                     "ORDER BY created_at, id", (subject,),
                 ).fetchall()
+                if world_item_visible(db, subject, "cognition", str(r[0]), surface="export")
             ]
             entities = [
                 {"id": str(r[0]), "canonical_name": str(r[1]), "kind": str(r[2])}
@@ -621,6 +649,7 @@ class DshMemoWeftRuntime:
                     "SELECT id, canonical_name, kind FROM entity WHERE world_id = ? AND invalid_at IS NULL "
                     "ORDER BY created_at, id", (subject,),
                 ).fetchall()
+                if world_item_visible(db, subject, "entity", str(r[0]), surface="export")
             ]
             relationships = [
                 {"id": str(r[0]), "content": str(r[1]), "confidence": int(r[2])}
@@ -628,6 +657,7 @@ class DshMemoWeftRuntime:
                     "SELECT id, content, confidence FROM relationship WHERE world_id = ? AND invalid_at IS NULL "
                     "ORDER BY created_at, id", (subject,),
                 ).fetchall()
+                if world_item_visible(db, subject, "relationship", str(r[0]), surface="export")
             ]
             events = [
                 {"id": str(r[0]), "content": str(r[1]), "confidence": int(r[2])}
@@ -635,6 +665,7 @@ class DshMemoWeftRuntime:
                     "SELECT id, content, confidence FROM world_event WHERE world_id = ? AND invalid_at IS NULL "
                     "ORDER BY created_at, id", (subject,),
                 ).fetchall()
+                if world_item_visible(db, subject, "event", str(r[0]), surface="export")
             ]
             return {
                 "cognitions": cognitions,
@@ -664,17 +695,16 @@ class DshMemoWeftRuntime:
             cognitions = [
                 {
                     "id": str(r[0]), "content": str(r[1]), "content_type": str(r[2]),
-                    "confidence": int(r[3]), "evidence_ids": json.loads(str(r[4]) or "[]"),
+                    "confidence": int(r[3]),
+                    "evidence_ids": list(linked_evidence(db, "cognition", str(r[0]))),
                 }
                 for r in db.execute(
-                    "SELECT c.id, c.content, c.content_type, c.confidence, "
-                    "COALESCE((SELECT json_group_array(ce.evidence_id) FROM cognition_evidence ce "
-                    "WHERE ce.cognition_id = c.id), '[]') "
+                    "SELECT c.id, c.content, c.content_type, c.confidence "
                     "FROM cognition c WHERE c.subject_id = ? "
                     "AND c.invalid_at IS NULL AND c.archived_at IS NULL AND c.muted_at IS NULL "
                     "ORDER BY c.created_at, c.id", (subject,),
                 ).fetchall()
-                if _world_row_visible(db, "cognition", str(r[0]))
+                if world_item_visible(db, subject, "cognition", str(r[0]), surface="export")
             ]
             evidence = [
                 {
@@ -682,10 +712,21 @@ class DshMemoWeftRuntime:
                     "source_kind": str(r[3]), "host_id": str(r[4]), "occurred_at": str(r[5]),
                 }
                 for r in db.execute(
-                    "SELECT id, raw_content, origin_id, source_kind, host_id, occurred_at FROM evidence "
-                    "WHERE subject_id = ? AND allow_local_read = 1 ORDER BY recorded_at, id",
+                    "SELECT id, raw_content, origin_id, source_kind, host_id, occurred_at, "
+                    "deleted_at, allow_local_read, allow_cloud_read, allow_inference FROM evidence "
+                    "WHERE subject_id = ? ORDER BY recorded_at, id",
                     (subject,),
                 ).fetchall()
+                if evidence_state(
+                    {
+                        "deleted_at": r[6],
+                        "allow_local_read": r[7],
+                        "allow_cloud_read": r[8],
+                        "allow_inference": r[9],
+                    },
+                    surface="export",
+                )
+                is None
             ]
             return {"cognitions": cognitions, "evidence": evidence}
         except sqlite3.Error:
@@ -697,9 +738,26 @@ class DshMemoWeftRuntime:
         return {
             "enabled": self._enabled,
             "db_path": str(self.db_path) if self.db_path is not None else None,
+            "subject_id": self.subject_id,
+            "host_id": self.host_id,
             "last_recall_count": self._last_recall_count,
             "worker_running": self._world_worker is not None,
         }
+
+    def kick_world_worker(self) -> bool:
+        """Wake the existing worker after an RPC-created follow-up Job."""
+
+        worker = self._world_worker
+        if not self._enabled or worker is None:
+            return False
+        try:
+            return worker.kick()
+        except Exception as exc:  # noqa: BLE001 - host wake failure stays diagnostic
+            logger.warning(
+                "MemoWeft World worker wake failed: error_type=%s",
+                type(exc).__name__,
+            )
+            return False
 
     def shutdown(self) -> None:
         worker = self._world_worker

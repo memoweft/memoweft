@@ -1,12 +1,136 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { exportBundle } from '../../src/portable/exportBundle.ts';
-import { importBundle } from '../../src/portable/importBundle.ts';
-import type { MemoryBundle } from '../../src/portable/model.ts';
+import {
+  importBundle,
+  type PortableV4Adapter,
+  type PortableV4AdapterPlan,
+} from '../../src/portable/importBundle.ts';
+import {
+  deriveBundleId,
+  deriveFreshPortableV4Plan,
+  type MemoryBundle,
+} from '../../src/portable/model.ts';
 import { validateBundle } from '../../src/portable/validateBundle.ts';
 import { openStores } from '../../src/store/openStores.ts';
 
 const T = '2026-07-31T00:00:00.000Z';
+
+function sharedFixture(name: string): unknown {
+  return JSON.parse(
+    readFileSync(new URL(`../../shared/portable-v4/fixtures/${name}`, import.meta.url), 'utf8'),
+  );
+}
+
+test('Portable v4 shared fixture：TS/Python canonical bundle 与 fresh plan identity 对齐', () => {
+  const bundle = sharedFixture('full-v4.json') as MemoryBundle;
+  const expected = sharedFixture('fresh-target-plan.json') as Record<string, unknown>;
+  assert.equal(validateBundle(bundle).valid, true);
+  assert.equal(validateBundle(sharedFixture('compat-v2.json')).valid, true);
+  assert.equal(validateBundle(sharedFixture('compat-v3.json')).valid, true);
+  assert.equal(bundle.bundleId, deriveBundleId(bundle));
+  const plan = deriveFreshPortableV4Plan(bundle, 'host-b-owner');
+  assert.equal(plan.planHash, expected.planHash);
+  assert.equal(plan.commandId, expected.commandId);
+  assert.equal(plan.receiptId, expected.receiptId);
+  assert.deepEqual(plan.payload.counts, expected.counts);
+});
+
+test('Portable v4 importer：无 adapter fail-closed，有 adapter 时主体重映射且 plan hash 跨语言一致', () => {
+  const bundle = sharedFixture('full-v4.json') as MemoryBundle;
+  const expected = sharedFixture('fresh-target-plan.json') as Record<string, unknown>;
+  const oracle = deriveFreshPortableV4Plan(bundle, 'host-b-owner');
+  const payload = oracle.payload as {
+    counts: Record<string, number>;
+    duplicates: Record<string, number>;
+    writeSet: Record<string, string[]>;
+  };
+  const adapterKeys = [
+    'entities',
+    'entityEvidence',
+    'relationships',
+    'worldEvents',
+    'relationshipEvidence',
+    'worldEventEvidence',
+    'cognitionTargets',
+    'retractions',
+    'cognitionTransitions',
+    'worldItemLifecycle',
+    'evidenceTombstones',
+  ];
+  const target = openStores(':memory:');
+  let applyCalls = 0;
+  const portableV4: PortableV4Adapter = {
+    plan(remapped, targetSubjectId): PortableV4AdapterPlan {
+      assert.equal(remapped.subjectId, 'host-b-owner');
+      assert.equal(remapped.sourceSubjectId, 'host-a-owner');
+      assert.equal(targetSubjectId, 'host-b-owner');
+      assert.ok(remapped.data.evidence.every((item) => item.subjectId === 'host-b-owner'));
+      assert.ok(remapped.data.entities?.every((item) => item.worldId === 'host-b-owner'));
+      return {
+        valid: true,
+        errors: [],
+        warnings: [],
+        conflicts: [],
+        counts: Object.fromEntries(adapterKeys.map((key) => [key, payload.counts[key]])),
+        duplicates: {
+          entities: payload.duplicates.entities,
+          relationships: payload.duplicates.relationships,
+          worldEvents: payload.duplicates.worldEvents,
+          retractions: payload.duplicates.retractions,
+          cognitionTransitions: payload.duplicates.cognitionTransitions,
+          worldItemLifecycle: payload.duplicates.worldItemLifecycle,
+        },
+        writeSet: Object.fromEntries(adapterKeys.map((key) => [key, payload.writeSet[key] ?? []])),
+      };
+    },
+    apply(remapped, targetSubjectId): void {
+      applyCalls++;
+      assert.equal(targetSubjectId, 'host-b-owner');
+      assert.equal(remapped.data.relationships?.[0]?.worldId, 'host-b-owner');
+      for (const evidence of remapped.data.evidence) {
+        if (evidence.deletedAt == null) continue;
+        target.db
+          .prepare('UPDATE evidence SET deleted_at = ?, origin_id = NULL WHERE id = ?')
+          .run(evidence.deletedAt, evidence.id);
+      }
+    },
+  };
+
+  try {
+    const blocked = importBundle(bundle, target, {
+      mode: 'dryRun',
+      targetSubjectId: 'host-b-owner',
+    });
+    assert.equal(blocked.valid, false);
+    assert.ok(blocked.errors.some((error) => error.includes('portableV4 adapter')));
+    assert.equal(target.evidenceStore.all().length, 0);
+
+    const deps = { ...target, portableV4 };
+    const dryRun = importBundle(bundle, deps, {
+      mode: 'dryRun',
+      targetSubjectId: 'host-b-owner',
+    });
+    assert.equal(dryRun.valid, true);
+    assert.equal(dryRun.planHash, expected.planHash);
+    assert.equal(dryRun.commandId, expected.commandId);
+    assert.equal(dryRun.receiptId, expected.receiptId);
+    assert.equal(target.evidenceStore.all().length, 0);
+
+    const applied = importBundle(bundle, deps, {
+      mode: 'merge',
+      targetSubjectId: 'host-b-owner',
+    });
+    assert.equal(applied.valid, true);
+    assert.equal(applied.planHash, expected.planHash);
+    assert.equal(applyCalls, 1);
+    assert.equal(target.evidenceStore.get('ev-live')?.subjectId, 'host-b-owner');
+    assert.equal(target.evidenceStore.get('ev-deleted'), null, 'adapter 已恢复墓碑而非活数据');
+  } finally {
+    target.close();
+  }
+});
 
 function minimalBundle(): MemoryBundle {
   return {

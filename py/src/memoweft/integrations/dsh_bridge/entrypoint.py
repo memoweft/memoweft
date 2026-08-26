@@ -11,5 +11,15 @@ from . import DshBoundaryError, DshMemoWeftRuntime
 # importing bridge code.  Keep the capability declaration a literal boolean so
 # that static AST inspection can fail closed.
 supports_durable_boundaries = True
+supports_dsh_rpc_v2 = True
+dsh_rpc_protocol_version = 2
+dsh_rpc_schema_version = 1
 
-__all__ = ["DshBoundaryError", "DshMemoWeftRuntime", "supports_durable_boundaries"]
+__all__ = [
+    "DshBoundaryError",
+    "DshMemoWeftRuntime",
+    "dsh_rpc_protocol_version",
+    "dsh_rpc_schema_version",
+    "supports_dsh_rpc_v2",
+    "supports_durable_boundaries",
+]

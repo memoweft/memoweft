@@ -175,6 +175,37 @@ def test_model_out_of_scope_is_zero_write_with_terminal_state(tmp_path: Path) ->
         db.close()
 
 
+def test_model_non_no_change_terminal_requires_nonempty_bounded_display(
+    tmp_path: Path,
+) -> None:
+    for label, result, field, value in (
+        ("clarification-missing", "clarification_required", "question", None),
+        ("clarification-empty", "clarification_required", "question", "  "),
+        ("scope-too-long", "out_of_scope", "note", "x" * 501),
+    ):
+        db_path = tmp_path / f"{label}.sqlite3"
+        clock = MutableClock()
+        model_result: dict[str, object] = {
+            "schema_version": 8,
+            "result": result,
+        }
+        if value is not None:
+            model_result[field] = value
+
+        assert _run(
+            db_path,
+            clock,
+            [{"content": json.dumps(model_result), "model": "test-model"}],
+        ) == 1
+        row = _job(db_path)
+        assert row["state"] == "no_change"
+        assert row["terminal_state"] == "no_change"
+        assert row["terminal_detail"] is None
+        assert json.loads(str(row["world_result_json"]))["reason"] == (
+            "invalid_model_result"
+        )
+
+
 def test_model_bad_question_fails_closed_as_invalid_model_result(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
@@ -208,6 +239,14 @@ def test_one_cognition_applies_atomically_with_ledger_and_revision(tmp_path: Pat
     assert processed == 1
     row = _job(db_path)
     assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
+    assert row["terminal_detail"] is None
+    assert row["completed_at"] is not None
+    assert row["world_result_json"] is not None
+    assert row["result_hash"] is not None
+    assert row["result_hash"] == __import__("hashlib").sha256(
+        str(row["world_result_json"]).encode("utf-8")
+    ).hexdigest()
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["state"] == "applied"
     assert outcome["world_revision"] == 1
@@ -408,8 +447,8 @@ def test_restatement_attaches_support_and_exact_replay_does_not_bump(tmp_path: P
         db.close()
 
     # Exact replay of the same proposition with the SAME Evidence: no new
-    # link, no confidence change, no revision bump — the job settles
-    # idempotently from the durable checkpoint.
+    # link, no confidence change, no revision bump — it is a no_change,
+    # not a second applied World terminal.
     _insert_job(db_path, clock, job_id="job-3", evidence_ids=("evidence-2",))
     processor3 = HermesBatchAdapterProcessor(
         str(db_path),
@@ -419,8 +458,12 @@ def test_restatement_attaches_support_and_exact_replay_does_not_bump(tmp_path: P
     worker3 = WorldJobWorker(db_path, processor=processor3, policy=_policy(), clock=clock)
     assert worker3.run_until_quiescent() == 1
     row3 = _job(db_path, job_id="job-3")
-    assert row3["state"] == "applied"
+    assert row3["state"] == "no_change"
+    assert row3["terminal_state"] == "no_change"
+    assert row3["terminal_detail"] == "no_world_mutation"
     outcome3 = json.loads(str(row3["world_result_json"]))
+    assert outcome3["state"] == "no_change"
+    assert outcome3["reason"] == "no_world_mutation"
     assert outcome3["world_revision"] == 2  # exact replay: unchanged
     db = sqlite3.connect(db_path)
     try:
@@ -428,5 +471,8 @@ def test_restatement_attaches_support_and_exact_replay_does_not_bump(tmp_path: P
         assert db.execute(
             "SELECT COUNT(*) FROM cognition_evidence"
         ).fetchone()[0] == 2
+        assert db.execute(
+            "SELECT COUNT(*) FROM terminal_outcome WHERE job_id = 'job-3'"
+        ).fetchone()[0] == 1
     finally:
         db.close()

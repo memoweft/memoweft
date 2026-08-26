@@ -1,0 +1,267 @@
+{
+  "bundleId": "portable:v4:82730c502da2b756fae9d405a4d08137e2deeebadb5c019a52671e79067bd28c",
+  "data": {
+    "cognitionEvidence": [
+      {
+        "cognitionId": "cog-old",
+        "evidenceId": "ev-live",
+        "relation": "support"
+      },
+      {
+        "cognitionId": "cog-new",
+        "evidenceId": "ev-live",
+        "relation": "support"
+      }
+    ],
+    "cognitionTargets": [
+      {
+        "cognitionId": "cog-new",
+        "perspectiveEntityId": "ent-owner",
+        "targetEntityId": "ent-xiaowang"
+      }
+    ],
+    "cognitionTransitions": [
+      {
+        "id": "transition-1",
+        "priorCognitionId": "cog-old",
+        "reason": "corrected",
+        "replacementCognitionId": "cog-new",
+        "revision": 5
+      }
+    ],
+    "cognitions": [
+      {
+        "archivedAt": null,
+        "askedAt": null,
+        "confidence": 600,
+        "content": "小王住在上海",
+        "contentType": "fact",
+        "createdAt": "2026-08-19T00:00:02.000Z",
+        "credStatus": "limited",
+        "formedBy": "stated",
+        "id": "cog-old",
+        "invalidAt": "2026-08-21T00:00:00.000Z",
+        "mutedAt": null,
+        "scope": null,
+        "subjectId": "host-a-owner",
+        "updatedAt": "2026-08-21T00:00:00.000Z",
+        "validAt": null
+      },
+      {
+        "archivedAt": null,
+        "askedAt": null,
+        "confidence": 800,
+        "content": "小王住在南京",
+        "contentType": "fact",
+        "createdAt": "2026-08-21T00:00:00.000Z",
+        "credStatus": "limited",
+        "formedBy": "stated",
+        "id": "cog-new",
+        "invalidAt": null,
+        "mutedAt": null,
+        "scope": null,
+        "subjectId": "host-a-owner",
+        "updatedAt": "2026-08-21T00:00:00.000Z",
+        "validAt": null
+      }
+    ],
+    "entities": [
+      {
+        "aliases": [],
+        "canonicalName": "用户",
+        "createdAt": "2026-08-20T00:00:02.000Z",
+        "id": "ent-owner",
+        "invalidAt": null,
+        "kind": "person",
+        "updatedAt": "2026-08-20T00:00:02.000Z",
+        "worldId": "host-a-owner"
+      },
+      {
+        "aliases": [
+          "王先生"
+        ],
+        "canonicalName": "小王",
+        "createdAt": "2026-08-20T00:00:02.000Z",
+        "id": "ent-xiaowang",
+        "invalidAt": null,
+        "kind": "person",
+        "updatedAt": "2026-08-20T00:00:02.000Z",
+        "worldId": "host-a-owner"
+      }
+    ],
+    "entityEvidence": [
+      {
+        "end": 2,
+        "entityId": "ent-owner",
+        "evidenceId": "ev-live",
+        "relation": "support",
+        "start": 0
+      },
+      {
+        "end": 2,
+        "entityId": "ent-xiaowang",
+        "evidenceId": "ev-live",
+        "relation": "support",
+        "start": 0
+      }
+    ],
+    "eventEvidence": [
+      {
+        "eventId": "evt-1",
+        "evidenceId": "ev-live"
+      }
+    ],
+    "events": [
+      {
+        "createdAt": "2026-08-20T00:00:02.000Z",
+        "id": "evt-1",
+        "occurredAt": "2026-08-20T00:00:00.000Z",
+        "subjectId": "host-a-owner",
+        "summary": "小王和用户去了南京"
+      }
+    ],
+    "evidence": [
+      {
+        "allowCloudRead": false,
+        "allowInference": true,
+        "allowLocalRead": true,
+        "correctsEvidenceId": null,
+        "deletedAt": null,
+        "hostId": "host-a",
+        "id": "ev-live",
+        "occurredAt": "2026-08-20T00:00:00.000Z",
+        "originId": "origin-live",
+        "rawContent": "小王上周末和我去了南京。",
+        "recordedAt": "2026-08-20T00:00:01.000Z",
+        "sourceKind": "spoken",
+        "subjectId": "host-a-owner",
+        "summary": "小王上周末和用户去了南京。"
+      },
+      {
+        "allowCloudRead": true,
+        "allowInference": true,
+        "allowLocalRead": true,
+        "correctsEvidenceId": null,
+        "deletedAt": "2026-08-24T00:00:00.000Z",
+        "hostId": "host-a",
+        "id": "ev-deleted",
+        "occurredAt": "2026-08-19T00:00:00.000Z",
+        "originId": null,
+        "rawContent": "这条旧信息已经要求忘记。",
+        "recordedAt": "2026-08-19T00:00:01.000Z",
+        "sourceKind": "spoken",
+        "subjectId": "host-a-owner",
+        "summary": "这条旧信息已经要求忘记。"
+      }
+    ],
+    "interactionContexts": [],
+    "relationshipEvidence": [
+      {
+        "evidenceId": "ev-live",
+        "relation": "support",
+        "relationshipId": "rel-1"
+      }
+    ],
+    "relationships": [
+      {
+        "confidence": 800,
+        "content": "小王是用户的朋友",
+        "createdAt": "2026-08-20T00:00:02.000Z",
+        "credStatus": "limited",
+        "formedBy": "stated",
+        "id": "rel-1",
+        "invalidAt": "2026-08-24T00:00:00.000Z",
+        "relationType": "friend",
+        "sourceEntityId": "ent-owner",
+        "targetEntityId": "ent-xiaowang",
+        "updatedAt": "2026-08-24T00:00:00.000Z",
+        "worldId": "host-a-owner"
+      }
+    ],
+    "retractions": [
+      {
+        "createdAt": "2026-08-24T00:00:00.000Z",
+        "id": "retraction-1",
+        "priorCognitionId": null,
+        "priorEventId": null,
+        "priorRelationshipId": "rel-1",
+        "reason": "用户撤回了旧关系",
+        "revision": 6
+      }
+    ],
+    "semanticResolutions": [],
+    "unconsolidatedEventIds": [],
+    "worldEventEvidence": [
+      {
+        "evidenceId": "ev-live",
+        "relation": "support",
+        "worldEventId": "world-event-1"
+      }
+    ],
+    "worldEvents": [
+      {
+        "confidence": 800,
+        "content": "用户和小王去了南京",
+        "createdAt": "2026-08-20T00:00:02.000Z",
+        "credStatus": "limited",
+        "formedBy": "stated",
+        "id": "world-event-1",
+        "invalidAt": null,
+        "objects": [],
+        "occurredAt": "2026-08-20",
+        "participants": [
+          {
+            "canonicalName": "用户",
+            "kind": "person"
+          },
+          {
+            "canonicalName": "小王",
+            "kind": "person"
+          }
+        ],
+        "timeExpression": "上周末",
+        "updatedAt": "2026-08-20T00:00:02.000Z",
+        "worldId": "host-a-owner"
+      }
+    ],
+    "worldItemLifecycle": [
+      {
+        "archivedAt": null,
+        "itemId": "ent-owner",
+        "mutedAt": "2026-08-23T00:00:00.000Z",
+        "objectKind": "entity",
+        "subjectId": "host-a-owner",
+        "updatedAt": "2026-08-23T00:00:00.000Z"
+      }
+    ]
+  },
+  "exportedAt": "2026-08-25T00:00:00.000Z",
+  "format": "memoweft-bundle",
+  "memoWeftVersion": "2.0.0",
+  "metadata": {
+    "counts": {
+      "cognitionTransitions": 1,
+      "cognitions": 2,
+      "entities": 2,
+      "entityEvidence": 2,
+      "events": 1,
+      "evidence": 2,
+      "relationships": 1,
+      "retractions": 1,
+      "worldEvents": 1,
+      "worldItemLifecycle": 1
+    },
+    "notes": [
+      "Portable v4 cross-language fixture"
+    ]
+  },
+  "schemaVersion": 4,
+  "source": {
+    "exportMode": "full",
+    "hostId": "host-a"
+  },
+  "sourceSubjectId": "host-a-owner",
+  "subjectId": "host-a-owner",
+  "worldRevision": 7,
+  "worldSnapshotHash": "snapshot-host-a-revision-7"
+}

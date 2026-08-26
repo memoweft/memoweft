@@ -45,7 +45,7 @@ import { importBundle } from '../src/portable/importBundle.ts';
 // bench 判定纯函数：eval-consolidation.mjs 已加 main 守卫，import 不会触发真实评测。
 import { checkStructural, parseYesNo } from '../bench/eval-consolidation.mjs';
 import { validateBundle } from '../src/portable/validateBundle.ts';
-import { BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION } from '../src/portable/model.ts';
+import { BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION, deriveBundleId } from '../src/portable/model.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const SHARED = join(ROOT, 'shared');
@@ -1406,10 +1406,12 @@ function parityImport() {
 
   const invalid = structuredClone(good);
   invalid.data.eventEvidence[0].evidenceId = 'ghost'; // 悬空溯源 → validateBundle 致命 error
+  invalid.bundleId = deriveBundleId(invalid);
 
   // originId 撞库:包里 ev-1 带 originId,库中已有【另一条 id】占用同 originId
   const withOrigin = structuredClone(good);
   withOrigin.data.evidence[0].originId = 'origin-x';
+  withOrigin.bundleId = deriveBundleId(withOrigin);
   const originCollision = run(withOrigin, 'merge', (stores) => {
     stores.evidenceStore.put({
       subjectId: 'owner',
@@ -1424,6 +1426,7 @@ function parityImport() {
   // 悬空 correctsEvidenceId:指向包外/库外 → 落库前置空 + 告警
   const dangling = structuredClone(good);
   dangling.data.evidence[1].correctsEvidenceId = 'ghost-corrects';
+  dangling.bundleId = deriveBundleId(dangling);
   const danglingRun = (() => {
     const stores = openStores(':memory:', config, () => new Date(T));
     const plan = importBundle(dangling, mkDeps(stores), { mode: 'merge' });
@@ -1674,14 +1677,18 @@ function seedBundle() {
     allowCloudRead: false,
     allowInference: true,
     correctsEvidenceId: null,
+    deletedAt: null,
     ...extra,
   });
-  return {
+  const bundle = {
     format: BUNDLE_FORMAT,
     schemaVersion: BUNDLE_SCHEMA_VERSION,
     exportedAt: '2026-01-02T00:00:00.000Z',
     memoWeftVersion: '0.6.0-dev',
     subjectId: 'owner',
+    sourceSubjectId: 'owner',
+    worldRevision: 0,
+    worldSnapshotHash: '',
     source: { hostId: 'local', exportMode: 'full' },
     data: {
       evidence: [ev('ev-1'), ev('ev-2', { sourceKind: 'tool', allowCloudRead: false })],
@@ -1732,9 +1739,33 @@ function seedBundle() {
         },
       ],
       semanticResolutions: [],
+      entities: [],
+      relationships: [],
+      relationshipEvidence: [],
+      worldEvents: [],
+      worldEventEvidence: [],
+      cognitionTargets: [],
+      retractions: [],
+      cognitionTransitions: [],
+      worldItemLifecycle: [],
     },
-    metadata: { counts: { evidence: 2, events: 1, cognitions: 1 }, notes: ['fixture'] },
+    metadata: {
+      counts: {
+        evidence: 2,
+        events: 1,
+        cognitions: 1,
+        entities: 0,
+        relationships: 0,
+        worldEvents: 0,
+        retractions: 0,
+        cognitionTransitions: 0,
+        worldItemLifecycle: 0,
+      },
+      notes: ['fixture'],
+    },
   };
+  bundle.bundleId = deriveBundleId(bundle);
+  return bundle;
 }
 
 function buildBundleFixtures() {
@@ -1746,8 +1777,11 @@ function buildBundleFixtures() {
   const clone = (mut) => {
     const b = structuredClone(good);
     mut(b);
+    b.bundleId = deriveBundleId(b);
     return b;
   };
+  const bundleIdMismatch = structuredClone(good);
+  bundleIdMismatch.bundleId = `portable:v4:${'f'.repeat(64)}`;
   const cases = [
     { label: 'valid', bundle: good },
     { label: 'not-object', bundle: 42 },
@@ -1756,6 +1790,10 @@ function buildBundleFixtures() {
       bundle: clone((b) => {
         b.format = 'nope';
       }),
+    },
+    {
+      label: 'bundle-id-mismatch',
+      bundle: bundleIdMismatch,
     },
     {
       label: 'schemaVersion-missing',
@@ -1926,6 +1964,16 @@ function buildBundleFixtures() {
   };
 }
 
+function portableV4Assets() {
+  const root = join(SHARED, 'portable-v4');
+  return Object.fromEntries(
+    jsonFiles(root).map((path) => [
+      `portable-v4/${relative(root, path).replaceAll('\\', '/')}`,
+      JSON.parse(readFileSync(path, 'utf8')),
+    ]),
+  );
+}
+
 /** 生成全部共享资产(纯计算,async 仅因 embed)。返回 { path → object }。 */
 export async function buildSharedAssets() {
   const he = parityHashEmbedder();
@@ -1986,6 +2034,7 @@ export async function buildSharedAssets() {
     'parity/eval-checks.json': parityEvalChecks(),
     'parity/schema.json': buildSchema(),
     'parity/fts.json': buildFtsGolden(),
+    ...portableV4Assets(),
     ...(() => {
       const bf = buildBundleFixtures();
       return { 'parity/bundle.json': bf.bundle, 'parity/bundle-validate.json': bf.validate };
@@ -2002,10 +2051,18 @@ function jsonFiles(root) {
   });
 }
 
+function isSeparatelyGovernedAsset(target, rel) {
+  // N7 Portable v4 fixtures/schema are the cross-host migration contract, not
+  // generated parity output. Keep them under shared/ without letting the older
+  // parity generator treat them as stale or prune them during shared:update.
+  return target === SHARED && rel.startsWith('portable-v4/');
+}
+
 function removeStaleAssets(target, assets) {
   const expected = new Set(Object.keys(assets));
   for (const path of jsonFiles(target)) {
     const rel = relative(target, path).replaceAll('\\', '/');
+    if (isSeparatelyGovernedAsset(target, rel)) continue;
     if (!expected.has(rel)) rmSync(path);
   }
 }
@@ -2033,6 +2090,7 @@ function checkAssets(target, label, assets) {
   }
   for (const path of jsonFiles(target)) {
     const rel = relative(target, path).replaceAll('\\', '/');
+    if (isSeparatelyGovernedAsset(target, rel)) continue;
     if (!expected.has(rel)) {
       console.error(`DRIFT: ${label}/${rel} 已不再由 TS 源生成(运行 npm run shared:update 清理)`);
       drift++;

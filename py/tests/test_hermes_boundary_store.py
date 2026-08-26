@@ -12,6 +12,7 @@ from typing import cast
 
 import pytest
 
+import memoweft.integrations.hermes.boundary_store as boundary_store_module
 from memoweft.integrations.hermes.boundary_store import (
     BoundaryEvidenceConflictError,
     BoundaryReceiptIntegrityError,
@@ -112,6 +113,16 @@ def _counts(db: sqlite3.Connection) -> tuple[int, int]:
     return evidence, jobs
 
 
+def _terminal_outcome_count(db: sqlite3.Connection, job_id: str | None = None) -> int:
+    if job_id is None:
+        return int(db.execute("SELECT COUNT(*) FROM terminal_outcome").fetchone()[0])
+    return int(
+        db.execute(
+            "SELECT COUNT(*) FROM terminal_outcome WHERE job_id = ?", (job_id,)
+        ).fetchone()[0]
+    )
+
+
 def _job(db: sqlite3.Connection, event_id: str = "boundary-event-1") -> sqlite3.Row:
     cursor = db.cursor()
     cursor.row_factory = sqlite3.Row
@@ -206,6 +217,32 @@ def test_no_eligible_boundary_persists_terminal_no_change_receipt_and_reason(
         )
         assert job["world_result_json"] == result_json
         assert job["result_hash"] == sha256(result_json.encode("utf-8")).hexdigest()
+        assert _terminal_outcome_count(db, str(job["job_id"])) == 1
+
+        # Exact replay is receipt-only: it neither updates the first outcome nor
+        # produces a second row for the same terminal Job.
+        assert HermesBoundaryStore(db, clock=_clock).accept(_boundary()) == receipt
+        assert _terminal_outcome_count(db, str(job["job_id"])) == 1
+    finally:
+        db.close()
+
+
+def test_no_eligible_outcome_insert_failure_rolls_back_acceptance_and_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db = open_db(str(tmp_path / "terminal-outcome-rollback.sqlite3"))
+    try:
+        def fail(_db: sqlite3.Connection, _job_id: str) -> dict[str, object]:
+            raise RuntimeError("injected terminal outcome write failure")
+
+        monkeypatch.setattr(
+            boundary_store_module, "persist_terminal_outcome_in_transaction", fail
+        )
+        with pytest.raises(RuntimeError, match="terminal outcome write failure"):
+            HermesBoundaryStore(db, clock=_clock).accept(_boundary())
+
+        assert _counts(db) == (0, 0)
+        assert _terminal_outcome_count(db) == 0
     finally:
         db.close()
 

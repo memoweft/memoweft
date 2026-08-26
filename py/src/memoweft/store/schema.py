@@ -23,7 +23,7 @@ from __future__ import annotations
 PYTHON_APPLICATION_ID = 0x4D575059
 
 #: Python-owned ``PRAGMA user_version``。TypeScript/shared parity 的版本仍为 6。
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 19
 
 #: 幂等的建表与索引 DDL；shared/parity/schema.json 验证列序、NOT NULL、DEFAULT 与主键契约。
 BASE_SCHEMA_SQL: tuple[str, ...] = (
@@ -331,6 +331,321 @@ WORLD_JOB_ALTER_V15_SQL: tuple[str, ...] = (
     "ALTER TABLE memory_world_job ADD COLUMN terminal_detail TEXT",
 )
 
+#: Python v16 durable terminal outcome.  This is deliberately separate from
+#: ``memory_world_job``: the latter is Core's formation/worker transport state,
+#: while this table is the immutable business terminal plus independently
+#: recoverable Hermes delivery state.  The row is created in the same caller-
+#: owned transaction that commits a terminal job, so a visible terminal never
+#: lacks an outcome and delivery failure can never rewrite the business result.
+TERMINAL_OUTCOME_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE terminal_outcome (
+  outcome_id            TEXT    PRIMARY KEY,
+  schema_version        INTEGER NOT NULL CHECK(schema_version = 1),
+  job_id                TEXT    NOT NULL UNIQUE,
+  boundary_event_id     TEXT    NOT NULL,
+  provider_name         TEXT    NOT NULL,
+  subject_id            TEXT    NOT NULL,
+  parent_session_id     TEXT    NOT NULL,
+  result_session_id     TEXT    NOT NULL,
+  terminal_state        TEXT    NOT NULL CHECK(terminal_state IN (
+                            'applied', 'no_change', 'clarification_required',
+                            'out_of_scope', 'failed'
+                          )),
+  terminal_detail       TEXT,
+  world_revision        INTEGER NOT NULL CHECK(world_revision >= 0),
+  world_result_json     TEXT    NOT NULL,
+  result_hash           TEXT    NOT NULL,
+  occurred_at           TEXT    NOT NULL,
+  delivery_state        TEXT    NOT NULL CHECK(delivery_state IN (
+                            'pending', 'processing', 'delivered', 'retry', 'dead'
+                          )),
+  attempts              INTEGER NOT NULL DEFAULT 0 CHECK(attempts >= 0),
+  next_attempt_at       TEXT,
+  claim_owner           TEXT,
+  claim_token           TEXT,
+  lease_expires_at      TEXT,
+  heartbeat_at          TEXT,
+  delivered_at          TEXT,
+  last_error            TEXT,
+  CHECK (
+    (delivery_state = 'processing'
+      AND claim_owner IS NOT NULL AND claim_token IS NOT NULL
+      AND lease_expires_at IS NOT NULL AND heartbeat_at IS NOT NULL
+      AND next_attempt_at IS NULL AND delivered_at IS NULL)
+    OR
+    (delivery_state <> 'processing'
+      AND claim_owner IS NULL AND claim_token IS NULL
+      AND lease_expires_at IS NULL AND heartbeat_at IS NULL)
+  ),
+  CHECK (
+    (delivery_state = 'pending'
+      AND next_attempt_at IS NULL AND delivered_at IS NULL)
+    OR (delivery_state = 'retry'
+      AND next_attempt_at IS NOT NULL AND delivered_at IS NULL)
+    OR (delivery_state = 'delivered'
+      AND next_attempt_at IS NULL AND delivered_at IS NOT NULL)
+    OR (delivery_state = 'dead'
+      AND next_attempt_at IS NULL AND delivered_at IS NULL)
+    OR delivery_state = 'processing'
+  )
+)""",
+    """CREATE INDEX ix_terminal_outcome_ready
+ON terminal_outcome(next_attempt_at, occurred_at, outcome_id)
+WHERE delivery_state IN ('pending', 'retry')""",
+    """CREATE INDEX ix_terminal_outcome_expired
+ON terminal_outcome(lease_expires_at, occurred_at, outcome_id)
+WHERE delivery_state = 'processing'""",
+)
+
+TERMINAL_OUTCOME_COLUMNS: tuple[str, ...] = (
+    "outcome_id",
+    "schema_version",
+    "job_id",
+    "boundary_event_id",
+    "provider_name",
+    "subject_id",
+    "parent_session_id",
+    "result_session_id",
+    "terminal_state",
+    "terminal_detail",
+    "world_revision",
+    "world_result_json",
+    "result_hash",
+    "occurred_at",
+    "delivery_state",
+    "attempts",
+    "next_attempt_at",
+    "claim_owner",
+    "claim_token",
+    "lease_expires_at",
+    "heartbeat_at",
+    "delivered_at",
+    "last_error",
+)
+
+TERMINAL_OUTCOME_SCHEMA_OBJECTS = frozenset(
+    {
+        "terminal_outcome",
+        "ix_terminal_outcome_ready",
+        "ix_terminal_outcome_expired",
+    }
+)
+
+#: Python v17 Trust Command ledger. A command row freezes the canonical
+#: request identity; its one receipt is the durable idempotency/result fact.
+#: ``world_item_lifecycle`` supplies one cross-kind archive/mute authority
+#: without altering the already-shipped Entity/Relationship/Event tables.
+TRUST_COMMAND_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE trust_command (
+  command_id               TEXT    PRIMARY KEY,
+  schema_version           INTEGER NOT NULL CHECK(schema_version = 1),
+  subject_id               TEXT    NOT NULL,
+  actor                    TEXT    NOT NULL,
+  expected_world_revision  INTEGER NOT NULL CHECK(expected_world_revision >= 0),
+  operation                TEXT    NOT NULL CHECK(operation IN (
+                               'update_evidence_permissions',
+                               'correct_world_item', 'retract_world_item',
+                               'forget_evidence', 'archive_world_item',
+                               'mute_world_item'
+                             )),
+  target_kind              TEXT    NOT NULL CHECK(target_kind IN (
+                               'evidence', 'entity', 'relationship',
+                               'event', 'cognition'
+                             )),
+  target_id                TEXT    NOT NULL,
+  payload_json             TEXT    NOT NULL,
+  request_hash             TEXT    NOT NULL,
+  submitted_at             TEXT    NOT NULL
+)""",
+    """CREATE INDEX ix_trust_command_subject
+ON trust_command(subject_id, submitted_at, command_id)""",
+    """CREATE TABLE trust_command_receipt (
+  command_id        TEXT    PRIMARY KEY,
+  schema_version    INTEGER NOT NULL CHECK(schema_version = 1),
+  accepted          INTEGER NOT NULL CHECK(accepted IN (0, 1)),
+  result_state      TEXT    NOT NULL CHECK(result_state IN (
+                        'applied', 'no_change',
+                        'revision_conflict', 'rejected'
+                      )),
+  before_revision   INTEGER NOT NULL CHECK(before_revision >= 0),
+  after_revision    INTEGER NOT NULL CHECK(after_revision >= 0),
+  affected_ids_json TEXT    NOT NULL,
+  transition_ids_json TEXT  NOT NULL,
+  result_hash       TEXT    NOT NULL,
+  completed_at      TEXT    NOT NULL
+)""",
+    """CREATE TABLE world_item_lifecycle (
+  subject_id   TEXT NOT NULL,
+  object_kind  TEXT NOT NULL CHECK(object_kind IN (
+                   'entity', 'relationship', 'event', 'cognition'
+                 )),
+  item_id      TEXT NOT NULL,
+  archived_at  TEXT,
+  muted_at     TEXT,
+  updated_at   TEXT NOT NULL,
+  PRIMARY KEY(subject_id, object_kind, item_id)
+)""",
+    """CREATE INDEX ix_world_item_lifecycle_current
+ON world_item_lifecycle(subject_id, object_kind, archived_at, muted_at, item_id)""",
+)
+
+TRUST_COMMAND_COLUMNS: tuple[str, ...] = (
+    "command_id",
+    "schema_version",
+    "subject_id",
+    "actor",
+    "expected_world_revision",
+    "operation",
+    "target_kind",
+    "target_id",
+    "payload_json",
+    "request_hash",
+    "submitted_at",
+)
+
+TRUST_COMMAND_RECEIPT_COLUMNS: tuple[str, ...] = (
+    "command_id",
+    "schema_version",
+    "accepted",
+    "result_state",
+    "before_revision",
+    "after_revision",
+    "affected_ids_json",
+    "transition_ids_json",
+    "result_hash",
+    "completed_at",
+)
+
+WORLD_ITEM_LIFECYCLE_COLUMNS: tuple[str, ...] = (
+    "subject_id",
+    "object_kind",
+    "item_id",
+    "archived_at",
+    "muted_at",
+    "updated_at",
+)
+
+TRUST_COMMAND_SCHEMA_OBJECTS = frozenset(
+    {
+        "trust_command",
+        "ix_trust_command_subject",
+        "trust_command_receipt",
+        "world_item_lifecycle",
+        "ix_world_item_lifecycle_current",
+    }
+)
+
+#: Python v18 durable clarification lifecycle. The source terminal outcome is
+#: immutable; one answer may atomically create one Evidence row and one
+#: follow-up World Job. A repeated clarification is represented by a new row,
+#: while the answered source row moves to ``resolved``.
+CLARIFICATION_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE clarification (
+  clarification_id    TEXT PRIMARY KEY,
+  source_job_id       TEXT NOT NULL UNIQUE,
+  source_outcome_id   TEXT NOT NULL UNIQUE,
+  subject_id          TEXT NOT NULL,
+  result_session_id   TEXT NOT NULL,
+  question            TEXT NOT NULL,
+  target_hint         TEXT,
+  state               TEXT NOT NULL CHECK(state IN ('open', 'answered', 'resolved')),
+  answer_evidence_id  TEXT,
+  follow_up_job_id    TEXT UNIQUE,
+  opened_at           TEXT NOT NULL,
+  answered_at         TEXT,
+  resolved_at         TEXT,
+  CHECK (
+    (state = 'open'
+      AND answer_evidence_id IS NULL AND follow_up_job_id IS NULL
+      AND answered_at IS NULL AND resolved_at IS NULL)
+    OR (state = 'answered'
+      AND answer_evidence_id IS NOT NULL AND follow_up_job_id IS NOT NULL
+      AND answered_at IS NOT NULL AND resolved_at IS NULL)
+    OR (state = 'resolved'
+      AND answer_evidence_id IS NOT NULL AND follow_up_job_id IS NOT NULL
+      AND answered_at IS NOT NULL AND resolved_at IS NOT NULL)
+  )
+)""",
+    """CREATE INDEX ix_clarification_session_state
+ON clarification(subject_id, result_session_id, state, opened_at, clarification_id)""",
+    """CREATE INDEX ix_clarification_follow_up
+ON clarification(follow_up_job_id)""",
+)
+
+CLARIFICATION_COLUMNS: tuple[str, ...] = (
+    "clarification_id",
+    "source_job_id",
+    "source_outcome_id",
+    "subject_id",
+    "result_session_id",
+    "question",
+    "target_hint",
+    "state",
+    "answer_evidence_id",
+    "follow_up_job_id",
+    "opened_at",
+    "answered_at",
+    "resolved_at",
+)
+
+CLARIFICATION_SCHEMA_OBJECTS = frozenset(
+    {
+        "clarification",
+        "ix_clarification_session_state",
+        "ix_clarification_follow_up",
+    }
+)
+
+#: Python v19 Portable v4 apply receipt.  The importer writes this row in the
+#: same transaction as all imported World/history rows and the target revision
+#: advance.  A process restart can therefore return the immutable original
+#: result by plan/command/receipt identity without replanning against a changed
+#: target database.
+PORTABLE_IMPORT_RECEIPT_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE portable_import_receipt (
+  receipt_id             TEXT    PRIMARY KEY,
+  schema_version         INTEGER NOT NULL CHECK(schema_version = 1),
+  command_id             TEXT    NOT NULL UNIQUE,
+  plan_hash              TEXT    NOT NULL UNIQUE,
+  bundle_id              TEXT    NOT NULL,
+  source_subject_id      TEXT    NOT NULL,
+  target_subject_id      TEXT    NOT NULL,
+  target_world_revision  INTEGER NOT NULL CHECK(target_world_revision >= 0),
+  target_snapshot_hash   TEXT    NOT NULL,
+  after_world_revision   INTEGER NOT NULL CHECK(after_world_revision >= 0),
+  result_state           TEXT    NOT NULL CHECK(result_state IN ('applied', 'no_change')),
+  result_json            TEXT    NOT NULL,
+  result_hash            TEXT    NOT NULL,
+  completed_at           TEXT    NOT NULL
+)""",
+    """CREATE INDEX ix_portable_import_receipt_target
+ON portable_import_receipt(target_subject_id, completed_at, receipt_id)""",
+)
+
+PORTABLE_IMPORT_RECEIPT_COLUMNS: tuple[str, ...] = (
+    "receipt_id",
+    "schema_version",
+    "command_id",
+    "plan_hash",
+    "bundle_id",
+    "source_subject_id",
+    "target_subject_id",
+    "target_world_revision",
+    "target_snapshot_hash",
+    "after_world_revision",
+    "result_state",
+    "result_json",
+    "result_hash",
+    "completed_at",
+)
+
+PORTABLE_IMPORT_RECEIPT_SCHEMA_OBJECTS = frozenset(
+    {
+        "portable_import_receipt",
+        "ix_portable_import_receipt_target",
+    }
+)
+
 #: v6 Python-owned 物理 marker。特别是 ``proposal_decision_receipts`` 不存在于 TS v6。
 PYTHON_V6_REQUIRED_SCHEMA_OBJECTS = frozenset(
     {
@@ -621,6 +936,10 @@ CURRENT_REQUIRED_SCHEMA_OBJECTS = (
     | COGNITION_TARGET_SCHEMA_OBJECTS
     | RETRACTION_SCHEMA_OBJECTS
     | WORLD_EVENT_SCHEMA_OBJECTS
+    | TERMINAL_OUTCOME_SCHEMA_OBJECTS
+    | TRUST_COMMAND_SCHEMA_OBJECTS
+    | CLARIFICATION_SCHEMA_OBJECTS
+    | PORTABLE_IMPORT_RECEIPT_SCHEMA_OBJECTS
 )
 
 #: Fresh Python schema。旧 v3/v6 DDL 保持冻结，v7 追加 WORLD_JOB_SCHEMA_SQL，
@@ -636,6 +955,10 @@ CURRENT_WORLD_SCHEMA_SQL: tuple[str, ...] = (
     + COGNITION_TARGET_SCHEMA_SQL
     + RETRACTION_SCHEMA_SQL
     + WORLD_EVENT_SCHEMA_SQL
+    + TERMINAL_OUTCOME_SCHEMA_SQL
+    + TRUST_COMMAND_SCHEMA_SQL
+    + CLARIFICATION_SCHEMA_SQL
+    + PORTABLE_IMPORT_RECEIPT_SCHEMA_SQL
 )
 CURRENT_SCHEMA_SQL: tuple[str, ...] = BASE_SCHEMA_SQL + CURRENT_WORLD_SCHEMA_SQL
 

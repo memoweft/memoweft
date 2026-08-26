@@ -29,7 +29,7 @@ import math
 from pathlib import Path
 import sqlite3
 import threading
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence, cast
 
 from .boundary_store import (
     HermesBoundaryEvidenceCandidate,
@@ -37,11 +37,25 @@ from .boundary_store import (
     HermesBoundaryStore,
     ValidatedHermesBoundary,
 )
-from .recall import recall_world_text
+from .recall import RecallSnapshotV1, recall_world_snapshot, recall_world_text
+from .terminal_outcome import TerminalOutcomeStore
 from .world_worker import WorldJobWorker
+from ..trust import (
+    ClarificationService,
+    CommandService,
+    QueryService,
+    TRUST_COMMAND_PROVIDER_TOOL_SCHEMAS,
+    TRUST_PROVIDER_TOOL_SCHEMAS,
+    TRUST_SCHEMA_VERSION,
+    TrustQueryError,
+    TrustCommandError,
+    canonical_json,
+)
 from ...store import open_db
 from ...store.schema import (
     BOUNDARY_EVIDENCE_CONTENT_COLUMNS,
+    CLARIFICATION_COLUMNS,
+    CLARIFICATION_SCHEMA_OBJECTS,
     COGNITION_TARGET_COLUMNS,
     ENTITY_COLUMNS,
     MEMORY_WORLD_JOB_COLUMNS,
@@ -49,6 +63,11 @@ from ...store.schema import (
     RELATIONSHIP_COLUMNS,
     RETRACTION_COLUMNS,
     SCHEMA_VERSION,
+    TERMINAL_OUTCOME_COLUMNS,
+    TERMINAL_OUTCOME_SCHEMA_OBJECTS,
+    TRUST_COMMAND_COLUMNS,
+    TRUST_COMMAND_RECEIPT_COLUMNS,
+    WORLD_ITEM_LIFECYCLE_COLUMNS,
     WORLD_EVENT_COLUMNS,
 )
 
@@ -76,7 +95,7 @@ def _optional_lang(value: Any) -> Optional[str]:
     """Normalize an optional language pin; anything invalid fails closed to
     auto-detection (never crashes provider initialization)."""
     if value in ("zh", "en"):
-        return value
+        return cast(str, value)
     if value is not None:
         logger.warning(
             "MemoWeft lang pin ignored (must be 'zh' or 'en'): %r", value
@@ -323,10 +342,10 @@ def _candidates(
 
 
 def _assert_existing_database_is_current(db_path: Path) -> None:
-    """Recognize only migratable Python v6-v13 or physically complete current v14.
+    """Recognize only migratable Python v6-v16 or a complete current schema.
 
     The probe is deliberately read-only and runs before :func:`open_db`.  A
-    Python v6-v13 database is identified by its physical marker and may then
+    Python v6-v15 database is identified by its physical marker and may then
     take the explicit stepwise migration to the current version.  TypeScript
     v6, future versions, and same-version partial schemas fail closed before
     a writable connection is opened.
@@ -345,7 +364,9 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
         db.execute("PRAGMA query_only = ON")
         version = int(db.execute("PRAGMA user_version").fetchone()[0])
         app_id = int(db.execute("PRAGMA application_id").fetchone()[0])
-        if version not in {6, 7, 8, 9, 10, 11, 12, 13, 14, SCHEMA_VERSION}:
+        if version not in {
+            6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, SCHEMA_VERSION
+        }:
             raise IncompatibleDatabaseError(
                 "Existing MemoWeft database is not a supported Python schema version"
             )
@@ -353,7 +374,9 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
             raise IncompatibleDatabaseError(
                 "Existing Python v6 database has an incompatible application id"
             )
-        if version in {7, 8, 9, 10, 11, 12, 13, 14, SCHEMA_VERSION} and app_id != PYTHON_APPLICATION_ID:
+        if version in {
+            7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, SCHEMA_VERSION
+        } and app_id != PYTHON_APPLICATION_ID:
             raise IncompatibleDatabaseError(
                 "Existing Python database has an incompatible application id"
             )
@@ -374,7 +397,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible World Job schema"
                 )
-        if version == SCHEMA_VERSION:
+        if version in {15, 16, 17, SCHEMA_VERSION}:
             job_columns = tuple(
                 str(row[1])
                 for row in db.execute('PRAGMA table_info("memory_world_job")')
@@ -383,7 +406,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible World Job schema"
                 )
-        if version in {8, 9, 10, 11, 12, 13, 14, SCHEMA_VERSION}:
+        if version in {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, SCHEMA_VERSION}:
             content_columns = tuple(
                 str(row[1])
                 for row in db.execute('PRAGMA table_info("boundary_evidence_content")')
@@ -392,7 +415,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible content-binding schema"
                 )
-        if version in {9, 10, 11, 12, 13, 14, SCHEMA_VERSION}:
+        if version in {9, 10, 11, 12, 13, 14, 15, 16, 17, SCHEMA_VERSION}:
             relationship_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("relationship")')
             )
@@ -400,7 +423,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible relationship schema"
                 )
-        if version == SCHEMA_VERSION:
+        if version in {15, 16, 17, SCHEMA_VERSION}:
             entity_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("entity")')
             )
@@ -408,7 +431,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible entity schema"
                 )
-        if version == SCHEMA_VERSION:
+        if version in {15, 16, 17, SCHEMA_VERSION}:
             target_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("cognition_target")')
             )
@@ -416,7 +439,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible cognition_target schema"
                 )
-        if version == SCHEMA_VERSION:
+        if version in {15, 16, 17, SCHEMA_VERSION}:
             retraction_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("retraction")')
             )
@@ -424,13 +447,71 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible retraction schema"
                 )
-        if version == SCHEMA_VERSION:
+        if version in {15, 16, 17, SCHEMA_VERSION}:
             world_event_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("world_event")')
             )
             if world_event_columns != WORLD_EVENT_COLUMNS:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible world_event schema"
+                )
+        if version in {16, 17, SCHEMA_VERSION}:
+            outcome_columns = tuple(
+                str(row[1])
+                for row in db.execute('PRAGMA table_info("terminal_outcome")')
+            )
+            if outcome_columns != TERMINAL_OUTCOME_COLUMNS:
+                raise IncompatibleDatabaseError(
+                    "Existing Python database has an incompatible terminal outcome schema"
+                )
+            outcome_objects = {
+                str(row[0])
+                for row in db.execute(
+                    "SELECT name FROM sqlite_master "
+                    "WHERE type IN ('table', 'index')"
+                )
+            }
+            if not TERMINAL_OUTCOME_SCHEMA_OBJECTS.issubset(outcome_objects):
+                raise IncompatibleDatabaseError(
+                    "Existing Python database has incomplete terminal outcome schema"
+                )
+        if version in {17, SCHEMA_VERSION}:
+            command_columns = tuple(
+                str(row[1]) for row in db.execute('PRAGMA table_info("trust_command")')
+            )
+            receipt_columns = tuple(
+                str(row[1])
+                for row in db.execute('PRAGMA table_info("trust_command_receipt")')
+            )
+            lifecycle_columns = tuple(
+                str(row[1])
+                for row in db.execute('PRAGMA table_info("world_item_lifecycle")')
+            )
+            if (
+                command_columns != TRUST_COMMAND_COLUMNS
+                or receipt_columns != TRUST_COMMAND_RECEIPT_COLUMNS
+                or lifecycle_columns != WORLD_ITEM_LIFECYCLE_COLUMNS
+            ):
+                raise IncompatibleDatabaseError(
+                    "Existing Python database has an incompatible Trust Command schema"
+                )
+        if version == SCHEMA_VERSION:
+            clarification_columns = tuple(
+                str(row[1])
+                for row in db.execute('PRAGMA table_info("clarification")')
+            )
+            clarification_objects = {
+                str(row[0])
+                for row in db.execute(
+                    "SELECT name FROM sqlite_master WHERE type IN ('table', 'index')"
+                )
+            }
+            if (
+                clarification_columns != CLARIFICATION_COLUMNS
+                or not CLARIFICATION_SCHEMA_OBJECTS.issubset(clarification_objects)
+            ):
+                raise IncompatibleDatabaseError(
+                    "Existing Python database has an incompatible clarification schema"
                 )
     finally:
         db.close()
@@ -494,6 +575,7 @@ class HermesMemoWeftRuntime:
     def __init__(self) -> None:
         self._session_id = ""
         self._ingestor: _HermesBoundaryRuntimeStore | None = None
+        self._outcome_store: TerminalOutcomeStore | None = None
         self._world_worker: WorldJobWorker | None = None
         self._enabled = False
         self._last_recall_count = 0
@@ -508,6 +590,7 @@ class HermesMemoWeftRuntime:
         # processing after the runtime's destination changes.
         self.shutdown()
         self._ingestor = None
+        self._outcome_store = None
         hermes_home = Path(str(kwargs.get("hermes_home") or "."))
         platform = str(kwargs.get("platform") or "unknown")
         agent_context = str(kwargs.get("agent_context") or "primary")
@@ -538,6 +621,7 @@ class HermesMemoWeftRuntime:
             host_id=f"hermes:{platform}",
         )
         self._ingestor.initialize()
+        self._outcome_store = TerminalOutcomeStore(db_path)
         # The host may inject its own strict one-shot model route
         # (``one_shot_llm`` initialize kwarg).  With it, the V1 formal batch
         # adapter interprets each committed boundary with at most one physical
@@ -741,6 +825,55 @@ class HermesMemoWeftRuntime:
                 )
         return receipt
 
+    def _require_terminal_outcome_store(self) -> TerminalOutcomeStore:
+        """Return the primary runtime's durable terminal-outcome store.
+
+        Outcome delivery changes durable state, so it shares the same primary
+        initialization fence as durable boundary intake.  Hosts that do not
+        implement this capability apply their no-op policy in N2; the Core
+        provider must never hide an invalid lifecycle call as an empty claim
+        or a failed compare-and-swap.
+        """
+
+        if not self._enabled or self._outcome_store is None:
+            raise RuntimeError(
+                "MemoWeft provider is not initialized for terminal outcomes"
+            )
+        return self._outcome_store
+
+    def claim_terminal_outcomes(
+        self, claim_owner: str, *, limit: int = 8
+    ) -> list[dict[str, object]]:
+        """Claim up to ``limit`` durable terminal outcomes for one host owner."""
+
+        outcomes = self._require_terminal_outcome_store().claim(
+            claim_owner, limit=limit
+        )
+        return [dict(outcome) for outcome in outcomes]
+
+    def heartbeat_terminal_outcome(
+        self, outcome_id: str, claim_token: str
+    ) -> bool:
+        """Extend the lease for the exact active delivery claim."""
+
+        return self._require_terminal_outcome_store().heartbeat(
+            outcome_id, claim_token
+        )
+
+    def ack_terminal_outcome(self, outcome_id: str, claim_token: str) -> bool:
+        """Acknowledge the exact active delivery claim."""
+
+        return self._require_terminal_outcome_store().ack(outcome_id, claim_token)
+
+    def nack_terminal_outcome(
+        self, outcome_id: str, claim_token: str, *, error_type: str
+    ) -> bool:
+        """Return the exact active delivery claim to Core-controlled retry."""
+
+        return self._require_terminal_outcome_store().nack(
+            outcome_id, claim_token, error_type=error_type
+        )
+
     def on_session_switch(self, new_session_id: str) -> None:
         self._session_id = new_session_id
 
@@ -778,11 +911,110 @@ class HermesMemoWeftRuntime:
         finally:
             db.close()
 
+    def prefetch_snapshot(
+        self, query: str, *, session_id: str = ""
+    ) -> RecallSnapshotV1 | None:
+        """Return the frozen structured Recall snapshot without host coupling.
+
+        ``None`` is the fail-closed unavailable/read-error signal.  A valid
+        no-hit read remains a structured snapshot (with ``count == 0``), so a
+        host can distinguish it from unavailable storage.  The legacy string
+        ``prefetch`` contract is intentionally unchanged.
+        """
+
+        del session_id
+        self._last_recall_count = 0
+        if not self._enabled or self._ingestor is None:
+            return None
+        db_path = self._ingestor.db_path
+        if db_path is None:
+            return None
+        try:
+            db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            return None
+        try:
+            snapshot = recall_world_snapshot(db, self._ingestor.subject_id, query)
+            if snapshot is None:
+                return None
+            self._last_recall_count = snapshot.count
+            return snapshot
+        except sqlite3.Error:
+            return None
+        finally:
+            db.close()
+
+    def get_trust_tool_schemas(self) -> list[dict[str, Any]]:
+        """Return defensive copies of the closed Query and Command schemas."""
+
+        return cast(
+            list[dict[str, Any]],
+            json.loads(
+                canonical_json(
+                    list(TRUST_PROVIDER_TOOL_SCHEMAS)
+                    + list(TRUST_COMMAND_PROVIDER_TOOL_SCHEMAS)
+                )
+            ),
+        )
+
+    def handle_trust_tool(
+        self, tool_name: str, args: Mapping[str, object]
+    ) -> dict[str, object]:
+        """Execute one subject-bound Trust query or explicit Trust command."""
+
+        if not self._enabled or self._ingestor is None:
+            raise TrustQueryError("trust_provider_not_initialized")
+        command_tools = {
+            str(schema["name"]) for schema in TRUST_COMMAND_PROVIDER_TOOL_SCHEMAS
+        }
+        if tool_name in command_tools:
+            command_service = CommandService(
+                self._ingestor.db_path,
+                subject_id=self._ingestor.subject_id,
+                host_id=self._ingestor.host_id,
+            )
+            return command_service.execute_provider_tool(tool_name, args)
+        query_service = QueryService(
+            self._ingestor.db_path,
+            subject_id=self._ingestor.subject_id,
+            surface="trust_cloud",
+        )
+        return query_service.execute_provider_tool(tool_name, args)
+
+    def answer_clarification(
+        self, *, result_session_id: str, answer: str
+    ) -> dict[str, object] | None:
+        """Bind one exact-session human answer and wake its follow-up Job."""
+
+        if not self._enabled or self._ingestor is None:
+            return None
+        service = ClarificationService(
+            self._ingestor.db_path,
+            subject_id=self._ingestor.subject_id,
+            host_id=self._ingestor.host_id,
+        )
+        receipt = service.answer_latest_for_session(
+            result_session_id=result_session_id,
+            answer=answer,
+        )
+        if receipt is not None:
+            worker = self._world_worker
+            if worker is not None:
+                try:
+                    worker.kick()
+                except Exception as exc:
+                    logger.warning(
+                        "MemoWeft clarification follow-up wake failed: error_type=%s",
+                        type(exc).__name__,
+                    )
+        return cast(dict[str, object] | None, receipt)
+
     def shutdown(self) -> None:
         """Boundedly stop the local asynchronous World-job worker."""
 
         worker = self._world_worker
         self._world_worker = None
+        self._outcome_store = None
         if worker is not None:
             worker.shutdown()
 
@@ -825,6 +1057,13 @@ def _build_provider_class(base: type[Any]) -> type[Any]:
         def prefetch(self, query: str, *, session_id: str = "") -> str:
             return self._runtime.prefetch(query, session_id=session_id)
 
+        def prefetch_snapshot(
+            self, query: str, *, session_id: str = ""
+        ) -> RecallSnapshotV1 | None:
+            """Optional duck-typed structured Recall surface for new hosts."""
+
+            return self._runtime.prefetch_snapshot(query, session_id=session_id)
+
         def recall_status(self) -> Any:
             count = self._runtime.last_recall_count
             if count <= 0:
@@ -844,7 +1083,25 @@ def _build_provider_class(base: type[Any]) -> type[Any]:
             return recall_status_cls(provider_label="memoweft", count=count)
 
         def get_tool_schemas(self) -> list[dict[str, Any]]:
-            return []
+            return self._runtime.get_trust_tool_schemas()
+
+        def handle_tool_call(
+            self, tool_name: str, args: dict[str, Any], **kwargs: Any
+        ) -> str:
+            del kwargs
+            try:
+                return canonical_json(self._runtime.handle_trust_tool(tool_name, args))
+            except (TrustQueryError, TrustCommandError) as exc:
+                is_submit = tool_name == "memoweft_submit_trust_command"
+                error_result: dict[str, object] = {
+                    "schema_version": TRUST_SCHEMA_VERSION,
+                    "ok": False,
+                    "error": {"code": exc.code},
+                    "read_only": not is_submit,
+                }
+                if is_submit:
+                    error_result["mutation_surface"] = True
+                return canonical_json(error_result)
 
         def on_durable_boundary(
             self, boundary: dict[str, Any]
@@ -868,6 +1125,34 @@ def _build_provider_class(base: type[Any]) -> type[Any]:
                     type(exc).__name__,
                 )
                 raise
+
+        def claim_terminal_outcomes(
+            self, claim_owner: str, *, limit: int = 8
+        ) -> list[dict[str, object]]:
+            return self._runtime.claim_terminal_outcomes(claim_owner, limit=limit)
+
+        def heartbeat_terminal_outcome(
+            self, outcome_id: str, claim_token: str
+        ) -> bool:
+            return self._runtime.heartbeat_terminal_outcome(outcome_id, claim_token)
+
+        def ack_terminal_outcome(self, outcome_id: str, claim_token: str) -> bool:
+            return self._runtime.ack_terminal_outcome(outcome_id, claim_token)
+
+        def nack_terminal_outcome(
+            self, outcome_id: str, claim_token: str, *, error_type: str
+        ) -> bool:
+            return self._runtime.nack_terminal_outcome(
+                outcome_id, claim_token, error_type=error_type
+            )
+
+        def answer_clarification(
+            self, *, result_session_id: str, answer: str
+        ) -> dict[str, object] | None:
+            return self._runtime.answer_clarification(
+                result_session_id=result_session_id,
+                answer=answer,
+            )
 
         def shutdown(self) -> None:
             self._runtime.shutdown()

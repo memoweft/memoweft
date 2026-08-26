@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { openStores } from '../../src/store/openStores.ts';
 import { exportBundle } from '../../src/portable/exportBundle.ts';
 import { importBundle } from '../../src/portable/importBundle.ts';
-import type { MemoryBundle } from '../../src/portable/model.ts';
+import { deriveBundleId, type MemoryBundle } from '../../src/portable/model.ts';
 
 /** 造一个含：2 证据（其一带 originId）+ 1 事件 + 1 活跃认知（挂溯源）+ 1 已失效认知 的源包。 */
 function seedSource(): MemoryBundle {
@@ -75,6 +75,17 @@ test('importBundle · dryRun：不写库，只返回计划', () => {
       cognitionEvidence: 1,
       interactionContexts: 0,
       semanticResolutions: 0,
+      entities: 0,
+      entityEvidence: 0,
+      relationships: 0,
+      worldEvents: 0,
+      relationshipEvidence: 0,
+      worldEventEvidence: 0,
+      cognitionTargets: 0,
+      retractions: 0,
+      cognitionTransitions: 0,
+      worldItemLifecycle: 0,
+      evidenceTombstones: 0,
     });
     assert.equal(t.evidenceStore.all().length, 0, 'dryRun 一条都不写');
     assert.equal(t.cognitionStore.all('owner').length, 0);
@@ -173,6 +184,17 @@ test('importBundle · 同 evidence id 但内容或授权不同：整包拒绝且
       cognitionEvidence: 0,
       interactionContexts: 0,
       semanticResolutions: 0,
+      entities: 0,
+      entityEvidence: 0,
+      relationships: 0,
+      worldEvents: 0,
+      relationshipEvidence: 0,
+      worldEventEvidence: 0,
+      cognitionTargets: 0,
+      retractions: 0,
+      cognitionTransitions: 0,
+      worldItemLifecycle: 0,
+      evidenceTombstones: 0,
     });
     assert.ok(plan.errors.some((error) => error.includes(`evidence ${source.id}`)));
     assert.equal(t.cognitionStore.all('owner').length, 0, '不能把包内派生内容绑定到碰撞记录');
@@ -190,6 +212,7 @@ test('importBundle · 同 event/cognition id 的 payload 或溯源关系不同�
     const payloadCollision = structuredClone(bundle);
     payloadCollision.data.events[0]!.summary = '碰撞后的事件摘要';
     payloadCollision.data.cognitions[0]!.content = '碰撞后的认知内容';
+    payloadCollision.bundleId = deriveBundleId(payloadCollision);
     const payloadPlan = importBundle(payloadCollision, t, { mode: 'merge' });
     assert.equal(payloadPlan.valid, false);
     assert.ok(payloadPlan.errors.some((error) => error.includes('event ')));
@@ -198,6 +221,7 @@ test('importBundle · 同 event/cognition id 的 payload 或溯源关系不同�
     const relationCollision = structuredClone(bundle);
     relationCollision.data.eventEvidence = relationCollision.data.eventEvidence.slice(0, 1);
     relationCollision.data.cognitionEvidence[0]!.relation = 'contradict';
+    relationCollision.bundleId = deriveBundleId(relationCollision);
     const relationPlan = importBundle(relationCollision, t, { mode: 'merge' });
     assert.equal(relationPlan.valid, false);
     assert.ok(relationPlan.errors.some((error) => error.includes('event ')));

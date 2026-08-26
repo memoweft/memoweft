@@ -14,6 +14,7 @@ import { MEMOWEFT_VERSION } from '../version.ts';
 import {
   BUNDLE_FORMAT,
   BUNDLE_SCHEMA_VERSION,
+  deriveBundleId,
   type MemoryBundle,
   type EventEvidenceLink,
   type CognitionEvidenceLink,
@@ -27,6 +28,26 @@ export interface ExportDeps {
   interactionContextStore: InteractionContextStore;
   /** 语义解析 store（v0.6）：按导出的证据集过滤导出语义解析。 */
   semanticResolutionStore: SemanticResolutionStore;
+  /** Optional v4 World/history adapter for a host that owns those sections.
+   * The legacy TypeScript core supplies no adapter and exports a complete,
+   * valid v4 bundle with empty World/history arrays and revision 0. */
+  portableV4?: {
+    worldRevision: number;
+    worldSnapshotHash: string;
+    data: Pick<
+      MemoryBundle['data'],
+      | 'entities'
+      | 'entityEvidence'
+      | 'relationships'
+      | 'relationshipEvidence'
+      | 'worldEvents'
+      | 'worldEventEvidence'
+      | 'cognitionTargets'
+      | 'retractions'
+      | 'cognitionTransitions'
+      | 'worldItemLifecycle'
+    >;
+  };
 }
 
 export interface ExportOptions {
@@ -57,7 +78,10 @@ export function exportBundle(
   } = deps;
 
   // evidenceStore.all() 返回全 subject，这里按 subjectId 收口（证据无 subject 过滤读法，靠 filter）。
-  const evidence = evidenceStore.all().filter((e) => e.subjectId === subjectId);
+  const evidence = evidenceStore
+    .all()
+    .filter((e) => e.subjectId === subjectId)
+    .map((e) => ({ ...e, deletedAt: null }));
   const events = eventStore.all(subjectId);
   const cognitions = cognitionStore.all(subjectId);
 
@@ -86,12 +110,26 @@ export function exportBundle(
   const interactionContexts = interactionContextStore.all(subjectId);
   const semanticResolutions = semanticResolutionStore.forEvidenceIds(evidence.map((e) => e.id));
 
-  return {
+  const v4 = deps.portableV4;
+  const entities = v4?.data.entities ?? [];
+  const entityEvidence = v4?.data.entityEvidence ?? [];
+  const relationships = v4?.data.relationships ?? [];
+  const relationshipEvidence = v4?.data.relationshipEvidence ?? [];
+  const worldEvents = v4?.data.worldEvents ?? [];
+  const worldEventEvidence = v4?.data.worldEventEvidence ?? [];
+  const cognitionTargets = v4?.data.cognitionTargets ?? [];
+  const retractions = v4?.data.retractions ?? [];
+  const cognitionTransitions = v4?.data.cognitionTransitions ?? [];
+  const worldItemLifecycle = v4?.data.worldItemLifecycle ?? [];
+  const bundle: MemoryBundle = {
     format: BUNDLE_FORMAT,
     schemaVersion: BUNDLE_SCHEMA_VERSION,
     exportedAt: opts.now ?? new Date().toISOString(),
     memoWeftVersion: opts.memoWeftVersion ?? MEMOWEFT_VERSION,
     subjectId,
+    sourceSubjectId: subjectId,
+    worldRevision: v4?.worldRevision ?? 0,
+    worldSnapshotHash: v4?.worldSnapshotHash ?? '',
     source: { hostId: opts.hostId ?? 'memoweft', exportMode: 'full' },
     data: {
       evidence,
@@ -102,14 +140,33 @@ export function exportBundle(
       unconsolidatedEventIds,
       interactionContexts,
       semanticResolutions,
+      entities,
+      entityEvidence,
+      relationships,
+      relationshipEvidence,
+      worldEvents,
+      worldEventEvidence,
+      cognitionTargets,
+      retractions,
+      cognitionTransitions,
+      worldItemLifecycle,
     },
     metadata: {
       counts: {
         evidence: evidence.length,
         events: events.length,
         cognitions: cognitions.length,
+        entities: entities.length,
+        entityEvidence: entityEvidence.length,
+        relationships: relationships.length,
+        worldEvents: worldEvents.length,
+        retractions: retractions.length,
+        cognitionTransitions: cognitionTransitions.length,
+        worldItemLifecycle: worldItemLifecycle.length,
       },
       notes: opts.notes ?? [],
     },
   };
+  bundle.bundleId = deriveBundleId(bundle);
+  return bundle;
 }

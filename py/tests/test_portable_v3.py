@@ -1,4 +1,4 @@
-"""Portable bundle v3: 2.0 World sections round-trip, validation, gating."""
+"""Portable World sections: v4 writer round-trip plus v2/v3 reader compatibility."""
 from __future__ import annotations
 
 import copy
@@ -86,7 +86,23 @@ def _seed_world(db: sqlite3.Connection, subject: str = SUBJECT) -> None:
     )
 
 
-def test_bundle_v3_round_trip_build_validate_import(tmp_path: Path) -> None:
+def _as_v3(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Downgrade a current writer fixture to the legacy v3 reader contract."""
+    legacy = copy.deepcopy(bundle)
+    legacy["schemaVersion"] = 3
+    for key in ("bundleId", "sourceSubjectId", "worldRevision", "worldSnapshotHash"):
+        legacy.pop(key, None)
+    for key in ("retractions", "cognitionTransitions", "worldItemLifecycle"):
+        legacy["data"].pop(key, None)
+    for evidence in legacy["data"]["evidence"]:
+        evidence.pop("deletedAt", None)
+        evidence.pop("precedingAiContext", None)
+    for key in ("retractions", "cognitionTransitions", "worldItemLifecycle"):
+        legacy["metadata"]["counts"].pop(key, None)
+    return legacy
+
+
+def test_bundle_v4_round_trip_build_validate_import(tmp_path: Path) -> None:
     source = open_db(str(tmp_path / "source.sqlite3"))
     try:
         _seed_world(source)
@@ -96,7 +112,7 @@ def test_bundle_v3_round_trip_build_validate_import(tmp_path: Path) -> None:
 
     validation = validate_bundle(bundle)
     assert validation.valid, validation.errors
-    assert bundle["schemaVersion"] == 3
+    assert bundle["schemaVersion"] == 4
     assert {e["id"] for e in bundle["data"]["entities"]} == {"ent-a", "ent-b"}
     assert bundle["data"]["entities"][0]["aliases"] in (["杨杨"], [])
     assert len(bundle["data"]["relationships"]) == 1
@@ -194,7 +210,7 @@ def test_import_without_world_db_skips_world_sections_with_warning() -> None:
     db = open_db(":memory:")
     try:
         _seed_world(db)
-        bundle = build_bundle(db, SUBJECT, host_id="host", exported_at=T)
+        bundle = _as_v3(build_bundle(db, SUBJECT, host_id="host", exported_at=T))
     finally:
         db.close()
 

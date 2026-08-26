@@ -7,27 +7,54 @@
       "evidence": 2
     },
     "plan": {
+      "bundleId": "portable:v4:9517d180cf61ce080fb4598275ec56c1e56052e2ce1ca66ca166ddbf1c23a46f",
+      "commandId": "portable:command:v1:15b3eabd369f8b1cbc5927126c96baa3286e5435afd8a78db02fc035c7d6ea08",
+      "conflicts": [],
       "counts": {
         "cognitionEvidence": 1,
+        "cognitionTargets": 0,
+        "cognitionTransitions": 0,
         "cognitions": 1,
+        "entities": 0,
+        "entityEvidence": 0,
         "eventEvidence": 2,
         "events": 1,
         "evidence": 2,
+        "evidenceTombstones": 0,
         "interactionContexts": 1,
-        "semanticResolutions": 0
+        "relationshipEvidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "semanticResolutions": 0,
+        "worldEventEvidence": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "duplicates": {
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
         "events": 0,
-        "evidence": 0
+        "evidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "errors": [],
       "mode": "merge",
+      "planHash": "15b3eabd369f8b1cbc5927126c96baa3286e5435afd8a78db02fc035c7d6ea08",
+      "receiptId": "portable:receipt:v1:15b3eabd369f8b1cbc5927126c96baa3286e5435afd8a78db02fc035c7d6ea08",
+      "sourceSubjectId": "owner",
+      "targetSnapshotHash": "",
+      "targetSubjectId": "owner",
+      "targetWorldRevision": 0,
       "valid": true,
       "warnings": [
         "evidence ev-2 correctsEvidenceId(ghost-corrects) is not in the bundle",
         "evidence ev-2 correctsEvidenceId(ghost-corrects) cannot be resolved in the target database; cleared on import"
-      ]
+      ],
+      "wouldAdvanceRevision": true
     }
   },
   "dryRun": {
@@ -37,24 +64,51 @@
       "evidence": 0
     },
     "plan": {
+      "bundleId": "portable:v4:dabea6a38d1da4941fd186c1b425f66a14b52d1c698ab457432dda5080644723",
+      "commandId": "portable:command:v1:c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "conflicts": [],
       "counts": {
         "cognitionEvidence": 1,
+        "cognitionTargets": 0,
+        "cognitionTransitions": 0,
         "cognitions": 1,
+        "entities": 0,
+        "entityEvidence": 0,
         "eventEvidence": 2,
         "events": 1,
         "evidence": 2,
+        "evidenceTombstones": 0,
         "interactionContexts": 1,
-        "semanticResolutions": 0
+        "relationshipEvidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "semanticResolutions": 0,
+        "worldEventEvidence": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "duplicates": {
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
         "events": 0,
-        "evidence": 0
+        "evidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "errors": [],
       "mode": "dryRun",
+      "planHash": "c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "receiptId": "portable:receipt:v1:c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "sourceSubjectId": "owner",
+      "targetSnapshotHash": "",
+      "targetSubjectId": "owner",
+      "targetWorldRevision": 0,
       "valid": true,
-      "warnings": []
+      "warnings": [],
+      "wouldAdvanceRevision": true
     }
   },
   "invalid": {
@@ -64,26 +118,53 @@
       "evidence": 0
     },
     "plan": {
+      "bundleId": "portable:v4:43b40875b4aa28be2e5ccaf7cc9b80cd51af1e8bf8df3df7db7bb67188a89c55",
+      "commandId": "portable:command:v1:a90d7c88cc70e68bfe98345412a63d765b38b5b82b1eeab3c6c5e29582b82ce0",
+      "conflicts": [],
       "counts": {
         "cognitionEvidence": 0,
+        "cognitionTargets": 0,
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
+        "entityEvidence": 0,
         "eventEvidence": 0,
         "events": 0,
         "evidence": 0,
+        "evidenceTombstones": 0,
         "interactionContexts": 0,
-        "semanticResolutions": 0
+        "relationshipEvidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "semanticResolutions": 0,
+        "worldEventEvidence": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "duplicates": {
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
         "events": 0,
-        "evidence": 0
+        "evidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "errors": [
         "eventEvidence references a non-existent evidence: ghost"
       ],
       "mode": "merge",
+      "planHash": "a90d7c88cc70e68bfe98345412a63d765b38b5b82b1eeab3c6c5e29582b82ce0",
+      "receiptId": "portable:receipt:v1:a90d7c88cc70e68bfe98345412a63d765b38b5b82b1eeab3c6c5e29582b82ce0",
+      "sourceSubjectId": "owner",
+      "targetSnapshotHash": "",
+      "targetSubjectId": "owner",
+      "targetWorldRevision": 0,
       "valid": false,
-      "warnings": []
+      "warnings": [],
+      "wouldAdvanceRevision": false
     }
   },
   "merge": {
@@ -93,24 +174,51 @@
       "evidence": 2
     },
     "plan": {
+      "bundleId": "portable:v4:dabea6a38d1da4941fd186c1b425f66a14b52d1c698ab457432dda5080644723",
+      "commandId": "portable:command:v1:c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "conflicts": [],
       "counts": {
         "cognitionEvidence": 1,
+        "cognitionTargets": 0,
+        "cognitionTransitions": 0,
         "cognitions": 1,
+        "entities": 0,
+        "entityEvidence": 0,
         "eventEvidence": 2,
         "events": 1,
         "evidence": 2,
+        "evidenceTombstones": 0,
         "interactionContexts": 1,
-        "semanticResolutions": 0
+        "relationshipEvidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "semanticResolutions": 0,
+        "worldEventEvidence": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "duplicates": {
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
         "events": 0,
-        "evidence": 0
+        "evidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "errors": [],
       "mode": "merge",
+      "planHash": "c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "receiptId": "portable:receipt:v1:c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "sourceSubjectId": "owner",
+      "targetSnapshotHash": "",
+      "targetSubjectId": "owner",
+      "targetWorldRevision": 0,
       "valid": true,
-      "warnings": []
+      "warnings": [],
+      "wouldAdvanceRevision": true
     }
   },
   "note": "importBundle 完整 ImportPlan:dryRun 只算不写 / merge 写入 / 幂等 duplicates / 非法包拒写 / originId 撞库丢悬空 join + 告警 / 悬空 corrects 置空 + 告警。warnings 语言随 resolveLang()(env 缺省 en)。",
@@ -121,28 +229,55 @@
       "evidence": 2
     },
     "plan": {
+      "bundleId": "portable:v4:2466af7bd6e39d8f8ed3ce5c37e700f4bbdd67e02938423b29cc280c31a8a716",
+      "commandId": "portable:command:v1:45a0721c2ba15bfc0a7def167d83a4427a9878606001425929fd03f22e70a988",
+      "conflicts": [],
       "counts": {
         "cognitionEvidence": 0,
+        "cognitionTargets": 0,
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
+        "entityEvidence": 0,
         "eventEvidence": 0,
         "events": 0,
         "evidence": 1,
+        "evidenceTombstones": 0,
         "interactionContexts": 1,
-        "semanticResolutions": 0
+        "relationshipEvidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "semanticResolutions": 0,
+        "worldEventEvidence": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "duplicates": {
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
         "events": 0,
-        "evidence": 1
+        "evidence": 1,
+        "relationships": 0,
+        "retractions": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "errors": [],
       "mode": "merge",
+      "planHash": "45a0721c2ba15bfc0a7def167d83a4427a9878606001425929fd03f22e70a988",
+      "receiptId": "portable:receipt:v1:45a0721c2ba15bfc0a7def167d83a4427a9878606001425929fd03f22e70a988",
+      "sourceSubjectId": "owner",
+      "targetSnapshotHash": "",
+      "targetSubjectId": "owner",
+      "targetWorldRevision": 0,
       "valid": true,
       "warnings": [
         "evidence ev-1 originId is already taken by another record in the database; skipping (its provenance links are dropped too)",
         "event evt-1 depends on unresolved evidence ev-1; skipping to prevent derived summary revival",
         "cognition cog-1 depends on unresolved evidence ev-1; skipping to prevent derived content revival"
-      ]
+      ],
+      "wouldAdvanceRevision": true
     }
   },
   "twice": {
@@ -152,44 +287,98 @@
       "evidence": 2
     },
     "first": {
+      "bundleId": "portable:v4:dabea6a38d1da4941fd186c1b425f66a14b52d1c698ab457432dda5080644723",
+      "commandId": "portable:command:v1:c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "conflicts": [],
       "counts": {
         "cognitionEvidence": 1,
+        "cognitionTargets": 0,
+        "cognitionTransitions": 0,
         "cognitions": 1,
+        "entities": 0,
+        "entityEvidence": 0,
         "eventEvidence": 2,
         "events": 1,
         "evidence": 2,
+        "evidenceTombstones": 0,
         "interactionContexts": 1,
-        "semanticResolutions": 0
+        "relationshipEvidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "semanticResolutions": 0,
+        "worldEventEvidence": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "duplicates": {
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
         "events": 0,
-        "evidence": 0
+        "evidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "errors": [],
       "mode": "merge",
+      "planHash": "c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "receiptId": "portable:receipt:v1:c05b02127215caa4df3b5c91324df2e99116189e50151e351179d2087c0e9efb",
+      "sourceSubjectId": "owner",
+      "targetSnapshotHash": "",
+      "targetSubjectId": "owner",
+      "targetWorldRevision": 0,
       "valid": true,
-      "warnings": []
+      "warnings": [],
+      "wouldAdvanceRevision": true
     },
     "second": {
+      "bundleId": "portable:v4:dabea6a38d1da4941fd186c1b425f66a14b52d1c698ab457432dda5080644723",
+      "commandId": "portable:command:v1:a4b12d685dfccdfbb7691e77b483661a14f8ad7e86b65bc872cfdf9ed5087d27",
+      "conflicts": [],
       "counts": {
         "cognitionEvidence": 0,
+        "cognitionTargets": 0,
+        "cognitionTransitions": 0,
         "cognitions": 0,
+        "entities": 0,
+        "entityEvidence": 0,
         "eventEvidence": 0,
         "events": 0,
         "evidence": 0,
+        "evidenceTombstones": 0,
         "interactionContexts": 0,
-        "semanticResolutions": 0
+        "relationshipEvidence": 0,
+        "relationships": 0,
+        "retractions": 0,
+        "semanticResolutions": 0,
+        "worldEventEvidence": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "duplicates": {
+        "cognitionTransitions": 0,
         "cognitions": 1,
+        "entities": 0,
         "events": 1,
-        "evidence": 2
+        "evidence": 2,
+        "relationships": 0,
+        "retractions": 0,
+        "worldEvents": 0,
+        "worldItemLifecycle": 0
       },
       "errors": [],
       "mode": "merge",
+      "planHash": "a4b12d685dfccdfbb7691e77b483661a14f8ad7e86b65bc872cfdf9ed5087d27",
+      "receiptId": "portable:receipt:v1:a4b12d685dfccdfbb7691e77b483661a14f8ad7e86b65bc872cfdf9ed5087d27",
+      "sourceSubjectId": "owner",
+      "targetSnapshotHash": "",
+      "targetSubjectId": "owner",
+      "targetWorldRevision": 0,
       "valid": true,
-      "warnings": []
+      "warnings": [],
+      "wouldAdvanceRevision": false
     }
   }
 }

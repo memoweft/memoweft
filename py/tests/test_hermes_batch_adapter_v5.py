@@ -399,6 +399,48 @@ def test_third_party_held_restate_support_merge_and_replay(tmp_path: Path) -> No
     ]
 
 
+def test_exact_held_replay_repairs_target_and_perspective_entities(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    held = _v8_item(
+        "attribute", "小王说小李是00后", (0, 9),
+        entity={"canonical_name": "小李", "kind": "person"},
+        perspective_holder={"canonical_name": "小王", "kind": "person"},
+    )
+    _run(
+        db_path, clock, [_model(_batch(held))], ("evidence-1",),
+        lambda path: _set_evidence(path, "evidence-1", _RAW_HELD),
+        job_id="job-1",
+    )
+    target_id = entity_id_for("owner", "小李")
+    perspective_id = entity_id_for("owner", "小王")
+    db = sqlite3.connect(db_path, isolation_level=None)
+    try:
+        db.execute("DELETE FROM entity WHERE id IN (?, ?)", (target_id, perspective_id))
+    finally:
+        db.close()
+
+    _run(db_path, clock, [_model(_batch(held))], ("evidence-1",), job_id="job-2")
+
+    row = _job(db_path, job_id="job-2")
+    outcome = json.loads(str(row["world_result_json"]))
+    assert row["state"] == "applied"
+    assert outcome["world_revision"] == 2
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute(
+            "SELECT COUNT(*) FROM entity WHERE id IN (?, ?)",
+            (target_id, perspective_id),
+        ).fetchone()[0] == 2
+        assert db.execute(
+            "SELECT COUNT(*) FROM terminal_outcome WHERE job_id = 'job-2'"
+        ).fetchone()[0] == 1
+    finally:
+        db.close()
+
+
 def test_third_party_held_cognition_retract(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
@@ -528,6 +570,61 @@ def test_third_party_held_cognition_contradict(tmp_path: Path) -> None:
         assert db.execute(
             "SELECT invalid_at IS NULL FROM cognition WHERE id = ?",
             (target,),
+        ).fetchone()[0] == 1
+    finally:
+        db.close()
+
+
+def test_exact_contradict_replay_repairs_missing_ledger(tmp_path: Path) -> None:
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    held = _v8_item(
+        "attribute", "小王说小李是00后", (0, 9),
+        entity={"canonical_name": "小李", "kind": "person"},
+        perspective_holder={"canonical_name": "小王", "kind": "person"},
+    )
+    _run(
+        db_path, clock, [_model(_batch(held))], ("evidence-1",),
+        lambda path: _set_evidence(path, "evidence-1", _RAW_HELD),
+        job_id="job-1",
+    )
+    target = cognition_id_for_holder(
+        "owner", "attribute", "小王说小李是00后", entity_id_for("owner", "小王")
+    )
+    contradict = _v8_item(
+        "attribute", "小李不是00后", (0, 7),
+        action="contradict", contradicts_cognition_id=target,
+        evidence_id="evidence-2",
+    )
+    _run(
+        db_path, clock, [_model(_batch(contradict))], ("evidence-2",),
+        lambda path: _set_evidence(path, "evidence-2", "小李不是00后"),
+        job_id="job-2",
+    )
+    db = sqlite3.connect(db_path, isolation_level=None)
+    try:
+        ledger_id = db.execute(
+            "SELECT id FROM evidence_ledger "
+            "WHERE content LIKE '%\"relation\":\"contradict\"%'"
+        ).fetchone()[0]
+        db.execute("DELETE FROM evidence_ledger WHERE id = ?", (ledger_id,))
+    finally:
+        db.close()
+
+    _run(db_path, clock, [_model(_batch(contradict))], ("evidence-2",), job_id="job-3")
+
+    row = _job(db_path, job_id="job-3")
+    outcome = json.loads(str(row["world_result_json"]))
+    assert row["state"] == "applied"
+    assert outcome["world_revision"] == 3
+    db = sqlite3.connect(db_path)
+    try:
+        assert db.execute(
+            "SELECT COUNT(*) FROM evidence_ledger "
+            "WHERE content LIKE '%\"relation\":\"contradict\"%'"
+        ).fetchone()[0] == 1
+        assert db.execute(
+            "SELECT COUNT(*) FROM terminal_outcome WHERE job_id = 'job-3'"
         ).fetchone()[0] == 1
     finally:
         db.close()

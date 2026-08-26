@@ -28,6 +28,9 @@ from uuid import uuid4
 
 from ...clock import to_iso_z
 from ...store.driver import BUSY_TIMEOUT_MS
+from ...types import ModelTier
+from ..trust.currentness import evidence_state
+from .terminal_outcome import persist_terminal_outcome_in_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -218,6 +221,11 @@ class WorldJobResult:
 
     def __post_init__(self) -> None:
         _validate_error_code(self.reason)
+        if self.state in {"clarification_required", "out_of_scope"}:
+            if not isinstance(self.display, str) or not self.display.strip():
+                raise ValueError(
+                    f"{self.state} requires a non-empty display"
+                )
         if self.display is not None:
             if not isinstance(self.display, str) or not self.display.strip():
                 raise ValueError("display must be a non-empty string when present")
@@ -330,6 +338,7 @@ class WorldJobProcessor(Protocol):
     """
 
     dispatches_model: bool
+    model_tier: ModelTier
 
     def process(self, job: ClaimedWorldJob) -> WorldJobResult:
         """Process all Evidence references in ``job`` as one batch."""
@@ -339,6 +348,7 @@ class FormalBatchAdapterUnavailableProcessor:
     """Production-safe default: terminal, deterministic, and zero World writes."""
 
     dispatches_model = False
+    model_tier: ModelTier = "cloud"
 
     def process(self, job: ClaimedWorldJob) -> WorldJobResult:
         del job
@@ -513,20 +523,11 @@ class WorldJobStore:
                             completed_at=now_text,
                         )
                     )
-                elif attempts >= self.policy.max_attempts:
-                    dead += int(
-                        self._dead_claim_in_transaction(
-                            db,
-                            job_id=job_id,
-                            claim_token=claim_token,
-                            fencing_generation=generation,
-                            reason="dispatch_result_unsettled",
-                            completed_at=now_text,
-                        )
-                    )
                 else:
                     # The model result IS durably stored: replay the
                     # deterministic Apply only — never a second model call.
+                    # A replay is not another remote attempt, including when
+                    # the completed remote call was the final allowed one.
                     cursor = db.execute(
                         f"""UPDATE {WORLD_JOB_TABLE}
                                SET state = 'retry',
@@ -611,7 +612,10 @@ class WorldJobStore:
                 fencing_generation,
             ),
         )
-        return cursor.rowcount == 1
+        if cursor.rowcount != 1:
+            return False
+        persist_terminal_outcome_in_transaction(db, job_id)
+        return True
 
     def _dead_unclaimed_in_transaction(
         self,
@@ -639,7 +643,10 @@ class WorldJobStore:
                    AND state IN ('pending', 'retry')""",
             (world_json, _hash_text(world_json), completed_at, reason, job_id),
         )
-        return cursor.rowcount == 1
+        if cursor.rowcount != 1:
+            return False
+        persist_terminal_outcome_in_transaction(db, job_id)
+        return True
 
     def claim_one(self, claim_owner: str) -> ClaimedWorldJob | None:
         """Recover stale work and atomically claim the oldest due job."""
@@ -654,29 +661,29 @@ class WorldJobStore:
             self._recover_expired_in_transaction(db, now)
 
             unsafe_rows = db.execute(
-                f"""SELECT job_id, model_dispatch_started_at, model_result_json
+                f"""SELECT job_id
                        FROM {WORLD_JOB_TABLE}
                       WHERE state IN ('pending', 'retry')
-                        AND model_dispatch_started_at IS NOT NULL"""
+                        AND model_dispatch_started_at IS NOT NULL
+                        AND model_result_json IS NULL"""
             ).fetchall()
             for row in unsafe_rows:
-                reason = (
-                    "dispatch_outcome_unknown"
-                    if row["model_result_json"] is None
-                    else "dispatch_result_unsettled"
-                )
                 self._dead_unclaimed_in_transaction(
                     db,
                     job_id=cast(str, row["job_id"]),
-                    reason=reason,
+                    reason="dispatch_outcome_unknown",
                     completed_at=now_text,
                 )
 
             exhausted = db.execute(
                 f"""SELECT job_id
-                       FROM {WORLD_JOB_TABLE}
+                      FROM {WORLD_JOB_TABLE}
                       WHERE state IN ('pending', 'retry')
-                        AND attempts >= ?""",
+                        AND attempts >= ?
+                        AND NOT (
+                            model_dispatch_started_at IS NOT NULL
+                            AND model_result_json IS NOT NULL
+                        )""",
                 (self.policy.max_attempts,),
             ).fetchall()
             for row in exhausted:
@@ -689,9 +696,15 @@ class WorldJobStore:
 
             row = db.execute(
                 f"""SELECT job_id
-                       FROM {WORLD_JOB_TABLE}
+                      FROM {WORLD_JOB_TABLE}
                       WHERE state IN ('pending', 'retry')
-                        AND attempts < ?
+                        AND (
+                            attempts < ?
+                            OR (
+                                model_dispatch_started_at IS NOT NULL
+                                AND model_result_json IS NOT NULL
+                            )
+                        )
                         AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
                       ORDER BY COALESCE(next_attempt_at, created_at), created_at, job_id
                       LIMIT 1""",
@@ -707,7 +720,13 @@ class WorldJobStore:
             cursor = db.execute(
                 f"""UPDATE {WORLD_JOB_TABLE}
                        SET state = 'processing',
-                           attempts = attempts + 1,
+                           attempts = CASE
+                               WHEN model_dispatch_started_at IS NOT NULL
+                                AND model_result_json IS NOT NULL
+                                AND attempts >= ?
+                               THEN attempts
+                               ELSE attempts + 1
+                           END,
                            next_attempt_at = NULL,
                            claim_owner = ?,
                            claim_token = ?,
@@ -719,8 +738,15 @@ class WorldJobStore:
                            last_error_type = NULL
                      WHERE job_id = ?
                        AND state IN ('pending', 'retry')
-                       AND attempts < ?""",
+                       AND (
+                           attempts < ?
+                           OR (
+                               model_dispatch_started_at IS NOT NULL
+                               AND model_result_json IS NOT NULL
+                           )
+                       )""",
                 (
+                    self.policy.max_attempts,
                     claim_owner,
                     claim_token,
                     now_text,
@@ -743,6 +769,34 @@ class WorldJobStore:
         except BaseException:
             self._rollback(db)
             raise
+        finally:
+            db.close()
+
+    def has_durable_model_result(self, claim: ClaimedWorldJob) -> bool:
+        """Whether this live claim can replay Apply without a model call."""
+
+        now_text = _timestamp(self._now())
+        db = self._connect()
+        try:
+            row = db.execute(
+                f"""SELECT 1 FROM {WORLD_JOB_TABLE}
+                       WHERE job_id = ?
+                         AND state = 'processing'
+                         AND claim_owner = ?
+                         AND claim_token = ?
+                         AND fencing_generation = ?
+                         AND lease_expires_at > ?
+                         AND model_dispatch_started_at IS NOT NULL
+                         AND model_result_json IS NOT NULL""",
+                (
+                    claim.job_id,
+                    claim.claim_owner,
+                    claim.claim_token,
+                    claim.fencing_generation,
+                    now_text,
+                ),
+            ).fetchone()
+            return row is not None
         finally:
             db.close()
 
@@ -771,7 +825,11 @@ class WorldJobStore:
         )
 
     def validate_current_evidence(
-        self, claim: ClaimedWorldJob, evidence_ids: tuple[str, ...]
+        self,
+        claim: ClaimedWorldJob,
+        evidence_ids: tuple[str, ...],
+        *,
+        model_tier: ModelTier = "cloud",
     ) -> None:
         """Fail closed unless every referenced Evidence is current and on-target.
 
@@ -792,7 +850,8 @@ class WorldJobStore:
                 placeholders = ",".join("?" for _ in chunk)
                 rows = db.execute(
                     "SELECT e.id, e.subject_id, e.host_id, e.source_kind, "
-                    "e.deleted_at, e.raw_content, b.raw_content_hash "
+                    "e.deleted_at, e.raw_content, e.allow_local_read, "
+                    "e.allow_cloud_read, e.allow_inference, b.raw_content_hash "
                     "FROM evidence e "
                     "LEFT JOIN boundary_evidence_content b "
                     "ON b.evidence_id = e.id "
@@ -808,8 +867,18 @@ class WorldJobStore:
             row = rows_by_id.get(evidence_id)
             if row is None:
                 raise PermanentWorldJobError("evidence_missing")
-            if row["deleted_at"] is not None:
-                raise PermanentWorldJobError("evidence_deleted")
+            state = evidence_state(
+                {
+                    "deleted_at": row["deleted_at"],
+                    "allow_local_read": row["allow_local_read"],
+                    "allow_cloud_read": row["allow_cloud_read"],
+                    "allow_inference": row["allow_inference"],
+                },
+                surface="formation",
+                model_tier=model_tier,
+            )
+            if state is not None:
+                raise PermanentWorldJobError(state)
             if (
                 row["subject_id"] != claim.subject_id
                 or row["host_id"] != claim.host_id
@@ -860,13 +929,71 @@ class WorldJobStore:
         finally:
             db.close()
 
-    def mark_dispatch_started(self, claim: ClaimedWorldJob) -> bool:
+    def _validate_current_evidence_on_connection(
+        self,
+        db: sqlite3.Connection,
+        claim: ClaimedWorldJob,
+        evidence_ids: tuple[str, ...],
+        *,
+        model_tier: ModelTier,
+    ) -> None:
+        """Repeat the currentness predicate under a caller-owned transaction."""
+
+        if not evidence_ids:
+            return
+        rows_by_id: dict[str, sqlite3.Row] = {}
+        for offset in range(0, len(evidence_ids), 500):
+            chunk = evidence_ids[offset : offset + 500]
+            placeholders = ",".join("?" for _ in chunk)
+            rows = db.execute(
+                "SELECT e.id, e.subject_id, e.host_id, e.source_kind, "
+                "e.deleted_at, e.raw_content, e.allow_local_read, "
+                "e.allow_cloud_read, e.allow_inference, b.raw_content_hash "
+                "FROM evidence e LEFT JOIN boundary_evidence_content b "
+                "ON b.evidence_id = e.id "
+                f"WHERE e.id IN ({placeholders})",
+                chunk,
+            ).fetchall()
+            for row in rows:
+                rows_by_id[cast(str, row["id"])] = row
+        for evidence_id in evidence_ids:
+            row = rows_by_id.get(evidence_id)
+            if row is None:
+                raise PermanentWorldJobError("evidence_missing")
+            state = evidence_state(
+                {
+                    "deleted_at": row["deleted_at"],
+                    "allow_local_read": row["allow_local_read"],
+                    "allow_cloud_read": row["allow_cloud_read"],
+                    "allow_inference": row["allow_inference"],
+                },
+                surface="formation",
+                model_tier=model_tier,
+            )
+            if state is not None:
+                raise PermanentWorldJobError(state)
+            if row["subject_id"] != claim.subject_id or row["host_id"] != claim.host_id:
+                raise PermanentWorldJobError("evidence_target_mismatch")
+            if row["source_kind"] != "spoken":
+                raise PermanentWorldJobError("evidence_source_kind_mismatch")
+            bound_hash = row["raw_content_hash"]
+            if not isinstance(bound_hash, str) or not bound_hash:
+                raise PermanentWorldJobError("evidence_content_hash_missing")
+            if sha256(str(row["raw_content"]).encode("utf-8")).hexdigest() != bound_hash:
+                raise PermanentWorldJobError("evidence_content_hash_mismatch")
+
+    def mark_dispatch_started(
+        self, claim: ClaimedWorldJob, *, model_tier: ModelTier = "cloud"
+    ) -> bool:
         """Persist the irreversible single-dispatch marker before model I/O."""
 
         now_text = _timestamp(self._now())
         db = self._connect()
         try:
             db.execute("BEGIN IMMEDIATE")
+            self._validate_current_evidence_on_connection(
+                db, claim, claim.evidence_ids(), model_tier=model_tier
+            )
             cursor = db.execute(
                 f"""UPDATE {WORLD_JOB_TABLE}
                        SET model_dispatch_started_at = ?,
@@ -911,7 +1038,6 @@ class WorldJobStore:
 
         if not isinstance(result, WorldJobResult):
             raise TypeError("processor must return WorldJobResult")
-        world_json = _outcome_json(result)
         now_text = _timestamp(self._now())
         db = self._connect()
         try:
@@ -936,6 +1062,13 @@ class WorldJobStore:
             if row is None:
                 db.execute("COMMIT")
                 return False
+            if result.state == "applied":
+                # Only the batch adapter owns the transaction that can bind a
+                # World mutation, revision, Job terminal, and applied outcome.
+                # A generic settlement still holding this claim cannot forge it.
+                raise PermanentWorldJobError(
+                    "applied_requires_atomic_world_mutation"
+                )
 
             attempts = cast(int, row["attempts"])
             dispatch_started = row["model_dispatch_started_at"] is not None
@@ -1053,6 +1186,12 @@ class WorldJobStore:
                     now_text,
                 ),
             )
+            if terminal and cursor.rowcount == 1:
+                # BatchAdapter applies in its own atomic transaction, so its
+                # outer worker settlement matches no processing row. Every
+                # remaining generic terminal is zero-mutation and writes its
+                # outcome only after the fenced Job terminal succeeds.
+                persist_terminal_outcome_in_transaction(db, claim.job_id)
             db.execute("COMMIT")
             return cursor.rowcount == 1
         except BaseException:
@@ -1205,7 +1344,13 @@ class WorldJobWorker:
         try:
             claim.validate_formal_target()
             evidence_ids = claim.evidence_ids()
-            self.store.validate_current_evidence(claim, evidence_ids)
+            configured_model_tier = getattr(self.processor, "model_tier", "cloud")
+            if configured_model_tier not in ("cloud", "local"):
+                raise PermanentWorldJobError("invalid_model_tier")
+            model_tier = cast(ModelTier, configured_model_tier)
+            self.store.validate_current_evidence(
+                claim, evidence_ids, model_tier=model_tier
+            )
         except PermanentWorldJobError as exc:
             self.store.settle(
                 claim,
@@ -1233,11 +1378,46 @@ class WorldJobWorker:
             self.store.settle(claim, WorldJobResult.retry(_exception_code(exc)))
             return
 
-        dispatch_started = False
+        model_completed = False
+        replaying_durable_model_result = False
         if dispatches_model:
-            dispatch_started = self.store.mark_dispatch_started(claim)
-            if not dispatch_started:
-                return
+            if self.store.has_durable_model_result(claim):
+                # A prior worker checkpointed the remote response but lost its
+                # lease before Apply.  The processor must load that immutable
+                # checkpoint and replay deterministic Apply, never dispatch.
+                model_completed = True
+                replaying_durable_model_result = True
+            else:
+                # The earlier validation happens before the processor capability
+                # lookup. Recheck immediately before persisting the irreversible
+                # dispatch marker so a just-revoked Evidence cannot start a route.
+                try:
+                    self.store.validate_current_evidence(
+                        claim, evidence_ids, model_tier=model_tier
+                    )
+                except PermanentWorldJobError as exc:
+                    self.store.settle(
+                        claim,
+                        WorldJobResult.dead(
+                            _declared_exception_code(exc, "invalid_evidence_batch")
+                        ),
+                    )
+                    return
+                try:
+                    dispatch_started = self.store.mark_dispatch_started(
+                        claim, model_tier=model_tier
+                    )
+                except PermanentWorldJobError as exc:
+                    self.store.settle(
+                        claim,
+                        WorldJobResult.dead(
+                            _declared_exception_code(exc, "invalid_evidence_batch")
+                        ),
+                    )
+                    return
+                if not dispatch_started:
+                    return
+                model_completed = True
 
         heartbeat_stop = threading.Event()
         heartbeat_thread = threading.Thread(
@@ -1254,7 +1434,7 @@ class WorldJobWorker:
             self.store.settle(
                 claim,
                 result,
-                model_completed=dispatch_started,
+                model_completed=model_completed,
             )
         except PermanentWorldJobError as exc:
             result = WorldJobResult.dead(
@@ -1267,7 +1447,7 @@ class WorldJobWorker:
             self.store.settle(
                 claim,
                 result,
-                model_completed=False,
+                model_completed=model_completed,
             )
         except RetryableWorldJobError as exc:
             result = WorldJobResult.retry(
@@ -1280,7 +1460,7 @@ class WorldJobWorker:
             self.store.settle(
                 claim,
                 result,
-                model_completed=False,
+                model_completed=replaying_durable_model_result,
             )
         except Exception as exc:
             result = WorldJobResult.retry(_exception_code(exc))
@@ -1293,7 +1473,7 @@ class WorldJobWorker:
             self.store.settle(
                 claim,
                 result,
-                model_completed=False,
+                model_completed=replaying_durable_model_result,
             )
         finally:
             heartbeat_stop.set()

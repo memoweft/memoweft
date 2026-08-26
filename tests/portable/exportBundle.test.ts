@@ -65,7 +65,18 @@ test('exportBundle：导出完整三层 + 溯源关系，保真 id/时间戳', (
     assert.equal(bundle.data.cognitions[0]!.id, c.id);
     assert.equal(bundle.data.cognitions[0]!.createdAt, c.createdAt);
 
-    assert.deepEqual(bundle.metadata.counts, { evidence: 2, events: 1, cognitions: 1 });
+    assert.deepEqual(bundle.metadata.counts, {
+      evidence: 2,
+      events: 1,
+      cognitions: 1,
+      entities: 0,
+      entityEvidence: 0,
+      relationships: 0,
+      worldEvents: 0,
+      retractions: 0,
+      cognitionTransitions: 0,
+      worldItemLifecycle: 0,
+    });
   } finally {
     s.close();
   }

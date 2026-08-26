@@ -30,11 +30,20 @@ from typing import Any, Callable, Literal, Mapping, Optional
 
 from ...clock import Clock, system_clock, to_iso_z
 from ...store.driver import BUSY_TIMEOUT_MS
+from ...types import ModelTier
+from ..trust.currentness import (
+    current_entity_aliases,
+    evidence_state,
+    linked_evidence,
+    world_item_visible,
+)
+from ..trust.revision import advance_world_revision
 from .world_worker import (
     ClaimedWorldJob,
     PermanentWorldJobError,
     WorldJobResult,
 )
+from .terminal_outcome import persist_terminal_outcome_in_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -514,6 +523,23 @@ class _CompiledOutcome:
     display: Optional[str] = None
 
 
+@dataclass(frozen=True, slots=True)
+class TrustCommandApplyResult:
+    """Formal Apply result returned inside a caller-owned command transaction."""
+
+    wrote_any: bool
+    results: tuple[dict[str, object], ...]
+    transition_ids: tuple[str, ...]
+
+
+class TrustCommandApplyError(RuntimeError):
+    """Stable compiler/Apply refusal for a direct Trust command."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
@@ -553,8 +579,8 @@ _SYSTEM_PROMPT = (
     "1. 只处理：用户本人稳定属性/偏好；第三方**身份类稳定属性**（性别/年龄/职业/"
     "所在地等，一次性/情景内容不算）；用户对第三方的命名；用户↔第三方或第三方↔"
     "第三方的稳定关系；用户明确说两个名字**同指一人**的显式等价（如\"杨杨就是"
-    "小杨\"）。**对任何人的评价（\"打游戏很厉害\"之类）一律不产出**；事件、"
-    "一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界"
+    "小杨\"）。**对任何人的评价（\"打游戏很厉害\"之类）一律不产出**；除已发生/"
+    "已确定事件外的一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界"
     "最多 5 条；作息/通勤/日程等稳定习惯也算用户稳定属性或偏好，可以产出；愿望/"
     "期待（\"想拥有…\"\"希望能…\"）与情绪、观点不产出）。\n"
     "2. supports 的 evidence_id 必须来自输入，start/end 是 Unicode 码点偏移，"
@@ -733,7 +759,8 @@ _SYSTEM_PROMPT_EN = (
     "third party or between third parties; explicit equivalence of two names "
     "for one person stated by the user (e.g. \"Yangyang is Xiaoyang\"). "
     "**Never produce evaluations of anyone (\"plays games really well\" and "
-    "the like)**; events, one-off facts and vague content are never produced. "
+    "the like)**; one-off facts other than happened/confirmed events and vague "
+    "content are never produced. "
     "Review the Evidence one by one; produce everything that is definite (at "
     "most 5 per boundary; routines/commutes/schedules and other stable habits "
     "count as stable attributes or preferences and may be produced; wishes/"
@@ -1000,13 +1027,17 @@ class HermesBatchAdapterProcessor:
         *,
         clock: Clock = system_clock,
         lang: Optional[str] = None,
+        model_tier: ModelTier = "cloud",
     ) -> None:
         if lang not in (None, "zh", "en"):
             raise ValueError("lang must be None, 'zh' or 'en'")
+        if model_tier not in ("cloud", "local"):
+            raise ValueError("model_tier must be 'cloud' or 'local'")
         self._db_path = db_path
         self._route = route
         self._clock = clock
         self._lang = lang
+        self.model_tier = model_tier
 
     # ── entry point ────────────────────────────────────────────────────────
 
@@ -1017,6 +1048,105 @@ class HermesBatchAdapterProcessor:
             return self._process(job, db)
         finally:
             db.close()
+
+    def apply_trust_command_items_in_transaction(
+        self,
+        db: sqlite3.Connection,
+        job: ClaimedWorldJob,
+        items: tuple[BatchItem, ...],
+        *,
+        now_text: str,
+    ) -> TrustCommandApplyResult:
+        """Reuse compiler-verified correction/retract Apply without a model call.
+
+        The caller owns ``BEGIN IMMEDIATE`` and the durable command receipt.
+        This method deliberately does not commit or advance ``memory_state``;
+        it writes the same World rows, provenance ledgers and transitions as
+        the World Job path, using the caller's next revision.
+        """
+
+        if not db.in_transaction:
+            raise TrustCommandApplyError("trust_command_transaction_required")
+        batch = _CompiledBatch(items=items)
+        try:
+            for evidence_id in job.evidence_ids():
+                self._validate_evidence_in_transaction(db, job, evidence_id)
+            for item in items:
+                self._validate_supports_in_transaction(db, job, item)
+            self._validate_historical_targets_in_transaction(db, job, batch)
+            results: list[dict[str, object]] = []
+            pending_cognition_transitions: list[tuple[str, str]] = []
+            transition_ids: list[str] = []
+            wrote_any = False
+            for item in items:
+                if item.action != "correct" or item.contradicts_cognition_id is not None:
+                    raise _ZeroWriteError("unsupported_trust_command_batch_item")
+                if item.retract:
+                    result, wrote = self._apply_retract(db, job, item, now_text)
+                    prior = (
+                        item.corrects_cognition_id
+                        or item.corrects_relationship_id
+                        or item.corrects_event_id
+                    )
+                    assert prior is not None
+                    transition_ids.append(
+                        "retraction-" + _hash_text(_canonical(["retracts", prior]))
+                    )
+                elif item.statement_kind == "relationship":
+                    result, wrote = self._apply_relationship_correct(
+                        db, job, item, now_text
+                    )
+                    transition_ids.append(
+                        "evidence-ledger-"
+                        + _hash_text(
+                            _canonical(
+                                [
+                                    "relationship_correction",
+                                    item.corrects_relationship_id,
+                                    result["replacement_relationship_id"],
+                                ]
+                            )
+                        )
+                    )
+                elif item.statement_kind == "event":
+                    result, wrote = self._apply_event_correct(db, job, item, now_text)
+                    transition_ids.append(
+                        "evidence-ledger-"
+                        + _hash_text(
+                            _canonical(
+                                [
+                                    "event_correction",
+                                    item.corrects_event_id,
+                                    result["replacement_event_id"],
+                                ]
+                            )
+                        )
+                    )
+                else:
+                    result, wrote, transition = self._apply_correct(
+                        db, job, item, now_text
+                    )
+                    if transition is not None:
+                        pending_cognition_transitions.append(transition)
+                results.append(result)
+                wrote_any = wrote_any or wrote
+            if wrote_any:
+                revision = self._current_revision(db) + 1
+                for prior_id, replacement_id in pending_cognition_transitions:
+                    self._write_transition(db, prior_id, replacement_id, revision)
+                    transition_ids.append(
+                        "cognition-transition-"
+                        + _hash_text(
+                            _canonical(["corrects", prior_id, replacement_id])
+                        )
+                    )
+            return TrustCommandApplyResult(
+                wrote_any=wrote_any,
+                results=tuple(results),
+                transition_ids=tuple(transition_ids if wrote_any else ()),
+            )
+        except _ZeroWriteError as exc:
+            raise TrustCommandApplyError(str(exc)) from exc
 
     def _process(self, job: ClaimedWorldJob, db: sqlite3.Connection) -> WorldJobResult:
         payload = self._load_checkpoint(db, job)
@@ -1065,6 +1195,10 @@ class HermesBatchAdapterProcessor:
             # applies deterministically.  This settle attempt must not mutate
             # anything (the fenced UPDATE below matches zero rows).
             return WorldJobResult.dead("world_apply_fence_lost", **model_kwargs)
+        if outcome["state"] == "no_change":
+            return WorldJobResult.no_change(
+                "no_world_mutation", world_result=outcome, **model_kwargs
+            )
         return WorldJobResult.applied(
             reason="applied",
             world_result=outcome,
@@ -1172,11 +1306,29 @@ class HermesBatchAdapterProcessor:
         blocks: list[dict[str, object]] = []
         for evidence_id in ids:
             row = db.execute(
-                "SELECT raw_content, preceding_ai_context FROM evidence WHERE id = ?",
+                "SELECT raw_content, preceding_ai_context, subject_id, host_id, source_kind, "
+                "deleted_at, allow_local_read, allow_cloud_read, allow_inference "
+                "FROM evidence WHERE id = ?",
                 (evidence_id,),
             ).fetchone()
             if row is None:
                 raise PermanentWorldJobError("evidence_missing")
+            state = evidence_state(
+                {
+                    "deleted_at": row[5],
+                    "allow_local_read": row[6],
+                    "allow_cloud_read": row[7],
+                    "allow_inference": row[8],
+                },
+                surface="formation",
+                model_tier=self.model_tier,
+            )
+            if state is not None:
+                raise PermanentWorldJobError(f"{state}_before_dispatch")
+            if str(row[2]) != job.subject_id or str(row[3]) != job.host_id:
+                raise PermanentWorldJobError("evidence_target_changed_before_dispatch")
+            if str(row[4]) != "spoken":
+                raise PermanentWorldJobError("evidence_source_kind_changed_before_dispatch")
             block: dict[str, object] = {
                 "id": evidence_id,
                 "text": str(row[0]),
@@ -1200,8 +1352,18 @@ class HermesBatchAdapterProcessor:
         ).fetchall()
         payload: list[dict[str, object]] = []
         for r in rows:
+            cognition_id = str(r[0])
+            if not world_item_visible(
+                db,
+                job.subject_id,
+                "cognition",
+                cognition_id,
+                surface="formation",
+                model_tier=self.model_tier,
+            ):
+                continue
             entry: dict[str, object] = {
-                "id": str(r[0]),
+                "id": cognition_id,
                 "content": str(r[1]),
                 "statement_kind": str(r[2]),
             }
@@ -1221,13 +1383,49 @@ class HermesBatchAdapterProcessor:
             "ORDER BY created_at, id",
             (job.subject_id,),
         ).fetchall()
+        entity_ids = {
+            str(r[0])
+            for r in rows
+            if world_item_visible(
+                db,
+                job.subject_id,
+                "entity",
+                str(r[0]),
+                surface="formation",
+                model_tier=self.model_tier,
+            )
+        }
+        for cognition in self._current_cognitions_payload(job, db):
+            for key in ("target_entity_id", "perspective_entity_id"):
+                value = cognition.get(key)
+                if isinstance(value, str):
+                    entity_ids.add(value)
+        for relationship in self._current_relationships_payload(job, db):
+            entity_ids.add(str(relationship["source_entity_id"]))
+            entity_ids.add(str(relationship["target_entity_id"]))
+        for event in self._current_events_payload(job, db):
+            for key in ("participants", "objects"):
+                values = event.get(key)
+                if isinstance(values, list):
+                    entity_ids.update(value for value in values if isinstance(value, str))
         payload: list[dict[str, object]] = []
         for r in rows:
+            if str(r[0]) not in entity_ids:
+                continue
             aliases: list[str] = []
             try:
                 decoded = json.loads(str(r[3]) or "[]")
                 if isinstance(decoded, list):
-                    aliases = [str(x) for x in decoded]
+                    permitted = set(
+                        current_entity_aliases(
+                            db,
+                            job.subject_id,
+                            str(r[0]),
+                            surface="formation",
+                            model_tier=self.model_tier,
+                        )
+                    )
+                    aliases = [str(x) for x in decoded if str(x) in permitted]
             except (TypeError, ValueError):
                 aliases = []
             payload.append(
@@ -1259,27 +1457,56 @@ class HermesBatchAdapterProcessor:
                 "target_entity_id": str(r[4]),
             }
             for r in rows
+            if world_item_visible(
+                db,
+                job.subject_id,
+                "relationship",
+                str(r[0]),
+                surface="formation",
+                model_tier=self.model_tier,
+            )
         ]
 
     def _current_events_payload(
         self, job: ClaimedWorldJob, db: sqlite3.Connection
     ) -> list[dict[str, object]]:
         rows = db.execute(
-            "SELECT id, content, occurred_at, time_expression "
+            "SELECT id, content, occurred_at, time_expression, participants_json, objects_json "
             "FROM world_event "
             "WHERE world_id = ? AND invalid_at IS NULL "
             "ORDER BY created_at, id",
             (job.subject_id,),
         ).fetchall()
-        return [
-            {
-                "id": str(r[0]),
-                "content": str(r[1]),
-                "occurred_at": None if r[2] is None else str(r[2]),
-                "time_expression": None if r[3] is None else str(r[3]),
-            }
-            for r in rows
-        ]
+        payload: list[dict[str, object]] = []
+        for r in rows:
+            event_id = str(r[0])
+            if not world_item_visible(
+                db,
+                job.subject_id,
+                "event",
+                event_id,
+                surface="formation",
+                model_tier=self.model_tier,
+            ):
+                continue
+            def entity_ids(value: object) -> list[str]:
+                try:
+                    decoded = json.loads(str(value))
+                except (TypeError, ValueError):
+                    return []
+                return [entry for entry in decoded if isinstance(entry, str)] if isinstance(decoded, list) else []
+
+            payload.append(
+                {
+                    "id": event_id,
+                    "content": str(r[1]),
+                    "occurred_at": None if r[2] is None else str(r[2]),
+                    "time_expression": None if r[3] is None else str(r[3]),
+                    "participants": entity_ids(r[4]),
+                    "objects": entity_ids(r[5]),
+                }
+            )
+        return payload
 
     # ── deterministic compile ──────────────────────────────────────────────
 
@@ -2165,8 +2392,15 @@ class HermesBatchAdapterProcessor:
                 db.execute("ROLLBACK")
                 return False, None
 
+            # The route observed the complete bound Evidence batch, not only
+            # the subset the model later cited in item.supports. Revalidate
+            # all of it before the first World mutation so a revoked unused
+            # input cannot influence an applied result.
+            for evidence_id in job.evidence_ids():
+                self._validate_evidence_in_transaction(db, job, evidence_id)
             for item in batch.items:
                 self._validate_supports_in_transaction(db, job, item)
+            self._validate_historical_targets_in_transaction(db, job, batch)
 
             results: list[dict[str, object]] = []
             pending_transitions: list[tuple[str, str]] = []
@@ -2211,20 +2445,31 @@ class HermesBatchAdapterProcessor:
                 results.append(result)
                 wrote_any = wrote_any or wrote
 
-            revision = (
-                self._bump_memory_state(db)
-                if wrote_any
-                else self._current_revision(db)
-            )
-            for prior_id, replacement_id in pending_transitions:
-                self._write_transition(db, prior_id, replacement_id, revision)
+            revision = self._current_revision(db)
+            if wrote_any:
+                revision = self._bump_memory_state(db)
+                for prior_id, replacement_id in pending_transitions:
+                    self._write_transition(db, prior_id, replacement_id, revision)
 
-            outcome = self._world_outcome(job, batch, results, revision)
+            terminal_state: Literal["applied", "no_change"] = (
+                "applied" if wrote_any else "no_change"
+            )
+            terminal_detail = None if wrote_any else "no_world_mutation"
+            outcome = self._world_outcome(
+                job,
+                batch,
+                results,
+                revision,
+                state=terminal_state,
+                reason=terminal_detail,
+            )
             world_json = _canonical(outcome)
             cursor = db.execute(
                 """UPDATE memory_world_job
-                      SET state = 'applied',
-                          world_result_json = ?,
+                       SET state = ?,
+                           terminal_state = ?,
+                           terminal_detail = ?,
+                           world_result_json = ?,
                           result_hash = ?,
                           completed_at = ?,
                           last_error_type = NULL,
@@ -2237,6 +2482,9 @@ class HermesBatchAdapterProcessor:
                       AND claim_token = ?
                       AND fencing_generation = ?""",
                 (
+                    terminal_state,
+                    terminal_state,
+                    terminal_detail,
                     world_json,
                     _hash_text(world_json),
                     now_text,
@@ -2249,6 +2497,7 @@ class HermesBatchAdapterProcessor:
             if cursor.rowcount != 1:
                 db.execute("ROLLBACK")
                 return False, None
+            persist_terminal_outcome_in_transaction(db, job.job_id)
             db.execute("COMMIT")
             return True, outcome
         except BaseException:
@@ -2262,30 +2511,136 @@ class HermesBatchAdapterProcessor:
         self, db: sqlite3.Connection, job: ClaimedWorldJob, item: BatchItem
     ) -> None:
         for evidence_id, start, end, slice_text in item.supports:
-            row = db.execute(
-                "SELECT e.raw_content, e.subject_id, e.host_id, e.source_kind, "
-                "e.deleted_at, b.raw_content_hash "
-                "FROM evidence e "
-                "LEFT JOIN boundary_evidence_content b ON b.evidence_id = e.id "
-                "WHERE e.id = ?",
-                (evidence_id,),
-            ).fetchone()
-            if row is None:
-                raise _ZeroWriteError("evidence_missing_before_apply")
-            if row[4] is not None:
-                raise _ZeroWriteError("evidence_deleted_before_apply")
-            if str(row[1]) != job.subject_id or str(row[2]) != job.host_id:
-                raise _ZeroWriteError("evidence_target_changed_before_apply")
-            if str(row[3]) != "spoken":
-                raise _ZeroWriteError("evidence_source_kind_changed_before_apply")
-            bound_hash = row[5]
-            if not isinstance(bound_hash, str) or not bound_hash:
-                raise _ZeroWriteError("evidence_content_hash_missing_before_apply")
-            raw = str(row[0])
-            if _hash_text(raw) != bound_hash:
-                raise _ZeroWriteError("evidence_content_hash_mismatch_before_apply")
+            raw = self._validate_evidence_in_transaction(db, job, evidence_id)
             if raw[start:end] != slice_text:
                 raise _ZeroWriteError("span_changed_before_apply")
+
+    def _validate_evidence_in_transaction(
+        self, db: sqlite3.Connection, job: ClaimedWorldJob, evidence_id: str
+    ) -> str:
+        row = db.execute(
+            "SELECT e.raw_content, e.subject_id, e.host_id, e.source_kind, "
+            "e.deleted_at, e.allow_local_read, e.allow_cloud_read, "
+            "e.allow_inference, b.raw_content_hash "
+            "FROM evidence e "
+            "LEFT JOIN boundary_evidence_content b ON b.evidence_id = e.id "
+            "WHERE e.id = ?",
+            (evidence_id,),
+        ).fetchone()
+        if row is None:
+            raise _ZeroWriteError("evidence_missing_before_apply")
+        state = evidence_state(
+            {
+                "deleted_at": row[4],
+                "allow_local_read": row[5],
+                "allow_cloud_read": row[6],
+                "allow_inference": row[7],
+            },
+            surface="formation",
+            model_tier=self.model_tier,
+        )
+        if state is not None:
+            raise _ZeroWriteError(f"{state}_before_apply")
+        if str(row[1]) != job.subject_id or str(row[2]) != job.host_id:
+            raise _ZeroWriteError("evidence_target_changed_before_apply")
+        if str(row[3]) != "spoken":
+            raise _ZeroWriteError("evidence_source_kind_changed_before_apply")
+        bound_hash = row[8]
+        if not isinstance(bound_hash, str) or not bound_hash:
+            raise _ZeroWriteError("evidence_content_hash_missing_before_apply")
+        raw = str(row[0])
+        if _hash_text(raw) != bound_hash:
+            raise _ZeroWriteError("evidence_content_hash_mismatch_before_apply")
+        return raw
+
+    def _validate_historical_targets_in_transaction(
+        self, db: sqlite3.Connection, job: ClaimedWorldJob, batch: _CompiledBatch
+    ) -> None:
+        """Fail closed if a model-selected historical target lost provenance.
+
+        The model saw these current rows in its route payload.  A route callback
+        may revoke/delete their supporting Evidence while the job Evidence stays
+        valid; therefore target currentness is rechecked in the same Apply
+        transaction and before any World mutation.  This deliberately shares
+        the exact surface-aware predicate used to construct that payload.
+        """
+
+        targets: set[tuple[str, str]] = set()
+        for item in batch.items:
+            if item.corrects_cognition_id is not None:
+                targets.add(("cognition", str(item.corrects_cognition_id)))
+            if item.contradicts_cognition_id is not None:
+                targets.add(("cognition", str(item.contradicts_cognition_id)))
+            if item.corrects_relationship_id is not None:
+                targets.add(("relationship", str(item.corrects_relationship_id)))
+            if item.corrects_event_id is not None:
+                targets.add(("event", str(item.corrects_event_id)))
+            if (
+                item.statement_kind == "alias"
+                and item.entity_canonical_name is not None
+                and item.alias_of_canonical_name is not None
+            ):
+                targets.add(
+                    ("entity", entity_id_for(job.subject_id, item.entity_canonical_name))
+                )
+                targets.add(
+                    ("entity", entity_id_for(job.subject_id, item.alias_of_canonical_name))
+                )
+
+        for kind, item_id in sorted(targets):
+            # Preserve the established deterministic replay/unknown-target
+            # outcomes.  The typed apply operation owns those state errors;
+            # provenance needs revalidation only for a historical target that
+            # is still current and could otherwise be mutated below.
+            if not self._historical_target_is_current(db, job.subject_id, kind, item_id):
+                continue
+            # V3 rows produced before entity-formation provenance existed are
+            # preserved for deterministic replay.  Once an Entity carries any
+            # formal provenance, however, every link is authoritative and a
+            # revoked one must block its alias merge/reanchor.
+            if kind == "entity" and not linked_evidence(db, "entity", item_id):
+                continue
+            if not world_item_visible(
+                db,
+                job.subject_id,
+                kind,  # type: ignore[arg-type]
+                item_id,
+                surface="formation",
+                model_tier=self.model_tier,
+            ):
+                raise _ZeroWriteError(
+                    f"historical_{kind}_provenance_not_current_before_apply"
+                )
+
+    @staticmethod
+    def _historical_target_is_current(
+        db: sqlite3.Connection, subject_id: str, kind: str, item_id: str
+    ) -> bool:
+        if kind == "cognition":
+            row = db.execute(
+                "SELECT 1 FROM cognition WHERE id = ? AND subject_id = ? "
+                "AND invalid_at IS NULL AND archived_at IS NULL AND muted_at IS NULL",
+                (item_id, subject_id),
+            ).fetchone()
+        elif kind == "relationship":
+            row = db.execute(
+                "SELECT 1 FROM relationship WHERE id = ? AND world_id = ? "
+                "AND invalid_at IS NULL",
+                (item_id, subject_id),
+            ).fetchone()
+        elif kind == "entity":
+            row = db.execute(
+                "SELECT 1 FROM entity WHERE id = ? AND world_id = ? "
+                "AND invalid_at IS NULL",
+                (item_id, subject_id),
+            ).fetchone()
+        else:
+            row = db.execute(
+                "SELECT 1 FROM world_event WHERE id = ? AND world_id = ? "
+                "AND invalid_at IS NULL",
+                (item_id, subject_id),
+            ).fetchone()
+        return row is not None
 
     @staticmethod
     def _recompute_chain_confidence(
@@ -2334,11 +2689,13 @@ class HermesBatchAdapterProcessor:
         cognition_id = item.cognition_id(job.subject_id)
         target_entity_id: Optional[str] = None
         perspective_entity_id: Optional[str] = None
+        target_created = False
+        perspective_created = False
         if item.entity_canonical_name is not None and item.statement_kind == "attribute":
             # V4 targeted third-party attribute: the proposition's subject is
             # the entity; resolve/create it and record the target sidecar.
             assert item.entity_kind is not None
-            target_entity_id, _created = self._resolve_target_entity(
+            target_entity_id, target_created = self._resolve_target_entity(
                 db, job, item.entity_canonical_name, item.entity_kind, now_text
             )
             if item.perspective_holder_name is not None:
@@ -2346,7 +2703,7 @@ class HermesBatchAdapterProcessor:
                 # holder enters the deterministic identity; the World stays the
                 # Owner's).
                 assert item.perspective_holder_kind is not None
-                perspective_entity_id, _h_created = self._resolve_target_entity(
+                perspective_entity_id, perspective_created = self._resolve_target_entity(
                     db, job, item.perspective_holder_name,
                     item.perspective_holder_kind, now_text,
                 )
@@ -2409,6 +2766,7 @@ class HermesBatchAdapterProcessor:
         else:
             # Exact replay: nothing in the World changed.
             wrote = False
+        wrote = wrote or target_created or perspective_created
         return (
             self._item_outcome(
                 item, cognition_id, confidence=new_confidence,
@@ -2422,14 +2780,14 @@ class HermesBatchAdapterProcessor:
 
     def _ensure_owner_entity(
         self, db: sqlite3.Connection, job: ClaimedWorldJob, now_text: str
-    ) -> str:
+    ) -> tuple[str, bool]:
         owner_id = owner_entity_id_for(job.subject_id)
         existing = db.execute(
             "SELECT 1 FROM entity WHERE id = ? AND invalid_at IS NULL",
             (owner_id,),
         ).fetchone()
         if existing is None:
-            db.execute(
+            cursor = db.execute(
                 "INSERT OR IGNORE INTO entity (id, world_id, kind, "
                 "canonical_name, invalid_at, created_at, updated_at) "
                 "VALUES (?, ?, ?, ?, NULL, ?, ?)",
@@ -2442,7 +2800,8 @@ class HermesBatchAdapterProcessor:
                     now_text,
                 ),
             )
-        return owner_id
+            return owner_id, cursor.rowcount == 1
+        return owner_id, False
 
     def _resolve_target_entity(
         self, db: sqlite3.Connection, job: ClaimedWorldJob,
@@ -2453,7 +2812,7 @@ class HermesBatchAdapterProcessor:
             "SELECT kind, invalid_at FROM entity WHERE id = ?", (entity_id,)
         ).fetchone()
         if existing is None:
-            db.execute(
+            cursor = db.execute(
                 "INSERT OR IGNORE INTO entity (id, world_id, kind, "
                 "canonical_name, invalid_at, created_at, updated_at) "
                 "VALUES (?, ?, ?, ?, NULL, ?, ?)",
@@ -2466,7 +2825,7 @@ class HermesBatchAdapterProcessor:
                     now_text,
                 ),
             )
-            return entity_id, True
+            return entity_id, cursor.rowcount == 1
         if existing[1] is not None:
             raise _ZeroWriteError("entity_not_current")
         if str(existing[0]) != kind:
@@ -2556,20 +2915,20 @@ class HermesBatchAdapterProcessor:
                 "cred_status": final_cred,
                 "evidence_count": len(item.supports),
             }
-            return outcome, wrote
+            return outcome, wrote or created
 
         assert item.relation_type is not None
         assert item.target_canonical_name is not None
         assert item.target_entity_kind is not None
         if item.source_canonical_name is not None:
             assert item.source_entity_kind is not None
-            source_id, _source_created = self._resolve_target_entity(
+            source_id, source_created = self._resolve_target_entity(
                 db, job, item.source_canonical_name, item.source_entity_kind,
                 now_text,
             )
         else:
-            source_id = self._ensure_owner_entity(db, job, now_text)
-        target_id, _created = self._resolve_target_entity(
+            source_id, source_created = self._ensure_owner_entity(db, job, now_text)
+        target_id, target_created = self._resolve_target_entity(
             db, job, item.target_canonical_name, item.target_entity_kind, now_text
         )
         relationship_id = relationship_id_for(
@@ -2660,7 +3019,7 @@ class HermesBatchAdapterProcessor:
             cred_status=new_cred, target_entity_id=target_id,
             source_entity_id=source_id,
         )
-        return outcome, wrote
+        return outcome, wrote or source_created or target_created
 
     # ── V5: alias merge ─────────────────────────────────────────────────────
 
@@ -2795,7 +3154,7 @@ class HermesBatchAdapterProcessor:
         aliases = self._entity_aliases(db, canonical_id)
         if alias_name not in aliases:
             aliases.append(alias_name)
-            db.execute(
+            ledger = db.execute(
                 "UPDATE entity SET aliases_json = ?, updated_at = ? WHERE id = ?",
                 (_canonical(aliases), now_text, canonical_id),
             )
@@ -3242,23 +3601,28 @@ class HermesBatchAdapterProcessor:
         optional (Owner decision 2026-08-16: time may be empty).
         """
         participant_ids: list[str] = []
+        entities_created = False
         for name, kind in item.event_participants:
             if name == OWNER_ENTITY_NAME:
-                participant_ids.append(
-                    self._ensure_owner_entity(db, job, now_text)
-                )
+                participant_id, created = self._ensure_owner_entity(db, job, now_text)
+                participant_ids.append(participant_id)
             else:
-                participant_ids.append(
-                    self._resolve_target_entity(db, job, name, kind, now_text)[0]
+                participant_id, created = self._resolve_target_entity(
+                    db, job, name, kind, now_text
                 )
+                participant_ids.append(participant_id)
+            entities_created = entities_created or created
         object_ids: list[str] = []
         for name, kind in item.event_objects:
             if name == OWNER_ENTITY_NAME:
-                object_ids.append(self._ensure_owner_entity(db, job, now_text))
+                object_id, created = self._ensure_owner_entity(db, job, now_text)
+                object_ids.append(object_id)
             else:
-                object_ids.append(
-                    self._resolve_target_entity(db, job, name, kind, now_text)[0]
+                object_id, created = self._resolve_target_entity(
+                    db, job, name, kind, now_text
                 )
+                object_ids.append(object_id)
+            entities_created = entities_created or created
         event_id = world_event_id_for(job.subject_id, item.proposition)
         existing = db.execute(
             "SELECT content, formed_by, occurred_at, time_expression, "
@@ -3361,6 +3725,7 @@ class HermesBatchAdapterProcessor:
             wrote = True
         else:
             wrote = False
+        wrote = wrote or entities_created
         return (
             self._event_outcome(
                 item, event_id, participant_ids, object_ids, new_confidence
@@ -3442,14 +3807,14 @@ class HermesBatchAdapterProcessor:
         participant_ids: list[str] = []
         for name, kind in item.event_participants:
             participant_ids.append(
-                self._ensure_owner_entity(db, job, now_text)
+                self._ensure_owner_entity(db, job, now_text)[0]
                 if name == OWNER_ENTITY_NAME
                 else self._resolve_target_entity(db, job, name, kind, now_text)[0]
             )
         object_ids: list[str] = []
         for name, kind in item.event_objects:
             object_ids.append(
-                self._ensure_owner_entity(db, job, now_text)
+                self._ensure_owner_entity(db, job, now_text)[0]
                 if name == OWNER_ENTITY_NAME
                 else self._resolve_target_entity(db, job, name, kind, now_text)[0]
             )
@@ -3802,7 +4167,7 @@ class HermesBatchAdapterProcessor:
             ledger_id = "evidence-ledger-" + _hash_text(
                 _canonical(["contradict", target, evidence_id, start, end])
             )
-            db.execute(
+            ledger = db.execute(
                 "INSERT OR IGNORE INTO evidence_ledger (id, content, "
                 "payload_json) VALUES (?, ?, ?)",
                 (
@@ -3819,6 +4184,7 @@ class HermesBatchAdapterProcessor:
                     ),
                 ),
             )
+            wrote = wrote or ledger.rowcount == 1
         return (
             {
                 "action": "contradict",
@@ -4201,97 +4567,7 @@ class HermesBatchAdapterProcessor:
         )
 
     def _bump_memory_state(self, db: sqlite3.Connection) -> int:
-        row = db.execute(
-            "SELECT revision FROM memory_state WHERE singleton = 1"
-        ).fetchone()
-        revision = (int(row[0]) + 1) if row is not None else 1
-        snapshot = db.execute(
-            "SELECT c.id, c.content, c.content_type, c.confidence, "
-            "c.cred_status, t.target_entity_id, t.perspective_entity_id "
-            "FROM cognition c LEFT JOIN cognition_target t "
-            "ON t.cognition_id = c.id "
-            "WHERE c.archived_at IS NULL AND c.invalid_at IS NULL "
-            "ORDER BY c.created_at, c.id"
-        ).fetchall()
-        snapshot_data = [
-            {
-                "id": str(r[0]),
-                "content": str(r[1]),
-                "content_type": str(r[2]),
-                "confidence": int(r[3]),
-                "cred_status": str(r[4]),
-                "target_entity_id": None if r[5] is None else str(r[5]),
-                "perspective_entity_id": None if r[6] is None else str(r[6]),
-            }
-            for r in snapshot
-        ]
-        entities = db.execute(
-            "SELECT id, canonical_name, kind FROM entity "
-            "WHERE invalid_at IS NULL ORDER BY created_at, id"
-        ).fetchall()
-        entity_data = [
-            {
-                "id": str(r[0]),
-                "canonical_name": str(r[1]),
-                "kind": str(r[2]),
-            }
-            for r in entities
-        ]
-        relationships = db.execute(
-            "SELECT id, content, relation_type, confidence, cred_status "
-            "FROM relationship WHERE invalid_at IS NULL ORDER BY created_at, id"
-        ).fetchall()
-        relationship_data = [
-            {
-                "id": str(r[0]),
-                "content": str(r[1]),
-                "relation_type": str(r[2]),
-                "confidence": int(r[3]),
-                "cred_status": str(r[4]),
-            }
-            for r in relationships
-        ]
-        events = db.execute(
-            "SELECT id, content, occurred_at, time_expression, "
-            "participants_json, objects_json, confidence, cred_status "
-            "FROM world_event WHERE invalid_at IS NULL ORDER BY created_at, id"
-        ).fetchall()
-        event_data = [
-            {
-                "id": str(r[0]),
-                "content": str(r[1]),
-                "occurred_at": None if r[2] is None else str(r[2]),
-                "time_expression": None if r[3] is None else str(r[3]),
-                "participants": json.loads(str(r[4]) or "[]"),
-                "objects": json.loads(str(r[5]) or "[]"),
-                "confidence": int(r[6]),
-                "cred_status": str(r[7]),
-            }
-            for r in events
-        ]
-        snapshot_json = _canonical(
-            {
-                "schema_version": 5,
-                "revision": revision,
-                "cognitions": snapshot_data,
-                "entities": entity_data,
-                "relationships": relationship_data,
-                "events": event_data,
-            }
-        )
-        if row is None:
-            db.execute(
-                "INSERT INTO memory_state (singleton, revision, snapshot_json, "
-                "snapshot_hash) VALUES (1, ?, ?, ?)",
-                (revision, snapshot_json, _hash_text(snapshot_json)),
-            )
-        else:
-            db.execute(
-                "UPDATE memory_state SET revision = ?, snapshot_json = ?, "
-                "snapshot_hash = ? WHERE singleton = 1",
-                (revision, snapshot_json, _hash_text(snapshot_json)),
-            )
-        return revision
+        return advance_world_revision(db)
 
     def _current_revision(self, db: sqlite3.Connection) -> int:
         row = db.execute(
@@ -4305,12 +4581,15 @@ class HermesBatchAdapterProcessor:
         batch: _CompiledBatch,
         results: list[dict[str, object]],
         revision: int,
+        *,
+        state: Literal["applied", "no_change"] = "applied",
+        reason: str | None = None,
     ) -> dict[str, object]:
         if batch.legacy:
             item = results[0]
-            return {
+            legacy_outcome: dict[str, object] = {
                 "schema_version": LEGACY_INTERPRETATION_SCHEMA_VERSION,
-                "state": "applied",
+                "state": state,
                 "cognition_id": item["cognition_id"],
                 "statement_kind": item["statement_kind"],
                 "confidence": item["confidence"],
@@ -4319,13 +4598,19 @@ class HermesBatchAdapterProcessor:
                 "evidence_count": item["evidence_count"],
                 "boundary_event_id": job.boundary_event_id,
             }
-        return {
+            if reason is not None:
+                legacy_outcome["reason"] = reason
+            return legacy_outcome
+        outcome: dict[str, object] = {
             "schema_version": batch.envelope_version,
-            "state": "applied",
+            "state": state,
             "world_revision": revision,
             "cognitions": results,
             "boundary_event_id": job.boundary_event_id,
         }
+        if reason is not None:
+            outcome["reason"] = reason
+        return outcome
 
 
 _SPAN_REPAIR_PREFIXES = ("我", "我们", "咱们", "俺", "本人")
@@ -4445,11 +4730,9 @@ class _ClarificationError(_ZeroWriteError):
         self.display = display
 
 
-def _model_display(value: object) -> Optional[str]:
-    """Validate the model-supplied question/note (optional, ≤500 chars)."""
+def _model_display(value: object) -> str:
+    """Require a bounded human question/note for its non-no-change terminal."""
 
-    if value is None:
-        return None
     if not isinstance(value, str):
         raise _ZeroWriteError("invalid_model_result")
     stripped = value.strip()

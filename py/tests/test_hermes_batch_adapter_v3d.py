@@ -137,6 +137,14 @@ def _seed_cognition(
 ) -> None:
     db = sqlite3.connect(db_path, isolation_level=None)
     db.execute(
+        "INSERT OR IGNORE INTO evidence (id, subject_id, source_kind, host_id, "
+        "origin_id, occurred_at, recorded_at, raw_content, summary, "
+        "allow_local_read, allow_cloud_read, allow_inference, deleted_at) "
+        "VALUES ('seed-evidence', 'owner', 'spoken', 'hermes:test', 'seed', ?, ?, "
+        "'seed evidence', 'seed evidence', 1, 1, 1, NULL)",
+        (_T0, _T0),
+    )
+    db.execute(
         "INSERT OR IGNORE INTO cognition (id, subject_id, content, content_type, "
         "formed_by, confidence, cred_status, valid_at, created_at, updated_at) "
         "VALUES (?, 'owner', ?, 'preference', 'stated', ?, 'limited', ?, ?, ?)",
@@ -153,6 +161,14 @@ def _seed_cognition(
 def _seed_relationship(db_path: Path, rid: str, content: str) -> None:
     db = sqlite3.connect(db_path, isolation_level=None)
     db.execute(
+        "INSERT OR IGNORE INTO evidence (id, subject_id, source_kind, host_id, "
+        "origin_id, occurred_at, recorded_at, raw_content, summary, "
+        "allow_local_read, allow_cloud_read, allow_inference, deleted_at) "
+        "VALUES ('seed-evidence', 'owner', 'spoken', 'hermes:test', 'seed', ?, ?, "
+        "'seed evidence', 'seed evidence', 1, 1, 1, NULL)",
+        (_T0, _T0),
+    )
+    db.execute(
         "INSERT OR IGNORE INTO relationship (id, world_id, source_entity_id, "
         "target_entity_id, relation_type, content, formed_by, confidence, "
         "cred_status, invalid_at, created_at, updated_at) VALUES (?, 'owner', "
@@ -165,6 +181,11 @@ def _seed_relationship(db_path: Path, rid: str, content: str) -> None:
             _T0,
             _T0,
         ),
+    )
+    db.execute(
+        "INSERT OR IGNORE INTO relationship_evidence (relationship_id, evidence_id, relation) "
+        "VALUES (?, 'seed-evidence', 'support')",
+        (rid,),
     )
     db.close()
 
@@ -195,6 +216,7 @@ def test_retract_cognition_invalidates_and_records_sidecar(tmp_path: Path) -> No
     )
     row = _job(db_path)
     assert row["state"] == "applied"
+    assert row["terminal_state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 1
     item = outcome["cognitions"][0]
