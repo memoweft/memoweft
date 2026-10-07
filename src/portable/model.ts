@@ -318,7 +318,8 @@ export function deriveFreshPortableV4Plan(
     semanticResolutions: (data.semanticResolutions ?? []).map((item) => item.id),
     entities: (data.entities ?? []).map((item) => item.id),
     entityEvidence: (data.entityEvidence ?? []).map(
-      (item) => `${item.entityId}/${item.evidenceId}/${item.relation}/${item.start ?? ''}/${item.end ?? ''}`,
+      (item) =>
+        `${item.entityId}/${item.evidenceId}/${item.relation}/${item.start ?? ''}/${item.end ?? ''}`,
     ),
     relationships: (data.relationships ?? []).map((item) => item.id),
     worldEvents: (data.worldEvents ?? []).map((item) => item.id),

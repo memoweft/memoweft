@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pytest
 
+from support.json_assertions import as_string
+
 from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
 from memoweft.integrations.dsh_bridge.reprocess import reprocess_job
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
@@ -17,12 +19,13 @@ def test_reprocess_reuses_evidence_and_preserves_old_terminal_and_history(tmp_pa
         {"role": "assistant", "content": "你好。", "message_id": "reply"},
     ]))
     path = runtime.db_path
+    assert path is not None
     WorldJobWorker(path).run_until_quiescent()
     with sqlite3.connect(path) as db:
         old = db.execute("SELECT * FROM memory_world_job WHERE job_id=?", (first["job_id"],)).fetchone()
         evidence = db.execute("SELECT * FROM evidence").fetchall()
         interactions = db.execute("SELECT * FROM interaction_context").fetchall()
-    args = dict(subject_id=runtime.subject_id, job_id=first["job_id"], request_id="repair-quote-support")
+    args = dict(subject_id=as_string(runtime.subject_id), job_id=as_string(first["job_id"]), request_id="repair-quote-support")
     result = reprocess_job(path, **args)
     assert result["stored"] == 0 and result["skipped"] == 1
     assert result["job_id"] != first["job_id"]

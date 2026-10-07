@@ -9,6 +9,8 @@ from typing import Any, cast
 
 import pytest
 
+from support.json_assertions import as_object, as_objects
+
 from memoweft.integrations.hermes.recall import recall_world_snapshot
 from memoweft.integrations.trust import QueryService
 from memoweft.integrations.trust.portable_service import PortableError, PortableService
@@ -246,10 +248,10 @@ def test_cross_host_plan_apply_restart_replay_world_and_recall_are_consistent(
     ).list_world_items(include_history=True)
     assert any(
         item["object_kind"] == "entity" and item["item_id"] == "ent-owner"
-        for item in target_world["items"]
+        for item in as_objects(target_world["items"])
     )
-    assert _replace_subject(source_world["items"], "host-a-owner") == _replace_subject(
-        target_world["items"], "host-b-owner"
+    assert _replace_subject(as_objects(source_world["items"]), "host-a-owner") == _replace_subject(
+        as_objects(target_world["items"]), "host-b-owner"
     )
 
     source_db = sqlite3.connect(source_path)
@@ -273,10 +275,10 @@ def test_conflict_plan_and_receipt_failure_are_zero_write(tmp_path: Path) -> Non
     target.apply_import(fixture, plan_hash=str(initial["plan_hash"]))
     duplicate_plan = target.plan_import(fixture)
     assert duplicate_plan["valid"] is True
-    assert duplicate_plan["counts"]["entity_evidence"] == 0
+    assert as_object(duplicate_plan["counts"])["entity_evidence"] == 0
 
     conflicting = json.loads(json.dumps(fixture, ensure_ascii=False))
-    conflicting["data"]["cognitions"][0]["content"] = "同 id 的不同内容"
+    as_objects(conflicting["data"]["cognitions"])[0]["content"] = "同 id 的不同内容"
     _rehash(conflicting)
     conflict_plan = target.plan_import(conflicting)
     assert conflict_plan["valid"] is False

@@ -4,8 +4,11 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import sqlite3
+from typing import Mapping
 
 import pytest
+
+from support.json_assertions import as_int, as_object, as_objects, as_string
 
 from memoweft.integrations.dsh_bridge import (
     DshBoundaryError,
@@ -189,7 +192,7 @@ def test_direct_world_change_filters_model_but_preserves_history(
         "回忆之前讨论的月度面板布局", projection="model"
     )
     assert before["count"] == 1
-    assert "星图布局" in before["rendered_context"]
+    assert "星图布局" in as_string(before["rendered_context"])
 
     with sqlite3.connect(runtime.db_path) as db:
         db.execute(
@@ -219,15 +222,15 @@ def test_direct_world_change_filters_model_but_preserves_history(
     )
     assert model["count"] == 0
     assert history["count"] == 1
-    assert history["items"][0]["dependency_state"] == "stale"
-    assert history["items"][0]["turns"][1]["content"] == (
+    assert as_objects(history["items"])[0]["dependency_state"] == "stale"
+    assert as_objects(as_objects(history["items"])[0]["turns"])[1]["content"] == (
         "月度面板可以继续采用星图布局。"
     )
     managed = runtime.query_interactions(
         "布局", projection="history", search_mode="history_search"
     )
     assert managed["count"] == 1
-    assert managed["items"][0]["dependency_state"] == "stale"
+    assert as_objects(managed["items"])[0]["dependency_state"] == "stale"
     assert runtime.query_interactions("布局", projection="history")["count"] == 0
     assert runtime.query_interactions(
         "无关火山编号", projection="history", search_mode="history_search"
@@ -330,17 +333,17 @@ def test_transitive_dependency_and_partial_turn_filtering(tmp_path: Path) -> Non
     with pytest.raises(InteractionQueryError, match="interaction_not_found"):
         runtime.query_interaction(second_id, projection="model")
     transitive_history = runtime.query_interaction(second_id, projection="history")
-    assert transitive_history["item"]["dependency_state"] == "stale"
+    assert as_object(transitive_history["item"])["dependency_state"] == "stale"
 
     partial_model = runtime.query_interaction(partial_id, projection="model")
-    assert partial_model["item"]["dependency_state"] == "partial"
-    assert [turn["message_id"] for turn in partial_model["item"]["turns"]] == [
+    assert as_object(partial_model["item"])["dependency_state"] == "partial"
+    assert [turn["message_id"] for turn in as_objects(as_object(partial_model["item"])["turns"])] == [
         "partial-user",
         "partial-independent",
     ]
-    assert "环形布局" not in partial_model["item"]["turns"][1]["content"]
+    assert "环形布局" not in as_string(as_objects(as_object(partial_model["item"])["turns"])[1]["content"])
     partial_history = runtime.query_interaction(partial_id, projection="history")
-    assert [turn["message_id"] for turn in partial_history["item"]["turns"]] == [
+    assert [turn["message_id"] for turn in as_objects(as_object(partial_history["item"])["turns"])] == [
         "partial-user",
         "partial-stale",
         "partial-independent",
@@ -380,14 +383,14 @@ def test_complete_empty_is_retained_and_legacy_unknown_is_history_only(
             )
         ],
     )
-    assert runtime.query_interaction(complete_id, projection="model")["item"][
+    assert as_objects(as_object(runtime.query_interaction(complete_id, projection="model")["item"])[
         "turns"
-    ][1]["content"] == "独立建议是先安排一次短评审。"
+    ])[1]["content"] == "独立建议是先安排一次短评审。"
     with pytest.raises(InteractionQueryError, match="interaction_not_found"):
         runtime.query_interaction(legacy_id, projection="model")
     history = runtime.query_interaction(legacy_id, projection="history")
-    assert history["item"]["dependency_state"] == "legacy_unknown"
-    assert history["item"]["turns"][1]["content"] == (
+    assert as_object(history["item"])["dependency_state"] == "legacy_unknown"
+    assert as_objects(as_object(history["item"])["turns"])[1]["content"] == (
         "旧版建议是直接安排长评审。"
     )
     runtime.shutdown()
@@ -411,7 +414,7 @@ def test_history_does_not_restore_deleted_or_unreadable_episode(
             )
         ],
     )
-    assert runtime.query_interaction(interaction_id, projection="history")["item"]
+    assert as_object(runtime.query_interaction(interaction_id, projection="history")["item"])
     assert runtime.query_interactions(
         "权限", projection="history", search_mode="history_search"
     )["count"] == 1
@@ -491,7 +494,7 @@ def test_cycle_depth_and_node_limits_fail_closed(tmp_path: Path) -> None:
             "interaction_ids": [a_id],
         },
     )["result_state"] == "applied"
-    assert runtime.query_interaction(a_id, projection="history")["item"][
+    assert as_object(runtime.query_interaction(a_id, projection="history")["item"])[
         "dependency_state"
     ] == "cycle"
     with pytest.raises(InteractionQueryError, match="interaction_not_found"):
@@ -525,7 +528,7 @@ def test_cycle_depth_and_node_limits_fail_closed(tmp_path: Path) -> None:
                 )
             ],
         )
-    assert runtime.query_interaction(child_id, projection="history")["item"][
+    assert as_object(runtime.query_interaction(child_id, projection="history")["item"])[
         "dependency_state"
     ] == "depth_limit"
 
@@ -565,7 +568,7 @@ def test_cycle_depth_and_node_limits_fail_closed(tmp_path: Path) -> None:
             )
         ],
     )
-    assert runtime.query_interaction(root_id, projection="history")["item"][
+    assert as_object(runtime.query_interaction(root_id, projection="history")["item"])[
         "dependency_state"
     ] == "node_limit"
     with pytest.raises(InteractionQueryError, match="interaction_not_found"):
@@ -610,8 +613,8 @@ def test_commitments_share_their_assistant_dependency_gate(tmp_path: Path) -> No
         ],
     )
     before = runtime.query_interactions("你之前给过什么发布建议？", projection="model")
-    assert before["commitment_count"] == 1
-    assert "双人复核" in before["rendered_context"]
+    assert as_int(before["commitment_count"]) == 1
+    assert "双人复核" in as_string(before["rendered_context"])
     with sqlite3.connect(runtime.db_path) as db:
         db.execute(
             "UPDATE cognition SET invalid_at = '2026-09-23T00:03:00Z' "
@@ -619,14 +622,14 @@ def test_commitments_share_their_assistant_dependency_gate(tmp_path: Path) -> No
         )
     model = runtime.query_interactions("你之前给过什么发布建议？", projection="model")
     history = runtime.query_interactions("你之前给过什么发布建议？", projection="history")
-    assert model["commitment_count"] == 0
-    assert "双人复核" not in model["rendered_context"]
-    assert history["commitment_count"] == 1
-    assert history["commitments"][0]["dependency_state"] == "stale"
+    assert as_int(model["commitment_count"]) == 0
+    assert "双人复核" not in as_string(model["rendered_context"])
+    assert as_int(history["commitment_count"]) == 1
+    assert as_objects(history["commitments"])[0]["dependency_state"] == "stale"
     runtime.shutdown()
 
 
-def _request(request_id: str, method: str, params: dict[str, object]) -> dict[str, object]:
+def _request(request_id: str, method: str, params: Mapping[str, object]) -> dict[str, object]:
     return {
         "protocol": "memoweft.dsh_rpc",
         "protocol_version": 2,
@@ -651,7 +654,7 @@ def test_exact_history_enumeration_and_link_rpc_cas(tmp_path: Path) -> None:
             },
         )
     )
-    assert initialized["result"]["capabilities"][
+    assert as_object(as_object(initialized["result"])["capabilities"])[
         "interaction_dependency_projection"
     ] == 1
     interaction_id, old_hash = _ingest(
@@ -674,8 +677,8 @@ def test_exact_history_enumeration_and_link_rpc_cas(tmp_path: Path) -> None:
         )
     )
     assert exact["ok"] is True
-    assert exact["result"]["count"] == 1
-    item = exact["result"]["items"][0]
+    assert as_object(exact["result"])["count"] == 1
+    item = as_objects(as_object(exact["result"])["items"])[0]
     assert item["id"] == interaction_id
     assert item["context_hash"] == old_hash
     assert item["user_message_id"] == "legacy-user-400"
@@ -693,25 +696,25 @@ def test_exact_history_enumeration_and_link_rpc_cas(tmp_path: Path) -> None:
         _request("link-applied", "link_interaction_dependencies", params)
     )
     assert applied["ok"] is True
-    assert applied["result"] == {
+    assert as_object(applied["result"]) == {
         "interaction_id": interaction_id,
         "old_context_hash": old_hash,
-        "context_hash": applied["result"]["context_hash"],
+        "context_hash": as_object(applied["result"])["context_hash"],
         "result_state": "applied",
     }
-    assert applied["result"]["context_hash"] != old_hash
+    assert as_object(applied["result"])["context_hash"] != old_hash
 
     no_change = server.handle(
         _request("link-idempotent", "link_interaction_dependencies", params)
     )
-    assert no_change["result"]["result_state"] == "no_change"
-    assert no_change["result"]["context_hash"] == applied["result"]["context_hash"]
+    assert as_object(no_change["result"])["result_state"] == "no_change"
+    assert as_object(no_change["result"])["context_hash"] == as_object(applied["result"])["context_hash"]
 
     conflicting = {**params, "model_context_dependencies": {**EMPTY, "capture_status": "withheld"}}
     conflict = server.handle(
         _request("link-conflict", "link_interaction_dependencies", conflicting)
     )
-    assert conflict["result"]["result_state"] == "conflict"
+    assert as_object(conflict["result"])["result_state"] == "conflict"
     wrong_message = server.handle(
         _request(
             "link-wrong-message",
@@ -719,7 +722,7 @@ def test_exact_history_enumeration_and_link_rpc_cas(tmp_path: Path) -> None:
             {**params, "assistant_message_id": "another-assistant"},
         )
     )
-    assert wrong_message["result"]["result_state"] == "not_found"
+    assert as_object(wrong_message["result"])["result_state"] == "not_found"
 
     assert server.runtime.db_path is not None
     with sqlite3.connect(server.runtime.db_path) as db:
@@ -755,7 +758,7 @@ def test_exact_history_enumeration_and_link_rpc_cas(tmp_path: Path) -> None:
             },
         )
     )
-    assert wrong_subject["result"]["result_state"] == "not_found"
+    assert as_object(wrong_subject["result"])["result_state"] == "not_found"
     server.runtime.shutdown()
 
 

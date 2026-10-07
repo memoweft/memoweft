@@ -82,7 +82,26 @@ _GENERIC_PREDICATE_BIGRAMS: frozenset[str] = frozenset({
 _HISTORICAL_QUERY_PATTERN: re.Pattern[str] = re.compile(
     r"(?:以前|曾经|过去|原先|之前|早先|从前|先前|那时候|旧的|以前的|谈过|聊过|提过|还记得.*吗|(?:喜欢|爱|爱过|交往|在一起|住|待|用|选)过)"
 )
-_QUESTION_PARTICLE_SUFFIX: re.Pattern[str] = re.compile(r"(?:了吗|了么|了没|没有|吗|(?<![什怎])么|呢|吧|呀|啊|啦|了|[?？])+$")
+def _strip_question_particles(text: str) -> str:
+    """Strip trailing question particles in linear time, preserving 什么/怎么.
+
+    Walk backwards instead of searching an overlapping repeated regex: 了么
+    can be parsed both as one token and as two, causing exponential retries
+    when a long run is followed by a non-particle character.
+    """
+    end = len(text)
+    while end:
+        if text[end - 1] in "吗呢吧呀啊啦了?？":
+            end -= 1
+        elif text[end - 1] == "么" and (end < 2 or text[end - 2] not in "什怎"):
+            end -= 1
+        elif end >= 2 and text[end - 2:end] in ("了没", "没有"):
+            end -= 2
+        else:
+            break
+    return text[:end]
+
+
 _PRONOUN_PREFIX: re.Pattern[str] = re.compile(r"^(?:我(?:的)?|你(?:的)?|他(?:的)?|她(?:的)?)")
 _IDENTITY_QUERY_PATTERN: re.Pattern[str] = re.compile(
     r"(?:我.*是.*[谁哪]|(?:你.*)?叫我.*[啥什么名字]|(?:怎么|如何|怎样).*称呼(?:我)?|(?:怎么|如何|怎样)叫我|我.*叫(?:什么|啥|名字)|我的(?:名字|姓名|称呼)|叫我什么|叫我啥|叫我|我是谁|是谁|你知道我是谁|你知道我是谁吧|记得我是谁|想起来了吗)"
@@ -290,7 +309,7 @@ def _explicit_query_cues(query: str) -> tuple[str, ...]:
     )
     cues.extend(separated)
     for part in separated:
-        stripped = _QUESTION_PARTICLE_SUFFIX.sub("", part).strip()
+        stripped = _strip_question_particles(part).strip()
         stripped = _PRONOUN_PREFIX.sub("", stripped).strip()
         if stripped and stripped != query.strip() and len(stripped) <= 128:
             cues.append(stripped)

@@ -14,7 +14,7 @@ def hash_context(context: list[VisibleTurn]) -> str:
     assistant turns add a canonical dependency summary so a conditional update
     cannot silently overwrite a concurrent, different causal binding.
     """
-    payload = [{"role": turn.role, "content": turn.content} for turn in context]
+    payload: list[dict[str, object]] = [{"role": turn.role, "content": turn.content} for turn in context]
     if any(turn.model_context_dependencies is not None for turn in context):
         payload = [
             {**row, **({"model_context_dependencies": turn.model_context_dependencies} if turn.model_context_dependencies is not None else {})}

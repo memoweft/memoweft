@@ -7,6 +7,7 @@ from pathlib import Path
 import sqlite3
 from threading import Thread
 from contextlib import contextmanager
+from typing import Iterator, Mapping, Sequence
 
 import httpx
 import pytest
@@ -26,16 +27,17 @@ from memoweft.integrations.hermes.world_worker import WorldJobWorker
 
 
 @contextmanager
-def _local_route_server(responses: list[tuple[int, dict[str, str], dict[str, object]]]):
+def _local_route_server(responses: Sequence[tuple[int, Mapping[str, str], Mapping[str, object]]]) -> Iterator[tuple[str, list[tuple[str, dict[str, object]]]]]:
     """Small real HTTP peer: route tests must exercise httpx and response headers."""
 
+    pending_responses = list(responses)
     received: list[tuple[str, dict[str, object]]] = []
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self) -> None:  # noqa: N802 - stdlib handler contract
             length = int(self.headers.get("Content-Length", "0"))
             received.append((self.path, json.loads(self.rfile.read(length))))
-            status, headers, payload = responses.pop(0)
+            status, headers, payload = pending_responses.pop(0)
             body = json.dumps(payload).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
@@ -96,7 +98,7 @@ def _job_state(db_path: Path) -> str:
     return str(row[0])
 
 
-def test_local_route_never_falls_back_to_deepseek(monkeypatch) -> None:
+def test_local_route_never_falls_back_to_deepseek(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DEEPSEEK_API_KEY", "cloud-secret")
     monkeypatch.delenv("MEMOWEFT_BASE_URL", raising=False)
     monkeypatch.delenv("MEMOWEFT_WORLD_MODEL", raising=False)
@@ -106,7 +108,7 @@ def test_local_route_never_falls_back_to_deepseek(monkeypatch) -> None:
     assert default_one_shot_route(model_tier="local") is None
 
 
-def test_local_route_accepts_in_memory_key_without_exposing_it(monkeypatch, tmp_path: Path) -> None:
+def test_local_route_accepts_in_memory_key_without_exposing_it(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("MEMOWEFT_BASE_URL", "http://127.0.0.1:18080/v1")
     monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "weftlearn-qwen3.8-27b")
     captured: dict[str, object] = {}
@@ -172,7 +174,7 @@ def test_local_route_accepts_in_memory_key_without_exposing_it(monkeypatch, tmp_
     server.runtime.shutdown()
 
 
-def test_follow_current_returns_each_actual_model_from_real_http_response(monkeypatch) -> None:
+def test_follow_current_returns_each_actual_model_from_real_http_response(monkeypatch: pytest.MonkeyPatch) -> None:
     responses = [
         (
             200,
@@ -200,7 +202,7 @@ def test_follow_current_returns_each_actual_model_from_real_http_response(monkey
 
 
 @pytest.mark.parametrize("resolved_model", ["", "@current"])
-def test_follow_current_rejects_missing_or_alias_model_header(monkeypatch, resolved_model: str) -> None:
+def test_follow_current_rejects_missing_or_alias_model_header(monkeypatch: pytest.MonkeyPatch, resolved_model: str) -> None:
     headers = {"X-ModelSwitcher-Model": resolved_model} if resolved_model else {}
     response = {"choices": [{"message": {"content": "{}"}}], "usage": {}}
     with _local_route_server([(200, headers, response)]) as (base_url, _received):
@@ -212,7 +214,7 @@ def test_follow_current_rejects_missing_or_alias_model_header(monkeypatch, resol
             route([], session_id="s")
 
 
-def test_follow_current_404_does_not_query_models_or_fall_back(monkeypatch) -> None:
+def test_follow_current_404_does_not_query_models_or_fall_back(monkeypatch: pytest.MonkeyPatch) -> None:
     with _local_route_server([(404, {}, {"error": {"message": "not found"}})]) as (base_url, received):
         monkeypatch.setenv("MEMOWEFT_BASE_URL", base_url)
         monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "@current")
@@ -224,7 +226,7 @@ def test_follow_current_404_does_not_query_models_or_fall_back(monkeypatch) -> N
     assert [request[0] for request in received] == ["/v1/chat/completions"]
 
 
-def test_follow_current_503_remains_worker_retry_not_no_change(tmp_path: Path, monkeypatch) -> None:
+def test_follow_current_503_remains_worker_retry_not_no_change(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     with _local_route_server([(503, {}, {"error": {"message": "busy"}})]) as (base_url, received):
         monkeypatch.setenv("MEMOWEFT_BASE_URL", base_url)
         monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "@current")
@@ -249,14 +251,14 @@ def test_follow_current_503_remains_worker_retry_not_no_change(tmp_path: Path, m
     assert [request[0] for request in received] == ["/v1/chat/completions"]
 
 
-def test_cloud_route_rejects_follow_current(monkeypatch) -> None:
+def test_cloud_route_rejects_follow_current(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DEEPSEEK_API_KEY", "cloud-test-key")
     monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "@current")
     with pytest.raises(DshBoundaryError, match="only available for local"):
         default_one_shot_route(model_tier="cloud")
 
 
-def test_cloud_route_keeps_120_second_timeout(monkeypatch) -> None:
+def test_cloud_route_keeps_120_second_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DEEPSEEK_API_KEY", "cloud-test-key")
     captured: dict[str, object] = {}
 
@@ -284,7 +286,7 @@ def test_cloud_route_keeps_120_second_timeout(monkeypatch) -> None:
     }
 
 
-def test_local_length_finish_reason_rejects_partial_json(monkeypatch) -> None:
+def test_local_length_finish_reason_rejects_partial_json(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEMOWEFT_BASE_URL", "http://127.0.0.1:18080/v1")
     monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "weftlearn-qwen3.8-27b")
 
@@ -310,7 +312,7 @@ def test_local_length_finish_reason_rejects_partial_json(monkeypatch) -> None:
         route([], session_id="s")
 
 
-def test_missing_local_route_leaves_worker_stopped_and_recoverable(tmp_path: Path, monkeypatch) -> None:
+def test_missing_local_route_leaves_worker_stopped_and_recoverable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MEMOWEFT_BASE_URL", raising=False)
     monkeypatch.delenv("MEMOWEFT_WORLD_MODEL", raising=False)
     monkeypatch.delenv("MEMOWEFT_API_KEY", raising=False)
@@ -340,7 +342,7 @@ def test_missing_local_route_leaves_worker_stopped_and_recoverable(tmp_path: Pat
 
 
 def test_local_connection_failure_retries_then_applies_without_duplicate(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("MEMOWEFT_TESTING", "1")
     monkeypatch.setenv("MEMOWEFT_TEST_MODEL_RESPONSE", "__smart__")
@@ -348,7 +350,7 @@ def test_local_connection_failure_retries_then_applies_without_duplicate(
     assert smart_route is not None
     available = False
 
-    def intermittent_route(messages: object, session_id: str = ""):
+    def intermittent_route(messages: object, session_id: str = "") -> Mapping[str, object]:
         if not available:
             raise httpx.ConnectError("connection refused")
         return smart_route(messages, session_id=session_id)

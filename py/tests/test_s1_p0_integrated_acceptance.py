@@ -12,11 +12,14 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import sqlite3
+from typing import Mapping, NoReturn
 
 import pytest
 
+from support.json_assertions import as_objects
+
 from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
-from memoweft.integrations.hermes.batch_adapter import HermesBatchAdapterProcessor
+from memoweft.integrations.hermes.batch_adapter import HermesBatchAdapterProcessor, OneShotRoute
 from memoweft.integrations.hermes.recall import recall_world_snapshot
 from memoweft.integrations.hermes.world_worker import WorldJobStore, WorldJobWorker
 from memoweft.store import open_db
@@ -60,16 +63,24 @@ def _world_counts(path: Path) -> tuple[int, int, int, int, int]:
         db.close()
 
 
+def _unexpected_route(calls: list[object]) -> OneShotRoute:
+    def route(*args: object, **kwargs: object) -> NoReturn:
+        calls.append((args, kwargs))
+        raise AssertionError("forbidden formation must not dispatch a route")
+
+    return route
+
+
 def _checkpoint_real_route(
     path: Path,
     clock: MutableClock,
-    response: dict[str, object],
+    response: Mapping[str, object],
 ) -> tuple[list[object], object]:
     calls: list[object] = []
 
     def route(messages: list[dict[str, str]], *, session_id: str) -> dict[str, object]:
         calls.append((messages, session_id))
-        return response
+        return dict(response)
 
     store = WorldJobStore(path, policy=_policy(), clock=clock)
     claim = store.claim_one("crashed-after-checkpoint")
@@ -100,7 +111,7 @@ def test_forbidden_cloud_formation_has_zero_route_payload_and_world_writes(
         db.close()
     calls: list[object] = []
     processor = HermesBatchAdapterProcessor(
-        str(path), lambda *args, **kwargs: calls.append((args, kwargs)), clock=clock
+        str(path), _unexpected_route(calls), clock=clock
     )
     worker = WorldJobWorker(path, processor=processor, policy=_policy(), clock=clock)
 
@@ -119,7 +130,7 @@ def test_enqueue_then_revoke_before_dispatch_has_zero_route_and_world_writes(
     _insert_job(path, clock)
     calls: list[object] = []
     processor = HermesBatchAdapterProcessor(
-        str(path), lambda *args, **kwargs: calls.append((args, kwargs)), clock=clock
+        str(path), _unexpected_route(calls), clock=clock
     )
     worker = WorldJobWorker(path, processor=processor, policy=_policy(), clock=clock)
     original_heartbeat = worker.store.heartbeat
@@ -159,7 +170,7 @@ def test_checkpoint_replay_revalidates_revoked_job_evidence_without_second_route
     assert _job(path)["model_result_json"] is not None
     clock.advance(11.0)
 
-    def forbidden_second_route(*_args: object, **_kwargs: object) -> object:
+    def forbidden_second_route(*_args: object, **_kwargs: object) -> NoReturn:
         calls.append("second-route")
         raise AssertionError("a durable model result must suppress a second route")
 
@@ -370,8 +381,8 @@ def test_restricted_history_and_naming_never_enter_cloud_formation_payload(
     )
     assert worker.run_until_quiescent() == 1
     payload = payloads[0]
-    assert payload["current_cognitions"] == []
-    assert {item["id"] for item in payload["current_entities"]} == {"entity-good"}
+    assert as_objects(payload["current_cognitions"]) == []
+    assert {item["id"] for item in as_objects(payload["current_entities"])} == {"entity-good"}
     assert "history-restricted" not in json.dumps(payload)
     assert "秘密名字" not in json.dumps(payload, ensure_ascii=False)
 
@@ -415,8 +426,8 @@ def test_recall_snapshot_and_dsh_export_fail_closed_across_lifecycle_changes(
             stable_b = recall_world_snapshot(db, subject, "喜欢喝咖啡")
             assert stable_a is not None and stable_a == stable_b and stable_a.count == 1
             assert runtime.prefetch("喜欢喝咖啡")["count"] == 1
-            assert [row["id"] for row in runtime.list_world()["cognitions"]] == ["recall-cognition"]
-            assert [row["id"] for row in runtime.export_world()["evidence"]] == ["recall-evidence"]
+            assert [row["id"] for row in as_objects(runtime.list_world()["cognitions"])] == ["recall-cognition"]
+            assert [row["id"] for row in as_objects(runtime.export_world()["evidence"])] == ["recall-evidence"]
 
             tokens = [stable_a.recall_snapshot_token]
             db.execute("UPDATE evidence SET deleted_at = ? WHERE id = 'recall-evidence'", (_NOW,))
@@ -425,7 +436,7 @@ def test_recall_snapshot_and_dsh_export_fail_closed_across_lifecycle_changes(
             assert deleted is not None and deleted.count == 0
             tokens.append(deleted.recall_snapshot_token)
             assert runtime.prefetch("喜欢喝咖啡")["count"] == 0
-            assert runtime.list_world()["cognitions"] == []
+            assert as_objects(runtime.list_world()["cognitions"]) == []
             assert runtime.export_world() == {"cognitions": [], "evidence": []}
 
             db.execute(

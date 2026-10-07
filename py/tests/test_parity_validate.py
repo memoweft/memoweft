@@ -13,7 +13,7 @@ def _python_version_expected(
     case: dict[str, Any], *, ts_schema_version: int
 ) -> dict[str, Any]:
     """Translate only the current-schema number in the two version messages."""
-    expected = copy.deepcopy(case["expected"])
+    expected: dict[str, Any] = copy.deepcopy(case["expected"])
     if case["label"] == "schemaVersion-too-high":
         ts_message = (
             f"schemaVersion=99 is higher than the {ts_schema_version} supported by this "

@@ -3,12 +3,16 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
 import memoweft.integrations.hermes as hermes_integration
+from support.json_assertions import as_objects
+
 from memoweft.integrations.hermes.batch_adapter import (
     HermesBatchAdapterProcessor,
+    OneShotRoute,
     _SYSTEM_PROMPT,
     _SYSTEM_PROMPT_EN,
     entity_id_for,
@@ -31,7 +35,7 @@ from test_hermes_world_worker import (
 )
 
 
-def _route(calls: list[object]) -> object:
+def _route(calls: list[object]) -> OneShotRoute:
     def route(messages: list[dict[str, str]], *, session_id: str) -> dict[str, object]:
         calls.append((messages, session_id))
         return {
@@ -52,7 +56,7 @@ def _route(calls: list[object]) -> object:
     ],
 )
 def test_forbidden_evidence_never_dispatches_formation_route(
-    tmp_path: Path, model_tier: str, permission_column: str
+    tmp_path: Path, model_tier: Literal["cloud", "local"], permission_column: str
 ) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
@@ -664,17 +668,17 @@ def test_formation_payload_excludes_restricted_history_and_closes_entities(
     assert len(payloads) == 1
     payload = payloads[0]
     if foreign_history_subject:
-        assert payload["current_cognitions"] == []
-        assert payload["current_relationships"] == []
-        assert payload["current_events"] == []
-        assert payload["current_entities"] == []
+        assert as_objects(payload["current_cognitions"]) == []
+        assert as_objects(payload["current_relationships"]) == []
+        assert as_objects(payload["current_events"]) == []
+        assert as_objects(payload["current_entities"]) == []
     else:
-        assert [item["id"] for item in payload["current_cognitions"]] == ["cognition-good"]
-        assert [item["id"] for item in payload["current_relationships"]] == ["relationship-good"]
-        assert [item["id"] for item in payload["current_events"]] == ["event-good"]
-        assert payload["current_events"][0]["participants"] == ["entity-event-participant"]
-        assert payload["current_events"][0]["objects"] == ["entity-event-object"]
-        assert {item["id"] for item in payload["current_entities"]} == {
+        assert [item["id"] for item in as_objects(payload["current_cognitions"])] == ["cognition-good"]
+        assert [item["id"] for item in as_objects(payload["current_relationships"])] == ["relationship-good"]
+        assert [item["id"] for item in as_objects(payload["current_events"])] == ["event-good"]
+        assert as_objects(payload["current_events"])[0]["participants"] == ["entity-event-participant"]
+        assert as_objects(payload["current_events"])[0]["objects"] == ["entity-event-object"]
+        assert {item["id"] for item in as_objects(payload["current_entities"])} == {
             "entity-ledger",
             "entity-cognition-target",
             "entity-relationship-source",
@@ -683,7 +687,7 @@ def test_formation_payload_excludes_restricted_history_and_closes_entities(
             "entity-event-object",
         }
         entity_ledger = next(
-            item for item in payload["current_entities"] if item["id"] == "entity-ledger"
+            item for item in as_objects(payload["current_entities"]) if item["id"] == "entity-ledger"
         )
         assert entity_ledger["aliases"] == []
 

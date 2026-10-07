@@ -12,6 +12,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any, Callable, cast
 
+from support.json_assertions import as_object, as_objects
+
 from memoweft.integrations.hermes.batch_adapter import (
     HermesBatchAdapterProcessor,
     entity_id_for,
@@ -192,6 +194,11 @@ def _seed_relationship(
 # ── alias merge ─────────────────────────────────────────────────────────────
 
 def test_alias_merge_earlier_formed_name_is_canonical(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ALIAS)
+        _seed_entity(path, "小杨", _T0)
+        _seed_entity(path, "杨杨", _T1)
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     script = [
@@ -207,18 +214,14 @@ def test_alias_merge_earlier_formed_name_is_canonical(tmp_path: Path) -> None:
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ALIAS),
-            _seed_entity(path, "小杨", _T0),
-            _seed_entity(path, "杨杨", _T1),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
     assert row["terminal_state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 1
-    item = outcome["cognitions"][0]
+    item = as_objects(outcome["cognitions"])[0]
     assert item["statement_kind"] == "alias"
     assert item["canonical_entity_id"] == entity_id_for("owner", "小杨")
     assert item["canonical_name"] == "小杨"
@@ -248,6 +251,11 @@ def test_alias_merge_earlier_formed_name_is_canonical(tmp_path: Path) -> None:
 
 
 def test_alias_merge_field_order_does_not_matter(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ALIAS)
+        _seed_entity(path, "小杨", _T0)
+        _seed_entity(path, "杨杨", _T1)
+
     """entity/alias_of order is meaningless: canonical always resolves by
     earlier formation."""
     db_path = tmp_path / "memoweft.sqlite3"
@@ -265,18 +273,23 @@ def test_alias_merge_field_order_does_not_matter(tmp_path: Path) -> None:
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ALIAS),
-            _seed_entity(path, "小杨", _T0),
-            _seed_entity(path, "杨杨", _T1),
-        ),
+        setup,
     )
-    item = json.loads(str(_job(db_path)["world_result_json"]))["cognitions"][0]
+    item = as_objects(json.loads(str(_job(db_path)["world_result_json"]))["cognitions"])[0]
     assert item["canonical_entity_id"] == entity_id_for("owner", "小杨")
     assert item["merged_entity_id"] == entity_id_for("owner", "杨杨")
 
 
 def test_alias_merge_reanchors_relationship_to_canonical(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ALIAS)
+        _seed_entity(path, "小王", _T0)
+        _seed_entity(path, "小杨", _T0)
+        _seed_entity(path, "杨杨", _T1)
+        _seed_relationship(
+                path, "小王", "girlfriend", "杨杨", "小王是杨杨的女朋友", _T1
+            )
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     script = [
@@ -296,19 +309,11 @@ def test_alias_merge_reanchors_relationship_to_canonical(tmp_path: Path) -> None
     )
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ALIAS),
-            _seed_entity(path, "小王", _T0),
-            _seed_entity(path, "小杨", _T0),
-            _seed_entity(path, "杨杨", _T1),
-            _seed_relationship(
-                path, "小王", "girlfriend", "杨杨", "小王是杨杨的女朋友", _T1
-            ),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
-    item = json.loads(str(row["world_result_json"]))["cognitions"][0]
+    item = as_objects(json.loads(str(row["world_result_json"]))["cognitions"])[0]
     assert item["reanchored_relationships"] == 1
     new_rid = relationship_id_for(
         "owner", entity_id_for("owner", "小王"), "girlfriend",
@@ -379,7 +384,7 @@ def test_alias_merge_repoints_cognition_targets(tmp_path: Path) -> None:
         db.close()
 
     _run(db_path, clock, script, ("evidence-1",), setup)
-    item = json.loads(str(_job(db_path)["world_result_json"]))["cognitions"][0]
+    item = as_objects(json.loads(str(_job(db_path)["world_result_json"]))["cognitions"])[0]
     assert item["repointed_cognitions"] == 1
     db = sqlite3.connect(db_path)
     try:
@@ -395,6 +400,11 @@ def test_alias_merge_repoints_cognition_targets(tmp_path: Path) -> None:
 def test_alias_merge_same_timestamp_tie_breaks_on_formation_order(
     tmp_path: Path,
 ) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ALIAS)
+        _seed_entity(path, "小杨", _T0)
+        _seed_entity(path, "杨杨", _T0)
+
     """Both entities share one created_at (one batch): the earlier-inserted
     row wins as canonical (Owner decision: earlier formation)."""
     db_path = tmp_path / "memoweft.sqlite3"
@@ -412,20 +422,21 @@ def test_alias_merge_same_timestamp_tie_breaks_on_formation_order(
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ALIAS),
-            _seed_entity(path, "小杨", _T0),
-            _seed_entity(path, "杨杨", _T0),  # same timestamp, inserted later
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
-    item = json.loads(str(row["world_result_json"]))["cognitions"][0]
+    item = as_objects(json.loads(str(row["world_result_json"]))["cognitions"])[0]
     assert item["canonical_entity_id"] == entity_id_for("owner", "小杨")
     assert item["merged_entity_id"] == entity_id_for("owner", "杨杨")
 
 
 def test_alias_merge_replay_is_zero_write(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ALIAS)
+        _seed_entity(path, "小杨", _T0)
+        _seed_entity(path, "杨杨", _T1)
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     script = [
@@ -441,11 +452,7 @@ def test_alias_merge_replay_is_zero_write(tmp_path: Path) -> None:
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ALIAS),
-            _seed_entity(path, "小杨", _T0),
-            _seed_entity(path, "杨杨", _T1),
-        ),
+        setup,
         job_id="job-1",
     )
     first = json.loads(str(_job(db_path, job_id="job-1")["world_result_json"]))
@@ -465,10 +472,15 @@ def test_alias_merge_replay_is_zero_write(tmp_path: Path) -> None:
     _run(db_path, clock, script2, ("evidence-1",), job_id="job-2")
     second = json.loads(str(_job(db_path, job_id="job-2")["world_result_json"]))
     assert second["world_revision"] == 1  # no bump
-    assert second["cognitions"] == first["cognitions"]  # identical outcome
+    assert as_objects(second["cognitions"]) == as_objects(first["cognitions"])  # identical outcome
 
 
 def test_alias_item_missing_target_defaults_to_owner_self(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ALIAS)
+        _seed_entity(path, "小杨", _T0)
+        _seed_entity(path, "杨杨", _T1)
+
     """Observed live: the real model omits ``target`` on alias items.  The
     perspective is 一律 owner_self, so absent target reads as owner_self."""
     db_path = tmp_path / "memoweft.sqlite3"
@@ -482,19 +494,19 @@ def test_alias_item_missing_target_defaults_to_owner_self(tmp_path: Path) -> Non
     script = [_model(_batch(item))]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ALIAS),
-            _seed_entity(path, "小杨", _T0),
-            _seed_entity(path, "杨杨", _T1),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
-    item = json.loads(str(row["world_result_json"]))["cognitions"][0]
+    item = as_objects(json.loads(str(row["world_result_json"]))["cognitions"])[0]
     assert item["canonical_entity_id"] == entity_id_for("owner", "小杨")
 
 
 def test_alias_unknown_entity_is_zero_write(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ALIAS)
+        _seed_entity(path, "小杨", _T0)
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     script = [
@@ -511,10 +523,7 @@ def test_alias_unknown_entity_is_zero_write(tmp_path: Path) -> None:
     # Only one of the two entities exists.
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ALIAS),
-            _seed_entity(path, "小杨", _T0),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "no_change"
@@ -625,6 +634,14 @@ def test_alias_rejected_in_v4_envelope(tmp_path: Path) -> None:
 # ── relationship 改口替换 ───────────────────────────────────────────────────
 
 def test_relationship_correct_invalidates_prior_and_forms_new(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_REL_CORRECT)
+        _seed_entity(path, "小王", _T0)
+        _seed_entity(path, "小杨", _T0)
+        _seed_relationship(
+                path, "小王", "girlfriend", "小杨", "小王是小杨的女朋友", _T0
+            )
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     prior_rid = relationship_id_for(
@@ -647,20 +664,13 @@ def test_relationship_correct_invalidates_prior_and_forms_new(tmp_path: Path) ->
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_REL_CORRECT),
-            _seed_entity(path, "小王", _T0),
-            _seed_entity(path, "小杨", _T0),
-            _seed_relationship(
-                path, "小王", "girlfriend", "小杨", "小王是小杨的女朋友", _T0
-            ),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 1
-    item = outcome["cognitions"][0]
+    item = as_objects(outcome["cognitions"])[0]
     assert item["action"] == "correct"
     assert item["statement_kind"] == "relationship"
     assert item["prior_relationship_id"] == prior_rid
@@ -701,6 +711,14 @@ def test_relationship_correct_invalidates_prior_and_forms_new(tmp_path: Path) ->
 
 
 def test_relationship_correct_replay_is_zero_write(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_REL_CORRECT)
+        _seed_entity(path, "小王", _T0)
+        _seed_entity(path, "小杨", _T0)
+        _seed_relationship(
+            path, "小王", "girlfriend", "小杨", "小王是小杨的女朋友", _T0
+        )
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     prior_rid = relationship_id_for(
@@ -721,14 +739,6 @@ def test_relationship_correct_replay_is_zero_write(tmp_path: Path) -> None:
             )
         )
     ]
-    setup = lambda path: (
-        _set_evidence(path, "evidence-1", _RAW_REL_CORRECT),
-        _seed_entity(path, "小王", _T0),
-        _seed_entity(path, "小杨", _T0),
-        _seed_relationship(
-            path, "小王", "girlfriend", "小杨", "小王是小杨的女朋友", _T0
-        ),
-    )
     _run(db_path, clock, script, ("evidence-1",), setup, job_id="job-1")
     first = json.loads(str(_job(db_path, job_id="job-1")["world_result_json"]))
     assert first["world_revision"] == 1
@@ -749,12 +759,25 @@ def test_relationship_correct_replay_is_zero_write(tmp_path: Path) -> None:
     _run(db_path, clock, script2, ("evidence-1",), job_id="job-2")
     second = json.loads(str(_job(db_path, job_id="job-2")["world_result_json"]))
     assert second["world_revision"] == 1  # replay: no bump
-    assert second["cognitions"] == first["cognitions"]
+    assert as_objects(second["cognitions"]) == as_objects(first["cognitions"])
 
 
 def test_alias_reanchor_merges_with_existing_current_relationship(
     tmp_path: Path,
 ) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ALIAS)
+        _seed_entity(path, "小王", _T0)
+        _seed_entity(path, "小杨", _T0)
+        _seed_entity(path, "杨杨", _T1)
+        _seed_relationship(
+                path, "小王", "girlfriend", "小杨", "小王的女朋友叫杨杨", _T1
+            )
+        _seed_relationship(
+                path, "小王", "girlfriend", "杨杨", "小王的女朋友叫杨杨", _T1,
+                evidence_id="seed-evidence-b",
+            )
+
     """The re-pointed triple already exists as a current relationship: the
     alias re-anchor merges support chains instead of duplicating the row."""
     db_path = tmp_path / "memoweft.sqlite3"
@@ -772,25 +795,11 @@ def test_alias_reanchor_merges_with_existing_current_relationship(
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ALIAS),
-            _seed_entity(path, "小王", _T0),
-            _seed_entity(path, "小杨", _T0),
-            _seed_entity(path, "杨杨", _T1),
-            # Existing current row with the re-pointed triple…
-            _seed_relationship(
-                path, "小王", "girlfriend", "小杨", "小王的女朋友叫杨杨", _T1
-            ),
-            # …and the row the alias re-points into it.
-            _seed_relationship(
-                path, "小王", "girlfriend", "杨杨", "小王的女朋友叫杨杨", _T1,
-                evidence_id="seed-evidence-b",
-            ),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
-    item = json.loads(str(row["world_result_json"]))["cognitions"][0]
+    item = as_objects(json.loads(str(row["world_result_json"]))["cognitions"])[0]
     assert item["reanchored_relationships"] == 1
     merged_rid = relationship_id_for(
         "owner", entity_id_for("owner", "小王"), "girlfriend",
@@ -886,6 +895,18 @@ def test_alias_reanchor_revives_historical_relationship(tmp_path: Path) -> None:
 def test_relationship_correct_merges_into_existing_current_relationship(
     tmp_path: Path,
 ) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_REL_CORRECT)
+        _seed_entity(path, "小王", _T0)
+        _seed_entity(path, "小杨", _T0)
+        _seed_entity(path, "小李", _T0)
+        _seed_relationship(
+                path, "小王", "girlfriend", "小杨", "小王是小杨的女朋友", _T0
+            )
+        _seed_relationship(
+                path, "小王", "girlfriend", "小李", "小王是小李的女朋友", _T0
+            )
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     prior_rid = relationship_id_for(
@@ -912,26 +933,13 @@ def test_relationship_correct_merges_into_existing_current_relationship(
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_REL_CORRECT),
-            _seed_entity(path, "小王", _T0),
-            _seed_entity(path, "小杨", _T0),
-            _seed_entity(path, "小李", _T0),
-            _seed_relationship(
-                path, "小王", "girlfriend", "小杨", "小王是小杨的女朋友", _T0
-            ),
-            # The replacement triple is already current: the correction
-            # re-asserts it, so supports merge instead of duplicating.
-            _seed_relationship(
-                path, "小王", "girlfriend", "小李", "小王是小李的女朋友", _T0
-            ),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 1
-    item = outcome["cognitions"][0]
+    item = as_objects(outcome["cognitions"])[0]
     assert item["prior_relationship_id"] == prior_rid
     assert item["replacement_relationship_id"] == new_rid
     db = sqlite3.connect(db_path)
@@ -1068,7 +1076,7 @@ def test_corrects_relationship_id_rejected_on_other_kinds(tmp_path: Path) -> Non
 
 def test_sync_owner_alias_creates_ledger_and_query_service_visible(tmp_path: Path) -> None:
     from memoweft.integrations.trust.currentness import current_entity_aliases
-    from memoweft.integrations.dsh_bridge.protocol_v2 import QueryService
+    from memoweft.integrations.trust import QueryService
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     item = _v5_item("preference", "用户以后叫我云", (7, 12))
@@ -1092,6 +1100,6 @@ def test_sync_owner_alias_creates_ledger_and_query_service_visible(tmp_path: Pat
         db.close()
     qs = QueryService(db_path, subject_id="owner")
     world = qs.list_world_items("entity")
-    owner_item = next(it for it in world["items"] if it["item_id"] == owner_id)
-    assert owner_item["value"]["aliases"] == ["云"]
-    assert owner_item["value"]["current_aliases"] == ["云"]
+    owner_item = next(it for it in as_objects(world["items"]) if it["item_id"] == owner_id)
+    assert as_object(owner_item["value"])["aliases"] == ["云"]
+    assert as_object(owner_item["value"])["current_aliases"] == ["云"]

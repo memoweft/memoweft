@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from support.json_assertions import as_object, as_objects
+
 from memoweft.portable import build_bundle, derive_bundle_id, import_bundle, validate_bundle
 from memoweft.integrations.dsh_bridge.interactions import query_interaction
 from memoweft.store import make_transaction, open_db
@@ -245,8 +247,8 @@ def test_linked_interaction_dependency_round_trip_preserves_hash_and_model_proje
         interaction_id=stored.id,
         projection="model",
     )
-    assert projected["item"]["dependency_state"] == "visible"
-    assert projected["item"]["turns"][1]["content"] == "可移植建议保持原样。"
+    assert as_object(projected["item"])["dependency_state"] == "visible"
+    assert as_objects(as_object(projected["item"])["turns"])[1]["content"] == "可移植建议保持原样。"
 
     invalid = copy.deepcopy(bundle)
     invalid_turn = invalid["data"]["interactionContexts"][0]["context"][0]
@@ -309,7 +311,7 @@ def test_bundle_v2_is_unchanged_and_world_keys_warn() -> None:
     assert validate_bundle(bundle).valid
 
     stray = copy.deepcopy(bundle)
-    stray["data"]["entities"] = []
+    as_object(stray["data"])["entities"] = []
     result = validate_bundle(stray)
     assert result.valid
     assert any("World sections" in w for w in result.warnings)

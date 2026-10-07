@@ -3,7 +3,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 from typing import Any, Callable, cast
+
+import pytest
 
 from memoweft.integrations.hermes import (
     HermesMemoWeftRuntime,
@@ -14,6 +18,7 @@ from memoweft.integrations.hermes.batch_adapter import (
 )
 from memoweft.integrations.hermes.recall import (
     _match_world_rows,
+    _strip_question_particles,
     format_recall,
     match_cognitions,
 )
@@ -22,6 +27,37 @@ from memoweft.integrations.hermes.world_worker import WorldJobWorker
 from test_hermes_world_worker import MutableClock, _job, _policy
 
 _RAW = "用户平时更喜欢冰美式。"
+
+
+@pytest.mark.parametrize(("query", "expected"), [
+    ("喜欢咖啡了吗", "喜欢咖啡"),
+    ("喜欢咖啡了么", "喜欢咖啡"),
+    ("喜欢咖啡了没", "喜欢咖啡"),
+    ("喜欢咖啡没有", "喜欢咖啡"),
+    ("喜欢咖啡吗呢吧呀啊啦了?？", "喜欢咖啡"),
+    ("喜欢什么吗", "喜欢什么"),
+    ("怎么了？", "怎么"),
+    ("么", ""),
+    ("", ""),
+    ("喜欢咖啡了么x", "喜欢咖啡了么x"),
+])
+def test_question_particles_preserve_topic_words(query: str, expected: str) -> None:
+    assert _strip_question_particles(query) == expected
+
+
+def test_question_particles_handle_adversarial_repetitions_without_backtracking() -> None:
+    # Isolate the security regression so a reintroduced vulnerable regex fails
+    # within a bounded time rather than hanging the whole test process.
+    subprocess.run(
+        [sys.executable, "-c", (
+            "from memoweft.integrations.hermes.recall import _strip_question_particles; "
+            "suffix = '了么' * 100_000; "
+            "assert _strip_question_particles('咖啡' + suffix + 'x') == '咖啡' + suffix + 'x'; "
+            "assert _strip_question_particles('咖啡' + suffix) == '咖啡'"
+        )],
+        check=True,
+        timeout=10,
+    )
 
 
 def test_named_person_recall_does_not_mix_owner_or_other_person_preferences() -> None:
@@ -349,6 +385,7 @@ def test_prefetch_recalls_world_events(tmp_path: Path) -> None:
     )
     try:
         db_path = tmp_path / "memoweft" / "memoweft.sqlite3"
+        assert runtime._ingestor is not None
         subject = str(runtime._ingestor.subject_id)
         db = sqlite3.connect(db_path)
         db.execute(
@@ -394,6 +431,7 @@ def test_relationship_particle_and_relation_type_recall(tmp_path: Path) -> None:
     )
     try:
         db_path = tmp_path / "memoweft" / "memoweft.sqlite3"
+        assert runtime._ingestor is not None
         subject = str(runtime._ingestor.subject_id)
         db = sqlite3.connect(db_path)
         db.execute(

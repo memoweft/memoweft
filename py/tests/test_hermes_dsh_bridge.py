@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from support.json_assertions import as_objects, as_string
+
 from memoweft.integrations.dsh_bridge import DshBoundaryError, DshMemoWeftRuntime
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
 from memoweft.store import open_db
@@ -239,7 +241,7 @@ def test_graph_aware_recall_matches_relationship_via_entity_alias(tmp_path: Path
         # 查询用别名"杨杨"：内容里只有"小王"，靠实体别名进入匹配面。
         result = rt.prefetch("杨杨和小李是什么关系", session_id="s")
         assert result["count"] == 1
-        assert "小王是小李的女朋友" in result["text"]
+        assert "小王是小李的女朋友" in as_string(result["text"])
     finally:
         rt.shutdown()
 
@@ -258,8 +260,8 @@ def test_permission_gate_hides_disallowed_evidence(tmp_path: Path) -> None:
         result = rt.prefetch("女朋友 咖啡", session_id="s")
         # 关系被权限门挡住；认知仍可见（fail-closed 只挡无权限的行）。
         assert result["count"] == 1
-        assert "小王是小李的女朋友" not in result["text"]
-        assert "用户喜欢喝咖啡" in result["text"]
+        assert "小王是小李的女朋友" not in as_string(result["text"])
+        assert "用户喜欢喝咖啡" in as_string(result["text"])
         direct = rt.prefetch("小王和小李", session_id="s")
         assert direct["count"] == 0
     finally:
@@ -277,8 +279,8 @@ def test_export_gate_excludes_disallowed_evidence(tmp_path: Path) -> None:
         finally:
             db.close()
         exported = rt.export_world()
-        assert exported["cognitions"] == []  # 其唯一 Evidence 被拒 → 认知不可导出
-        evidence_ids = {item["id"] for item in exported["evidence"]}
+        assert as_objects(exported["cognitions"]) == []  # 其唯一 Evidence 被拒 → 认知不可导出
+        evidence_ids = {item["id"] for item in as_objects(exported["evidence"])}
         assert "ev-open" in evidence_ids
         assert "ev-cog" not in evidence_ids
     finally:
@@ -311,8 +313,8 @@ def test_export_world_excludes_noncurrent_support_and_never_dangles(
         finally:
             db.close()
         exported = rt.export_world()
-        assert exported["cognitions"] == [], invalid_support
-        assert exported["evidence"] == [], invalid_support
+        assert as_objects(exported["cognitions"]) == [], invalid_support
+        assert as_objects(exported["evidence"]) == [], invalid_support
     finally:
         rt.shutdown()
 
@@ -354,7 +356,7 @@ def test_list_world_excludes_rows_with_noncurrent_support(
             db.commit()
         finally:
             db.close()
-        assert rt.list_world()[list_key] == [], f"{kind}:{invalid_support}"
+        assert as_objects(rt.list_world()[list_key]) == [], f"{kind}:{invalid_support}"
     finally:
         rt.shutdown()
 
@@ -388,7 +390,7 @@ def test_list_world_keeps_row_with_all_current_supports(
             db.commit()
         finally:
             db.close()
-        assert [item["id"] for item in rt.list_world()[list_key]] == [row_id]
+        assert [item["id"] for item in as_objects(rt.list_world()[list_key])] == [row_id]
     finally:
         rt.shutdown()
 
@@ -429,6 +431,7 @@ def test_dsh_route_tier_controls_dispatch_after_local_read_revocation(
             db.commit()
         finally:
             db.close()
+        assert runtime.db_path is not None
         runner = WorldJobWorker(runtime.db_path, processor=processor)
         try:
             assert runner.run_until_quiescent() == 1
@@ -478,6 +481,7 @@ def test_dsh_route_tier_denied_evidence_capability_prevents_dispatch(
             db.commit()
         finally:
             db.close()
+        assert runtime.db_path is not None
         runner = WorldJobWorker(runtime.db_path, processor=processor)
         try:
             assert runner.run_until_quiescent() == 1

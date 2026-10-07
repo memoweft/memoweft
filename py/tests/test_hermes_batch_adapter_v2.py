@@ -241,6 +241,10 @@ def test_empty_batch_is_invalid(tmp_path: Path) -> None:
 
 
 def test_duplicate_cognitions_in_batch_are_rejected(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_ICED)
+        _set_evidence(path, "evidence-2", _RAW_ICED)
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     script = [
@@ -256,10 +260,7 @@ def test_duplicate_cognitions_in_batch_are_rejected(tmp_path: Path) -> None:
         clock,
         script,
         ("evidence-1", "evidence-2"),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_ICED),
-            _set_evidence(path, "evidence-2", _RAW_ICED),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "no_change"
@@ -577,6 +578,10 @@ def test_correction_merge_collision_is_zero_write(tmp_path: Path) -> None:
 
 
 def test_two_items_correcting_the_same_target_are_rejected(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-2", _RAW_COFFEE)
+        _set_evidence(path, "evidence-3", "其实我更喜欢喝茶。")
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     _run(
@@ -600,10 +605,7 @@ def test_two_items_correcting_the_same_target_are_rejected(tmp_path: Path) -> No
         clock,
         script,
         ("evidence-2", "evidence-3"),
-        lambda path: (
-            _set_evidence(path, "evidence-2", _RAW_COFFEE),
-            _set_evidence(path, "evidence-3", "其实我更喜欢喝茶。"),
-        ),
+        setup,
         job_id="job-2",
     )
     row = _job(db_path, job_id="job-2")
@@ -885,6 +887,10 @@ def test_confirmed_with_empty_claim_is_missing(tmp_path: Path) -> None:
 # ── mixed batch, replay, carrier interop ───────────────────────────────────
 
 def test_mixed_form_and_correct_batch_applies_atomically(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-2", _RAW_SLEEP)
+        _set_evidence(path, "evidence-3", _RAW_COFFEE)
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     _run(
@@ -914,10 +920,7 @@ def test_mixed_form_and_correct_batch_applies_atomically(tmp_path: Path) -> None
         clock,
         script,
         ("evidence-2", "evidence-3"),
-        lambda path: (
-            _set_evidence(path, "evidence-2", _RAW_SLEEP),
-            _set_evidence(path, "evidence-3", _RAW_COFFEE),
-        ),
+        setup,
         job_id="job-2",
     )
     assert len(script) == 0
@@ -933,6 +936,10 @@ def test_mixed_form_and_correct_batch_applies_atomically(tmp_path: Path) -> None
 
 
 def test_v2_batch_exact_replay_is_idempotent(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-2", _RAW_SLEEP)
+        _set_evidence(path, "evidence-3", _RAW_COFFEE)
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     _run(
@@ -953,10 +960,7 @@ def test_v2_batch_exact_replay_is_idempotent(tmp_path: Path) -> None:
         clock,
         [_model(batch_payload)],
         ("evidence-2", "evidence-3"),
-        lambda path: (
-            _set_evidence(path, "evidence-2", _RAW_SLEEP),
-            _set_evidence(path, "evidence-3", _RAW_COFFEE),
-        ),
+        setup,
         job_id="job-2",
     )
     assert (

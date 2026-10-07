@@ -763,11 +763,7 @@ export function validateBundle(bundle: unknown): ValidateResult {
               field,
             );
         }
-        if (
-          typeof link.start === 'number' &&
-          typeof link.end === 'number' &&
-          link.end < link.start
-        )
+        if (typeof link.start === 'number' && typeof link.end === 'number' && link.end < link.start)
           errors.push(
             `entityEvidence ${String(link.entityId)}/${String(link.evidenceId)} has end before start`,
           );

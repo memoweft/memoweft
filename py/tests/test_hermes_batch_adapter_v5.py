@@ -12,7 +12,7 @@ import hashlib
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, Callable, Mapping, cast
 
 from memoweft.integrations.hermes.batch_adapter import (
     HermesBatchAdapterProcessor,
@@ -121,7 +121,7 @@ def _v8_item(
     return item
 
 
-def _batch(*items: dict[str, object]) -> dict[str, object]:
+def _batch(*items: Mapping[str, object]) -> dict[str, object]:
     return {"schema_version": 8, "result": "cognitions", "cognitions": list(items)}
 
 

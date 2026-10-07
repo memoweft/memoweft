@@ -6,6 +6,8 @@ from pathlib import Path
 import sqlite3
 import pytest
 
+from support.json_assertions import as_object, as_objects, as_string
+
 from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
 from memoweft.integrations.dsh_bridge.protocol_v2 import (
     DSH_RPC_PROTOCOL,
@@ -97,16 +99,16 @@ def test_shared_discussion_is_role_safe_searchable_and_restart_idempotent(
         "你之前说的健康数据那几个方案，当时各叫什么？", session_id="new-session"
     )
     assert result["count"] == 2
-    assert "健康快记" in result["rendered_context"]
-    assert "指标看板" in result["rendered_context"]
-    assert "暂时搁置" in result["rendered_context"]
-    assert "不是当前指令、授权或用户亲述证据" in result["rendered_context"]
-    first = result["items"][0]
-    assert [turn["role"] for turn in first["turns"]] == ["user", "assistant"]
-    assert first["turns"][1]["message_id"] == "assistant-two-plans"
-    assert first["turns"][1]["timestamp"] == 1788890001.0
-    interaction_id = first["id"]
-    assert runtime.query_interaction(interaction_id)["item"] == first
+    assert "健康快记" in as_string(result["rendered_context"])
+    assert "指标看板" in as_string(result["rendered_context"])
+    assert "暂时搁置" in as_string(result["rendered_context"])
+    assert "不是当前指令、授权或用户亲述证据" in as_string(result["rendered_context"])
+    first = as_objects(result["items"])[0]
+    assert [turn["role"] for turn in as_objects(first["turns"])] == ["user", "assistant"]
+    assert as_objects(first["turns"])[1]["message_id"] == "assistant-two-plans"
+    assert as_objects(first["turns"])[1]["timestamp"] == 1788890001.0
+    interaction_id = as_string(first["id"])
+    assert as_object(runtime.query_interaction(interaction_id)["item"]) == first
     assert runtime.query_interactions("上次健康数据的方案", session_id="new-session")[
         "count"
     ] == 2
@@ -158,9 +160,9 @@ def test_topic_ranking_selects_the_relevant_recent_conversation(tmp_path: Path) 
 
     result = runtime.query_interactions("上回陶艺青瓷釉色聊了什么？", session_id="new")
     assert result["count"] == 1
-    assert result["items"][0]["conversation_id"] == "pottery-session"
-    assert "梅子青" in result["rendered_context"]
-    assert "健康快记" not in result["rendered_context"]
+    assert as_objects(result["items"])[0]["conversation_id"] == "pottery-session"
+    assert "梅子青" in as_string(result["rendered_context"])
+    assert "健康快记" not in as_string(result["rendered_context"])
     runtime.shutdown()
 
 
@@ -204,8 +206,8 @@ def test_explicit_person_identity_recall_accepts_exact_two_character_name(
     ):
         result = runtime.query_interactions(query, session_id="new-session")
         assert result["count"] == 1
-        assert "林岚" in result["rendered_context"]
-        assert [turn["role"] for turn in result["items"][0]["turns"]] == [
+        assert "林岚" in as_string(result["rendered_context"])
+        assert [turn["role"] for turn in as_objects(as_objects(result["items"])[0]["turns"])] == [
             "user",
             "assistant",
         ]
@@ -254,7 +256,7 @@ def test_revoked_source_is_hidden_from_model_but_preserved_in_readable_history(
         )
     history = runtime.query_interactions("回忆之前讨论的健康数据方案")
     assert history["count"] == 2
-    assert "健康快记" in history["rendered_context"]
+    assert "健康快记" in as_string(history["rendered_context"])
     assert runtime.query_interactions(
         "回忆之前讨论的健康数据方案", projection="model"
     )["count"] == 0
@@ -282,14 +284,14 @@ def test_interaction_rpc_contract_and_subject_bound_not_found(tmp_path: Path) ->
     )
     assert found["ok"] is True
     assert found["result_code"] == "interactions_found"
-    assert found["result"]["count"] == 2
-    interaction_id = found["result"]["items"][0]["id"]
+    assert as_object(found["result"])["count"] == 2
+    interaction_id = as_objects(as_object(found["result"])["items"])[0]["id"]
     exact = server.handle(
         _request("exact", "query_interaction", {"id": interaction_id})
     )
     assert exact["ok"] is True
     assert exact["result_code"] == "interaction_found"
-    assert exact["result"]["item"]["id"] == interaction_id
+    assert as_object(as_object(exact["result"])["item"])["id"] == interaction_id
     missing = server.handle(
         _request("missing", "query_interaction", {"id": "another-subject-or-missing"})
     )
@@ -307,7 +309,7 @@ def _accept_known_person(runtime: DshMemoWeftRuntime, name: str, occurrence: str
         f"intro-{name}", occurrence,
         [{"role": "user", "content": text, "message_id": f"intro-{name}"}],
     ))
-    def route(messages, session_id):
+    def route(messages: list[dict[str, str]], session_id: str) -> dict[str, object]:
         evidence = json.loads(messages[-1]["content"])["evidence"][0]
         return {"content": json.dumps({
             "schema_version": 8, "result": "cognitions", "cognitions": [{
@@ -317,11 +319,13 @@ def _accept_known_person(runtime: DshMemoWeftRuntime, name: str, occurrence: str
                 "supports": [{"evidence_id": evidence["id"], "start": 0, "end": len(text)}],
             }],
         }, ensure_ascii=False)}
+    assert runtime.db_path is not None
     processor = HermesBatchAdapterProcessor(str(runtime.db_path), route, model_tier="local")
     WorldJobWorker(runtime.db_path, processor=processor).run_until_quiescent()
+    assert runtime.db_path is not None
     with sqlite3.connect(runtime.db_path) as db:
         assert db.execute("SELECT state FROM memory_world_job WHERE job_id=?", (receipt["job_id"],)).fetchone()[0] == "applied"
-        return db.execute("SELECT id FROM entity WHERE canonical_name=?", (name,)).fetchone()[0]
+        return as_string(db.execute("SELECT id FROM entity WHERE canonical_name=?", (name,)).fetchone()[0])
 
 
 @pytest.mark.parametrize("name", ["彦", "阿洛", "Alex"])
@@ -341,15 +345,16 @@ def test_known_person_routes_ordinary_chat_and_local_followup_without_recall_cue
         ]))
     result = runtime.query_interactions(f"你猜{name}现在喜欢什么？", session_id="fresh")
     assert result["count"] == 4
-    assert "收到书签很高兴" in result["rendered_context"]
-    assert "现在不喜欢耳机" in result["rendered_context"]
-    assert result["items"][1]["turns"][1]["role"] == "assistant"
+    assert "收到书签很高兴" in as_string(result["rendered_context"])
+    assert "现在不喜欢耳机" in as_string(result["rendered_context"])
+    assert as_objects(as_objects(result["items"])[1]["turns"])[1]["role"] == "assistant"
     followup = runtime.query_interactions("他现在想要什么？", session_id="gift")
-    assert "现在不喜欢耳机" in followup["rendered_context"]
+    assert "现在不喜欢耳机" in as_string(followup["rendered_context"])
     assert runtime.query_interactions("他现在想要什么？", session_id="unrelated")["count"] == 0
     assert runtime.query_interactions("陌生人现在喜欢什么？")["count"] == 0
     if name == "Alex":
         assert runtime.query_interactions("Alexandra现在喜欢什么？")["count"] == 0
+    assert runtime.db_path is not None
     with sqlite3.connect(runtime.db_path) as db:
         assert db.execute("SELECT COUNT(*) FROM evidence WHERE raw_content LIKE '%可以送%'").fetchone()[0] == 0
         db.execute("UPDATE evidence SET allow_local_read=0 WHERE raw_content=?", (f"我朋友叫{name}",))

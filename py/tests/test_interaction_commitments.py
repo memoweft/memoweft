@@ -4,6 +4,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sqlite3
+from typing import Literal, TypedDict
+
+from support.json_assertions import as_int, as_objects, as_string, as_string
 
 from memoweft.integrations.dsh_bridge.commitments import (
     distill_commitments_from_messages,
@@ -17,8 +20,13 @@ from memoweft.store.interaction_context import SqliteInteractionContextStore
 from memoweft.types import InteractionContextInput, VisibleTurn
 
 
+class Message(TypedDict):
+    role: Literal["user", "assistant", "tool"]
+    content: str
+
+
 def test_distill_commitments_from_messages() -> None:
-    messages = [
+    messages: list[Message] = [
         {"role": "user", "content": "我们这次项目选什么后端框架好？"},
         {
             "role": "assistant",
@@ -105,7 +113,7 @@ def test_query_interactions_integration(tmp_path: Path) -> None:
         "VALUES ('ev-1', 'user-01', 'spoken', 'host-01', '2026-09-18T00:00:00Z', '2026-09-18T00:00:00Z', '原话', '摘要', 1, 1, 1)"
     )
 
-    messages = [
+    messages: list[Message] = [
         {"role": "user", "content": "我们这次项目用什么框架？"},
         {"role": "assistant", "content": "我建议在本次项目中选用 Axum 框架。" + "大段废话 " * 30},
     ]
@@ -137,13 +145,13 @@ def test_query_interactions_integration(tmp_path: Path) -> None:
 
     # Query interactions with query="建议"
     res = query_interactions(db_path, subject_id="user-01", query="你之前给过什么建议？", session_id="conv-02")
-    assert res["commitment_count"] >= 1
+    assert as_int(res["commitment_count"]) >= 1
     assert "commitments" in res
-    assert len(res["commitments"]) >= 1
-    assert "Axum" in res["commitments"][0]["content"]
+    assert len(as_objects(res["commitments"])) >= 1
+    assert "Axum" in as_string(as_objects(res["commitments"])[0]["content"])
 
     # Verify rendered text
-    rendered = str(res["rendered_context"])
+    rendered = str(as_string(res["rendered_context"]))
     assert "[AI历史建议与承诺]" in rendered
     assert "[AI建议] AI建议在本次项目中选用 Axum 框架" in rendered
     # Verify assistant long monologue is truncated

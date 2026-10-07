@@ -26,7 +26,7 @@ import json
 import logging
 import re
 import sqlite3
-from typing import Any, Callable, Literal, Mapping, Optional
+from typing import Any, Callable, Literal, Mapping, Optional, TypedDict
 
 from ...clock import Clock, system_clock, to_iso_z
 from ...store.driver import BUSY_TIMEOUT_MS
@@ -117,10 +117,17 @@ def _hash_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def _evidence_segments(raw: str) -> list[dict[str, object]]:
+class EvidenceSegment(TypedDict):
+    id: str
+    start: int
+    end: int
+    text: str
+
+
+def _evidence_segments(raw: str) -> list[EvidenceSegment]:
     """Deterministic verbatim clauses; models select IDs, never calculate spans."""
 
-    segments: list[dict[str, object]] = []
+    segments: list[EvidenceSegment] = []
     start = 0
     for match in re.finditer(r"[\n，。！？；,!?;]", raw):
         end = match.end()
@@ -1580,7 +1587,10 @@ class HermesBatchAdapterProcessor:
             if not isinstance(canonical, str):
                 continue
             mentions[canonical] = canonical
-            for alias in entity.get("aliases") or []:
+            aliases = entity.get("aliases")
+            if not isinstance(aliases, list):
+                continue
+            for alias in aliases:
                 if isinstance(alias, str):
                     mentions[alias] = canonical
         return mentions

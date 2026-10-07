@@ -13,7 +13,9 @@ import hashlib
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, Callable, Mapping, cast
+
+from support.json_assertions import as_object, as_objects
 
 from memoweft.integrations.hermes.batch_adapter import (
     HermesBatchAdapterProcessor,
@@ -128,7 +130,7 @@ def _v6_item(
     return item
 
 
-def _batch(*items: dict[str, object]) -> dict[str, object]:
+def _batch(*items: Mapping[str, object]) -> dict[str, object]:
     return {"schema_version": 6, "result": "cognitions", "cognitions": list(items)}
 
 
@@ -197,6 +199,10 @@ def _seed_relationship(db_path: Path, rid: str, content: str) -> None:
 # ── retract ─────────────────────────────────────────────────────────────────
 
 def test_retract_cognition_invalidates_and_records_sidecar(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_RETRACT)
+        _seed_cognition(path, target, "用户喜欢喝咖啡")
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     target = "cognition-coffee"
@@ -213,17 +219,14 @@ def test_retract_cognition_invalidates_and_records_sidecar(tmp_path: Path) -> No
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_RETRACT),
-            _seed_cognition(path, target, "用户喜欢喝咖啡"),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
     assert row["terminal_state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 1
-    item = outcome["cognitions"][0]
+    item = as_objects(outcome["cognitions"])[0]
     assert item["action"] == "correct"
     assert item["retract"] is True
     assert item["prior_cognition_id"] == target
@@ -296,13 +299,13 @@ def test_owner_preference_misattributed_to_friend_is_retracted_but_traceable(
     trace = QueryService(db_path, subject_id="owner").get_world_item_provenance(
         "cognition", target
     )
-    assert {entry["evidence"]["raw_content"] for entry in trace["provenance"]} == {
+    assert {as_object(entry["evidence"])["raw_content"] for entry in as_objects(trace["provenance"])} == {
         original,
         correction,
     }
     assert any(
         transition["transition_kind"] == "retracts"
-        for transition in trace["transition_history"]
+        for transition in as_objects(trace["transition_history"])
     )
 
 
@@ -319,6 +322,10 @@ def test_temporary_state_contract_and_unrelated_recall_stay_scoped(tmp_path: Pat
 
 
 def test_retract_relationship_invalidates(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_REL_RETRACT)
+        _seed_relationship(path, rid, "小王是小杨的女朋友")
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     rid = relationship_id_for(
@@ -338,14 +345,11 @@ def test_retract_relationship_invalidates(tmp_path: Path) -> None:
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_REL_RETRACT),
-            _seed_relationship(path, rid, "小王是小杨的女朋友"),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
-    item = json.loads(str(row["world_result_json"]))["cognitions"][0]
+    item = as_objects(json.loads(str(row["world_result_json"]))["cognitions"])[0]
     assert item["prior_relationship_id"] == rid
     db = sqlite3.connect(db_path)
     try:
@@ -363,6 +367,10 @@ def test_retract_relationship_invalidates(tmp_path: Path) -> None:
 
 
 def test_retract_replay_is_zero_write(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_RETRACT)
+        _seed_cognition(path, target, "用户喜欢喝咖啡")
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     target = "cognition-coffee"
@@ -377,10 +385,6 @@ def test_retract_replay_is_zero_write(tmp_path: Path) -> None:
             )
         )
     ]
-    setup = lambda path: (
-        _set_evidence(path, "evidence-1", _RAW_RETRACT),
-        _seed_cognition(path, target, "用户喜欢喝咖啡"),
-    )
     _run(db_path, clock, script, ("evidence-1",), setup, job_id="job-1")
     first = json.loads(str(_job(db_path, job_id="job-1")["world_result_json"]))
     assert first["world_revision"] == 1
@@ -398,7 +402,7 @@ def test_retract_replay_is_zero_write(tmp_path: Path) -> None:
     _run(db_path, clock, script2, ("evidence-1",), job_id="job-2")
     second = json.loads(str(_job(db_path, job_id="job-2")["world_result_json"]))
     assert second["world_revision"] == 1  # no bump
-    assert second["cognitions"] == first["cognitions"]
+    assert as_objects(second["cognitions"]) == as_objects(first["cognitions"])
 
 
 def test_retract_naming_is_rejected(tmp_path: Path) -> None:
@@ -534,6 +538,10 @@ def test_retract_rejected_in_v5_envelope(tmp_path: Path) -> None:
 # ── contradict ──────────────────────────────────────────────────────────────
 
 def test_contradict_attaches_same_id_and_downgrades_only(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_CONTRADICT)
+        _seed_cognition(path, target, "用户喜欢喝咖啡")
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     target = "cognition-coffee"
@@ -549,16 +557,13 @@ def test_contradict_attaches_same_id_and_downgrades_only(tmp_path: Path) -> None
     ]
     _run(
         db_path, clock, script, ("evidence-1",),
-        lambda path: (
-            _set_evidence(path, "evidence-1", _RAW_CONTRADICT),
-            _seed_cognition(path, target, "用户喜欢喝咖啡"),
-        ),
+        setup,
     )
     row = _job(db_path)
     assert row["state"] == "applied"
     outcome = json.loads(str(row["world_result_json"]))
     assert outcome["world_revision"] == 1
-    item = outcome["cognitions"][0]
+    item = as_objects(outcome["cognitions"])[0]
     assert item["action"] == "contradict"
     assert item["cognition_id"] == target
     assert item["confidence"] == 0  # contradict pins the weakest carrier to 0
@@ -589,13 +594,13 @@ def test_contradict_attaches_same_id_and_downgrades_only(tmp_path: Path) -> None
 
 
 def test_contradict_replay_is_zero_write(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_CONTRADICT)
+        _seed_cognition(path, target, "用户喜欢喝咖啡")
+
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     target = "cognition-coffee"
-    setup = lambda path: (
-        _set_evidence(path, "evidence-1", _RAW_CONTRADICT),
-        _seed_cognition(path, target, "用户喜欢喝咖啡"),
-    )
     payload = _batch(
         _v6_item(
             "preference", "咖啡其实不好喝", (0, 7),
@@ -608,7 +613,7 @@ def test_contradict_replay_is_zero_write(tmp_path: Path) -> None:
     _run(db_path, clock, [_model(payload)], ("evidence-1",), job_id="job-2")
     second = json.loads(str(_job(db_path, job_id="job-2")["world_result_json"]))
     assert second["world_revision"] == 1
-    assert second["cognitions"] == first["cognitions"]
+    assert as_objects(second["cognitions"]) == as_objects(first["cognitions"])
 
 
 def _cognition_id(subject: str, kind: str, proposition: str) -> str:
@@ -623,15 +628,15 @@ def _cognition_id(subject: str, kind: str, proposition: str) -> str:
 
 
 def test_contradict_then_restate_stays_downgraded(tmp_path: Path) -> None:
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", _RAW_CONTRADICT)
+        _seed_cognition(path, target, "用户喜欢喝咖啡")
+
     """A later restatement attaches support but must NOT erase the
     contradiction: the chain still pins the weakest carrier to base 0."""
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     target = _cognition_id("owner", "preference", "用户喜欢喝咖啡")
-    setup = lambda path: (
-        _set_evidence(path, "evidence-1", _RAW_CONTRADICT),
-        _seed_cognition(path, target, "用户喜欢喝咖啡"),
-    )
     _run(
         db_path,
         clock,
@@ -672,7 +677,7 @@ def test_contradict_then_restate_stays_downgraded(tmp_path: Path) -> None:
     _run(db_path, clock, [_model(_batch(restate))], ("evidence-2",), job_id="job-2")
     row = _job(db_path, job_id="job-2")
     assert row["state"] == "applied"
-    item = json.loads(str(row["world_result_json"]))["cognitions"][0]
+    item = as_objects(json.loads(str(row["world_result_json"]))["cognitions"])[0]
     assert item["confidence"] == 40  # base 0 + one extra support link
     assert item["cred_status"] == "candidate"
     db = sqlite3.connect(db_path)

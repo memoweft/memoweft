@@ -11,6 +11,8 @@ from threading import Barrier
 
 import pytest
 
+from support.json_assertions import as_int, as_object, as_objects
+
 from memoweft.integrations.trust import QueryService
 from memoweft.integrations.trust.command_service import CommandService
 from memoweft.integrations.trust.command_store import TrustCommandError
@@ -269,7 +271,7 @@ def test_permission_command_is_atomic_query_visible_exported_and_replay_safe(
     assert receipt["accepted"] is True
     assert receipt["result_state"] == "applied"
     assert receipt["before_revision"] == 1
-    assert receipt["after_revision"] == 2
+    assert as_int(receipt["after_revision"]) == 2
     assert receipt["affected_ids"] == ["e-coffee"]
     assert len(str(receipt["result_hash"])) == 64
     assert receipt["result_hash"] == sha256(
@@ -283,15 +285,15 @@ def test_permission_command_is_atomic_query_visible_exported_and_replay_safe(
     ).hexdigest()
 
     query = QueryService(path, subject_id=_SUBJECT)
-    evidence = query.get_evidence("e-coffee")["evidence"]
+    evidence = as_object(query.get_evidence("e-coffee")["evidence"])
     assert evidence["permissions"] == {
         "allow_local_read": False,
         "allow_cloud_read": False,
         "allow_inference": False,
     }
     assert evidence["raw_content"] is None
-    assert query.list_world_items()["items"] == []
-    assert query.preview_recall("咖啡")["preview"]["count"] == 0
+    assert as_objects(query.list_world_items()["items"]) == []
+    assert as_object(query.preview_recall("咖啡")["preview"])["count"] == 0
 
     with _open(path) as db:
         formation_row = db.execute(
@@ -311,7 +313,7 @@ def test_permission_command_is_atomic_query_visible_exported_and_replay_safe(
             exported_at=_T0,
         )
         exported = next(
-            row for row in bundle["data"]["evidence"] if row["id"] == "e-coffee"
+            row for row in as_objects(bundle["data"]["evidence"]) if row["id"] == "e-coffee"
         )
         assert exported["allowLocalRead"] is False
         assert exported["allowCloudRead"] is False
@@ -382,7 +384,7 @@ def test_expected_revision_conflict_is_durable_and_zero_write(tmp_path: Path) ->
     )
     assert receipt["accepted"] is False
     assert receipt["result_state"] == "revision_conflict"
-    assert receipt["before_revision"] == receipt["after_revision"] == 4
+    assert receipt["before_revision"] == as_int(receipt["after_revision"]) == 4
     assert receipt["affected_ids"] == []
     assert receipt == _service(path).get_command_receipt("cmd-stale")
     with _open(path) as db:
@@ -411,7 +413,7 @@ def test_no_change_and_concurrent_same_revision_commands_advance_at_most_once(
     )
     assert no_change["accepted"] is True
     assert no_change["result_state"] == "no_change"
-    assert no_change["before_revision"] == no_change["after_revision"] == 1
+    assert no_change["before_revision"] == as_int(no_change["after_revision"]) == 1
 
     barrier = Barrier(2)
 
@@ -446,7 +448,7 @@ def test_no_change_and_concurrent_same_revision_commands_advance_at_most_once(
         "applied",
         "revision_conflict",
     ]
-    assert sorted(int(row["after_revision"]) for row in receipts) == [2, 2]
+    assert sorted(int(as_int(row["after_revision"])) for row in receipts) == [2, 2]
     with _open(path) as db:
         permissions = db.execute(
             "SELECT allow_local_read, allow_cloud_read FROM evidence "
@@ -474,16 +476,16 @@ def test_forget_preserves_evidence_audit_but_removes_current_world_and_recall(
     )
     assert receipt["result_state"] == "applied"
     assert receipt["before_revision"] == 1
-    assert receipt["after_revision"] == 2
+    assert as_int(receipt["after_revision"]) == 2
     query = QueryService(path, subject_id=_SUBJECT)
-    evidence = query.get_evidence("e-coffee")["evidence"]
+    evidence = as_object(query.get_evidence("e-coffee")["evidence"])
     assert evidence["currentness_state"] == "evidence_deleted"
-    assert evidence["lifecycle"]["deleted_at"] == _T0
+    assert as_object(evidence["lifecycle"])["deleted_at"] == _T0
     assert evidence["raw_content"] is None
     historical = query.get_world_item("cognition", "cog-coffee", include_history=True)
-    assert historical["item"]["current_state"] == "not_current"
-    assert historical["item"]["value"] == {"redacted": True}
-    assert query.preview_recall("咖啡")["preview"]["count"] == 0
+    assert as_object(historical["item"])["current_state"] == "not_current"
+    assert as_object(as_object(historical["item"])["value"]) == {"redacted": True}
+    assert as_object(query.preview_recall("咖啡")["preview"])["count"] == 0
     with _open(path) as db:
         audit = db.execute(
             "SELECT raw_content, summary, deleted_at FROM evidence WHERE id = 'e-coffee'"
@@ -721,15 +723,15 @@ def test_archive_and_mute_share_cross_kind_lifecycle_authority(
         )
         assert receipt["result_state"] == "applied"
         revision += 1
-        assert receipt["after_revision"] == revision
+        assert as_int(receipt["after_revision"]) == revision
 
     query = QueryService(path, subject_id=_SUBJECT)
-    assert query.list_world_items()["items"] == []
-    history = query.list_world_items(include_history=True)["items"]
+    assert as_objects(query.list_world_items()["items"]) == []
+    history = as_objects(query.list_world_items(include_history=True)["items"])
     assert len(history) == 4
-    assert all(item["lifecycle"][column] == _T0 for item in history)
+    assert all(as_object(item["lifecycle"])[column] == _T0 for item in history)
     assert all(item["current_state"] == "not_current" for item in history)
-    assert query.preview_recall("小王 咖啡 爬山")["preview"]["count"] == 0
+    assert as_object(query.preview_recall("小王 咖啡 爬山")["preview"])["count"] == 0
     with _open(path) as db:
         cognition = db.execute(
             f"SELECT {column} FROM cognition WHERE id = 'cog-coffee'"
@@ -766,14 +768,14 @@ def test_local_only_correction_applies_without_cloud_permission_or_model_call(
 
     assert receipt["result_state"] == "applied"
     assert receipt["before_revision"] == 1
-    assert receipt["after_revision"] == 2
+    assert as_int(receipt["after_revision"]) == 2
     replacement_id = str(receipt["affected_ids"][1])
     correction_evidence_id = str(receipt["affected_ids"][2])
     query = QueryService(path, subject_id=_SUBJECT)
-    assert query.get_world_item("cognition", replacement_id)["item"]["value"][
+    assert as_object(as_object(query.get_world_item("cognition", replacement_id)["item"])["value"])[
         "content"
     ] == correction_text
-    evidence = query.get_evidence(correction_evidence_id)["evidence"]
+    evidence = as_object(query.get_evidence(correction_evidence_id)["evidence"])
     assert evidence["permissions"] == {
         "allow_local_read": True,
         "allow_cloud_read": False,
@@ -803,28 +805,28 @@ def test_correction_and_retract_use_exact_evidence_formal_history_and_zero_repla
     )
     assert correction["result_state"] == "applied"
     assert correction["before_revision"] == 1
-    assert correction["after_revision"] == 2
+    assert as_int(correction["after_revision"]) == 2
     assert correction["affected_ids"][0] == "cog-coffee"
     replacement_id = str(correction["affected_ids"][1])
     correction_evidence_id = str(correction["affected_ids"][2])
     assert correction["transition_ids"]
 
     query = QueryService(path, subject_id=_SUBJECT)
-    prior = query.get_world_item("cognition", "cog-coffee", include_history=True)["item"]
-    replacement = query.get_world_item("cognition", replacement_id)["item"]
-    evidence = query.get_evidence(correction_evidence_id)["evidence"]
+    prior = as_object(query.get_world_item("cognition", "cog-coffee", include_history=True)["item"])
+    replacement = as_object(query.get_world_item("cognition", replacement_id)["item"])
+    evidence = as_object(query.get_evidence(correction_evidence_id)["evidence"])
     assert prior["current_state"] == "not_current"
-    assert replacement["value"]["content"] == "用户喜欢喝茶"
+    assert as_object(replacement["value"])["content"] == "用户喜欢喝茶"
     assert evidence["raw_content"] == "用户喜欢喝茶"
     assert evidence["origin_id"] == (
         "trust-command:cmd-correct:cognition:cog-coffee:correction"
     )
     assert evidence["corrects_evidence_id"] == "e-coffee"
-    assert [row["evidence_id"] for row in replacement["provenance"]] == [
+    assert [row["evidence_id"] for row in as_objects(replacement["provenance"])] == [
         correction_evidence_id
     ]
     history = query.get_world_item_history("cognition", replacement_id)
-    assert history["transition_history"][0]["prior_item_id"] == "cog-coffee"
+    assert as_objects(history["transition_history"])[0]["prior_item_id"] == "cog-coffee"
 
     with _open(path) as db:
         counts = {
@@ -865,14 +867,14 @@ def test_correction_and_retract_use_exact_evidence_formal_history_and_zero_repla
     )
     assert retract["result_state"] == "applied"
     assert retract["before_revision"] == 2
-    assert retract["after_revision"] == 3
+    assert as_int(retract["after_revision"]) == 3
     assert retract["transition_ids"]
-    retracted = query.get_world_item(
+    retracted = as_object(query.get_world_item(
         "cognition", replacement_id, include_history=True
-    )["item"]
+    )["item"])
     assert retracted["current_state"] == "not_current"
-    assert query.get_evidence(correction_evidence_id)["evidence"]["raw_content"] == "用户喜欢喝茶"
-    assert query.preview_recall("茶")["preview"]["count"] == 0
+    assert as_object(query.get_evidence(correction_evidence_id)["evidence"])["raw_content"] == "用户喜欢喝茶"
+    assert as_object(query.preview_recall("茶")["preview"])["count"] == 0
 
 
 def test_provider_command_dispatch_is_subject_bound_and_receipt_survives_restart(
@@ -897,11 +899,11 @@ def test_provider_command_dispatch_is_subject_bound_and_receipt_survives_restart
         if key not in {"schema_version", "subject_id"}
     }
     submitted = service.execute_provider_tool("memoweft_submit_trust_command", args)
-    assert submitted["receipt"]["result_state"] == "applied"
+    assert as_object(submitted["receipt"])["result_state"] == "applied"
     looked_up = _service(path).execute_provider_tool(
         "memoweft_get_trust_command_receipt", {"command_id": "cmd-provider"}
     )
-    assert looked_up["receipt"] == submitted["receipt"]
+    assert as_object(looked_up["receipt"]) == as_object(submitted["receipt"])
 
     with pytest.raises(TrustCommandError, match="unexpected_trust_command_argument"):
         service.execute_provider_tool(
@@ -947,9 +949,9 @@ def test_relationship_and_event_correction_and_retract_share_formal_apply(
     )
     assert relationship["result_state"] == "applied"
     new_relationship_id = str(relationship["affected_ids"][1])
-    assert QueryService(path, subject_id=_SUBJECT).get_world_item(
+    assert as_object(as_object(QueryService(path, subject_id=_SUBJECT).get_world_item(
         "relationship", new_relationship_id
-    )["item"]["value"]["relation_type"] == "colleague"
+    )["item"])["value"])["relation_type"] == "colleague"
 
     event = service.submit_command(
         _command(
@@ -964,7 +966,7 @@ def test_relationship_and_event_correction_and_retract_share_formal_apply(
     assert event["result_state"] == "applied"
     new_event_id = str(event["affected_ids"][1])
     query = QueryService(path, subject_id=_SUBJECT)
-    assert query.get_world_item("event", new_event_id)["item"]["value"]["content"] == "用户和小王去露营"
+    assert as_object(as_object(query.get_world_item("event", new_event_id)["item"])["value"])["content"] == "用户和小王去露营"
 
     relation_retract = service.submit_command(
         _command(
@@ -986,12 +988,12 @@ def test_relationship_and_event_correction_and_retract_share_formal_apply(
     )
     assert relation_retract["result_state"] == "applied"
     assert event_retract["result_state"] == "applied"
-    assert query.get_world_item(
+    assert as_object(query.get_world_item(
         "relationship", new_relationship_id, include_history=True
-    )["item"]["current_state"] == "not_current"
-    assert query.get_world_item(
+    )["item"])["current_state"] == "not_current"
+    assert as_object(query.get_world_item(
         "event", new_event_id, include_history=True
-    )["item"]["current_state"] == "not_current"
+    )["item"])["current_state"] == "not_current"
 
     unsupported = service.submit_command(
         _command(
@@ -1005,7 +1007,7 @@ def test_relationship_and_event_correction_and_retract_share_formal_apply(
     )
     assert unsupported["accepted"] is False
     assert unsupported["result_state"] == "rejected"
-    assert unsupported["before_revision"] == unsupported["after_revision"] == 5
+    assert unsupported["before_revision"] == as_int(unsupported["after_revision"]) == 5
     assert _service(path).get_command_receipt("cmd-correct-entity") == unsupported
     assert _service(path).submit_command(
         _command(
@@ -1017,4 +1019,4 @@ def test_relationship_and_event_correction_and_retract_share_formal_apply(
             {"correction_text": "小王改名为老王"},
         )
     ) == unsupported
-    assert unsupported["before_revision"] == unsupported["after_revision"] == 5
+    assert unsupported["before_revision"] == as_int(unsupported["after_revision"]) == 5

@@ -1,9 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { join, resolve } from 'node:path';
 import { memoryAuthorityLabel, readTestbenchRuntimeConfig } from './runtime-config.mjs';
 
+const testbenchDir = resolve('testbench');
+const isolatedDir = resolve('isolated');
+
 test('runtime config preserves the 1.x defaults when isolation overrides are absent', () => {
-  const config = readTestbenchRuntimeConfig({ env: {}, dirname: 'D:\\MemoWeft\\testbench' });
+  const config = readTestbenchRuntimeConfig({ env: {}, dirname: testbenchDir });
   assert.equal(config.port, 7888);
   assert.match(config.dbPath, /testbench-evidence\.db$/);
   assert.match(config.logDir, /logs$/);
@@ -15,7 +19,7 @@ test('runtime config preserves the 1.x defaults when isolation overrides are abs
 test('runtime config enables the accepted 2.0 world only through the exact next authority switch', () => {
   const config = readTestbenchRuntimeConfig({
     env: { MEMOWEFT_TESTBENCH_MEMORY_AUTHORITY: 'next' },
-    dirname: 'D:\\MemoWeft\\testbench',
+    dirname: testbenchDir,
   });
 
   assert.equal(config.memoryAuthority, 'next');
@@ -26,7 +30,7 @@ test('runtime config enables the accepted 2.0 world only through the exact next 
       () =>
         readTestbenchRuntimeConfig({
           env: { MEMOWEFT_TESTBENCH_MEMORY_AUTHORITY: value },
-          dirname: 'D:\\MemoWeft\\testbench',
+          dirname: testbenchDir,
         }),
       /MEMOWEFT_TESTBENCH_MEMORY_AUTHORITY.*legacy.*next/,
     );
@@ -36,11 +40,11 @@ test('runtime config enables the accepted 2.0 world only through the exact next 
 test('runtime config enables per-turn profile scheduling only with the explicit on switch', () => {
   const enabled = readTestbenchRuntimeConfig({
     env: { MEMOWEFT_TESTBENCH_PROFILE_EVERY_TURN: 'on' },
-    dirname: 'D:\\MemoWeft\\testbench',
+    dirname: testbenchDir,
   });
   const disabled = readTestbenchRuntimeConfig({
     env: { MEMOWEFT_TESTBENCH_PROFILE_EVERY_TURN: 'off' },
-    dirname: 'D:\\MemoWeft\\testbench',
+    dirname: testbenchDir,
   });
 
   assert.equal(enabled.profileEveryTurn, true);
@@ -53,7 +57,7 @@ test('runtime config rejects an unsafe or ambiguous per-turn profile switch', ()
       () =>
         readTestbenchRuntimeConfig({
           env: { MEMOWEFT_TESTBENCH_PROFILE_EVERY_TURN: value },
-          dirname: 'D:\\MemoWeft\\testbench',
+          dirname: testbenchDir,
         }),
       /MEMOWEFT_TESTBENCH_PROFILE_EVERY_TURN.*on.*off/,
     );
@@ -64,21 +68,21 @@ test('runtime config accepts an isolated loopback port and explicit absolute DB/
   const config = readTestbenchRuntimeConfig({
     env: {
       MEMOWEFT_TESTBENCH_PORT: '7889',
-      MEMOWEFT_TESTBENCH_DB_PATH: 'D:\\MemoWeft\\isolated\\evidence.db',
-      MEMOWEFT_TESTBENCH_LOG_DIR: 'D:\\MemoWeft\\isolated\\logs',
+      MEMOWEFT_TESTBENCH_DB_PATH: join(isolatedDir, 'evidence.db'),
+      MEMOWEFT_TESTBENCH_LOG_DIR: join(isolatedDir, 'logs'),
     },
-    dirname: 'D:\\MemoWeft\\testbench',
+    dirname: testbenchDir,
   });
   assert.equal(config.port, 7889);
   assert.match(config.dbPath, /isolated[\\/]evidence\.db$/);
   assert.match(config.logDir, /isolated[\\/]logs$/);
   assert.throws(() =>
-    readTestbenchRuntimeConfig({ env: { MEMOWEFT_TESTBENCH_PORT: '0' }, dirname: 'D:\\x' }),
+    readTestbenchRuntimeConfig({ env: { MEMOWEFT_TESTBENCH_PORT: '0' }, dirname: testbenchDir }),
   );
   assert.throws(() =>
     readTestbenchRuntimeConfig({
-      env: { MEMOWEFT_TESTBENCH_DB_PATH: '.\\relative.db' },
-      dirname: 'D:\\x',
+      env: { MEMOWEFT_TESTBENCH_DB_PATH: join('.', 'relative.db') },
+      dirname: testbenchDir,
     }),
   );
 });
