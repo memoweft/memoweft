@@ -20,6 +20,34 @@ import { reply, type RelevantCognition } from './action.ts';
 import { recallCognitions } from '../retrieval/recall.ts';
 import { systemClock, type Clock } from '../clock.ts';
 
+/**
+ * 本轮由宿主提供、可安全进入回复提示的记忆。
+ *
+ * 这是一个窄的回复注入缝：它不是感知元数据，不会被 perceive/store 看见，
+ * 也不会被写进工作记忆窗口。宿主须在调用前完成来源与形状校验。
+ */
+interface TrustedReplyOptions {
+  /**
+   * Private testbench hook, run only after this turn's user Evidence is safe
+   * in the store and 1.x recall has completed.  It may fail or time out;
+   * either case degrades to no additional reply memory.
+   */
+  loadTrustedReplyMemory?: () =>
+    readonly RelevantCognition[] | Promise<readonly RelevantCognition[]>;
+  /**
+   * Private testbench hook for one already validated, deterministic question.
+   * A non-empty result becomes the sole assistant reply for this turn and is
+   * context only: it is never passed through perceive/store as user Evidence.
+   */
+  loadTrustedProactiveQuestion?: () => string | null | Promise<string | null>;
+  /**
+   * Private testbench authority switch.  In `next` authority mode 1.x still
+   * owns durable user Evidence and the sole chat reply, but it must not read
+   * native cognition/profile memory into that reply.
+   */
+  skipNativeCognitionRecall?: boolean;
+}
+
 export interface ConversationDeps {
   store: EvidenceStore;
   retriever: Retriever;
@@ -85,6 +113,15 @@ export class Conversation {
   async handle(userMsg: string, opts: PerceiveOptions = {}): Promise<TurnOutcome> {
     const { store, retriever, cognitionStore, llm } = this.deps;
     const cfg = this.deps.config ?? config; // 可注入配置（缺省=单例）
+    // Keep the frozen 1.x public handle signature intact.  The testbench uses
+    // this private server-owned extension at runtime only; published hosts
+    // continue to see exactly `PerceiveOptions`.
+    const {
+      loadTrustedReplyMemory,
+      loadTrustedProactiveQuestion,
+      skipNativeCognitionRecall = false,
+      ...perceiveOpts
+    } = opts as PerceiveOptions & TrustedReplyOptions;
 
     // 1) 感知 → 存证据（只存用户的，亲口）。先存，后答。
     // 附和/AI 上下文：先存后答；此刻 window 里还留着【上一轮 AI 那句】
@@ -94,22 +131,55 @@ export class Conversation {
     //   只此 Conversation 路捕得到（裸 ingest 无 working memory 窗口 → 缺省 null）。
     const precedingAiContext =
       [...this.window.context()].reverse().find((t) => t.role === 'assistant')?.content ?? null;
-    const stored = store.put({ ...perceive(userMsg, opts, cfg), precedingAiContext });
+    const stored = store.put({ ...perceive(userMsg, perceiveOpts, cfg), precedingAiContext });
 
     // 2) 召回相关认知（b）。失败不挡回话。
     // 召回段已抽为共享函数 retrieval/recall.ts：门槛顺序与判断条件原样搬走、语义零变化，
     // Conversation 与 core.recall 共用同一段；这里只保留"失败不挡回话"的容错壳。
     let recall: RecalledCognition[] = [];
+    if (!skipNativeCognitionRecall) {
+      try {
+        recall = await recallCognitions(
+          userMsg,
+          stored.subjectId,
+          { retriever, cognitionStore },
+          cfg,
+          (this.deps.clock ?? systemClock)(),
+        );
+      } catch {
+        /* 召回失败 → 当作无召回，照常回话 */
+      }
+    }
+
+    // A host may decide to speak one separately-owned, already-validated
+    // clarification.  It runs only after durable user Evidence and never
+    // enters perceive/store.  Hook failure simply preserves ordinary reply.
+    let proactiveQuestion: string | null = null;
     try {
-      recall = await recallCognitions(
-        userMsg,
-        stored.subjectId,
-        { retriever, cognitionStore },
-        cfg,
-        (this.deps.clock ?? systemClock)(),
-      );
+      const loaded = await loadTrustedProactiveQuestion?.();
+      if (
+        typeof loaded === 'string' &&
+        loaded.length > 0 &&
+        loaded.length <= 12_000 &&
+        loaded === loaded.trim()
+      ) {
+        proactiveQuestion = loaded;
+      }
     } catch {
-      /* 召回失败 → 当作无召回，照常回话 */
+      /* trusted proactive question unavailable → original reply path */
+    }
+
+    // A host may add a separately-owned, already-validated memory source for
+    // an ordinary reply.  Skip that second read when the host has already
+    // selected a question as the sole assistant turn.
+    let trustedReplyMemory: readonly RelevantCognition[] = [];
+    if (proactiveQuestion === null) {
+      try {
+        const loaded = await loadTrustedReplyMemory?.();
+        if (Array.isArray(loaded)) trustedReplyMemory = loaded;
+      } catch {
+        /* trusted reply memory unavailable → original reply path */
+      }
     }
 
     // 3) 回话：带最近几轮窗口 + 注入相关认知。助手回话不落证据。
@@ -117,16 +187,29 @@ export class Conversation {
     let replyText = '';
     let llmCalls = 0;
     let error: string | null = null;
-    try {
-      const r = await reply(userMsg, recent, recall, llm, this.deps.systemPrompt);
-      replyText = r.text;
-      llmCalls = r.llmCalls;
-    } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
-      replyText =
-        resolveLang(cfg) === 'zh'
-          ? '（回话失败，但你的话已存为证据）'
-          : '(Reply failed, but your message has been saved as evidence.)';
+    if (proactiveQuestion !== null) {
+      replyText = proactiveQuestion;
+    } else {
+      try {
+        // `trustedReplyMemory` is deliberately reply-only.  It is never part of
+        // `perceiveOpts`, `stored`, `recall`, or `window`; accepting a 2.0 memory
+        // must not turn it into fresh 1.x Evidence or conversational history.
+        const r = await reply(
+          userMsg,
+          recent,
+          [...recall, ...trustedReplyMemory],
+          llm,
+          this.deps.systemPrompt,
+        );
+        replyText = r.text;
+        llmCalls = r.llmCalls;
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+        replyText =
+          resolveLang(cfg) === 'zh'
+            ? '（回话失败，但你的话已存为证据）'
+            : '(Reply failed, but your message has been saved as evidence.)';
+      }
     }
 
     this.window.push({ role: 'user', content: userMsg });

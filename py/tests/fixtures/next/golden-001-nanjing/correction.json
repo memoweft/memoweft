@@ -1,0 +1,15 @@
+{
+  "correction_id": "correction-nanjing-first-trip-nervous",
+  "conversation_id": "conv-golden-001-nanjing",
+  "turn_id": "turn-005-correction",
+  "role": "user",
+  "content": "朋友不是一直爱规划；那次是她第一次去南京，所以有点紧张，才希望把行程和攻略安排好。",
+  "occurred_at": "2026-08-07T09:00:00+08:00",
+  "expected_semantics": {
+    "preserve_event": "event:nanjing-conflict",
+    "narrow_cognition": "cog:friend-planning-style",
+    "narrow_scope": "that_nanjing_trip",
+    "add_cause_detail": "first trip to Nanjing and nervous",
+    "must_not": ["erase_conflict_history", "make_friend_always_planner"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "fixture_id": "golden-001-nanjing",
+  "fixture_version": "1.0.0-synthetic",
+  "status": "frozen",
+  "synthetic": true,
+  "owner_approved": true,
+  "not_gate_1_evidence": true,
+  "evidence_allowlist": {
+    "user_or_authoritative_tool_only": true,
+    "turn_ids": ["turn-001", "turn-003"]
+  },
+  "payloads": {
+    "transcript.jsonl": "sha256:AA416D7622D281CFBBCF1DEB816B0FE6EF2DDF4B36EBFEA76C01E6D7CD5DA0FA",
+    "expected-predicates.json": "sha256:34A87CE6C71138EC5B67B107DBF8080EF9104AE112035378379AF122A2379EEB",
+    "query.json": "sha256:E9F12506410B1B3D1C14988C6241B50A554831F00A5FAA49609E23B1BF8EDE49",
+    "correction.json": "sha256:3E5228FE400112048B27BD10F0A6480A1F270FA8D9DDDD9D3B0AF3F71CC2497C"
+  },
+  "review_note": "Owner 于 2026-08-08 通过 Gate 0 后冻结的 synthetic v1；冻结输入本身不等于 Gate 1 证据。"
+}

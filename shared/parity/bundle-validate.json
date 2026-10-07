@@ -2,6 +2,7 @@
   "cases": [
     {
       "bundle": {
+        "bundleId": "portable:v4:dabea6a38d1da4941fd186c1b425f66a14b52d1c698ab457432dda5080644723",
         "data": {
           "cognitionEvidence": [
             {
@@ -10,6 +11,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -29,6 +32,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -55,6 +59,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -70,6 +75,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -97,28 +103,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [],
@@ -140,6 +161,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:985a0def44661b661865b19fe8913f4d3c38a5b74c40128bb44981fd9973a61a",
         "data": {
           "cognitionEvidence": [
             {
@@ -148,6 +170,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -167,6 +191,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -193,6 +218,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -208,6 +234,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -235,28 +262,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "nope",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -269,6 +311,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
         "data": {
           "cognitionEvidence": [
             {
@@ -277,6 +320,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -296,6 +341,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -322,6 +368,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -337,6 +384,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -364,17 +412,179 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
+          },
+          "notes": [
+            "fixture"
+          ]
+        },
+        "schemaVersion": 4,
+        "source": {
+          "exportMode": "full",
+          "hostId": "local"
+        },
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
+      },
+      "expected": {
+        "errors": [
+          "bundleId does not match the canonical bundle payload"
+        ],
+        "valid": false,
+        "warnings": []
+      },
+      "label": "bundle-id-mismatch"
+    },
+    {
+      "bundle": {
+        "bundleId": "portable:v4:bdf6faca0c58c7047ec56ae077206421ed4bf28196248e188678cb7fc109195d",
+        "data": {
+          "cognitionEvidence": [
+            {
+              "cognitionId": "cog-1",
+              "evidenceId": "ev-1",
+              "relation": "support"
+            }
+          ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
+          "cognitions": [
+            {
+              "archivedAt": null,
+              "askedAt": null,
+              "confidence": 600,
+              "content": "用户喜欢 X",
+              "contentType": "preference",
+              "createdAt": "2026-01-01T00:00:03.000Z",
+              "credStatus": "limited",
+              "formedBy": "stated",
+              "id": "cog-1",
+              "invalidAt": null,
+              "mutedAt": null,
+              "scope": null,
+              "subjectId": "owner",
+              "updatedAt": "2026-01-01T00:00:03.000Z",
+              "validAt": null
+            }
+          ],
+          "entities": [],
+          "eventEvidence": [
+            {
+              "eventId": "evt-1",
+              "evidenceId": "ev-1"
+            },
+            {
+              "eventId": "evt-1",
+              "evidenceId": "ev-2"
+            }
+          ],
+          "events": [
+            {
+              "consolidated": true,
+              "createdAt": "2026-01-01T00:00:02.000Z",
+              "id": "evt-1",
+              "occurredAt": "2026-01-01T00:00:00.000Z",
+              "subjectId": "owner",
+              "summary": "一个事件"
+            }
+          ],
+          "evidence": [
+            {
+              "allowCloudRead": false,
+              "allowInference": true,
+              "allowLocalRead": true,
+              "correctsEvidenceId": null,
+              "deletedAt": null,
+              "hostId": "local",
+              "id": "ev-1",
+              "occurredAt": "2026-01-01T00:00:00.000Z",
+              "originId": null,
+              "rawContent": "原话 ev-1",
+              "recordedAt": "2026-01-01T00:00:01.000Z",
+              "sourceKind": "spoken",
+              "subjectId": "owner",
+              "summary": "摘要 ev-1"
+            },
+            {
+              "allowCloudRead": false,
+              "allowInference": true,
+              "allowLocalRead": true,
+              "correctsEvidenceId": null,
+              "deletedAt": null,
+              "hostId": "local",
+              "id": "ev-2",
+              "occurredAt": "2026-01-01T00:00:00.000Z",
+              "originId": null,
+              "rawContent": "原话 ev-2",
+              "recordedAt": "2026-01-01T00:00:01.000Z",
+              "sourceKind": "tool",
+              "subjectId": "owner",
+              "summary": "摘要 ev-2"
+            }
+          ],
+          "interactionContexts": [
+            {
+              "context": [
+                {
+                  "content": "hi",
+                  "role": "user"
+                }
+              ],
+              "contextHash": "b03d228fdf33e7c81a9a7ea3eadadcf2cdcb98823fe93c669b8f0db42e0fa8a0",
+              "conversationId": "conv-1",
+              "createdAt": "2026-01-01T00:00:00.500Z",
+              "episodeId": "ep-1",
+              "id": "ic-1",
+              "subjectId": "owner"
+            }
+          ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
+          "semanticResolutions": [],
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
+        },
+        "exportedAt": "2026-01-02T00:00:00.000Z",
+        "format": "memoweft-bundle",
+        "memoWeftVersion": "0.6.0-dev",
+        "metadata": {
+          "counts": {
+            "cognitionTransitions": 0,
+            "cognitions": 1,
+            "entities": 0,
+            "events": 1,
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
@@ -384,7 +594,10 @@
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -397,6 +610,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:a7d82a74ad190b805f47bcfe93c03a1df3fb47383f9657700d5e5062650e5522",
         "data": {
           "cognitionEvidence": [
             {
@@ -405,6 +619,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -424,6 +640,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -450,6 +667,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -465,6 +683,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -492,17 +711,29 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
@@ -513,11 +744,14 @@
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
-          "schemaVersion=99 is higher than the 2 supported by this version (upgrade MemoWeft before importing)"
+          "schemaVersion=99 is higher than the 4 supported by this version (upgrade MemoWeft before importing)"
         ],
         "valid": false,
         "warnings": []
@@ -526,6 +760,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:f9bc9b899e46ed7a96e400bcdeaa267d94861071be20288e07cb4564ffdea833",
         "data": {
           "cognitionEvidence": [
             {
@@ -534,6 +769,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -553,6 +790,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -579,6 +817,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -594,6 +833,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -621,17 +861,29 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
@@ -642,19 +894,24 @@
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [],
         "valid": true,
         "warnings": [
-          "schemaVersion=1 is lower than the current 2 (importing with the old structure)"
+          "schemaVersion=1 is lower than the current 4 (importing with the old structure)",
+          "World sections are only supported by schemaVersion 3 or later; ignored"
         ]
       },
       "label": "schemaVersion-lower"
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:be7f2fdced61aa00f8026d39435bb6e5d7522bb8fd9cfba15cce709f2cbfc899",
         "data": {
           "cognitionEvidence": [
             {
@@ -663,6 +920,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -682,6 +941,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -708,6 +968,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -723,6 +984,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -750,31 +1012,52 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
-        }
+        },
+        "sourceSubjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
-          "subjectId is missing"
+          "subjectId is missing",
+          "sourceSubjectId does not match subjectId",
+          "evidence ev-1 subjectId(owner) does not match the bundle(undefined)",
+          "evidence ev-2 subjectId(owner) does not match the bundle(undefined)",
+          "event evt-1 subjectId(owner) does not match the bundle",
+          "cognition cog-1 subjectId(owner) does not match the bundle",
+          "interactionContext ic-1 subjectId(owner) does not match the bundle"
         ],
         "valid": false,
         "warnings": []
@@ -783,25 +1066,35 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:003b117ad4477a11287e4232d283311f16b92ffdad23e2a4849e8cefdc8d87d6",
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -814,6 +1107,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:19a227d46d675fab1ad17fa0ca5628da44207ae37f68650951a0c3449ea4e74c",
         "data": {
           "cognitionEvidence": [
             {
@@ -822,6 +1116,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -841,6 +1137,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -878,28 +1175,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -912,6 +1224,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:8ee96b608bf85b45450189cde4069b0d39382fd5cc74863a24b8a82ad416db97",
         "data": {
           "cognitionEvidence": [
             {
@@ -920,6 +1233,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -939,6 +1254,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -965,6 +1281,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -980,6 +1297,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1007,28 +1325,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -1041,6 +1374,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:c2bf3da9461d790225bc4473bf1c68058b57d58500e927a6b7ce5c7b70b2809a",
         "data": {
           "cognitionEvidence": [
             {
@@ -1049,6 +1383,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -1068,6 +1404,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -1094,6 +1431,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1109,6 +1447,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1136,28 +1475,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -1171,6 +1525,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:43b40875b4aa28be2e5ccaf7cc9b80cd51af1e8bf8df3df7db7bb67188a89c55",
         "data": {
           "cognitionEvidence": [
             {
@@ -1179,6 +1534,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -1198,6 +1555,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -1224,6 +1582,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1239,6 +1598,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1266,28 +1626,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -1300,6 +1675,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:56a3f83080015e837e41455271f93062e8ecea96ecee9c74b5dc889f839444e6",
         "data": {
           "cognitionEvidence": [
             {
@@ -1308,6 +1684,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -1327,6 +1705,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -1353,6 +1732,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1368,6 +1748,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1395,28 +1776,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -1429,6 +1825,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:f69eda3d47b7f1995b5c396d77ec7afe3f399d0363281a69068c2994258b981c",
         "data": {
           "cognitionEvidence": [
             {
@@ -1437,6 +1834,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -1456,6 +1855,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -1486,6 +1886,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1501,6 +1902,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1528,28 +1930,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -1562,6 +1979,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:a2143544c28fd1492348fedc46f05018b59659ec81080924ff01eddddf7d48bd",
         "data": {
           "cognitionEvidence": [
             {
@@ -1575,6 +1993,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -1594,6 +2014,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -1620,6 +2041,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1635,6 +2057,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1662,28 +2085,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -1696,6 +2134,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:44a2b85006dce8ba60bb06d00b0365d35dcb6f51d6a6b21783d6b8e816fb39ce",
         "data": {
           "cognitionEvidence": [
             {
@@ -1704,6 +2143,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -1723,6 +2164,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -1749,6 +2191,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1764,6 +2207,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1791,28 +2235,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -1827,6 +2286,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:f513f9c91ee76145a1e45a11554ee678988f20c1cabf692e4123ea5b5c2f18a1",
         "data": {
           "cognitionEvidence": [
             {
@@ -1835,6 +2295,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -1854,6 +2316,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -1880,6 +2343,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-02-28T23:59:59.123+08:00",
@@ -1895,6 +2359,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -1922,28 +2387,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [],
@@ -1954,6 +2434,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:79817c90f2c71d5d46170f11b8cbbf799a9cd3272b61cefc9c451232ca795828",
         "data": {
           "cognitionEvidence": [
             {
@@ -1962,6 +2443,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -1981,6 +2464,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -2007,6 +2491,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-02-30T12:00:00Z",
@@ -2022,6 +2507,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2049,28 +2535,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -2083,6 +2584,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:1219589ba826bd0ea984e62c44a906e6b0cc50a8068f1f87c2ad1daadc651d8d",
         "data": {
           "cognitionEvidence": [
             {
@@ -2091,6 +2593,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -2110,6 +2614,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -2136,6 +2641,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2151,6 +2657,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2178,28 +2685,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "Fri, 31 Jul 2026 12:00:00 GMT",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -2212,6 +2734,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:a3b8ef0f25392cf0fdd9b88776448220f6f922a5cc1d9d4249d58d4ff4b3f193",
         "data": {
           "cognitionEvidence": [
             {
@@ -2220,6 +2743,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -2239,6 +2764,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -2265,6 +2791,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2280,6 +2807,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2307,28 +2835,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -2341,6 +2884,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:39b7cf9cc243f317140a36ca21e19fd7d5e56bd3940fc343845be69b1652d0c8",
         "data": {
           "cognitionEvidence": [
             {
@@ -2349,6 +2893,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -2368,6 +2914,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -2394,6 +2941,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": "ghost",
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2409,6 +2957,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2436,28 +2985,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [],
@@ -2470,6 +3034,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:3f130c3b52d5a936119543de098c8f4b0f8021c6b2487d60aef4fd83f833f6b6",
         "data": {
           "cognitionEvidence": [
             {
@@ -2478,6 +3043,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -2497,6 +3064,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -2523,6 +3091,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2538,6 +3107,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2565,30 +3135,45 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
           "unconsolidatedEventIds": [
             "ghost"
-          ]
+          ],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [],
@@ -2601,6 +3186,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:3c9298f284768fcbf9ca9c4853909a1c8b6f4aa041e6941bbdd5bf2b21bea308",
         "data": {
           "cognitionEvidence": [
             {
@@ -2609,6 +3195,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -2628,6 +3216,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -2654,6 +3243,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2669,6 +3259,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2696,28 +3287,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -2730,6 +3336,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:49ddd8afc464769a0835342795e63d59f17e66e107a12a5ccdd985fc1171feac",
         "data": {
           "cognitionEvidence": [
             {
@@ -2738,6 +3345,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -2757,6 +3366,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -2783,6 +3393,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2798,6 +3409,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2825,28 +3437,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -2859,6 +3486,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:3183849d0cb9e3340ff89c6da85625bf721c98ac719142c858333a856790ff68",
         "data": {
           "cognitionEvidence": [
             {
@@ -2867,6 +3495,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -2886,6 +3516,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -2912,6 +3543,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2927,6 +3559,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -2954,28 +3587,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -2988,6 +3636,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:b38e59072d7ec16eabcd25a63a8ee55825a089440b9d751231078c060d8f14bf",
         "data": {
           "cognitionEvidence": [
             {
@@ -2996,6 +3645,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -3015,6 +3666,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -3041,6 +3693,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -3056,6 +3709,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -3083,28 +3737,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -3117,6 +3786,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:7dabb137cbe11f6e0ebcbb9bd3cef2f9c49bcacdf38ddeb8192562eebdd306d0",
         "data": {
           "cognitionEvidence": [
             {
@@ -3125,6 +3795,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -3144,6 +3816,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -3170,6 +3843,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -3185,6 +3859,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -3212,28 +3887,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -3246,6 +3936,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:c94c3386102118e167385a8fcac98391afa66904c7ca580820ae9841d79bd02a",
         "data": {
           "cognitionEvidence": [
             {
@@ -3254,6 +3945,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -3273,6 +3966,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -3299,6 +3993,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -3314,6 +4009,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -3341,28 +4037,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [
@@ -3375,6 +4086,7 @@
     },
     {
       "bundle": {
+        "bundleId": "portable:v4:27efd2fa1b7e02560fec715d77bb7ca542ab8d41a9f27ec68989ba3e17d3038e",
         "data": {
           "cognitionEvidence": [
             {
@@ -3383,6 +4095,8 @@
               "relation": "support"
             }
           ],
+          "cognitionTargets": [],
+          "cognitionTransitions": [],
           "cognitions": [
             {
               "archivedAt": null,
@@ -3402,6 +4116,7 @@
               "validAt": null
             }
           ],
+          "entities": [],
           "eventEvidence": [
             {
               "eventId": "evt-1",
@@ -3428,6 +4143,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-1",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -3443,6 +4159,7 @@
               "allowInference": true,
               "allowLocalRead": true,
               "correctsEvidenceId": null,
+              "deletedAt": null,
               "hostId": "local",
               "id": "ev-2",
               "occurredAt": "2026-01-01T00:00:00.000Z",
@@ -3470,28 +4187,43 @@
               "subjectId": "owner"
             }
           ],
+          "relationshipEvidence": [],
+          "relationships": [],
+          "retractions": [],
           "semanticResolutions": [],
-          "unconsolidatedEventIds": []
+          "unconsolidatedEventIds": [],
+          "worldEventEvidence": [],
+          "worldEvents": [],
+          "worldItemLifecycle": []
         },
         "exportedAt": "2026-01-02T00:00:00.000Z",
         "format": "memoweft-bundle",
         "memoWeftVersion": "0.6.0-dev",
         "metadata": {
           "counts": {
+            "cognitionTransitions": 0,
             "cognitions": 1,
+            "entities": 0,
             "events": 1,
-            "evidence": 2
+            "evidence": 2,
+            "relationships": 0,
+            "retractions": 0,
+            "worldEvents": 0,
+            "worldItemLifecycle": 0
           },
           "notes": [
             "fixture"
           ]
         },
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "source": {
           "exportMode": "full",
           "hostId": "local"
         },
-        "subjectId": "owner"
+        "sourceSubjectId": "owner",
+        "subjectId": "owner",
+        "worldRevision": 0,
+        "worldSnapshotHash": ""
       },
       "expected": {
         "errors": [],

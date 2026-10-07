@@ -1,0 +1,29 @@
+{
+  "data": {
+    "cognitionEvidence": [],
+    "cognitions": [],
+    "eventEvidence": [],
+    "events": [],
+    "evidence": [],
+    "interactionContexts": [],
+    "semanticResolutions": [],
+    "unconsolidatedEventIds": []
+  },
+  "exportedAt": "2026-08-25T00:00:00.000Z",
+  "format": "memoweft-bundle",
+  "memoWeftVersion": "1.0.0",
+  "metadata": {
+    "counts": {
+      "cognitions": 0,
+      "events": 0,
+      "evidence": 0
+    },
+    "notes": []
+  },
+  "schemaVersion": 2,
+  "source": {
+    "exportMode": "full",
+    "hostId": "legacy-host"
+  },
+  "subjectId": "legacy-owner"
+}

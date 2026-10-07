@@ -52,7 +52,9 @@ def _brief(e: Evidence) -> EvidenceBrief:
 # ── proposeAsk ──
 
 
-def _template_question(hypothesis: str, evidence: Sequence[EvidenceBrief], lang: Lang) -> str:
+def render_hypothesis_question(
+    hypothesis: str, evidence: Sequence[EvidenceBrief], lang: Lang
+) -> str:
     """生成带证据且保留不确定性的确定性后备问题。"""
     if lang == "zh":
         shown = "、".join(f"「{e.summary}」" for e in evidence)
@@ -74,7 +76,7 @@ def _phrase_question(hypothesis: str, evidence: Sequence[EvidenceBrief], llm: LL
         ChatMessage(role="user", content=user),
     ]
     text = js_trim(llm.chat(messages))
-    return text or _template_question(hypothesis, evidence, lang)
+    return text or render_hypothesis_question(hypothesis, evidence, lang)
 
 
 def propose_ask(
@@ -119,7 +121,11 @@ def propose_ask(
         # 隐私边界：措辞模型仅接收当前 tier 可读的证据；宿主展示数据保留完整证据集合。
         tier = llm.tier if (llm is not None and llm.tier is not None) else "cloud"
         readable = [_brief(e) for e in filter_readable_by_tier(support_evidence, tier)]
-        question = _phrase_question(cog.content, readable, llm, lg) if llm is not None else _template_question(cog.content, evidence, lg)
+        question = (
+            _phrase_question(cog.content, readable, llm, lg)
+            if llm is not None
+            else render_hypothesis_question(cog.content, evidence, lg)
+        )
         proposals.append(
             AskProposal(
                 cognition_id=cog.id, kind="hypothesis", hypothesis=cog.content, question=question,
@@ -136,7 +142,12 @@ def propose_ask(
 # ── revisitConflicts ──
 
 
-def _revisit_template(content: str, support: Sequence[EvidenceBrief], contradict: Sequence[EvidenceBrief], lang: Lang) -> str:
+def render_conflict_question(
+    content: str,
+    support: Sequence[EvidenceBrief],
+    contradict: Sequence[EvidenceBrief],
+    lang: Lang,
+) -> str:
     """生成并列呈现支撑与反对证据的确定性后备问题。"""
     if lang == "zh":
         s = "、".join(f"「{e.summary}」" for e in support)
@@ -167,7 +178,7 @@ def _revisit_phrase(
         ChatMessage(role="user", content=user),
     ]
     text = js_trim(llm.chat(messages))
-    return text or _revisit_template(content, support, contradict, lang)
+    return text or render_conflict_question(content, support, contradict, lang)
 
 
 def revisit_conflicts(
@@ -207,7 +218,7 @@ def revisit_conflicts(
                 llm, lg,
             )
         else:
-            question = _revisit_template(cog.content, support, contradict, lg)
+            question = render_conflict_question(cog.content, support, contradict, lg)
         proposals.append(
             AskProposal(
                 cognition_id=cog.id, kind="conflict", hypothesis=cog.content, question=question,

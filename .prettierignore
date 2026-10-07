@@ -6,6 +6,11 @@ py/src/memoweft/_shared_data/**/*.json
 bench/consolidation-baseline.md
 bench/consolidation-baseline.json
 
+# Frozen byte-level fixtures whose SHA-256 values are part of their contracts.
+py/tests/fixtures/next/gate2-entity-continuity/corpus.json
+py/tests/fixtures/next/golden-001-nanjing/expected-predicates.json
+py/tests/fixtures/next/golden-001-nanjing/query.json
+
 # AI 助手的本地工作流（同 .gitignore）：这些文件不属于本仓，不该被仓库的格式门禁扫到。
 #   实测症状：本机 `npm run format` 因 .claude/skills/**/*.yaml 变红，而 CI 上这些文件根本不存在
 #   （已被 .gitignore 挡住）→ 本地红、CI 绿，门禁失去意义。

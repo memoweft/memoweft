@@ -1,104 +1,361 @@
-/**
- * 便携记忆包（Portable Memory Bundle）数据模型。
- *
- * 目标：把某个 subject 的三层记忆（evidence → event → cognition）+ 溯源关系
- * 打成一个可读、可校验、可版本化的 JSON 包，用于导出 / 备份 / 迁移 / 恢复。
- *
- * 保真原则（兼容性约束）：保留原 id 与全部时间戳，导入后 get(原id) 仍成立、溯源链不丢。
- * 不含：向量索引（派生物，导入后 retriever.indexAll 重建）、logs、.env / API key、宿主 UI 状态。
- */
+/** Portable Memory Bundle v4 data, identity and import-plan contracts. */
+import { createHash } from 'node:crypto';
 import type { Evidence } from '../evidence/model.ts';
 import type { Event } from '../event/model.ts';
 import type { Cognition, EvidenceRelation } from '../cognition/model.ts';
 import type { InteractionContext, SemanticResolution } from '../interaction/model.ts';
 
-/** 包格式标记（用于导入前辨认）。 */
 export const BUNDLE_FORMAT = 'memoweft-bundle';
-/** 包结构版本（结构演进时 +1，配合 validate/migration）。
- *  v2：data 增 interactionContexts / semanticResolutions（交互上下文 + 语义解析随用户迁移）。
- *  向后兼容：导入 v1 包（无这两段）按空处理。 */
-export const BUNDLE_SCHEMA_VERSION = 2;
+export const BUNDLE_SCHEMA_VERSION = 4;
+export const PLAN_SCHEMA_VERSION = 1;
 
-/** 事件 → 覆盖的原话证据（对应 event_evidence 表一行）。 */
 export interface EventEvidenceLink {
   eventId: string;
   evidenceId: string;
 }
 
-/** 认知 → 溯源证据 + 关系（对应 cognition_evidence 表一行）。 */
 export interface CognitionEvidenceLink {
   cognitionId: string;
   evidenceId: string;
   relation: EvidenceRelation;
 }
 
-/** 一个便携记忆包（导出产物 / 导入入参）。 */
+export interface PortableEvidence extends Evidence {
+  deletedAt?: string | null;
+}
+
+export interface PortableEntity {
+  id: string;
+  worldId: string;
+  kind: string;
+  canonicalName: string;
+  aliases: string[];
+  invalidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EntityEvidenceLink {
+  entityId: string;
+  evidenceId: string;
+  relation: 'support';
+  start: number | null;
+  end: number | null;
+}
+
+export interface PortableRelationship {
+  id: string;
+  worldId: string;
+  sourceEntityId: string;
+  targetEntityId: string;
+  relationType: string;
+  content: string;
+  formedBy: string;
+  confidence: number;
+  credStatus: string;
+  invalidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PortableWorldEvent {
+  id: string;
+  worldId: string;
+  content: string;
+  occurredAt: string | null;
+  timeExpression: string | null;
+  participants: Array<{ canonicalName: string; kind: string }>;
+  objects: Array<{ canonicalName: string; kind: string }>;
+  formedBy: string;
+  confidence: number;
+  credStatus: string;
+  invalidAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PortableRetraction {
+  id: string;
+  priorCognitionId: string | null;
+  priorRelationshipId: string | null;
+  priorEventId: string | null;
+  reason: string;
+  revision: number;
+  createdAt: string;
+}
+
+export interface PortableCognitionTransition {
+  id: string;
+  priorCognitionId: string;
+  replacementCognitionId: string;
+  reason: string;
+  revision: number;
+}
+
+export interface PortableWorldItemLifecycle {
+  subjectId: string;
+  objectKind: 'entity' | 'relationship' | 'event' | 'cognition';
+  itemId: string;
+  archivedAt: string | null;
+  mutedAt: string | null;
+  updatedAt: string;
+}
+
 export interface MemoryBundle {
   format: string;
   schemaVersion: number;
+  /** v4 only. v2/v3 readers accept bundles without this field. */
+  bundleId?: string;
   exportedAt: string;
   memoWeftVersion: string;
   subjectId: string;
-  source: {
-    hostId: string;
-    exportMode: 'full';
-  };
+  /** v4 only; equals subjectId in source bytes and survives target remap planning. */
+  sourceSubjectId?: string;
+  worldRevision?: number;
+  worldSnapshotHash?: string;
+  source: { hostId: string; exportMode: 'full' };
   data: {
-    evidence: Evidence[];
+    evidence: PortableEvidence[];
     events: Event[];
     eventEvidence: EventEvidenceLink[];
     cognitions: Cognition[];
     cognitionEvidence: CognitionEvidenceLink[];
-    /** 导出时尚未消化（consolidated=0）的事件 id；导入按此还原 consolidated 标记（保真，防漏消化）。 */
     unconsolidatedEventIds: string[];
-    /** 交互上下文（v0.6，schemaVersion≥2）：跟随用户迁移的会话上下文快照。v1 包无此段（导入按空）。
-     *  注意：内容含 AI 可见文本，但**永不成为证据**——导入回来仍是独立表、不进 consolidate 白名单。 */
     interactionContexts?: InteractionContext[];
-    /** 语义解析（v0.6，schemaVersion≥2）：证据的语义解析。通常为空（由写路径按需生成）。v1 包无此段。 */
     semanticResolutions?: SemanticResolution[];
+    /** v3+ World sections. */
+    entities?: PortableEntity[];
+    /** v4 entity formation provenance retained from the durable ledger. */
+    entityEvidence?: EntityEvidenceLink[];
+    relationships?: PortableRelationship[];
+    relationshipEvidence?: Array<{
+      relationshipId: string;
+      evidenceId: string;
+      relation: EvidenceRelation;
+    }>;
+    worldEvents?: PortableWorldEvent[];
+    worldEventEvidence?: Array<{
+      worldEventId: string;
+      evidenceId: string;
+      relation: EvidenceRelation;
+    }>;
+    cognitionTargets?: Array<{
+      cognitionId: string;
+      targetEntityId: string;
+      perspectiveEntityId: string | null;
+    }>;
+    /** v4 durable history/currentness. */
+    retractions?: PortableRetraction[];
+    cognitionTransitions?: PortableCognitionTransition[];
+    worldItemLifecycle?: PortableWorldItemLifecycle[];
   };
   metadata: {
     counts: {
       evidence: number;
       events: number;
       cognitions: number;
+      entities?: number;
+      entityEvidence?: number;
+      relationships?: number;
+      worldEvents?: number;
+      retractions?: number;
+      cognitionTransitions?: number;
+      worldItemLifecycle?: number;
     };
     notes: string[];
   };
 }
 
-/** 导入模式：dryRun 只校验不写；merge 合并导入（按 id/originId 去重）。replace 留 V2。 */
 export type ImportMode = 'dryRun' | 'merge';
 
-/** 校验结果（validateBundle 产出，也并入 ImportPlan）。 */
 export interface ValidateResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
 }
 
-/** 导入计划 / 结果：dryRun 只算不写；merge 反映实际写入。 */
 export interface ImportPlan {
   mode: ImportMode;
   valid: boolean;
   errors: string[];
   warnings: string[];
-  /** dryRun：将新写入的条数；merge：实际新写入条数（已存在的计入 duplicates，不重复写）。 */
   counts: {
     evidence: number;
     events: number;
     cognitions: number;
     eventEvidence: number;
     cognitionEvidence: number;
-    /** 交互上下文新写入条数（v0.6）。 */
     interactionContexts: number;
-    /** 语义解析新写入条数（v0.6）。 */
     semanticResolutions: number;
+    entities?: number;
+    entityEvidence?: number;
+    relationships?: number;
+    worldEvents?: number;
+    relationshipEvidence?: number;
+    worldEventEvidence?: number;
+    cognitionTargets?: number;
+    retractions?: number;
+    cognitionTransitions?: number;
+    worldItemLifecycle?: number;
+    evidenceTombstones?: number;
   };
-  /** 因 id 已存在（或 originId 冲突）而跳过、未重复写入的条数。 */
   duplicates: {
     evidence: number;
     events: number;
     cognitions: number;
+    entities?: number;
+    relationships?: number;
+    worldEvents?: number;
+    retractions?: number;
+    cognitionTransitions?: number;
+    worldItemLifecycle?: number;
   };
+  bundleId?: string;
+  sourceSubjectId?: string;
+  targetSubjectId?: string;
+  targetWorldRevision?: number;
+  targetSnapshotHash?: string;
+  conflicts?: Array<{ kind: string; id: string; code: string }>;
+  wouldAdvanceRevision?: boolean;
+  planHash?: string;
+  commandId?: string;
+  receiptId?: string;
+}
+
+function canonicalValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((item) => canonicalValue(item));
+  if (value !== null && typeof value === 'object') {
+    const source = value as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(source).sort()) {
+      if (source[key] !== undefined) out[key] = canonicalValue(source[key]);
+    }
+    return out;
+  }
+  return value;
+}
+
+export function canonicalJson(value: unknown): string {
+  const encoded = JSON.stringify(canonicalValue(value));
+  if (encoded === undefined) throw new TypeError('value_is_not_json');
+  return encoded;
+}
+
+export function canonicalSha256(value: unknown): string {
+  return createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex');
+}
+
+export function deriveBundleId(bundle: unknown): string {
+  if (bundle === null || typeof bundle !== 'object' || Array.isArray(bundle))
+    throw new TypeError('bundle_must_be_object');
+  const payload = { ...(bundle as Record<string, unknown>) };
+  delete payload.bundleId;
+  return `portable:v4:${canonicalSha256(payload)}`;
+}
+
+export function derivePlanIds(payload: unknown): {
+  planHash: string;
+  commandId: string;
+  receiptId: string;
+} {
+  const planHash = canonicalSha256(payload);
+  return {
+    planHash,
+    commandId: `portable:command:v1:${planHash}`,
+    receiptId: `portable:receipt:v1:${planHash}`,
+  };
+}
+
+/** Cross-language fresh-target plan oracle used by the shared v4 fixture.
+ * Runtime imports still perform real target collision queries in importBundle/Core. */
+export function deriveFreshPortableV4Plan(
+  bundle: MemoryBundle,
+  targetSubjectId: string,
+  targetWorldRevision = 0,
+  targetSnapshotHash = '',
+): ReturnType<typeof derivePlanIds> & { payload: Record<string, unknown> } {
+  const data = bundle.data;
+  const counts = {
+    evidence: data.evidence.length,
+    events: data.events.length,
+    cognitions: data.cognitions.length,
+    eventEvidence: data.eventEvidence.length,
+    cognitionEvidence: data.cognitionEvidence.length,
+    interactionContexts: (data.interactionContexts ?? []).length,
+    semanticResolutions: (data.semanticResolutions ?? []).length,
+    entities: (data.entities ?? []).length,
+    entityEvidence: (data.entityEvidence ?? []).length,
+    relationships: (data.relationships ?? []).length,
+    worldEvents: (data.worldEvents ?? []).length,
+    relationshipEvidence: (data.relationshipEvidence ?? []).length,
+    worldEventEvidence: (data.worldEventEvidence ?? []).length,
+    cognitionTargets: (data.cognitionTargets ?? []).length,
+    retractions: (data.retractions ?? []).length,
+    cognitionTransitions: (data.cognitionTransitions ?? []).length,
+    worldItemLifecycle: (data.worldItemLifecycle ?? []).length,
+    evidenceTombstones: data.evidence.filter((item) => item.deletedAt != null).length,
+  };
+  const duplicates = {
+    evidence: 0,
+    events: 0,
+    cognitions: 0,
+    entities: 0,
+    relationships: 0,
+    worldEvents: 0,
+    retractions: 0,
+    cognitionTransitions: 0,
+    worldItemLifecycle: 0,
+  };
+  const writeSet = {
+    evidence: data.evidence.map((item) => item.id),
+    events: data.events.map((item) => item.id),
+    cognitions: data.cognitions.map((item) => item.id),
+    eventEvidence: data.eventEvidence.map((item) => `${item.eventId}/${item.evidenceId}`),
+    cognitionEvidence: data.cognitionEvidence.map(
+      (item) => `${item.cognitionId}/${item.evidenceId}/${item.relation}`,
+    ),
+    interactionContexts: (data.interactionContexts ?? []).map((item) => item.id),
+    semanticResolutions: (data.semanticResolutions ?? []).map((item) => item.id),
+    entities: (data.entities ?? []).map((item) => item.id),
+    entityEvidence: (data.entityEvidence ?? []).map(
+      (item) =>
+        `${item.entityId}/${item.evidenceId}/${item.relation}/${item.start ?? ''}/${item.end ?? ''}`,
+    ),
+    relationships: (data.relationships ?? []).map((item) => item.id),
+    worldEvents: (data.worldEvents ?? []).map((item) => item.id),
+    relationshipEvidence: (data.relationshipEvidence ?? []).map(
+      (item) => `${item.relationshipId}/${item.evidenceId}/${item.relation}`,
+    ),
+    worldEventEvidence: (data.worldEventEvidence ?? []).map(
+      (item) => `${item.worldEventId}/${item.evidenceId}/${item.relation}`,
+    ),
+    cognitionTargets: (data.cognitionTargets ?? []).map(
+      (item) => `${item.cognitionId}/${item.targetEntityId}/${item.perspectiveEntityId ?? ''}`,
+    ),
+    retractions: (data.retractions ?? []).map((item) => item.id),
+    cognitionTransitions: (data.cognitionTransitions ?? []).map((item) => item.id),
+    worldItemLifecycle: (data.worldItemLifecycle ?? []).map(
+      (item) => `${item.objectKind}/${item.itemId}`,
+    ),
+    evidenceTombstones: data.evidence
+      .filter((item) => item.deletedAt != null)
+      .map((item) => item.id),
+  };
+  for (const values of Object.values(writeSet)) values.sort();
+  const payload: Record<string, unknown> = {
+    planVersion: PLAN_SCHEMA_VERSION,
+    bundleId: bundle.bundleId,
+    sourceSubjectId: bundle.sourceSubjectId ?? bundle.subjectId,
+    targetSubjectId,
+    targetWorldRevision,
+    targetSnapshotHash,
+    valid: true,
+    conflicts: [],
+    warnings: [],
+    counts,
+    duplicates,
+    writeSet,
+    wouldAdvanceRevision: Object.values(counts).some((value) => value > 0),
+  };
+  return { payload, ...derivePlanIds(payload) };
 }

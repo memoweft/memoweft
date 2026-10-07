@@ -1,6 +1,8 @@
-# MemoWeft Python parity implementation
+# MemoWeft Python 2.0 Core
 
-This directory contains the experimental Python counterpart to MemoWeft's TypeScript implementation. It exists to verify cross-language behavior and portable data contracts; it is not yet presented as a feature-complete, stable Python SDK.
+This directory contains the MemoWeft 2.0 Python Core candidate. Its production mainline lives under `memoweft.integrations` and provides the Hermes and WeftMate/DSH host boundaries for the Personal Memory World. The directory also retains a parity-insurance layer for cross-language behavior and portable-data verification; that layer is not a second production World engine.
+
+The top-level public facade remains intentionally narrow and is not a feature-complete, stable general-purpose Python SDK. The Memory Experience product form has not yet formed or received its own version. This 2.0 Core candidate identity does not claim Beta, GA, release, or publication.
 
 ## Current scope
 
@@ -14,7 +16,7 @@ The repository tests these Python layers against fixtures generated from the Typ
 | Write pipeline   | distillation, consolidation, profile updates, asking, attribution, trends, expiration, and privacy filtering                            |
 | Model boundary   | OpenAI-compatible HTTP client, prompt loading, response extraction, and JSON repair                                                     |
 
-The top-level `memoweft` exports remain intentionally limited to the parity kernel. Storage, portable, and write-path modules are exercised by the test suite but do not yet have a stable facade equivalent to TypeScript's `createMemoWeftCore`.
+The top-level `memoweft` exports remain intentionally limited to the rule kernel. Production integrations, storage, portable, and write-path modules are exercised through their explicit module contracts but do not yet form a broad stable facade equivalent to TypeScript's `createMemoWeftCore`.
 
 ## Shared contract
 

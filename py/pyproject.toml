@@ -1,7 +1,7 @@
 [project]
 name = "memoweft"
-version = "0.7.0.dev0"
-description = "Experimental Python parity implementation for MemoWeft's memory rules, storage, and portable-data contracts."
+version = "2.0.0"
+description = "MemoWeft 2.0 Personal Memory World — portable, traceable long-term memory that keeps evidence, inference, and conflicts distinct."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -10,6 +10,9 @@ dependencies = [
     "regex>=2024.0.0", # \p{L}/\p{N}/\p{Han} Unicode property classes for tokenize (stdlib re lacks \p{Script=...})
     "httpx>=0.27", # OpenAI 兼容端点 HTTP 客户端(同步 httpx.Client;不引 SDK,同 TS 精神)
 ]
+
+[project.entry-points."hermes_agent.memory_providers"]
+memoweft = "memoweft.integrations.hermes.entrypoint:register"
 
 [project.optional-dependencies]
 dev = [
@@ -41,4 +44,4 @@ typeCheckingMode = "strict"
 [tool.mypy]
 python_version = "3.11"
 strict = true
-mypy_path = "src"
+mypy_path = ["src"]

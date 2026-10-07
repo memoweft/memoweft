@@ -1,0 +1,208 @@
+:root {
+  color-scheme: dark;
+  --bg: #10141d;
+  --surface: #192132;
+  --line: #34415a;
+  --text: #e9edf7;
+  --muted: #9eabc3;
+  --accent: #78d7bd;
+  --danger: #ff948a;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    15px/1.5 ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+header,
+main {
+  max-width: 1180px;
+  margin: auto;
+  padding: 20px 28px;
+}
+header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+h1 {
+  margin: 0;
+  font-size: 30px;
+}
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  font-size: 11px;
+}
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+nav {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  background: #263450;
+  color: var(--text);
+  border: 1px solid #425577;
+  border-radius: 7px;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+button:hover,
+button.active {
+  border-color: var(--accent);
+  background: #1f4a4b;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+input {
+  background: #111827;
+  color: var(--text);
+  border: 1px solid #425577;
+  border-radius: 6px;
+  padding: 7px;
+}
+.hidden {
+  display: none !important;
+}
+#status {
+  min-height: 28px;
+  margin-top: 14px;
+  color: var(--muted);
+}
+#status.error {
+  color: var(--danger);
+}
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.group,
+.card,
+dialog article {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 9px;
+  padding: 14px;
+}
+.group h2 {
+  font-size: 15px;
+  margin: 0 0 9px;
+  color: var(--accent);
+}
+.card {
+  width: 100%;
+  text-align: left;
+  margin: 7px 0;
+}
+.meta {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+pre {
+  white-space: pre-wrap;
+  overflow: auto;
+  background: #0d1119;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+dialog {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  max-width: min(800px, 95vw);
+}
+dialog::backdrop {
+  background: #000b;
+}
+dialog article {
+  min-width: min(720px, 90vw);
+  max-height: 80vh;
+  overflow: auto;
+}
+#detail-close {
+  float: right;
+  font-size: 20px;
+  padding: 0 8px;
+}
+.control {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.receipt {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+  margin: 12px 0;
+}
+.permission-form,
+.form-row {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.permission-form label,
+.form-row label {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+.form-row textarea,
+.card textarea {
+  min-height: 72px;
+  width: 100%;
+  resize: vertical;
+  background: #111827;
+  color: var(--text);
+  border: 1px solid #425577;
+  border-radius: 6px;
+  padding: 7px;
+}
+.card > label {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+@media (max-width: 600px) {
+  header,
+  main {
+    padding: 16px;
+  }
+  header {
+    align-items: start;
+    gap: 10px;
+    flex-direction: column;
+  }
+  dialog article {
+    min-width: 90vw;
+  }
+}

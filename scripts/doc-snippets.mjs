@@ -33,7 +33,8 @@ function walk(dir, acc = []) {
   }
   return acc;
 }
-const files = walk(join(ROOT, 'docs'));
+const docsRoot = join(ROOT, 'docs');
+const files = existsSync(docsRoot) ? walk(docsRoot) : [];
 for (const extra of ['README.md', 'README.zh-CN.md']) {
   const p = join(ROOT, extra);
   if (existsSync(p)) files.push(p);

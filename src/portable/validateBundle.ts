@@ -15,6 +15,7 @@
 import {
   BUNDLE_FORMAT,
   BUNDLE_SCHEMA_VERSION,
+  deriveBundleId,
   type MemoryBundle,
   type ValidateResult,
 } from './model.ts';
@@ -130,7 +131,7 @@ export function validateBundle(bundle: unknown): ValidateResult {
         ? `schemaVersion=${b.schemaVersion} 高于当前 MemoWeft 支持的 ${BUNDLE_SCHEMA_VERSION}（请升级 MemoWeft 再导入）`
         : `schemaVersion=${b.schemaVersion} is higher than the ${BUNDLE_SCHEMA_VERSION} supported by this version (upgrade MemoWeft before importing)`,
     );
-  } else if (b.schemaVersion < BUNDLE_SCHEMA_VERSION) {
+  } else if (b.schemaVersion < 2) {
     warnings.push(
       lang === 'zh'
         ? `schemaVersion=${b.schemaVersion} 低于当前 ${BUNDLE_SCHEMA_VERSION}（按旧结构导入）`
@@ -142,6 +143,44 @@ export function validateBundle(bundle: unknown): ValidateResult {
   }
   if (!isStrictIsoDateTime(b.exportedAt)) {
     errors.push(lang === 'zh' ? 'exportedAt 非法或缺失' : 'exportedAt is invalid or missing');
+  }
+  if (b.schemaVersion === 4) {
+    if (b.sourceSubjectId !== b.subjectId)
+      errors.push(
+        lang === 'zh'
+          ? 'sourceSubjectId 与 subjectId 不一致'
+          : 'sourceSubjectId does not match subjectId',
+      );
+    if (
+      typeof b.worldRevision !== 'number' ||
+      !Number.isInteger(b.worldRevision) ||
+      b.worldRevision < 0
+    )
+      errors.push(
+        lang === 'zh' ? 'worldRevision 非法或缺失' : 'worldRevision is invalid or missing',
+      );
+    if (typeof b.worldSnapshotHash !== 'string')
+      errors.push(
+        lang === 'zh' ? 'worldSnapshotHash 非法或缺失' : 'worldSnapshotHash is invalid or missing',
+      );
+    if (!isNonEmptyString(b.bundleId)) {
+      errors.push(lang === 'zh' ? 'bundleId 缺失' : 'bundleId is missing');
+    } else {
+      try {
+        if (b.bundleId !== deriveBundleId(bundle))
+          errors.push(
+            lang === 'zh'
+              ? 'bundleId 与 canonical bundle payload 不匹配'
+              : 'bundleId does not match the canonical bundle payload',
+          );
+      } catch {
+        errors.push(
+          lang === 'zh'
+            ? 'bundleId 无法从非法 JSON 派生'
+            : 'bundleId cannot be derived from invalid JSON',
+        );
+      }
+    }
   }
 
   const data = b.data;
@@ -156,13 +195,17 @@ export function validateBundle(bundle: unknown): ValidateResult {
     ['cognitions', data.cognitions],
     ['cognitionEvidence', data.cognitionEvidence],
   ];
+  let requiredArrayInvalid = false;
   for (const [name, arr] of arrays) {
-    if (!Array.isArray(arr))
+    if (!Array.isArray(arr)) {
+      requiredArrayInvalid = true;
       errors.push(lang === 'zh' ? `data.${name} 应为数组` : `data.${name} should be an array`);
+    }
   }
-  if (errors.length > 0) return { valid: false, errors, warnings };
+  if (requiredArrayInvalid) return { valid: false, errors, warnings };
 
   // 每个元素必须有非空字符串 id / 端点：防 undefined 混进 Set 掩盖引用检查，也防 undefined 落库。
+  const elementShapeErrorStart = errors.length;
   const badId = (x: unknown) => !isRecord(x) || !isNonEmptyString(x.id);
   if (data.evidence.some(badId))
     errors.push(
@@ -202,7 +245,7 @@ export function validateBundle(bundle: unknown): ValidateResult {
       break;
     }
   }
-  if (errors.length > 0) return { valid: false, errors, warnings };
+  if (errors.length > elementShapeErrorStart) return { valid: false, errors, warnings };
 
   // 到这里五个数组都在、元素 id 都是非空字符串。
   const evidenceIds = new Set(data.evidence.map((e) => e.id));
@@ -387,6 +430,16 @@ export function validateBundle(bundle: unknown): ValidateResult {
     if (!isNullableString(e.originId)) invalidField('evidence', e.id, 'originId');
     if (!isNullableString(e.correctsEvidenceId))
       invalidField('evidence', e.id, 'correctsEvidenceId');
+    if (b.schemaVersion === 4) {
+      if (e.deletedAt === undefined || (e.deletedAt !== null && !isStrictIsoDateTime(e.deletedAt)))
+        invalidField('evidence', e.id, 'deletedAt');
+      if (Object.hasOwn(e, 'precedingAiContext'))
+        errors.push(
+          lang === 'zh'
+            ? `evidence ${e.id} 不得导出 precedingAiContext`
+            : `evidence ${e.id} must not export precedingAiContext`,
+        );
+    }
   }
   for (const e of data.events) {
     if (!isNonEmptyString(e.subjectId)) invalidField('event', e.id, 'subjectId');
@@ -566,6 +619,246 @@ export function validateBundle(bundle: unknown): ValidateResult {
         invalidField('semanticResolution', value.id, 'requiredContext');
     }
   }
+
+  // v3/v4 World sections. v4 additionally requires durable history/currentness.
+  const worldNames = [
+    'entities',
+    'entityEvidence',
+    'relationships',
+    'relationshipEvidence',
+    'worldEvents',
+    'worldEventEvidence',
+    'cognitionTargets',
+  ] as const;
+  const worldPresent = worldNames.some((name) => data[name] !== undefined);
+  if (worldPresent && typeof b.schemaVersion === 'number' && b.schemaVersion < 3) {
+    warnings.push(
+      lang === 'zh'
+        ? 'World 段仅由 schemaVersion 3 或更高版本支持；已忽略'
+        : 'World sections are only supported by schemaVersion 3 or later; ignored',
+    );
+  } else if (worldPresent) {
+    for (const name of worldNames)
+      if (name === 'entityEvidence' && data[name] === undefined) continue;
+      else if (!Array.isArray(data[name]))
+        errors.push(lang === 'zh' ? `data.${name} 应为数组` : `data.${name} should be an array`);
+
+    const entities = Array.isArray(data.entities) ? data.entities : [];
+    const relationships = Array.isArray(data.relationships) ? data.relationships : [];
+    const worldEvents = Array.isArray(data.worldEvents) ? data.worldEvents : [];
+    const entityIds = new Set<string>();
+    for (const entity of entities) {
+      if (!isRecord(entity) || !isNonEmptyString(entity.id)) {
+        errors.push('data.entities has an element with a missing id');
+        continue;
+      }
+      if (entityIds.has(entity.id)) errors.push('data.entities has duplicate ids');
+      entityIds.add(entity.id);
+      if (entity.worldId !== b.subjectId)
+        errors.push(`entity ${entity.id} worldId does not match the bundle`);
+      if (!isNonEmptyString(entity.kind)) invalidField('entity', entity.id, 'kind');
+      if (!isNonEmptyString(entity.canonicalName))
+        invalidField('entity', entity.id, 'canonicalName');
+      if (!Array.isArray(entity.aliases) || entity.aliases.some((item) => !isNonEmptyString(item)))
+        invalidField('entity', entity.id, 'aliases');
+      if (!isStrictIsoDateTime(entity.createdAt)) invalidField('entity', entity.id, 'createdAt');
+      if (!isStrictIsoDateTime(entity.updatedAt)) invalidField('entity', entity.id, 'updatedAt');
+      if (entity.invalidAt !== null && !isStrictIsoDateTime(entity.invalidAt))
+        invalidField('entity', entity.id, 'invalidAt');
+    }
+
+    const relationshipIds = new Set<string>();
+    for (const relationship of relationships) {
+      if (!isRecord(relationship) || !isNonEmptyString(relationship.id)) {
+        errors.push('data.relationships has an element with a missing id');
+        continue;
+      }
+      if (relationshipIds.has(relationship.id)) errors.push('data.relationships has duplicate ids');
+      relationshipIds.add(relationship.id);
+      if (relationship.worldId !== b.subjectId)
+        errors.push(`relationship ${relationship.id} worldId does not match the bundle`);
+      if (
+        !isNonEmptyString(relationship.sourceEntityId) ||
+        !isNonEmptyString(relationship.targetEntityId) ||
+        !entityIds.has(relationship.sourceEntityId) ||
+        !entityIds.has(relationship.targetEntityId)
+      )
+        errors.push(`relationship ${relationship.id} references a non-existent entity`);
+      if (relationship.sourceEntityId === relationship.targetEntityId)
+        errors.push(`relationship ${relationship.id} endpoints must differ`);
+    }
+
+    const worldEventIds = new Set<string>();
+    for (const event of worldEvents) {
+      if (!isRecord(event) || !isNonEmptyString(event.id)) {
+        errors.push('data.worldEvents has an element with a missing id');
+        continue;
+      }
+      if (worldEventIds.has(event.id)) errors.push('data.worldEvents has duplicate ids');
+      worldEventIds.add(event.id);
+      if (event.worldId !== b.subjectId)
+        errors.push(`worldEvent ${event.id} worldId does not match the bundle`);
+      if (!isNonEmptyString(event.content)) invalidField('worldEvent', event.id, 'content');
+      if (
+        event.occurredAt !== null &&
+        !isStrictIsoDateTime(event.occurredAt) &&
+        !(typeof event.occurredAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(event.occurredAt))
+      )
+        invalidField('worldEvent', event.id, 'occurredAt');
+    }
+
+    const checkProvenance = (links: unknown, idKey: string, ids: Set<string>, name: string) => {
+      if (!Array.isArray(links)) return;
+      const seen = new Set<string>();
+      for (const link of links) {
+        if (!isRecord(link)) {
+          errors.push(`data.${name} has an invalid link`);
+          continue;
+        }
+        const target = link[idKey];
+        if (!isNonEmptyString(target) || !ids.has(target))
+          errors.push(`${name} references a non-existent ${idKey}: ${String(target)}`);
+        if (!isNonEmptyString(link.evidenceId) || !evidenceIds.has(link.evidenceId))
+          errors.push(`${name} references a non-existent evidence: ${String(link.evidenceId)}`);
+        if (!EVIDENCE_RELATION_SET.has(link.relation as string))
+          invalidField(name, `${String(target)}/${String(link.evidenceId)}`, 'relation');
+        const key = `${String(target)}\u0000${String(link.evidenceId)}\u0000${String(link.relation)}`;
+        if (seen.has(key)) errors.push(`data.${name} has duplicate link`);
+        seen.add(key);
+      }
+    };
+    checkProvenance(
+      data.relationshipEvidence,
+      'relationshipId',
+      relationshipIds,
+      'relationshipEvidence',
+    );
+    if (Array.isArray(data.entityEvidence)) {
+      const seen = new Set<string>();
+      for (const link of data.entityEvidence) {
+        if (!isRecord(link)) {
+          errors.push('data.entityEvidence has an invalid link');
+          continue;
+        }
+        if (!isNonEmptyString(link.entityId) || !entityIds.has(link.entityId))
+          errors.push(
+            `entityEvidence references a non-existent entityId: ${String(link.entityId)}`,
+          );
+        if (!isNonEmptyString(link.evidenceId) || !evidenceIds.has(link.evidenceId))
+          errors.push(
+            `entityEvidence references a non-existent evidence: ${String(link.evidenceId)}`,
+          );
+        if (link.relation !== 'support')
+          invalidField(
+            'entityEvidence',
+            `${String(link.entityId)}/${String(link.evidenceId)}`,
+            'relation',
+          );
+        for (const field of ['start', 'end'] as const) {
+          const value = link[field];
+          if (value !== null && (!Number.isSafeInteger(value) || (value as number) < 0))
+            invalidField(
+              'entityEvidence',
+              `${String(link.entityId)}/${String(link.evidenceId)}`,
+              field,
+            );
+        }
+        if (typeof link.start === 'number' && typeof link.end === 'number' && link.end < link.start)
+          errors.push(
+            `entityEvidence ${String(link.entityId)}/${String(link.evidenceId)} has end before start`,
+          );
+        const key = `${String(link.entityId)}\u0000${String(link.evidenceId)}\u0000${String(link.relation)}\u0000${String(link.start)}\u0000${String(link.end)}`;
+        if (seen.has(key)) errors.push('data.entityEvidence has duplicate link');
+        seen.add(key);
+      }
+    }
+    checkProvenance(data.worldEventEvidence, 'worldEventId', worldEventIds, 'worldEventEvidence');
+
+    if (Array.isArray(data.cognitionTargets)) {
+      const seen = new Set<string>();
+      for (const target of data.cognitionTargets) {
+        if (!isRecord(target) || !isNonEmptyString(target.cognitionId)) {
+          errors.push('data.cognitionTargets has an invalid endpoint');
+          continue;
+        }
+        if (seen.has(target.cognitionId))
+          errors.push('data.cognitionTargets has duplicate cognitionId');
+        seen.add(target.cognitionId);
+        if (!cognitionIds.has(target.cognitionId))
+          errors.push(`cognitionTarget references a non-existent cognition: ${target.cognitionId}`);
+        if (!isNonEmptyString(target.targetEntityId) || !entityIds.has(target.targetEntityId))
+          errors.push(
+            `cognitionTarget ${target.cognitionId} references a non-existent target entity`,
+          );
+        if (
+          target.perspectiveEntityId !== null &&
+          (!isNonEmptyString(target.perspectiveEntityId) ||
+            !entityIds.has(target.perspectiveEntityId))
+        )
+          errors.push(
+            `cognitionTarget ${target.cognitionId} references a non-existent perspective entity`,
+          );
+      }
+    }
+
+    if (b.schemaVersion === 4) {
+      const historyNames = ['retractions', 'cognitionTransitions', 'worldItemLifecycle'] as const;
+      for (const name of historyNames)
+        if (!Array.isArray(data[name]))
+          errors.push(lang === 'zh' ? `data.${name} 应为数组` : `data.${name} should be an array`);
+      if (Array.isArray(data.retractions)) {
+        const seen = new Set<string>();
+        for (const item of data.retractions) {
+          if (!isRecord(item) || !isNonEmptyString(item.id)) {
+            errors.push('data.retractions has an element with a missing id');
+            continue;
+          }
+          if (seen.has(item.id)) errors.push('data.retractions has duplicate ids');
+          seen.add(item.id);
+          const priors = [item.priorCognitionId, item.priorRelationshipId, item.priorEventId];
+          if (priors.filter((value) => value !== null).length !== 1)
+            errors.push(`retraction ${item.id} must identify exactly one prior World item`);
+          if (item.priorCognitionId !== null && !cognitionIds.has(item.priorCognitionId as string))
+            errors.push(`retraction ${item.id} references a non-existent cognition`);
+          if (
+            item.priorRelationshipId !== null &&
+            !relationshipIds.has(item.priorRelationshipId as string)
+          )
+            errors.push(`retraction ${item.id} references a non-existent relationship`);
+          if (item.priorEventId !== null && !worldEventIds.has(item.priorEventId as string))
+            errors.push(`retraction ${item.id} references a non-existent world event`);
+        }
+      }
+      if (Array.isArray(data.cognitionTransitions)) {
+        const seen = new Set<string>();
+        for (const item of data.cognitionTransitions) {
+          if (!isRecord(item) || !isNonEmptyString(item.id)) {
+            errors.push('data.cognitionTransitions has an element with a missing id');
+            continue;
+          }
+          if (seen.has(item.id)) errors.push('data.cognitionTransitions has duplicate ids');
+          seen.add(item.id);
+          if (!isNonEmptyString(item.priorCognitionId) || !cognitionIds.has(item.priorCognitionId))
+            errors.push(`cognitionTransition ${item.id} references a non-existent prior cognition`);
+          if (
+            !isNonEmptyString(item.replacementCognitionId) ||
+            !cognitionIds.has(item.replacementCognitionId)
+          )
+            errors.push(
+              `cognitionTransition ${item.id} references a non-existent replacement cognition`,
+            );
+        }
+      }
+      if (Array.isArray(data.worldItemLifecycle)) {
+        for (const item of data.worldItemLifecycle) {
+          if (!isRecord(item) || item.subjectId !== b.subjectId)
+            errors.push('worldItemLifecycle subjectId does not match the bundle');
+        }
+      }
+    }
+  }
+  if (b.schemaVersion === 4 && !worldPresent)
+    errors.push('Portable v4 requires complete World and history sections');
 
   return { valid: errors.length === 0, errors, warnings };
 }

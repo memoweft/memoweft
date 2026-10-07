@@ -1,0 +1,30 @@
+{
+  "bundleId": "portable:v4:82730c502da2b756fae9d405a4d08137e2deeebadb5c019a52671e79067bd28c",
+  "commandId": "portable:command:v1:77b1f6a375dfb9372a6bc81673fe0d0bf7e60503653c2dc719bbd5be3e6b64e6",
+  "counts": {
+    "cognitionEvidence": 2,
+    "cognitionTargets": 1,
+    "cognitionTransitions": 1,
+    "cognitions": 2,
+    "entities": 2,
+    "entityEvidence": 2,
+    "eventEvidence": 1,
+    "events": 1,
+    "evidence": 2,
+    "evidenceTombstones": 1,
+    "interactionContexts": 0,
+    "relationshipEvidence": 1,
+    "relationships": 1,
+    "retractions": 1,
+    "semanticResolutions": 0,
+    "worldEventEvidence": 1,
+    "worldEvents": 1,
+    "worldItemLifecycle": 1
+  },
+  "planHash": "77b1f6a375dfb9372a6bc81673fe0d0bf7e60503653c2dc719bbd5be3e6b64e6",
+  "receiptId": "portable:receipt:v1:77b1f6a375dfb9372a6bc81673fe0d0bf7e60503653c2dc719bbd5be3e6b64e6",
+  "sourceSubjectId": "host-a-owner",
+  "targetSnapshotHash": "",
+  "targetSubjectId": "host-b-owner",
+  "targetWorldRevision": 0
+}

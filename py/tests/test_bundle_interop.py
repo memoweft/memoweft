@@ -12,7 +12,7 @@ from typing import Any
 
 from conftest import parity
 
-from memoweft.portable import import_bundle, validate_bundle
+from memoweft.portable import derive_bundle_id, import_bundle, validate_bundle
 from memoweft.store import make_transaction, open_db
 from memoweft.store.cognition import SqliteCognitionStore
 from memoweft.store.event import SqliteEventStore
@@ -127,6 +127,7 @@ def test_same_event_or_cognition_id_with_different_payload_or_links_is_fatal() -
         payload_collision = deepcopy(bundle)
         payload_collision["data"]["events"][0]["summary"] = "colliding event"
         payload_collision["data"]["cognitions"][0]["content"] = "colliding cognition"
+        payload_collision["bundleId"] = derive_bundle_id(payload_collision)
         payload_plan = import_bundle(
             payload_collision, **st, transaction=make_transaction(db)
         )
@@ -139,6 +140,7 @@ def test_same_event_or_cognition_id_with_different_payload_or_links_is_fatal() -
             "eventEvidence"
         ][:1]
         relation_collision["data"]["cognitionEvidence"][0]["relation"] = "contradict"
+        relation_collision["bundleId"] = derive_bundle_id(relation_collision)
         relation_plan = import_bundle(
             relation_collision, **st, transaction=make_transaction(db)
         )

@@ -32,6 +32,48 @@ export interface Migration {
   up: (db: DatabaseSync) => void;
 }
 
+/** MemoWeft Next 2.0 在 1.0 主库上追加的 world / identity 持久化结构。 */
+export const WORLD_SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS memory_state (
+  singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+  revision INTEGER NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  snapshot_hash TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS evidence_ledger (
+  id TEXT PRIMARY KEY,
+  content TEXT NOT NULL,
+  payload_json TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS proposals (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  base_revision INTEGER NOT NULL,
+  result_hash TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  review_payload_json TEXT,
+  status TEXT NOT NULL CHECK(status IN ('pending', 'accept', 'reject'))
+);
+CREATE TABLE IF NOT EXISTS cognition_transitions (
+  id TEXT PRIMARY KEY,
+  prior_cognition_id TEXT NOT NULL UNIQUE,
+  replacement_cognition_id TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  revision INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS identity_state (
+  singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+  identity_schema_version INTEGER NOT NULL,
+  world_id TEXT NOT NULL,
+  memory_revision INTEGER NOT NULL CHECK(memory_revision >= 0),
+  memory_snapshot_hash TEXT NOT NULL,
+  identity_graph_hash TEXT NOT NULL,
+  state_json TEXT NOT NULL,
+  state_hash TEXT NOT NULL,
+  storage_generation INTEGER NOT NULL CHECK(storage_generation >= 1)
+);
+`;
+
 /**
  * 有序迁移列表。v1 = baseline（0.1.0 形状）：表由各 store 构造 `CREATE TABLE IF NOT EXISTS` 建，
  * 本条只做"标记这库到了 0.1.0 版"的 stamp，不含 DDL。往后真改结构从 v2 追加。
@@ -58,6 +100,38 @@ export const MIGRATIONS: Migration[] = [
         'DELETE FROM cognition WHERE id IN (SELECT DISTINCT cognition_id FROM evidence_retraction)',
       );
       db.exec('DELETE FROM evidence_retraction');
+    },
+  },
+  {
+    version: 3,
+    name: 'identity-persistence-integration',
+    up: (db) => db.exec(WORLD_SCHEMA_SQL),
+  },
+  {
+    version: 4,
+    name: 'world-evolution-payload-contract',
+    up: () => {
+      // No DDL: v4 marks that `proposals.kind = evolution` is understood as
+      // a closed, typed payload.  v3 code must reject this database instead of
+      // treating every non-addition proposal as a correction.
+    },
+  },
+  {
+    version: 5,
+    name: 'relationship-successor-evolution-payload-contract',
+    up: () => {
+      // No DDL: v5 marks that product_bundle payloads may carry closed
+      // relationship successor evolution steps. Existing rows remain byte-for-byte
+      // unchanged; older code must reject this database rather than misread them.
+    },
+  },
+  {
+    version: 6,
+    name: 'product-bundle-cognition-evidence-update-payload-contract',
+    up: () => {
+      // No DDL: v6 marks that product_bundle payloads may carry a closed
+      // same-cognition Evidence update. Existing rows and payload bytes remain
+      // unchanged; older code must reject this database rather than misread them.
     },
   },
 ];

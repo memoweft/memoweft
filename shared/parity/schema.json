@@ -131,6 +131,43 @@
         "type": "TEXT"
       }
     ],
+    "cognition_transitions": [
+      {
+        "dflt": null,
+        "name": "id",
+        "notnull": 0,
+        "pk": 1,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "prior_cognition_id",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "replacement_cognition_id",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "reason",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "revision",
+        "notnull": 1,
+        "pk": 0,
+        "type": "INTEGER"
+      }
+    ],
     "event": [
       {
         "dflt": null,
@@ -298,6 +335,29 @@
         "type": "TEXT"
       }
     ],
+    "evidence_ledger": [
+      {
+        "dflt": null,
+        "name": "id",
+        "notnull": 0,
+        "pk": 1,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "content",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "payload_json",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      }
+    ],
     "evidence_retraction": [
       {
         "dflt": null,
@@ -319,6 +379,71 @@
         "notnull": 1,
         "pk": 0,
         "type": "TEXT"
+      }
+    ],
+    "identity_state": [
+      {
+        "dflt": null,
+        "name": "singleton",
+        "notnull": 0,
+        "pk": 1,
+        "type": "INTEGER"
+      },
+      {
+        "dflt": null,
+        "name": "identity_schema_version",
+        "notnull": 1,
+        "pk": 0,
+        "type": "INTEGER"
+      },
+      {
+        "dflt": null,
+        "name": "world_id",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "memory_revision",
+        "notnull": 1,
+        "pk": 0,
+        "type": "INTEGER"
+      },
+      {
+        "dflt": null,
+        "name": "memory_snapshot_hash",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "identity_graph_hash",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "state_json",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "state_hash",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "storage_generation",
+        "notnull": 1,
+        "pk": 0,
+        "type": "INTEGER"
       }
     ],
     "interaction_context": [
@@ -416,6 +541,87 @@
         "type": "TEXT"
       }
     ],
+    "memory_state": [
+      {
+        "dflt": null,
+        "name": "singleton",
+        "notnull": 0,
+        "pk": 1,
+        "type": "INTEGER"
+      },
+      {
+        "dflt": null,
+        "name": "revision",
+        "notnull": 1,
+        "pk": 0,
+        "type": "INTEGER"
+      },
+      {
+        "dflt": null,
+        "name": "snapshot_json",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "snapshot_hash",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      }
+    ],
+    "proposals": [
+      {
+        "dflt": null,
+        "name": "id",
+        "notnull": 0,
+        "pk": 1,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "kind",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "base_revision",
+        "notnull": 1,
+        "pk": 0,
+        "type": "INTEGER"
+      },
+      {
+        "dflt": null,
+        "name": "result_hash",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "payload_json",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "review_payload_json",
+        "notnull": 0,
+        "pk": 0,
+        "type": "TEXT"
+      },
+      {
+        "dflt": null,
+        "name": "status",
+        "notnull": 1,
+        "pk": 0,
+        "type": "TEXT"
+      }
+    ],
     "semantic_resolution": [
       {
         "dflt": null,
@@ -489,5 +695,5 @@
       }
     ]
   },
-  "userVersion": 2
+  "userVersion": 6
 }

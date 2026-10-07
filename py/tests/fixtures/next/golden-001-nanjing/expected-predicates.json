@@ -1,0 +1,26 @@
+{
+  "fixture_id": "golden-001-nanjing",
+  "required": [
+    {"predicate": "entity_exists", "entity_id": "person:user"},
+    {"predicate": "entity_exists", "entity_id": "person:friend-x"},
+    {"predicate": "relationship_exists", "relationship_id": "relationship:user-friend-x", "relation_type": "friend"},
+    {"predicate": "event_exists", "event_id": "event:nanjing-conflict", "event_type": "interpersonal_conflict"},
+    {"predicate": "event_related_entity", "event_id": "event:nanjing-conflict", "entity_id": "activity:nanjing-trip"},
+    {"predicate": "event_related_entity", "event_id": "event:nanjing-conflict", "entity_id": "place:nanjing"},
+    {"predicate": "event_cause_contains", "event_id": "event:nanjing-conflict", "text": "计划"},
+    {"predicate": "event_position_contains", "event_id": "event:nanjing-conflict", "about_entity_id": "person:user", "text": "固定行程"},
+    {"predicate": "event_position_contains", "event_id": "event:nanjing-conflict", "about_entity_id": "person:friend-x", "text": "旅游攻略"},
+    {"predicate": "cognition_target", "cognition_id": "cog:user-travel-style", "target_type": "entity", "target_id": "person:user", "scope": "travel"},
+    {"predicate": "cognition_target", "cognition_id": "cog:friend-planning-style", "target_type": "entity", "target_id": "person:friend-x"},
+    {"predicate": "cognition_target", "cognition_id": "cog:relationship-planning-friction", "target_type": "relationship", "target_id": "relationship:user-friend-x"},
+    {"predicate": "evidence_allowlist_contains", "evidence_id": "turn-001"},
+    {"predicate": "evidence_allowlist_contains", "evidence_id": "turn-003"}
+  ],
+  "forbidden": [
+    {"predicate": "assistant_turn_is_evidence"},
+    {"predicate": "evidence_allowlist_contains", "evidence_id": "turn-002"},
+    {"predicate": "evidence_allowlist_contains", "evidence_id": "turn-004"},
+    {"predicate": "cognition_content_contains", "text": "用户认为"},
+    {"predicate": "unsupported_entity_expansion", "entity_id": "person:friend-x-partner"}
+  ]
+}

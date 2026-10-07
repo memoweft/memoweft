@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MemoWeft Memory Experience</title>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">MEMOWEFT 2.0</p>
+        <h1>Memory Experience</h1>
+      </div>
+      <p id="revision" aria-live="polite">Loading current revision…</p>
+    </header>
+    <main>
+      <nav aria-label="Memory views">
+        <button data-view="world" class="active">World</button
+        ><button data-view="evidence">Evidence</button><button data-view="jobs">Jobs</button
+        ><button data-view="clarifications">Clarifications</button
+        ><button data-view="portable">Portable</button>
+      </nav>
+      <section id="status" role="status" aria-live="polite"></section>
+      <section id="world" class="view">
+        <div class="toolbar">
+          <label>Recall preview <input id="recall-query" placeholder="Ask about a memory" /></label
+          ><button id="recall-button">Preview recall</button>
+        </div>
+        <pre id="recall"></pre>
+        <div id="world-groups" class="groups"></div>
+      </section>
+      <section id="evidence" class="view hidden"><div id="evidence-list"></div></section>
+      <section id="jobs" class="view hidden"><div id="jobs-list"></div></section>
+      <section id="clarifications" class="view hidden"><div id="clarification-list"></div></section>
+      <section id="portable" class="view hidden">
+        <div class="toolbar">
+          <button id="portable-export">Export bundle</button
+          ><label
+            >Import bundle <input id="portable-file" type="file" accept="application/json" /></label
+          ><button id="portable-plan" disabled>Dry-run plan</button
+          ><button id="portable-apply" disabled>Apply planned import</button>
+        </div>
+        <pre id="portable-output"></pre>
+      </section>
+    </main>
+    <dialog id="detail">
+      <article>
+        <button id="detail-close" aria-label="Close">×</button>
+        <div id="detail-content"></div>
+      </article>
+    </dialog>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

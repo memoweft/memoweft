@@ -227,6 +227,12 @@ class VisibleTurn:
 
     role: Literal["user", "assistant", "tool"]
     content: str
+    source_ref: Optional[str] = None
+    message_id: Optional[str] = None
+    timestamp: Optional[float] = None
+    # Optional causal record of what Core context the model saw before this
+    # assistant turn.  Absent preserves legacy context_json/hash semantics.
+    model_context_dependencies: Optional[dict[str, object]] = None
 
 
 @dataclass(frozen=True, slots=True)

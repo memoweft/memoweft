@@ -7,7 +7,13 @@ from typing import Any, Callable
 import httpx
 import pytest
 
-from memoweft.llm.client import ChatMessage, LLMConfig, OpenAICompatClient, load_llm_config
+from memoweft.llm.client import (
+    ChatMessage,
+    LLMConfig,
+    OpenAICompatClient,
+    _trust_environment_proxy,
+    load_llm_config,
+)
 
 
 def _client(handler: Callable[[httpx.Request], httpx.Response], cfg: LLMConfig) -> OpenAICompatClient:
@@ -51,6 +57,43 @@ def test_chat_temperature_default_and_no_usage() -> None:
     assert client.usage.calls_with_usage == 0  # 无 usage 不计
 
 
+def test_chat_can_explicitly_disable_model_thinking() -> None:
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {"name": "tiny", "schema": {"type": "object"}},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        assert body["chat_template_kwargs"] == {"enable_thinking": False}
+        assert body["max_tokens"] == 4096
+        assert body["response_format"] == response_format
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    client = _client(
+        handler,
+        LLMConfig(
+            base_url="http://x",
+            api_key="k",
+            model="m",
+            enable_thinking=False,
+            max_tokens=4096,
+            response_format=response_format,
+        ),
+    )
+    assert client.chat([ChatMessage(role="user", content="q")]) == "{}"
+
+
+@pytest.mark.parametrize("max_tokens", [0, -1, True])
+def test_invalid_max_tokens_fails_before_transport(max_tokens: int) -> None:
+    client = _client(
+        lambda _request: pytest.fail("transport must not run"),
+        LLMConfig(base_url="http://x", api_key="k", model="m", max_tokens=max_tokens),
+    )
+    with pytest.raises(ValueError, match="max_tokens"):
+        client.chat([ChatMessage(role="user", content="q")])
+
+
 def test_chat_total_tokens_fallback() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -82,6 +125,23 @@ def test_chat_http_error() -> None:
     client = _client(handler, LLMConfig(base_url="http://x", api_key="k", model="m"))
     with pytest.raises(RuntimeError):
         client.chat([ChatMessage(role="user", content="q")])
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "http://127.0.0.1:8012/v1",
+        "http://127.0.0.2/v1",
+        "http://localhost:8012/v1",
+        "http://[::1]:8012/v1",
+    ],
+)
+def test_loopback_base_urls_bypass_environment_proxy(base_url: str) -> None:
+    assert _trust_environment_proxy(base_url) is False
+
+
+def test_remote_base_url_keeps_environment_proxy_behavior() -> None:
+    assert _trust_environment_proxy("https://api.example.com/v1") is True
 
 
 def test_load_llm_config_env(monkeypatch: pytest.MonkeyPatch) -> None:

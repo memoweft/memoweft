@@ -9,6 +9,7 @@
  */
 import { createServer } from 'node:http';
 import { readFile, readdir, stat, rename } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRunLogger } from '../src/obs/runLog.ts';
@@ -38,6 +39,16 @@ import { exportBundle, importBundle } from '../src/portable/index.ts';
 import { resetTestbenchSubject } from './factoryReset.mjs';
 import { portableDeps } from './portableDeps.mjs';
 import {
+  buildAdapterMemoryTurns,
+  createNextBridge,
+  mergeRecallForRecord,
+  sanitizePreparedAdapterMemoryTurn,
+  selectCarryForwardEvidenceIds,
+} from './next-bridge.mjs';
+import { DEFAULT_OPERATION_LEASE_MS, NextAdapterOperationStore } from './next-operation-store.mjs';
+import { readTestbenchRuntimeConfig } from './runtime-config.mjs';
+import { getWorkbenchIdentity, getWorkbenchIdentityRoute } from './workbench-identity.mjs';
+import {
   clientInputRejection,
   encodeDotenvEntries,
   readJson,
@@ -48,11 +59,50 @@ import {
 // 开发者模式·热调：进程一启动就深拷一份 config 当"出厂默认"（必须在任何请求改动 config 之前拍这张快照）。
 // 之后 /api/config/reset 靠它把 config 恢复原样。structuredClone 是 Node 内置，零依赖。
 const configDefaults = structuredClone(config);
+// Capture before any optional .env load: lifecycle identity is inherited only
+// from the managed launcher and must not be changed by an application config.
+const workbenchIdentity = getWorkbenchIdentity();
 
-const PORT = 7888;
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const LOG_DIR = join(__dirname, '..', 'logs');
-const DB_PATH = join(__dirname, 'testbench-evidence.db'); // 独立库，不污染正式 ./dla.db
+const runtimeConfig = readTestbenchRuntimeConfig({ dirname: __dirname });
+const PORT = runtimeConfig.port;
+const LOG_DIR = runtimeConfig.logDir;
+const DB_PATH = runtimeConfig.dbPath; // 独立库，不污染正式 ./dla.db
+const MEMORY_AUTHORITY = runtimeConfig.memoryAuthorityLabel;
+const NEXT_AUTHORITY = runtimeConfig.memoryAuthority === 'next';
+
+// In Next-authority mode the 1.x stores remain an Evidence compatibility
+// ledger, never a second mutable long-term-memory authority.  Keep deletion
+// routes outside this list: privacy erasure remains available to the Owner.
+const LEGACY_COGNITION_MUTATION_PATHS = new Set([
+  '/api/distill',
+  '/api/consolidate',
+  '/api/refresh',
+  '/api/attribute',
+  '/api/ask',
+  '/api/cognition/update',
+]);
+const LEGACY_COGNITION_MUTATION_CODE = 'LEGACY_COGNITION_MUTATION_BLOCKED';
+
+function legacyCognitionMutationBlocked(req, url) {
+  if (!NEXT_AUTHORITY || req.method !== 'POST') return false;
+  if (LEGACY_COGNITION_MUTATION_PATHS.has(url.pathname)) return true;
+  return url.pathname === '/api/import-bundle' && url.searchParams.get('mode') === 'merge';
+}
+
+function sendLegacyCognitionMutationBlocked(res) {
+  sendJson(res, 409, {
+    error: '当前记忆权威是已接受的 2.0 世界，不能修改 1.x 画像。',
+    code: LEGACY_COGNITION_MUTATION_CODE,
+    memoryAuthority: MEMORY_AUTHORITY,
+  });
+}
+
+function hasExactKeys(value, expected) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const keys = Object.keys(value).sort();
+  return keys.length === expected.length && keys.every((key, index) => key === expected[index]);
+}
 
 // 共享依赖：证据库、空召回和 LLM。缺少 .env 时仍可启动，模型调用错误通过 error 字段返回。
 // 三个 store 共用【一条】连接 + 一个事务器——让 consolidate 的多步、多表写能原子化（跨连接事务是硬约束，见 store/openStores.ts）。
@@ -61,13 +111,147 @@ const store = stores.evidenceStore;
 const eventStore = stores.eventStore;
 const cogStore = stores.cognitionStore;
 const transaction = stores.transaction; // 传给 updateProfile / consolidate 即让其写入原子化
+// Request delivery is a testbench transport concern, not a second memory
+// authority. The formal World remains in Next SQLite; this small local ledger
+// only prevents a generated reply from waiting on a
+// slow model operation or silently losing that operation on process restart.
+const nextAdapterOperations = new NextAdapterOperationStore(stores.db);
 // 受控记忆管理 API：删除、标失效、授权变更等关键管理行为。
 // 一律走它——带 reason 落审计（management_log），Host 不再直接摸 Sqlite*Store 完成这些操作。
 const memoryApi = createMemoryManagementAPI(stores);
+const REPLY_CLAUSE_GAP = '[^，,。！？!?\uff1b;\\n]{0,24}';
+const REPLY_SENTENCE_GAP = '[^。！？!?\uff1b;\\n]{0,48}';
+const REPLY_PERSIST_VERB =
+  '(?:记住|记下|记好|记牢|记着|记在|存好|存下|保存|记录|收好|留存|留档|归档|存档|备案|写入|写进|录入|录进|登记|收录|加入|放进|存进)';
+
+// These are speech-act patterns, not user-topic keywords. They cover a reply
+// claiming that the current turn is already durable, promising that it will be
+// durable later, or promising future recognition/retention. A plain past
+// recall such as “我记得你之前说过…” intentionally does not match: it may be
+// grounded in the accepted recall block supplied before reply generation.
+const UNVERIFIED_MEMORY_CLAIM_PATTERNS = [
+  new RegExp(
+    `(?:已|已经|刚刚|刚|现在|这就|这下|我${REPLY_CLAUSE_GAP}(?:已|已经))${REPLY_CLAUSE_GAP}${REPLY_PERSIST_VERB}`,
+    'iu',
+  ),
+  new RegExp(
+    `${REPLY_PERSIST_VERB}${REPLY_CLAUSE_GAP}(?:了|啦|咯|喏|好了|完了|完成|成功|妥了|到位)`,
+    'iu',
+  ),
+  new RegExp(
+    `(?:我|我们|这边|系统)${REPLY_CLAUSE_GAP}(?:会|将|要|能|一定|肯定|保证|永远|一直)${REPLY_CLAUSE_GAP}(?:记住|记得|记着|记在|保存|记录|留存|保留|归档|存档|写入|录入|认得|认出来|知道|对得上|对上号|接得上|接得住|续得上|接着聊|放在心上|有印象|不忘)`,
+    'iu',
+  ),
+  new RegExp(
+    `(?:以后|今后|往后|之后|下次|下回|将来|日后|回头|从现在起|从今以后|再聊${REPLY_CLAUSE_GAP}时)${REPLY_SENTENCE_GAP}(?:记住|记得|记着|认得|认出来|知道|对得上|对上号|接得上|接得住|续得上|续上|接着聊|有印象|联系得上|不会忘|不忘|保留|留着|(?:不必|不用)(?:再|重新)?(?:提醒|解释|告诉|重复))`,
+    'iu',
+  ),
+  new RegExp(`(?:不会|绝不会|永远不会)${REPLY_CLAUSE_GAP}(?:忘|忘掉|漏掉|丢掉|丢失)`, 'iu'),
+  new RegExp(
+    `(?:放|写|存|收|录|加)(?:进|入|到)${REPLY_CLAUSE_GAP}(?:长期|永久|跨对话)?${REPLY_CLAUSE_GAP}(?:记忆|档案|资料库|数据库|系统)`,
+    'iu',
+  ),
+  new RegExp(
+    `(?:长期记忆|永久记忆|跨对话记忆|档案|资料库|数据库|记忆库)${REPLY_CLAUSE_GAP}(?:已|已经|会|将|能|一直)?${REPLY_CLAUSE_GAP}(?:保存|存储|记录|写入|收录|保留|留存|有效)`,
+    'iu',
+  ),
+  new RegExp(
+    `(?:记在|刻在|印在)${REPLY_CLAUSE_GAP}(?:脑子|心里|心上|记忆里)${REPLY_CLAUSE_GAP}(?:了|啦|不会忘|一直)`,
+    'iu',
+  ),
+  /\b(?:i(?:'ve| have)|we(?:'ve| have)|it(?:'s| is)|this is|that is)\b[^,.!?;\n]{0,28}\b(?:remembered|saved|stored|recorded|filed|archived|logged|written|added|committed|locked in|tucked (?:it |that |this )?away)\b/iu,
+  /\b(?:i(?:'ll| will)|we(?:'ll| will)|i(?:'m| am) going to)\b[^,.!?;\n]{0,28}\b(?:remember|save|store|record|keep|retain|recognize|know|file|archive)\b/iu,
+  /\b(?:i|we)\b[^,.!?;\n]{0,20}\b(?:won't|will not|never)\b[^,.!?;\n]{0,16}\b(?:forget|lose|drop)\b/iu,
+  /\b(?:next time|from now on|in the future|in later conversations?|when (?:you|we) (?:mention|discuss) it again)\b[^,.!?;\n]{0,36}\b(?:remember|recognize|know|recall|pick (?:it )?up|connect)\b/iu,
+  /\b(?:saved|stored|recorded|filed|archived|logged|written|added|committed)\b[^,.!?;\n]{0,24}\b(?:for (?:later|next time)|in (?:long[- ]term )?memory|in (?:the )?(?:database|profile|records?))\b/iu,
+  /\b(?:this|that|it)\s+(?:is|'s)\s+(?:now\s+)?(?:in|part of)\s+(?:my\s+)?(?:long[- ]term\s+)?memory\b/iu,
+  /\bi(?:'ve| have)\b[^,.!?;\n]{0,20}\b(?:got|put)\b[^,.!?;\n]{0,16}\b(?:on file|in memory|in the records?)\b/iu,
+  /\b(?:consider|mark) (?:it|that|this) (?:remembered|saved|stored|recorded|done)\b/iu,
+  /\b(?:this|that|it)\b[^,.!?;\n]{0,20}\b(?:stays?|is staying|will stay)\b[^,.!?;\n]{0,16}\b(?:with me|in mind|on file)\b/iu,
+  /\b(?:this|that|it)(?:'ll| will)\b[^,.!?;\n]{0,20}\bstay\b[^,.!?;\n]{0,16}\b(?:with me|in mind|on file)\b/iu,
+  /\byou\b[^,.!?;\n]{0,16}\b(?:won't|will not)\b[^,.!?;\n]{0,18}\b(?:repeat|remind|explain|tell me)\b[^,.!?;\n]{0,18}\b(?:again|next time|in the future)\b/iu,
+];
+
+const HONEST_NON_ACCEPTANCE_PATTERNS = [
+  /(?:已|已经)?(?:保存|记录|存储)(?:为|成|到)?\s*(?:Evidence|证据)/giu,
+  new RegExp(
+    `(?:尚未|还没有|还没|并未|未)(?:被|正式|真正|实际)?${REPLY_CLAUSE_GAP}(?:记住|记下|保存|记录|写入|写进|录入|加入|进入|存入|归档|存档|接受)`,
+    'giu',
+  ),
+  new RegExp(
+    `(?:不|并不|不能|无法|没法)(?:代表|表示|说明|保证|承诺|确认)${REPLY_CLAUSE_GAP}(?:已|已经|会|将)?${REPLY_CLAUSE_GAP}(?:记住|记下|记得|保存|记录|写入|录入|保留|不会忘)`,
+    'giu',
+  ),
+  /\b(?:has|have|is|are|was|were)?\s*not\s+(?:yet\s+)?(?:been\s+)?(?:remembered|saved|stored|recorded|added|written|committed|accepted|filed|archived)\b[^,.!?;\n]{0,30}/giu,
+  /\b(?:cannot|can't|do not|don't|does not|doesn't)\s+(?:mean|promise|guarantee|confirm)\b[^,.!?;\n]{0,55}/giu,
+];
+
+function withoutHonestNonAcceptanceClauses(value) {
+  let remaining = value;
+  for (const pattern of HONEST_NON_ACCEPTANCE_PATTERNS) {
+    remaining = remaining.replace(pattern, ' ');
+  }
+  return remaining;
+}
+
+export function replyMakesUnverifiedMemoryClaim(value) {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  const remaining = withoutHonestNonAcceptanceClauses(
+    value.normalize('NFKC').replace(/[‘’]/gu, "'"),
+  );
+  return UNVERIFIED_MEMORY_CLAIM_PATTERNS.some((pattern) => pattern.test(remaining));
+}
+
+/**
+ * A chat reply is produced before the Next candidate exists, and Owner
+ * acceptance can only happen in a later decision request. Therefore any
+ * completion/promise claim about this turn is unknowable at this boundary.
+ * Fail closed to a natural acknowledgement; do not let a false claim enter
+ * either the HTTP response or Conversation's subsequent working-memory window.
+ */
+export function enforceReplyMemoryHonesty(value) {
+  const reply = typeof value === 'string' ? value.trim() : '';
+  if (!replyMakesUnverifiedMemoryClaim(reply)) return reply;
+  return /[\p{Script=Han}]/u.test(reply) ? '我明白你的意思了。' : 'I understand what you mean.';
+}
+
+export function createReplyHonestyGuard(inner) {
+  if (!inner || typeof inner.chat !== 'function') {
+    throw new TypeError('reply honesty guard requires an LLM client');
+  }
+  return {
+    async chat(messages) {
+      return enforceReplyMemoryHonesty(await inner.chat(messages));
+    },
+    get callCount() {
+      return inner.callCount;
+    },
+    get tier() {
+      return inner.tier;
+    },
+    get usage() {
+      return inner.usage;
+    },
+  };
+}
+
 // 模型池：写路径（distill/consolidate/attribute/trends）使用写模型，对话使用聊天模型。
 const llmPool = loadLLMPool();
 const llm = llmPool.for('write'); // 写路径统一用它（updateProfile / 手动 distill/consolidate/attribute/ask / trends）
-const chatLLM = llmPool.for('chat'); // 对话使用聊天模型，写路径可独立选择更轻量的模型
+const chatLLM = createReplyHonestyGuard(llmPool.for('chat')); // 回复在进入会话窗口前强制经过诚实性边界
+
+// Next 只是一条候选记忆实验支路，绝不能因本地 Lab 缺席而阻断 1.x 聊天、Evidence 或画像。
+// URL 校验失败同样降级；配置错误只在本机控制台留一条不含 URL/请求体的诊断。
+let nextBridge = null;
+try {
+  nextBridge = createNextBridge();
+} catch {
+  console.warn('  ⚠️ MemoWeft Next bridge 配置不可用；1.x 测试台照常运行。');
+}
+// Legacy cognition migration is intentionally one-at-a-time.  A live world
+// preflight plus this local guard prevents two browser requests from both
+// observing an empty review queue and staging two new model operations.
+let legacyCognitionMigrationInFlight = false;
 
 // LLM 网络错误（socket closed / fetch failed 等）不应终止诊断台进程。
 process.on('unhandledRejection', (e) =>
@@ -79,19 +263,26 @@ const embedConfig = loadEmbedConfig();
 const retriever = embedConfig
   ? new VectorRetriever(DB_PATH, new OpenAICompatEmbedder(embedConfig))
   : new NullRetriever();
-if (!embedConfig)
-  console.log('  ⚠️ 未配 MEMOWEFT_EMBED_*（或兼容 DLA_EMBED_*），召回降级为空（回话不注入画像）');
+if (!embedConfig) {
+  console.log(
+    NEXT_AUTHORITY
+      ? '  ℹ️ 未配 MEMOWEFT_EMBED_*：1.0 向量召回关闭；2.0 已接受世界仍可进行本地正式召回'
+      : '  ⚠️ 未配 MEMOWEFT_EMBED_*（或兼容 DLA_EMBED_*），召回降级为空（回话不注入画像）',
+  );
+}
 
 // loadLLMPool 允许无 .env 启动；未配置写模型时回退到聊天模型，详见 src/llm/pool.ts。
 
 // 诊断台作为宿主注入 MemoWeft-aware 设定；语气归宿主，Core 默认保持中性。
-// 修一个 integration testing 暴露的坑：素提示下大模型会露出出厂反射「我不保留记忆、聊完就忘」，正好否定 MemoWeft 的价值。
-const REPLY_PERSONA =
-  '你是一个长期陪着这个用户、会持续记住 ta 的助手。' +
-  '下面若给出「你已了解关于这个用户的情况」，就自然地把它用上，像一个真的记得 ta 的人那样回应。' +
-  '绝不要说“我不会保留记忆”“每次对话都是全新开始”“对话结束就忘”这类话——' +
-  '你背后有一个跨对话持续记住 ta 的记忆层，ta 说的会被记下来、以后还认得。' +
-  '语气自然、简洁、真诚，别生硬地复述你了解到的东西。';
+// 这里只教模型如何表达；上面的程序边界才是最终保证。
+export const REPLY_PERSONA =
+  '你是一个长期陪伴用户的助手。' +
+  '只有经过 Evidence、后台身份与语义验证并自动 Apply 的内容，才是已经持久化的长期记忆。' +
+  '当前用户消息在你生成回复时，后台验证尚未完成，不能据此断言已经形成长期记忆；' +
+  '你可以用“我明白了”“原来如此”自然表达理解，但不能宣称本轮内容已经或一定会被记住、保存、写入、以后认得，也不能承诺不会忘。' +
+  '下面若给出「你已了解关于这个用户的情况」，那些内容来自已自动 Apply 的长期记忆，可以自然使用，也可以说“我记得你之前说过…”。' +
+  '如果用户直接问本轮是否已记住，就说当前还未确认进入长期记忆；除非用户追问，不主动解释后台流程。' +
+  '语气自然、简洁、真诚，别生硬地复述记忆内容。';
 
 // ── 多会话：内存里的活跃会话 + 磁盘上的历史日志两处；current 指向"当前会话"。──
 // 一个会话 = 一个 Conversation（回话窗口）+ 一个 logger（run-<id>.jsonl）。/api/reset 新建并【保留】旧的
@@ -103,6 +294,7 @@ function makeSession(seedTurns = []) {
   const s = {
     id,
     createdAt: new Date().toISOString(),
+    chatTail: Promise.resolve(),
     convo: new Conversation({
       store,
       retriever,
@@ -124,6 +316,31 @@ function newSession() {
   return current;
 }
 
+// 清空聊天记录只处理会话日志与内存中的 Conversation 窗口。日志改名保留，
+// 1.0 Evidence/画像库和 Next 已接受世界都不在这个函数的触及范围内。
+async function clearChatSessions() {
+  let files = [];
+  try {
+    files = (await readdir(LOG_DIR)).filter((file) => /^run-s-.*\.jsonl$/.test(file));
+  } catch {
+    files = [];
+  }
+  const batchId = `${Date.now()}-${seq++}`;
+  let archivedCount = 0;
+  for (const file of files) {
+    try {
+      await rename(join(LOG_DIR, file), join(LOG_DIR, `${file}.cleared-${batchId}`));
+      archivedCount += 1;
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
+  const liveSessionCount = sessions.size;
+  sessions.clear();
+  newSession();
+  return { archivedCount, liveSessionCount, batchId };
+}
+
 // 打开一条会话：活跃的直接切；只在盘上的 → 读回最近几轮做种子重建（logger 续写同文件、轮号接着走）。
 function openSession(id) {
   let s = sessions.get(id);
@@ -139,6 +356,7 @@ function openSession(id) {
     s = {
       id,
       createdAt: new Date().toISOString(),
+      chatTail: Promise.resolve(),
       convo: new Conversation({
         store,
         retriever,
@@ -155,16 +373,26 @@ function openSession(id) {
   return s;
 }
 
+function serializeSessionChat(session, work) {
+  const running = session.chatTail.then(work);
+  // Conversation working memory and the append-only delivery history are one
+  // ordered session stream.  Keep a rejected request from poisoning later
+  // turns while retaining the current request's rejection for its caller.
+  session.chatTail = running.catch(() => undefined);
+  return running;
+}
+
 // ── 后台自动更新画像（空闲防抖触发）──
 // 写路径需要多次模型调用，因此不阻塞聊天：对话立即记录证据，画像在后台更新。
 // 共用一把锁：同一用户的画像更新【不能并发】（否则重复消化同一批事件、markConsolidated 竞争）。
-// 批量更新：累计达到 config.profileUpdate.batchSize 条，或空闲达到 idleMinutes 后更新画像。
+// 默认批量更新：累计达到 config.profileUpdate.batchSize 条，或空闲达到 idleMinutes 后更新画像。
+// 隔离测试台可用启动期开关显式改为每轮安排一次，不能由 HTTP 请求修改。
 let profileUpdating = false;
 let bgTimer = null;
 let bgLast = null; // 上次更新结果摘要，供前端轮询显示
 let seedProgress = { running: false, step: 0, total: 6, label: '空闲' }; // integration testing 灌数据进度（脚本上报、前端轮询画进度条）
 
-async function runProfileUpdate(trigger = 'background') {
+async function runProfileUpdate(trigger = 'background', session = current) {
   if (profileUpdating) return null; // 正忙 → 调用方决定重排/提示
   profileUpdating = true;
   try {
@@ -202,7 +430,7 @@ async function runProfileUpdate(trigger = 'background') {
       })),
     };
     // Persist per-stage timing and a content-free summary for diagnostics.
-    current.logger.appendProfileUpdate({
+    session.logger.appendProfileUpdate({
       trigger,
       timings: r.timings,
       summary: {
@@ -223,7 +451,7 @@ async function runProfileUpdate(trigger = 'background') {
     });
     return r;
   } catch (e) {
-    current.logger.appendProfileUpdate({
+    session.logger.appendProfileUpdate({
       trigger,
       error: e instanceof Error ? e.message : String(e),
     });
@@ -233,35 +461,36 @@ async function runProfileUpdate(trigger = 'background') {
   }
 }
 
-// 批量更新触发器：每次对话完成后累加计数。
-// 达到 batchSize 时立即安排更新；否则重置空闲计时，在 idleMinutes 内无新对话时更新。先满足的条件触发。
+// 触发器：默认每次对话完成后累加计数，达到 batchSize 时立即安排更新；否则重置空闲计时，
+// 在 idleMinutes 内无新对话时更新。测试台的显式 per-turn 开关会立即安排更新；写路径仍不阻塞回复。
 let pendingSinceUpdate = 0;
-function scheduleBackgroundUpdate() {
+function scheduleBackgroundUpdate(session) {
+  if (NEXT_AUTHORITY) return;
   pendingSinceUpdate++;
   const { batchSize, idleMinutes } = config.profileUpdate;
-  if (pendingSinceUpdate >= batchSize) {
+  if (runtimeConfig.profileEveryTurn || pendingSinceUpdate >= batchSize) {
     if (bgTimer) {
       clearTimeout(bgTimer);
       bgTimer = null;
     } // 攒够一批 → 立刻排，清掉空闲计时
-    void triggerProfileUpdate();
+    void triggerProfileUpdate(session);
   } else {
     if (bgTimer) clearTimeout(bgTimer); // 又聊了 → 重置空闲计时
     bgTimer = setTimeout(() => {
       bgTimer = null;
-      void triggerProfileUpdate();
+      void triggerProfileUpdate(session);
     }, idleMinutes * 60000);
   }
 }
-async function triggerProfileUpdate() {
+async function triggerProfileUpdate(session = current) {
   try {
-    const r = await runProfileUpdate('background');
+    const r = await runProfileUpdate('background', session);
     if (r === null) {
       // 手动更新占用锁时，保留待处理计数并在 10 秒后重试。
       if (bgTimer) clearTimeout(bgTimer);
       bgTimer = setTimeout(() => {
         bgTimer = null;
-        void triggerProfileUpdate();
+        void triggerProfileUpdate(session);
       }, 10000);
       return;
     }
@@ -272,12 +501,1035 @@ async function triggerProfileUpdate() {
   }
 }
 
-function sendJson(res, code, data) {
-  res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(data));
+export const MAX_CHAT_HISTORY_RESPONSE_BYTES = 512 * 1024;
+
+const EXPECTED_CLIENT_DISCONNECT_CODES = new Set([
+  'ECONNRESET',
+  'EPIPE',
+  'ERR_STREAM_DESTROYED',
+  'ERR_HTTP_REQUEST_ABORTED',
+]);
+
+function responseCanWrite(res) {
+  return res && res.destroyed !== true && res.writableEnded !== true;
 }
 
-const server = createServer(async (req, res) => {
+function isExpectedClientDisconnect(error) {
+  return EXPECTED_CLIENT_DISCONNECT_CODES.has(error?.code);
+}
+
+/**
+ * A browser may navigate, reload, or abort a poll while JSON is being written.
+ * ServerResponse emits those socket failures asynchronously; without a local
+ * listener Node treats the `error` event as uncaught and can terminate the
+ * entire diagnostics process even though the request itself is disposable.
+ */
+function guardRequestSocket(req, res) {
+  const observe = (stream, label) => {
+    if (!stream || typeof stream.on !== 'function') return;
+    stream.on('error', (error) => {
+      if (!isExpectedClientDisconnect(error)) {
+        console.error(
+          `测试台${label}流异常（服务继续）：`,
+          error instanceof Error ? error.message : error,
+        );
+      }
+    });
+  };
+  observe(req, '请求');
+  observe(res, '响应');
+}
+
+function sendJson(res, code, data) {
+  if (!responseCanWrite(res)) return false;
+  const raw = JSON.stringify(data);
+  try {
+    if (!responseCanWrite(res)) return false;
+    if (!res.headersSent) {
+      res.writeHead(code, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': String(Buffer.byteLength(raw)),
+      });
+    }
+    if (!responseCanWrite(res)) return false;
+    res.end(raw);
+    return true;
+  } catch (error) {
+    if (!responseCanWrite(res) || isExpectedClientDisconnect(error)) return false;
+    throw error;
+  }
+}
+
+function compactHistoryText(value, maxChars) {
+  const text = typeof value === 'string' ? value : value == null ? '' : String(value);
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, maxChars)}…[历史显示已截断]`;
+}
+
+function objectRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null;
+}
+
+function compactCandidateItem(value) {
+  if (!objectRecord(value)) return compactHistoryText(value, 1000);
+  const item = {};
+  if (typeof value.id === 'string') item.id = compactHistoryText(value.id, 240);
+  for (const key of ['content', 'summary', 'canonical_name', 'relation_type']) {
+    if (typeof value[key] === 'string' && value[key]) {
+      item[key] = compactHistoryText(value[key], 1000);
+      break;
+    }
+  }
+  if (Object.keys(item).length === 0 && typeof value.kind === 'string') {
+    item.kind = compactHistoryText(value.kind, 120);
+  }
+  return item;
+}
+
+function compactCandidateMemory(value) {
+  const memory = objectRecord(value) ?? {};
+  const result = {};
+  for (const key of ['entities', 'relationships', 'events', 'cognitions']) {
+    result[key] = Array.isArray(memory[key])
+      ? memory[key].slice(0, 5).map(compactCandidateItem)
+      : [];
+  }
+  return result;
+}
+
+function compactEvidence(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 5).map((entry) => {
+    if (!objectRecord(entry)) return compactHistoryText(entry, 1200);
+    const result = {};
+    if (typeof entry.evidenceId === 'string') {
+      result.evidenceId = compactHistoryText(entry.evidenceId, 240);
+    }
+    const text = entry.text ?? entry.content;
+    if (text !== undefined) result.text = compactHistoryText(text, 1200);
+    return result;
+  });
+}
+
+function compactCognitionTarget(value) {
+  const target = objectRecord(value);
+  if (!target) return undefined;
+  return {
+    ...(typeof target.kind === 'string' ? { kind: compactHistoryText(target.kind, 80) } : {}),
+    ...(typeof target.id === 'string' ? { id: compactHistoryText(target.id, 240) } : {}),
+  };
+}
+
+function compactCognitionPerspective(value) {
+  const perspective = objectRecord(value);
+  if (!perspective) return undefined;
+  return {
+    ...(typeof perspective.kind === 'string'
+      ? { kind: compactHistoryText(perspective.kind, 80) }
+      : {}),
+    ...(Array.isArray(perspective.holder_entity_ids)
+      ? {
+          holder_entity_ids: perspective.holder_entity_ids
+            .filter((id) => typeof id === 'string' && id)
+            .slice(0, 12)
+            .map((id) => compactHistoryText(id, 240)),
+        }
+      : {}),
+  };
+}
+
+function compactStructuredClaim(value) {
+  const claim = objectRecord(value);
+  if (!claim) return undefined;
+  return {
+    ...(typeof claim.statement_kind === 'string'
+      ? { statement_kind: compactHistoryText(claim.statement_kind, 120) }
+      : {}),
+    ...(claim.predicate === null
+      ? { predicate: null }
+      : typeof claim.predicate === 'string'
+        ? { predicate: compactHistoryText(claim.predicate, 500) }
+        : {}),
+    ...(claim.value === null
+      ? { value: null }
+      : typeof claim.value === 'string'
+        ? { value: compactHistoryText(claim.value, 1000) }
+        : {}),
+    ...(typeof claim.polarity === 'string'
+      ? { polarity: compactHistoryText(claim.polarity, 80) }
+      : {}),
+    ...(typeof claim.epistemic_status === 'string'
+      ? { epistemic_status: compactHistoryText(claim.epistemic_status, 80) }
+      : {}),
+  };
+}
+
+function compactCognitionSnapshot(value) {
+  const cognition = objectRecord(value);
+  if (!cognition) return undefined;
+  const target = compactCognitionTarget(cognition.target);
+  const perspective = compactCognitionPerspective(cognition.perspective);
+  const structuredClaim = compactStructuredClaim(cognition.structured_claim);
+  return {
+    ...(typeof cognition.id === 'string' ? { id: compactHistoryText(cognition.id, 240) } : {}),
+    ...(typeof cognition.world_id === 'string'
+      ? { world_id: compactHistoryText(cognition.world_id, 240) }
+      : {}),
+    ...(target ? { target } : {}),
+    ...(typeof cognition.content === 'string'
+      ? { content: compactHistoryText(cognition.content, 1000) }
+      : {}),
+    ...(typeof cognition.content_type === 'string'
+      ? { content_type: compactHistoryText(cognition.content_type, 80) }
+      : {}),
+    ...(typeof cognition.formed_by === 'string'
+      ? { formed_by: compactHistoryText(cognition.formed_by, 80) }
+      : {}),
+    ...(Number.isInteger(cognition.confidence) ? { confidence: cognition.confidence } : {}),
+    ...(typeof cognition.cred_status === 'string'
+      ? { cred_status: compactHistoryText(cognition.cred_status, 80) }
+      : {}),
+    ...(perspective ? { perspective } : {}),
+    ...(Array.isArray(cognition.sources)
+      ? {
+          sources: cognition.sources.slice(0, 8).map((raw) => {
+            const source = objectRecord(raw) ?? {};
+            return {
+              ...(typeof source.evidence_id === 'string'
+                ? { evidence_id: compactHistoryText(source.evidence_id, 240) }
+                : {}),
+              ...(typeof source.relation === 'string'
+                ? { relation: compactHistoryText(source.relation, 80) }
+                : {}),
+            };
+          }),
+        }
+      : {}),
+    ...(typeof cognition.scope === 'string'
+      ? { scope: compactHistoryText(cognition.scope, 1000) }
+      : cognition.scope === null
+        ? { scope: null }
+        : {}),
+    ...(typeof cognition.valid_at === 'string'
+      ? { valid_at: compactHistoryText(cognition.valid_at, 120) }
+      : cognition.valid_at === null
+        ? { valid_at: null }
+        : {}),
+    ...(typeof cognition.invalid_at === 'string'
+      ? { invalid_at: compactHistoryText(cognition.invalid_at, 120) }
+      : cognition.invalid_at === null
+        ? { invalid_at: null }
+        : {}),
+    ...(structuredClaim ? { structured_claim: structuredClaim } : {}),
+  };
+}
+
+function compactCognitionEvidenceChanges(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 8).map((raw) => {
+    const change = objectRecord(raw) ?? {};
+    const before = compactCognitionSnapshot(change.before);
+    const after = compactCognitionSnapshot(change.after);
+    return {
+      ...(typeof change.cognitionId === 'string'
+        ? { cognitionId: compactHistoryText(change.cognitionId, 240) }
+        : {}),
+      ...(typeof change.relation === 'string'
+        ? { relation: compactHistoryText(change.relation, 80) }
+        : {}),
+      ...(typeof change.evidenceId === 'string'
+        ? { evidenceId: compactHistoryText(change.evidenceId, 240) }
+        : {}),
+      ...(before ? { before } : {}),
+      ...(after ? { after } : {}),
+    };
+  });
+}
+
+function compactCognitionReplacements(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 12).map((raw) => {
+    const replacement = objectRecord(raw) ?? {};
+    const before = compactCognitionSnapshot(replacement.before);
+    const after = compactCognitionSnapshot(replacement.after);
+    return {
+      ...(typeof replacement.priorCognitionId === 'string'
+        ? { priorCognitionId: compactHistoryText(replacement.priorCognitionId, 240) }
+        : {}),
+      ...(typeof replacement.successorCognitionId === 'string'
+        ? { successorCognitionId: compactHistoryText(replacement.successorCognitionId, 240) }
+        : {}),
+      ...(typeof replacement.relation === 'string'
+        ? { relation: compactHistoryText(replacement.relation, 80) }
+        : {}),
+      ...(typeof replacement.evidenceId === 'string'
+        ? { evidenceId: compactHistoryText(replacement.evidenceId, 240) }
+        : {}),
+      ...(before ? { before } : {}),
+      ...(after ? { after } : {}),
+    };
+  });
+}
+
+function compactPipeline(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 10).map((entry) => {
+    if (!objectRecord(entry)) return { detail: compactHistoryText(entry, 500) };
+    return {
+      ...(typeof entry.name === 'string' ? { name: compactHistoryText(entry.name, 120) } : {}),
+      ...(typeof entry.state === 'string' ? { state: compactHistoryText(entry.state, 120) } : {}),
+      ...(entry.detail !== undefined ? { detail: compactHistoryText(entry.detail, 500) } : {}),
+    };
+  });
+}
+
+function compactFailure(value) {
+  if (!objectRecord(value)) return value == null ? null : compactHistoryText(value, 500);
+  return {
+    ...(typeof value.kind === 'string' ? { kind: compactHistoryText(value.kind, 160) } : {}),
+    ...(Array.isArray(value.codes)
+      ? { codes: value.codes.slice(0, 10).map((code) => compactHistoryText(code, 300)) }
+      : {}),
+    ...(Number.isInteger(value.attempts) ? { attempts: value.attempts } : {}),
+  };
+}
+
+function compactCorrection(value) {
+  if (!objectRecord(value)) return undefined;
+  return {
+    ...(value.replacementContent !== undefined
+      ? { replacementContent: compactHistoryText(value.replacementContent, 1200) }
+      : {}),
+    ...(Array.isArray(value.supersededCognitions)
+      ? { supersededCognitions: value.supersededCognitions.slice(0, 5).map(compactCandidateItem) }
+      : {}),
+  };
+}
+
+function compactTarget(value) {
+  const target = objectRecord(value);
+  if (!target) return undefined;
+  return {
+    ...(typeof target.entityId === 'string'
+      ? { entityId: compactHistoryText(target.entityId, 240) }
+      : {}),
+    ...(Array.isArray(target.entityNames)
+      ? {
+          entityNames: target.entityNames
+            .filter((name) => typeof name === 'string' && name)
+            .slice(0, 8)
+            .map((name) => compactHistoryText(name, 240)),
+        }
+      : {}),
+  };
+}
+
+function compactPerspective(value) {
+  const perspective = objectRecord(value);
+  if (!perspective) return undefined;
+  return {
+    ...(typeof perspective.kind === 'string'
+      ? { kind: compactHistoryText(perspective.kind, 80) }
+      : {}),
+    ...(Array.isArray(perspective.entityIds)
+      ? {
+          entityIds: perspective.entityIds
+            .filter((id) => typeof id === 'string' && id)
+            .slice(0, 8)
+            .map((id) => compactHistoryText(id, 240)),
+        }
+      : {}),
+  };
+}
+
+function compactIdentityBindings(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 12).map((raw) => {
+    const binding = objectRecord(raw) ?? {};
+    return {
+      ...(typeof binding.entity_id === 'string'
+        ? { entity_id: compactHistoryText(binding.entity_id, 240) }
+        : {}),
+      ...(typeof binding.evidence_id === 'string'
+        ? { evidence_id: compactHistoryText(binding.evidence_id, 240) }
+        : {}),
+      ...(Number.isInteger(binding.start_codepoint)
+        ? { start_codepoint: binding.start_codepoint }
+        : {}),
+      ...(Number.isInteger(binding.end_codepoint) ? { end_codepoint: binding.end_codepoint } : {}),
+    };
+  });
+}
+
+function compactClarification(value) {
+  const clarification = objectRecord(value);
+  if (!clarification) return undefined;
+  return {
+    ...(typeof clarification.code === 'string'
+      ? { code: compactHistoryText(clarification.code, 160) }
+      : {}),
+    ...(typeof clarification.message === 'string'
+      ? { message: compactHistoryText(clarification.message, 1200) }
+      : {}),
+    ...(Array.isArray(clarification.candidateEntityNames)
+      ? {
+          candidateEntityNames: clarification.candidateEntityNames
+            .filter((name) => typeof name === 'string' && name)
+            .slice(0, 8)
+            .map((name) => compactHistoryText(name, 240)),
+        }
+      : {}),
+  };
+}
+
+/**
+ * History is a UI recovery projection, not a second copy of the 2.0 ledger.
+ * Keep a stable automatic-Apply receipt and a human-readable change/Evidence
+ * summary, while intentionally excluding the full world, run transcript,
+ * assistant context, and any other duplicated diagnostic payload. Legacy
+ * proposal fields remain readable only for old history records.
+ */
+export function compactNextMemoryForHistory(value) {
+  const wrapped = objectRecord(value);
+  if (!wrapped) return undefined;
+  const run = objectRecord(wrapped.run);
+  const explicitProposal =
+    objectRecord(wrapped.memoryProposal) ?? objectRecord(run?.memoryProposal);
+  const proposal = explicitProposal ?? run ?? wrapped;
+  const state = proposal.state ?? run?.state ?? wrapped.state;
+  const pipeline = wrapped.pipeline ?? run?.pipeline ?? proposal.pipeline;
+  const failure = wrapped.memoryFailure ?? run?.memoryFailure ?? run?.failure ?? proposal.failure;
+  const candidateCorrection = compactCorrection(proposal.candidateCorrection);
+  const correction = compactCorrection(proposal.correction);
+  const target = compactTarget(proposal.target);
+  const ownerPerspective = compactPerspective(proposal.ownerPerspective);
+  const clarification = compactClarification(proposal.clarification ?? run?.clarification);
+  const result = {
+    ...(typeof wrapped.status === 'string'
+      ? { status: compactHistoryText(wrapped.status, 80) }
+      : {}),
+    ...(typeof wrapped.code === 'string' ? { code: compactHistoryText(wrapped.code, 160) } : {}),
+  };
+
+  if (typeof state === 'string') {
+    const projectedProposal = {
+      ...(typeof proposal.id === 'string' ? { id: compactHistoryText(proposal.id, 240) } : {}),
+      ...(typeof proposal.runId === 'string'
+        ? { runId: compactHistoryText(proposal.runId, 240) }
+        : {}),
+      ...(typeof proposal.title === 'string'
+        ? { title: compactHistoryText(proposal.title, 500) }
+        : {}),
+      ...(typeof proposal.operationId === 'string'
+        ? { operationId: compactHistoryText(proposal.operationId, 240) }
+        : {}),
+      ...(typeof proposal.sessionId === 'string'
+        ? { sessionId: compactHistoryText(proposal.sessionId, 240) }
+        : {}),
+      ...(typeof proposal.currentEvidenceId === 'string'
+        ? { currentEvidenceId: compactHistoryText(proposal.currentEvidenceId, 240) }
+        : {}),
+      state: compactHistoryText(state, 80),
+      ...(typeof proposal.reviewId === 'string'
+        ? { reviewId: compactHistoryText(proposal.reviewId, 240) }
+        : {}),
+      ...(typeof proposal.resultHash === 'string'
+        ? { resultHash: compactHistoryText(proposal.resultHash, 240) }
+        : {}),
+      ...(Number.isInteger(proposal.baseRevision) ? { baseRevision: proposal.baseRevision } : {}),
+      ...(proposal.candidateMemory !== undefined
+        ? { candidateMemory: compactCandidateMemory(proposal.candidateMemory) }
+        : {}),
+      ...(proposal.evidence !== undefined ? { evidence: compactEvidence(proposal.evidence) } : {}),
+      ...(proposal.cognitionEvidenceChanges !== undefined
+        ? {
+            cognitionEvidenceChanges: compactCognitionEvidenceChanges(
+              proposal.cognitionEvidenceChanges,
+            ),
+          }
+        : {}),
+      ...(proposal.cognitionReplacements !== undefined
+        ? {
+            cognitionReplacements: compactCognitionReplacements(proposal.cognitionReplacements),
+          }
+        : {}),
+      ...(target ? { target } : {}),
+      ...(typeof proposal.statementKind === 'string'
+        ? { statementKind: compactHistoryText(proposal.statementKind, 120) }
+        : {}),
+      ...(ownerPerspective ? { ownerPerspective } : {}),
+      ...(proposal.identityBindings !== undefined
+        ? { identityBindings: compactIdentityBindings(proposal.identityBindings) }
+        : {}),
+      ...(clarification ? { clarification } : {}),
+      ...(candidateCorrection ? { candidateCorrection } : {}),
+      ...(correction ? { correction } : {}),
+    };
+    result.memoryProposal = projectedProposal;
+  }
+  if (failure !== undefined && failure !== null) result.memoryFailure = compactFailure(failure);
+  if (pipeline !== undefined) result.pipeline = compactPipeline(pipeline);
+  return result;
+}
+
+function compactHistoryTurn(turn) {
+  return {
+    turn: turn.turn,
+    userInput: compactHistoryText(turn.userInput, 4000),
+    reply: compactHistoryText(turn.reply, 12_000),
+    ...(turn.nextMemory !== undefined
+      ? { nextMemory: compactNextMemoryForHistory(turn.nextMemory) }
+      : {}),
+  };
+}
+
+export function buildBoundedHistoryPayload({ sessionId, turns, extra = {} }) {
+  const projected = turns.map(compactHistoryTurn);
+  const originalCount = projected.length;
+  let payload;
+  do {
+    const omittedTurnCount = originalCount - projected.length;
+    payload = {
+      ...extra,
+      sessionId,
+      turns: projected,
+      ...(omittedTurnCount > 0 ? { historyTruncated: true, omittedTurnCount } : {}),
+    };
+    if (
+      projected.length <= 1 ||
+      Buffer.byteLength(JSON.stringify(payload)) <= MAX_CHAT_HISTORY_RESPONSE_BYTES
+    ) {
+      break;
+    }
+    projected.shift();
+  } while (true);
+  if (Buffer.byteLength(JSON.stringify(payload)) > MAX_CHAT_HISTORY_RESPONSE_BYTES) {
+    // An adversarial single record should fail closed instead of allocating or
+    // writing an unbounded response. Normal records cannot reach this branch
+    // after the field and array caps above.
+    return {
+      ...extra,
+      sessionId,
+      turns: [],
+      historyTruncated: true,
+      omittedTurnCount: originalCount,
+      error: '该会话的单轮历史超过安全显示上限。',
+      code: 'CHAT_HISTORY_RESPONSE_TOO_LARGE',
+    };
+  }
+  return payload;
+}
+
+/**
+ * Construct a migration request only from original, eligible spoken Evidence.
+ * A legacy cognition's derived content intentionally never enters this path.
+ */
+function buildLegacyCognitionMigration(cognitionId) {
+  const turns = cogStore
+    .sourcesOf(cognitionId)
+    .filter((source) => source.relation === 'support')
+    .map((source) => store.get(source.evidenceId))
+    .filter(
+      (evidence) =>
+        evidence &&
+        evidence.sourceKind === 'spoken' &&
+        evidence.allowLocalRead === true &&
+        evidence.allowInference === true &&
+        typeof evidence.rawContent === 'string' &&
+        evidence.rawContent.length > 0,
+    )
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt) || a.id.localeCompare(b.id))
+    .map((evidence) => ({
+      turnId: evidence.id,
+      role: 'user',
+      content: evidence.rawContent,
+      occurredAt: evidence.occurredAt,
+    }));
+
+  if (turns.length === 0) return null;
+  // The downstream bridge permits at most twenty exact user turns and 20k
+  // source characters.  Reject rather than selecting a partial support set,
+  // because a partial migration would alter the source meaning silently.
+  if (turns.length > 20 || turns.reduce((sum, turn) => sum + turn.content.length, 0) > 20_000) {
+    return { error: 'LEGACY_COGNITION_MIGRATION_TOO_LARGE' };
+  }
+  const fingerprint = createHash('sha256').update(JSON.stringify(turns)).digest('hex');
+  return { operationId: `legacy-cognition:sha256:${fingerprint}`, turns };
+}
+
+function safeNextMemory(result) {
+  if (!result || result.status !== 'ok') {
+    return {
+      status: result?.status === 'failed' ? 'failed' : 'unavailable',
+      code: typeof result?.code === 'string' ? result.code : 'NEXT_UNAVAILABLE',
+    };
+  }
+  const value = result.value && typeof result.value === 'object' ? result.value : {};
+  const run = value.run ?? (typeof value.id === 'string' ? value : undefined);
+  const terminalState = nextOperationTerminalState(value);
+  return {
+    status: 'ok',
+    ...(terminalState ? { state: terminalState } : {}),
+    ...(value.memoryChange !== undefined ? { memoryChange: value.memoryChange } : {}),
+    ...(value.applied !== undefined ? { applied: value.applied } : {}),
+    ...(value.memoryResult !== undefined ? { memoryResult: value.memoryResult } : {}),
+    ...(value.memoryProposal !== undefined ? { memoryProposal: value.memoryProposal } : {}),
+    ...(value.memoryFailure !== undefined
+      ? { memoryFailure: value.memoryFailure }
+      : value.failure !== undefined
+        ? { memoryFailure: value.failure }
+        : {}),
+    ...(value.pipeline !== undefined
+      ? { pipeline: value.pipeline }
+      : run?.pipeline !== undefined
+        ? { pipeline: run.pipeline }
+        : {}),
+    ...(value.world !== undefined ? { world: value.world } : {}),
+    ...(run !== undefined ? { run } : {}),
+  };
+}
+
+const NEXT_OPERATION_AUTOMATIC_TERMINAL_STATES = new Set([
+  'applied',
+  'no-change',
+  'no-candidate',
+  'clarification-required',
+  'out-of-scope',
+  'failed',
+]);
+
+function nextOperationTerminalState(value) {
+  const wrapped = objectRecord(value);
+  const run = objectRecord(wrapped?.run);
+  const proposal = objectRecord(wrapped?.memoryProposal) ?? objectRecord(run?.memoryProposal);
+  const memoryChange = objectRecord(wrapped?.memoryChange);
+  const memoryResult = objectRecord(wrapped?.memoryResult);
+  const applied = objectRecord(wrapped?.applied);
+  const state =
+    memoryChange?.state ??
+    memoryResult?.state ??
+    applied?.state ??
+    proposal?.state ??
+    run?.state ??
+    wrapped?.state;
+  return typeof state === 'string' && NEXT_OPERATION_AUTOMATIC_TERMINAL_STATES.has(state)
+    ? state
+    : null;
+}
+
+function nextOperationResultMatchesRequest(result, operation) {
+  const value = objectRecord(result?.value);
+  const run = objectRecord(value?.run) ?? (typeof value?.id === 'string' ? value : null);
+  const adapter = objectRecord(run?.adapter);
+  return (
+    adapter?.operationId === operation.operationId &&
+    adapter?.sessionId === operation.sessionId &&
+    adapter?.currentUserTurnId === operation.currentUserTurnId
+  );
+}
+
+function projectNextOperationTerminal(value) {
+  const wrapped = objectRecord(value);
+  if (!wrapped) return undefined;
+  const state = nextOperationTerminalState(wrapped);
+  if (!state) return undefined;
+  // The operation receipt is an observation of automatic Apply, never a
+  // mutable approval object.  Preserve the compact legacy proposal/run
+  // projection for history readers, and preserve the already bounded complete
+  // proposal when Python still provides that compatibility field.  Carry the
+  // new applied/change receipt when present. The formal World snapshot is
+  // purposely excluded: it is queried from its own authority instead of
+  // duplicated here.
+  const projected = compactNextMemoryForHistory(wrapped) ?? {};
+  const proposal = objectRecord(wrapped.memoryProposal);
+  return {
+    ...projected,
+    state,
+    ...(proposal ? { memoryProposal: proposal } : {}),
+    ...(wrapped.memoryChange !== undefined ? { memoryChange: wrapped.memoryChange } : {}),
+    ...(wrapped.applied !== undefined ? { applied: wrapped.applied } : {}),
+    ...(wrapped.memoryResult !== undefined ? { memoryResult: wrapped.memoryResult } : {}),
+  };
+}
+
+function processingNextMemory(operation) {
+  return {
+    status: 'ok',
+    state: 'processing',
+    operationId: operation.operationId,
+    sessionId: operation.sessionId,
+    currentEvidenceId: operation.currentUserTurnId,
+  };
+}
+
+function publicNextOperation(operation) {
+  const identity = {
+    operationId: operation.operationId,
+    sessionId: operation.sessionId,
+  };
+  if (operation.status === 'ready') {
+    return { ...identity, state: 'ready', nextMemory: operation.safeNextMemory };
+  }
+  if (operation.status === 'failed') {
+    return { ...identity, state: 'failed', code: operation.failureCode };
+  }
+  // The browser deliberately sees one non-terminal product state.  Whether
+  // the job is queued, actively inside the slow Lab, or waiting for an
+  // at-least-once transport retry never creates an Owner decision.
+  return { ...identity, state: 'pending' };
+}
+
+const NEXT_OPERATION_RETRY_MS = 1_500;
+const NEXT_OPERATION_MAX_RETRY_MS = 30_000;
+const NEXT_OPERATION_LEASE_MS = Math.min(
+  900_000,
+  Math.max(DEFAULT_OPERATION_LEASE_MS, (nextBridge?.operationTimeoutMs ?? 0) + 30_000),
+);
+const NEXT_OPERATION_LEASE_HEARTBEAT_MS = Math.min(15_000, NEXT_OPERATION_LEASE_MS / 4);
+const NEXT_OPERATION_LEASE_RETRY_MS = 1_000;
+const NEXT_OPERATION_LEASE_SAFETY_MS = 5_000;
+let nextOperationWorkerActive = false;
+let nextOperationWakeScheduled = false;
+let nextOperationRetryTimer = null;
+let nextOperationRetryDueAt = 0;
+const nextOperationRetryState = new Map();
+
+function deferNextOperation(operation) {
+  const latest = nextAdapterOperations.get(operation.operationId, operation.sessionId);
+  if (!latest || ['ready', 'failed'].includes(latest.status)) return;
+  if (latest.status === 'running') {
+    nextAdapterOperations.markPending(operation.operationId, operation.sessionId, {
+      claimToken: operation.claimToken,
+    });
+  }
+  const attempts = (nextOperationRetryState.get(operation.operationId)?.attempts ?? 0) + 1;
+  const delay = Math.min(
+    NEXT_OPERATION_RETRY_MS * 2 ** Math.min(attempts - 1, 5),
+    NEXT_OPERATION_MAX_RETRY_MS,
+  );
+  nextOperationRetryState.set(operation.operationId, {
+    attempts,
+    notBefore: Date.now() + delay,
+  });
+  scheduleNextOperationWorker(delay);
+}
+
+function startNextOperationLeaseHeartbeat(operation) {
+  let timer = null;
+  let stopped = false;
+  let ownershipLost = false;
+  let confirmedExpiry = operation.claimExpiresAtMs;
+
+  const schedule = (delayMs) => {
+    if (stopped || ownershipLost) return;
+    timer = setTimeout(renew, delayMs);
+  };
+
+  const renew = () => {
+    timer = null;
+    if (stopped || ownershipLost) return;
+    try {
+      const renewed = nextAdapterOperations.renewLease(
+        operation.operationId,
+        operation.sessionId,
+        operation.claimToken,
+        { leaseMs: NEXT_OPERATION_LEASE_MS },
+      );
+      confirmedExpiry = renewed.claimExpiresAtMs;
+      schedule(NEXT_OPERATION_LEASE_HEARTBEAT_MS);
+    } catch {
+      try {
+        const latest = nextAdapterOperations.get(operation.operationId, operation.sessionId);
+        if (
+          !latest ||
+          latest.status !== 'running' ||
+          latest.claimOwner !== operation.claimOwner ||
+          latest.claimToken !== operation.claimToken
+        ) {
+          ownershipLost = true;
+          return;
+        }
+      } catch {
+        // A temporary SQLite read failure is retried only while the last
+        // confirmed lease still has a safety margin.
+      }
+      if (Date.now() >= confirmedExpiry - NEXT_OPERATION_LEASE_SAFETY_MS) {
+        ownershipLost = true;
+        return;
+      }
+      schedule(NEXT_OPERATION_LEASE_RETRY_MS);
+    }
+  };
+
+  schedule(NEXT_OPERATION_LEASE_HEARTBEAT_MS);
+  return {
+    stop() {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      timer = null;
+    },
+    get ownershipLost() {
+      return ownershipLost;
+    },
+  };
+}
+
+function scheduleNextOperationWorker(delayMs = 0) {
+  if (delayMs > 0) {
+    const dueAt = Date.now() + delayMs;
+    if (nextOperationRetryTimer && nextOperationRetryDueAt <= dueAt) return;
+    if (nextOperationRetryTimer) clearTimeout(nextOperationRetryTimer);
+    nextOperationRetryDueAt = dueAt;
+    nextOperationRetryTimer = setTimeout(() => {
+      nextOperationRetryTimer = null;
+      nextOperationRetryDueAt = 0;
+      scheduleNextOperationWorker();
+    }, delayMs);
+    nextOperationRetryTimer.unref?.();
+    return;
+  }
+  if (nextOperationWorkerActive || nextOperationWakeScheduled) return;
+  nextOperationWakeScheduled = true;
+  setImmediate(() => {
+    nextOperationWakeScheduled = false;
+    void runNextOperationWorker();
+  });
+}
+
+async function runNextOperationWorker() {
+  if (nextOperationWorkerActive) return;
+  // Bridge configuration is immutable for this process.  Keep every exact
+  // request recoverable so a corrected restart can deliver it; absence of the
+  // bridge is not a terminal memory outcome.
+  if (!nextBridge) return;
+  nextOperationWorkerActive = true;
+  try {
+    while (true) {
+      nextAdapterOperations.recoverExpiredRunning();
+      const recoverable = nextAdapterOperations.listRecoverable();
+      const now = Date.now();
+      const operation = recoverable.find(
+        (item) => (nextOperationRetryState.get(item.operationId)?.notBefore ?? 0) <= now,
+      );
+      if (!operation) {
+        const future = recoverable
+          .map((item) => nextOperationRetryState.get(item.operationId)?.notBefore)
+          .filter((value) => Number.isFinite(value) && value > now)
+          .sort((left, right) => left - right)[0];
+        const leaseDelay = nextAdapterOperations.millisecondsUntilNextLeaseExpiry();
+        const wakeDelays = [
+          ...(future ? [Math.max(1, future - now)] : []),
+          ...(leaseDelay !== null ? [Math.max(1, leaseDelay)] : []),
+        ];
+        if (wakeDelays.length > 0) scheduleNextOperationWorker(Math.min(...wakeDelays));
+        return;
+      }
+      const running = nextAdapterOperations.markRunning(
+        operation.operationId,
+        operation.sessionId,
+        {
+          leaseMs: NEXT_OPERATION_LEASE_MS,
+        },
+      );
+
+      let result;
+      const leaseHeartbeat = startNextOperationLeaseHeartbeat(running);
+      try {
+        result = await nextBridge.stagePreparedMemoryTurn(running.request);
+      } catch {
+        leaseHeartbeat.stop();
+        if (leaseHeartbeat.ownershipLost) {
+          scheduleNextOperationWorker();
+          continue;
+        }
+        // An exception after delivery is transport-ambiguous: Python may
+        // already have applied the SQLite World change.  Keep the exact
+        // request pending and retry it under the same operationId instead of
+        // inventing a terminal result.
+        deferNextOperation(running);
+        continue;
+      }
+      leaseHeartbeat.stop();
+      if (leaseHeartbeat.ownershipLost) {
+        // Another worker now owns reconciliation.  The stable operationId
+        // makes a possible duplicate delivery safe downstream; this stale
+        // callback is fenced from every local state transition.
+        scheduleNextOperationWorker();
+        continue;
+      }
+      if (result.status !== 'ok') {
+        if (result.status === 'failed') {
+          nextOperationRetryState.delete(running.operationId);
+          nextAdapterOperations.markFailed(
+            running.operationId,
+            running.sessionId,
+            typeof result.code === 'string' ? result.code : 'NEXT_OPERATION_REJECTED',
+            { claimToken: running.claimToken },
+          );
+          continue;
+        }
+        deferNextOperation(running);
+        continue;
+      }
+      let terminal;
+      try {
+        if (!nextOperationResultMatchesRequest(result, running)) {
+          throw new Error('Next operation result does not match its exact request');
+        }
+        const safe = safeNextMemory(result);
+        if (!nextOperationTerminalState(safe)) {
+          // A pre-2.0 Python process can still return candidate-ready.  That
+          // result is historical compatibility data, not a valid outcome for
+          // a newly reserved automatic operation.  Terminally expose this
+          // local contract mismatch; do not leave a fresh turn stranded in a
+          // hidden awaiting-Owner state or retry it forever.
+          nextOperationRetryState.delete(running.operationId);
+          nextAdapterOperations.markFailed(
+            running.operationId,
+            running.sessionId,
+            'NEXT_AUTO_APPLY_RESULT_INVALID',
+            { claimToken: running.claimToken },
+          );
+          continue;
+        }
+        terminal = projectNextOperationTerminal(safe);
+        if (!terminal) throw new Error('Next operation result has no safe projection');
+      } catch {
+        // A successful HTTP delivery may already have staged SQLite authority.
+        // Keep the request and replay it under the same operation key instead
+        // of converting a projection/compatibility error into a false terminal.
+        deferNextOperation(running);
+        continue;
+      }
+      try {
+        nextAdapterOperations.markReady(running.operationId, running.sessionId, terminal, {
+          claimToken: running.claimToken,
+        });
+        nextOperationRetryState.delete(running.operationId);
+      } catch {
+        // If the terminal write itself failed, the exact request remains the
+        // only safe reconciliation material.  A partially successful write is
+        // detected by deferNextOperation's fresh terminal read.
+        deferNextOperation(running);
+      }
+    }
+  } catch (error) {
+    console.error(
+      'Next 后台自动记忆队列异常（聊天继续）：',
+      error instanceof Error ? error.message : error,
+    );
+    scheduleNextOperationWorker(NEXT_OPERATION_RETRY_MS);
+  } finally {
+    nextOperationWorkerActive = false;
+  }
+}
+
+// A process may have exited after reserving or while delivering a request.
+// Re-open those rows only after all worker state and bridge functions exist.
+nextAdapterOperations.recoverExpiredRunning();
+scheduleNextOperationWorker();
+
+/**
+ * The Next Lab may provide already applied 2.0 cognitions for this reply,
+ * but it never owns the 1.x chat turn.  Its failure is intentionally silent
+ * here: 1.x still stores the user Evidence and makes its one normal reply.
+ */
+async function recallNextReplyMemory(query) {
+  // The diagnostic Lab currently serializes requests.  A background model
+  // stage must never make the next chat wait on its short recall timeout;
+  // degrade this reply to no 2.0 recall while our worker owns that slow lane.
+  if (!nextBridge || nextOperationWorkerActive) return [];
+  const result = await nextBridge.recallMemory(query);
+  return result.status === 'ok' ? result.value.memories : [];
+}
+
+function recordedAskMatchesProposal(record, proposal) {
+  if (
+    !record ||
+    record.kind === 'profile_update' ||
+    record.reply !== proposal.question ||
+    record.proactiveQuestion !== proposal.question
+  ) {
+    return false;
+  }
+  if (proposal.reason === 'low_confidence') {
+    return (
+      Array.isArray(record.hypotheses) &&
+      record.hypotheses.some((item) => item?.text === proposal.content)
+    );
+  }
+  return (
+    proposal.reason === 'unresolved_conflict' &&
+    Array.isArray(record.conflicts) &&
+    record.conflicts.some((item) => item?.detail === proposal.content)
+  );
+}
+
+function memoryAskTurnFields(proposal) {
+  if (!proposal) {
+    return { proactiveQuestion: null, hypotheses: [], conflicts: [] };
+  }
+  return {
+    proactiveQuestion: proposal.question,
+    hypotheses:
+      proposal.reason === 'low_confidence'
+        ? [
+            {
+              text: proposal.content,
+              confidence: proposal.effectiveConfidence,
+              credStatus: proposal.credStatus,
+            },
+          ]
+        : [],
+    conflicts: proposal.reason === 'unresolved_conflict' ? [{ detail: proposal.content }] : [],
+  };
+}
+
+async function recallNextProactiveAsk(query, session) {
+  // The Lab serializes requests.  Do not put an interactive clarification
+  // behind a slow background formation call; ordinary reply remains the safe
+  // degradation until a later turn can observe the accepted World.
+  if (!NEXT_AUTHORITY || !nextBridge || nextOperationWorkerActive) return null;
+  const result = await nextBridge.proposeMemoryAsk(query);
+  if (result.status !== 'ok' || result.value.status !== 'proposed') return null;
+  const proposal = result.value.proposal;
+  let history;
+  try {
+    // Delivery suppression is session-local and reads the complete append-only
+    // interaction log.  A read-only projection alone never creates this mark.
+    history = session.logger.readRecent(Number.MAX_SAFE_INTEGER);
+  } catch {
+    return null;
+  }
+  return history.some((record) => recordedAskMatchesProposal(record, proposal)) ? null : proposal;
+}
+
+async function forwardNext(res, operation) {
+  if (!nextBridge) {
+    sendJson(res, 503, { next: { status: 'unavailable', code: 'NEXT_BRIDGE_DISABLED' } });
+    return;
+  }
+  const result = await operation(nextBridge);
+  if (result.status !== 'ok') {
+    sendJson(res, result.status === 'unavailable' ? 503 : 400, {
+      next: { status: result.status, code: result.code },
+    });
+    return;
+  }
+  sendJson(res, 200, result.value);
+}
+
+function sendNextBridgeFailure(res, result) {
+  sendJson(res, result?.status === 'unavailable' ? 503 : 400, {
+    next: {
+      status: result?.status === 'unavailable' ? 'unavailable' : 'failed',
+      code: typeof result?.code === 'string' ? result.code : 'NEXT_UNAVAILABLE',
+    },
+  });
+}
+
+export const server = createServer(async (req, res) => {
+  guardRequestSocket(req, res);
   const url = new URL(req.url, `http://localhost:${PORT}`);
   try {
     // 每一个请求都先过 loopback Host 边界，避免 DNS rebinding 下的伪 Host 同源读取静态页或
@@ -286,6 +1538,21 @@ const server = createServer(async (req, res) => {
     const rejection = requestRejection(req.headers, req.method, PORT);
     if (rejection) {
       sendJson(res, rejection.statusCode, { error: rejection.message });
+      return;
+    }
+
+    if (legacyCognitionMutationBlocked(req, url)) {
+      sendLegacyCognitionMutationBlocked(res);
+      return;
+    }
+
+    const workbenchIdentityRoute = getWorkbenchIdentityRoute({
+      method: req.method,
+      pathname: url.pathname,
+      identity: workbenchIdentity,
+    });
+    if (workbenchIdentityRoute) {
+      sendJson(res, workbenchIdentityRoute.statusCode, workbenchIdentityRoute.body);
       return;
     }
 
@@ -305,32 +1572,288 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // 一轮对话：记录证据并生成回复，写入诊断记录后返回完整结果。
+    // 一轮对话：1.x 先安全落用户 Evidence，并在唯一一次聊天调用前只读找 Next 2.0
+    // 已接受记忆。回复生成后，把精确 adapter 请求和聊天记录都持久化即可返回；候选由
+    // Node 本地 durable operation 在后台投递。Next 不生成第二个聊天回复，slow staging
+    // 也不再占住回复或延迟聊天 JSONL。
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       const { text, originId, sessionId: reqSid } = await readJson(req);
-      if (reqSid && sessions.has(reqSid)) current = sessions.get(reqSid); // 指定了活跃会话 → 切过去
-      const outcome = await current.convo.handle(String(text ?? ''), {
-        originId: originId ?? null,
+      // The active UI session can change while the model/Next bridge awaits.
+      // Resolve it once after parsing and keep this request on that exact
+      // conversation/logger through every later await.  Requests from older
+      // clients without sessionId retain the historical "current at parse"
+      // behavior.
+      let session = current;
+      if (reqSid !== undefined) {
+        if (
+          typeof reqSid !== 'string' ||
+          !reqSid ||
+          reqSid !== reqSid.trim() ||
+          reqSid.length > 200 ||
+          !sessions.has(reqSid)
+        ) {
+          sendJson(res, 409, {
+            error: '这条聊天请求绑定的会话已经不是活动会话，请重新打开后再发送。',
+            code: 'CHAT_SESSION_NOT_ACTIVE',
+          });
+          return;
+        }
+        session = sessions.get(reqSid);
+        current = session; // preserve existing explicit-open behavior
+      }
+      await serializeSessionChat(session, async () => {
+        const userText = String(text ?? '');
+        let trustedReplyMemory = [];
+        let deliveredAsk = null;
+        const outcome = await session.convo.handle(userText, {
+          originId: originId ?? null,
+          // Conversation invokes this only after durable 1.x Evidence (and
+          // skips native cognition recall under the Next authority).  The
+          // closure retains exactly
+          // what was injected so the diagnostic log never claims a phantom 2.0
+          // recall item.
+          skipNativeCognitionRecall: NEXT_AUTHORITY,
+          loadTrustedProactiveQuestion: async () => {
+            deliveredAsk = await recallNextProactiveAsk(userText, session);
+            return deliveredAsk?.question ?? null;
+          },
+          loadTrustedReplyMemory: async () => {
+            trustedReplyMemory = await recallNextReplyMemory(userText);
+            return trustedReplyMemory;
+          },
+        });
+        const turnDraft = {
+          // 用户 Evidence 的 recorded/occurred 事实来自 1.x store；以它为 bridge 时间，重试可保持同一请求哈希。
+          ts: outcome.storedEvidence.occurredAt,
+          // 尚未 append，因此这里只是给 bridge 排除当前轮的占位值；实际持久轮号仍完全由 RunLogger 分配。
+          turn: -1,
+          userInput: String(text ?? ''),
+          reply: outcome.reply,
+          evidence: [{ id: outcome.storedEvidence.id, summary: outcome.storedEvidence.summary }],
+        };
+        const previousRecords = session.logger.readRecent(200);
+        const carryForwardEvidenceIds = selectCarryForwardEvidenceIds({
+          sessionId: session.id,
+          record: turnDraft,
+          previousRecords,
+        });
+        let prepared = null;
+        let nextOperation = null;
+        let nextMemory;
+        try {
+          prepared = sanitizePreparedAdapterMemoryTurn(
+            buildAdapterMemoryTurns({
+              sessionId: session.id,
+              record: turnDraft,
+              previousRecords,
+              carryForwardEvidenceIds,
+              evidenceRecords: [
+                outcome.storedEvidence,
+                ...carryForwardEvidenceIds.map((evidenceId) => store.get(evidenceId)),
+              ],
+            }),
+          );
+          // The transcript marker is written before reserve.  A hard exit in
+          // between therefore leaves a visible marker whose status query becomes
+          // a stable NOT_FOUND failure, never an undiscoverable Owner review.
+          nextMemory = processingNextMemory(prepared);
+        } catch {
+          // Evidence and the reply already exist.  A local reservation failure
+          // must be visible on this exact chat turn; silently omitting the card
+          // would falsely suggest that no candidate work was expected.
+          nextMemory = {
+            status: 'failed',
+            memoryFailure: { kind: 'NEXT_OPERATION_RESERVATION_FAILED' },
+          };
+        }
+        const record = session.logger.appendTurn({
+          ...turnDraft,
+          reply: outcome.reply,
+          recall: mergeRecallForRecord(outcome.recall, trustedReplyMemory),
+          ...memoryAskTurnFields(deliveredAsk),
+          llmCalls: outcome.llmCalls,
+          error: outcome.error,
+          nextMemory,
+        });
+        if (prepared) {
+          try {
+            nextOperation = nextAdapterOperations.reserve(prepared);
+          } catch {
+            // The marker remains discoverable in history; the immediate response
+            // also reports the stable local failure instead of pretending the
+            // request was queued.
+            nextMemory = {
+              status: 'failed',
+              memoryFailure: { kind: 'NEXT_OPERATION_RESERVATION_FAILED' },
+            };
+          }
+        }
+        if (nextOperation) scheduleNextOperationWorker();
+        sendJson(res, 200, {
+          record,
+          nextMemory,
+          sessionId: session.id,
+          logFile: session.logger.file,
+        });
+        scheduleBackgroundUpdate(session); // keep deferred diagnostics with the request's session
       });
-      const record = current.logger.appendTurn({
-        userInput: String(text ?? ''),
-        reply: outcome.reply,
-        evidence: [{ id: outcome.storedEvidence.id, summary: outcome.storedEvidence.summary }],
-        recall: outcome.recall.map((r) => ({
-          summary: r.content,
-          score: Math.round(r.score * 1000),
-        })),
-        llmCalls: outcome.llmCalls,
-        error: outcome.error,
-      });
-      sendJson(res, 200, { record, sessionId: current.id, logFile: current.logger.file });
-      scheduleBackgroundUpdate(); // 对话完成后安排后台更新，不阻塞本轮回复
+      return;
+    }
+
+    // In-flight status is served from the local durable operation ledger, not
+    // from the single-threaded Lab that may currently be occupied by the very
+    // request being polled.  Both identifiers are mandatory so one session
+    // cannot probe another session's automatic memory result.
+    if (req.method === 'GET' && url.pathname === '/api/next/memory-operations') {
+      const keys = [...url.searchParams.keys()].sort();
+      const operationId = url.searchParams.get('operationId');
+      const sessionId = url.searchParams.get('sessionId');
+      if (
+        keys.length !== 2 ||
+        keys[0] !== 'operationId' ||
+        keys[1] !== 'sessionId' ||
+        url.searchParams.getAll('operationId').length !== 1 ||
+        url.searchParams.getAll('sessionId').length !== 1 ||
+        typeof operationId !== 'string' ||
+        !operationId ||
+        operationId !== operationId.trim() ||
+        operationId.length > 200 ||
+        typeof sessionId !== 'string' ||
+        !sessionId ||
+        sessionId !== sessionId.trim() ||
+        sessionId.length > 200
+      ) {
+        sendJson(res, 400, {
+          error: 'memory operation 查询需要精确的 sessionId 与 operationId。',
+          code: 'NEXT_OPERATION_QUERY_INVALID',
+        });
+        return;
+      }
+      let operation;
+      try {
+        operation = nextAdapterOperations.get(operationId, sessionId);
+      } catch {
+        sendJson(res, 500, {
+          operationId,
+          sessionId,
+          state: 'failed',
+          code: 'NEXT_OPERATION_STATE_INVALID',
+        });
+        return;
+      }
+      if (!operation) {
+        sendJson(res, 404, {
+          operationId,
+          sessionId,
+          state: 'failed',
+          code: 'NEXT_OPERATION_NOT_FOUND',
+        });
+        return;
+      }
+      sendJson(res, 200, publicNextOperation(operation));
+      return;
+    }
+
+    // Next 的查询/世界接口只做同源、字段白名单代理；浏览器不可借此访问 Lab 的任意路径。
+    if (req.method === 'GET' && url.pathname === '/api/next/status') {
+      await forwardNext(res, (bridge) => bridge.getStatus());
+      return;
+    }
+    if (req.method === 'GET' && url.pathname === '/api/next/memory-world') {
+      await forwardNext(res, (bridge) => bridge.getMemoryWorld());
+      return;
+    }
+    if (req.method === 'GET' && url.pathname === '/api/next/memory-runs') {
+      await forwardNext(res, (bridge) => bridge.getMemoryRuns());
+      return;
+    }
+    if (req.method === 'POST' && url.pathname === '/api/next/memory-queries') {
+      const body = await readJson(req);
+      await forwardNext(res, (bridge) => bridge.queryMemory(body));
+      return;
+    }
+    if (req.method === 'POST' && url.pathname === '/api/next/memory-corrections') {
+      const body = await readJson(req);
+      await forwardNext(res, (bridge) => bridge.correctMemory(body));
+      return;
+    }
+
+    // Evidence-only migration from one existing 1.x cognition into the 2.0
+    // automatic formation path. The browser can name exactly one
+    // cognition id; the server independently reads only eligible *supporting
+    // spoken Evidence*, never the cognition's derived profile text.
+    if (req.method === 'POST' && url.pathname === '/api/next/legacy-cognition-migrations') {
+      const body = await readJson(req);
+      if (
+        !hasExactKeys(body, ['cognitionId']) ||
+        typeof body.cognitionId !== 'string' ||
+        !body.cognitionId ||
+        body.cognitionId.length > 200
+      ) {
+        sendJson(res, 400, {
+          error: '迁移请求必须且只能包含有效的 cognitionId。',
+          code: 'LEGACY_COGNITION_ID_INVALID',
+        });
+        return;
+      }
+      if (!cogStore.get(body.cognitionId)) {
+        sendJson(res, 404, {
+          error: '未找到要迁移的 1.x 画像。',
+          code: 'LEGACY_COGNITION_NOT_FOUND',
+        });
+        return;
+      }
+      if (legacyCognitionMigrationInFlight) {
+        sendJson(res, 409, {
+          error: '已有一条 legacy 画像正在迁移，请等待其完成后再迁移下一条。',
+          code: 'LEGACY_MIGRATION_IN_FLIGHT',
+        });
+        return;
+      }
+      if (!nextBridge) {
+        sendNextBridgeFailure(res, { status: 'unavailable', code: 'NEXT_BRIDGE_DISABLED' });
+        return;
+      }
+      legacyCognitionMigrationInFlight = true;
+      try {
+        const migration = buildLegacyCognitionMigration(body.cognitionId);
+        if (migration === null) {
+          sendJson(res, 422, {
+            error: '该画像没有可用于迁移的原始用户 Evidence。',
+            code: 'LEGACY_COGNITION_NO_ELIGIBLE_EVIDENCE',
+          });
+          return;
+        }
+        if ('error' in migration) {
+          sendJson(res, 422, {
+            error: '该画像的原始用户 Evidence 超过安全迁移上限。',
+            code: migration.error,
+          });
+          return;
+        }
+        const result = await nextBridge.stageLegacyMemory(migration);
+        // The bridge accepts only an explicit automatic terminal receipt.  Do
+        // not turn an old staging-compatible 2xx body into a false success.
+        if (result.status !== 'ok') {
+          sendNextBridgeFailure(res, result);
+          return;
+        }
+        sendJson(res, 200, result.value);
+      } finally {
+        legacyCognitionMigrationInFlight = false;
+      }
       return;
     }
 
     // 后台消化状态（前端轮询：转圈 / 待消化 / 刚更新了什么）
     if (req.method === 'GET' && url.pathname === '/api/bg-status') {
-      sendJson(res, 200, { updating: profileUpdating, pending: !!bgTimer, last: bgLast });
+      sendJson(res, 200, {
+        authority: MEMORY_AUTHORITY,
+        memoryAuthority: MEMORY_AUTHORITY,
+        updating: profileUpdating,
+        pending: !!bgTimer,
+        last: bgLast,
+      });
       return;
     }
 
@@ -348,7 +1871,7 @@ const server = createServer(async (req, res) => {
       } catch {
         /* 未配 → false */
       }
-      sendJson(res, 200, { llmReady, embedReady });
+      sendJson(res, 200, { llmReady, embedReady, memoryAuthority: MEMORY_AUTHORITY });
       return;
     }
 
@@ -522,10 +2045,7 @@ const server = createServer(async (req, res) => {
       const turns = lg
         .readRecent(50)
         .filter((t) => t.kind !== 'profile_update' && t.userInput != null);
-      sendJson(res, 200, {
-        sessionId: sid || current.id,
-        turns: turns.map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply })),
-      });
+      sendJson(res, 200, buildBoundedHistoryPayload({ sessionId: sid || current.id, turns }));
       return;
     }
 
@@ -735,6 +2255,23 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    // 批量清空聊天记录：全部会话日志软归档并建立一个空白当前会话。
+    // 该入口不删除 1.0 兼容数据，也不调用 Next 正式记忆写路径。
+    if (req.method === 'POST' && url.pathname === '/api/sessions/clear') {
+      const result = await clearChatSessions();
+      sendJson(res, 200, {
+        ok: true,
+        scope: 'chat-only',
+        currentId: current.id,
+        archivedCount: result.archivedCount,
+        liveSessionCount: result.liveSessionCount,
+        recoveryBatch: result.batchId,
+        legacyMemoryPreserved: true,
+        acceptedWorldPreserved: true,
+      });
+      return;
+    }
+
     // 会话列表：磁盘上所有 run-s-*.jsonl → { sessionId, mtime, turnCount, preview, live, current }。
     // 空会话（只有 profile_update、没真对话）不列。开发者/当前会话由前端按 id 自己标注。
     if (req.method === 'GET' && url.pathname === '/api/sessions') {
@@ -781,9 +2318,12 @@ const server = createServer(async (req, res) => {
       const s = openSession(String(id));
       const turns = s.logger
         .readRecent(200)
-        .filter((t) => t.kind !== 'profile_update' && t.userInput != null)
-        .map((t) => ({ turn: t.turn, userInput: t.userInput, reply: t.reply }));
-      sendJson(res, 200, { ok: true, sessionId: s.id, turns });
+        .filter((t) => t.kind !== 'profile_update' && t.userInput != null);
+      sendJson(
+        res,
+        200,
+        buildBoundedHistoryPayload({ sessionId: s.id, turns, extra: { ok: true } }),
+      );
       return;
     }
 
@@ -844,6 +2384,9 @@ const server = createServer(async (req, res) => {
       newSession(); // 同步清空当前会话窗口，不保留旧上下文
       sendJson(res, 200, {
         ok: true,
+        scope: 'legacy-only',
+        memoryAuthority: MEMORY_AUTHORITY,
+        message: '恢复出厂仅清除 1.x legacy 数据；不会清除已接受的 2.0 世界。',
         evidenceRemoved,
         eventRemoved,
         cognitionRemoved,
@@ -883,7 +2426,11 @@ if (process.env.MEMOWEFT_EXPERIENCE_UI === 'off') {
   // 且配置向导会经 HTTP 明文传 API key。若不指定 host，Node 默认绑 ::/0.0.0.0，
   // 同网段任何人都能读全部画像、发起对话、截明文 key。只开本机，杜绝这条外网面。
   server.listen(PORT, '127.0.0.1', () => {
-    console.log(`\n  MemoWeft 测试台：画像 + 召回 → http://localhost:${PORT}`);
+    console.log(
+      NEXT_AUTHORITY
+        ? `\n  MemoWeft 测试台：原 1.0 控制台 + 2.0 正式记忆 → http://localhost:${PORT}`
+        : `\n  MemoWeft 测试台：画像 + 召回 → http://localhost:${PORT}`,
+    );
     console.log(`  证据库 → ${DB_PATH}`);
     console.log(`  运行日志 → ${LOG_DIR}\\run-${current.id}.jsonl`);
     console.log('  (Ctrl+C 停止)\n');

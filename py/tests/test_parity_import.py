@@ -12,7 +12,7 @@ from typing import Any, Callable, Optional
 
 from conftest import parity
 
-from memoweft.portable import ImportPlan, import_bundle
+from memoweft.portable import ImportPlan, derive_bundle_id, import_bundle
 from memoweft.store import make_transaction, open_db
 from memoweft.store.cognition import SqliteCognitionStore
 from memoweft.store.event import SqliteEventStore
@@ -45,8 +45,29 @@ def _dump(plan: ImportPlan) -> dict[str, Any]:
             "evidence": plan.counts.evidence, "events": plan.counts.events, "cognitions": plan.counts.cognitions,
             "eventEvidence": plan.counts.event_evidence, "cognitionEvidence": plan.counts.cognition_evidence,
             "interactionContexts": plan.counts.interaction_contexts, "semanticResolutions": plan.counts.semantic_resolutions,
+            "entities": plan.counts.entities, "entityEvidence": plan.counts.entity_evidence,
+            "relationships": plan.counts.relationships,
+            "worldEvents": plan.counts.world_events, "relationshipEvidence": plan.counts.relationship_evidence,
+            "worldEventEvidence": plan.counts.world_event_evidence, "cognitionTargets": plan.counts.cognition_targets,
+            "retractions": plan.counts.retractions, "cognitionTransitions": plan.counts.cognition_transitions,
+            "worldItemLifecycle": plan.counts.world_item_lifecycle,
+            "evidenceTombstones": plan.counts.evidence_tombstones,
         },
-        "duplicates": {"evidence": plan.duplicates.evidence, "events": plan.duplicates.events, "cognitions": plan.duplicates.cognitions},
+        "duplicates": {
+            "evidence": plan.duplicates.evidence, "events": plan.duplicates.events,
+            "cognitions": plan.duplicates.cognitions, "entities": plan.duplicates.entities,
+            "relationships": plan.duplicates.relationships, "worldEvents": plan.duplicates.world_events,
+            "retractions": plan.duplicates.retractions,
+            "cognitionTransitions": plan.duplicates.cognition_transitions,
+            "worldItemLifecycle": plan.duplicates.world_item_lifecycle,
+        },
+        "bundleId": plan.bundle_id, "sourceSubjectId": plan.source_subject_id,
+        "targetSubjectId": plan.target_subject_id,
+        "targetWorldRevision": plan.target_world_revision,
+        "targetSnapshotHash": plan.target_snapshot_hash,
+        "conflicts": plan.conflicts, "wouldAdvanceRevision": plan.would_advance_revision,
+        "planHash": plan.plan_hash, "commandId": plan.command_id,
+        "receiptId": plan.receipt_id,
     }
 
 
@@ -100,6 +121,7 @@ def test_import_matches_ts() -> None:
     # ④ 非法包(悬空溯源)→ 拒写
     invalid = copy.deepcopy(good)
     invalid["data"]["eventEvidence"][0]["evidenceId"] = "ghost"
+    invalid["bundleId"] = derive_bundle_id(invalid)
     plan, state = _run(invalid, "merge")
     assert _dump(plan) == want["invalid"]["plan"]
     assert state == want["invalid"]["dbState"]
@@ -107,6 +129,7 @@ def test_import_matches_ts() -> None:
     # ⑤ originId 撞库 → 跳过该条 + 丢弃指向它的 join + 告警
     with_origin = copy.deepcopy(good)
     with_origin["data"]["evidence"][0]["originId"] = "origin-x"
+    with_origin["bundleId"] = derive_bundle_id(with_origin)
 
     def seed(st: dict[str, Any]) -> None:
         st["evidence_store"].put(
@@ -120,6 +143,7 @@ def test_import_matches_ts() -> None:
     # ⑥ 悬空 correctsEvidenceId → 置空 + 告警
     dangling = copy.deepcopy(good)
     dangling["data"]["evidence"][1]["correctsEvidenceId"] = "ghost-corrects"
+    dangling["bundleId"] = derive_bundle_id(dangling)
     db = open_db(":memory:")
     try:
         st = _stores(db)

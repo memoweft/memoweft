@@ -126,6 +126,7 @@ class SqliteEvidenceStore:
         *,
         raw_content: Optional[str] = None,
         summary: Optional[str] = None,
+        allow_local_read: Optional[bool] = None,
         allow_cloud_read: Optional[bool] = None,
         allow_inference: Optional[bool] = None,
     ) -> Optional[Evidence]:
@@ -135,11 +136,13 @@ class SqliteEvidenceStore:
             return None
         rc = raw_content if raw_content is not None else cur.raw_content
         sm = summary if summary is not None else cur.summary
+        alr = allow_local_read if allow_local_read is not None else cur.allow_local_read
         acr = allow_cloud_read if allow_cloud_read is not None else cur.allow_cloud_read
         ai = allow_inference if allow_inference is not None else cur.allow_inference
         self._db.execute(
-            "UPDATE evidence SET raw_content = ?, summary = ?, allow_cloud_read = ?, allow_inference = ? WHERE id = ?",
-            (rc, sm, 1 if acr else 0, 1 if ai else 0, id),
+            "UPDATE evidence SET raw_content = ?, summary = ?, allow_local_read = ?, "
+            "allow_cloud_read = ?, allow_inference = ? WHERE id = ?",
+            (rc, sm, 1 if alr else 0, 1 if acr else 0, 1 if ai else 0, id),
         )
         return self.get(id)
 
