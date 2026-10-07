@@ -23,7 +23,7 @@ from __future__ import annotations
 PYTHON_APPLICATION_ID = 0x4D575059
 
 #: Python-owned ``PRAGMA user_version``。TypeScript/shared parity 的版本仍为 6。
-SCHEMA_VERSION = 20
+SCHEMA_VERSION = 21
 
 #: 幂等的建表与索引 DDL；shared/parity/schema.json 验证列序、NOT NULL、DEFAULT 与主键契约。
 BASE_SCHEMA_SQL: tuple[str, ...] = (
@@ -963,6 +963,22 @@ WORLD_EVENT_SCHEMA_OBJECTS = frozenset(
     }
 )
 
+OBSERVED_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE observed_source (
+  subject_id TEXT NOT NULL,
+  host_id TEXT NOT NULL,
+  source_hash TEXT NOT NULL,
+  evidence_id TEXT,
+  version TEXT NOT NULL,
+  payload_hash TEXT NOT NULL,
+  permission_version TEXT NOT NULL,
+  withdrawn_through TEXT,
+  valid_at TEXT NOT NULL,
+  valid_until TEXT,
+  PRIMARY KEY (subject_id, host_id, source_hash)
+)""",
+)
+
 CURRENT_REQUIRED_SCHEMA_OBJECTS = (
     PYTHON_V6_REQUIRED_SCHEMA_OBJECTS
     | WORLD_JOB_SCHEMA_OBJECTS
@@ -976,6 +992,7 @@ CURRENT_REQUIRED_SCHEMA_OBJECTS = (
     | TRUST_REJECTION_SCHEMA_OBJECTS
     | CLARIFICATION_SCHEMA_OBJECTS
     | PORTABLE_IMPORT_RECEIPT_SCHEMA_OBJECTS
+    | frozenset({"observed_source"})
 )
 
 #: Fresh Python schema。旧 v3/v6 DDL 保持冻结，v7 追加 WORLD_JOB_SCHEMA_SQL，
@@ -996,6 +1013,7 @@ CURRENT_WORLD_SCHEMA_SQL: tuple[str, ...] = (
     + TRUST_REJECTION_SCHEMA_SQL
     + CLARIFICATION_SCHEMA_SQL
     + PORTABLE_IMPORT_RECEIPT_SCHEMA_SQL
+    + OBSERVED_SCHEMA_SQL
 )
 CURRENT_SCHEMA_SQL: tuple[str, ...] = BASE_SCHEMA_SQL + CURRENT_WORLD_SCHEMA_SQL
 

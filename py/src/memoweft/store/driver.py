@@ -13,6 +13,7 @@ from typing import Sequence
 
 from .schema import (
     BASE_SCHEMA_SQL,
+    OBSERVED_SCHEMA_SQL,
     BOUNDARY_EVIDENCE_CONTENT_COLUMNS,
     BOUNDARY_EVIDENCE_CONTENT_SCHEMA_SQL,
     CLARIFICATION_SCHEMA_SQL,
@@ -439,6 +440,9 @@ def _migrate(db: sqlite3.Connection, current: int) -> None:
                         "SELECT 1 FROM sqlite_master WHERE name = ?", (name,)
                     ).fetchone() is None:
                         db.execute(statement)
+            elif version == 21:
+                for statement in OBSERVED_SCHEMA_SQL:
+                    db.execute(statement.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ", 1))
             db.execute(f"PRAGMA user_version = {version}")
             db.execute("COMMIT")
         except BaseException as exc:

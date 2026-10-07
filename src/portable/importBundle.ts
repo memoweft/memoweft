@@ -377,7 +377,10 @@ export function importBundle(
   const newEvidence = data.evidence.filter((e) => {
     // 删除是单调的：旧备份不能让已明确删除的同 id 证据复活。get() 故意看不见墓碑，
     // 因而恢复路径必须显式辨认它；关联到该 id 的新 join / 解析也一并跳过。
-    if (isEvidenceTombstoned(evidenceStore, e.id)) {
+    if (
+      isEvidenceTombstoned(evidenceStore, e.id) ||
+      (e.originId?.startsWith('observed:') && isEvidenceTombstoned(evidenceStore, e.originId))
+    ) {
       plan.duplicates.evidence++;
       unresolvedEvidence.add(e.id);
       plan.warnings.push(

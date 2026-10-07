@@ -301,13 +301,13 @@ class QueryService:
         if tool_name == "memoweft_preview_recall":
             self._require_keys(
                 raw,
-                allowed=frozenset({"query"}),
+                allowed=frozenset({"query", "model_tier"}),
                 required=frozenset({"query"}),
             )
             query = raw["query"]
             if not isinstance(query, str):
                 raise TrustQueryError("invalid_recall_query")
-            return self.preview_recall(query)
+            return self.preview_recall(query, model_tier=cast(Any, raw.get("model_tier", "local")))
         raise TrustQueryError("unknown_trust_tool")
 
     @staticmethod
@@ -447,22 +447,25 @@ class QueryService:
                 "job": self._job(read, job_id),
             }
 
-    def preview_recall(self, query: str) -> dict[str, object]:
+    def preview_recall(self, query: str, *, model_tier: str = "local") -> dict[str, object]:
         if not isinstance(query, str) or not query.strip() or len(query) > 4000:
             raise TrustQueryError("invalid_recall_query")
+        if model_tier not in {"local", "cloud"}:
+            raise TrustQueryError("invalid_model_tier")
         # Imported lazily because ``hermes.recall`` itself imports the shared
         # currentness module from this package.  The runtime dependency is one-
         # way at operation time and avoids a package-initialization cycle.
         from ..hermes.recall import recall_world_snapshot
 
         with self._read() as read:
-            snapshot = recall_world_snapshot(read.db, self._subject_id, query)
+            snapshot = recall_world_snapshot(read.db, self._subject_id, query, model_tier=cast(Any, model_tier))
             if snapshot is None or snapshot.world_revision != read.world_revision:
                 raise TrustQueryError("recall_snapshot_unavailable")
             return {
                 **self._base(read.world_revision),
                 "preview": {
                     "query_hash": sha256(query.encode("utf-8")).hexdigest(),
+                    "model_tier": model_tier,
                     "selected_item_ids": [list(pair) for pair in snapshot.selected_item_ids],
                     "currentness_digest": snapshot.currentness_digest,
                     "rendered_recall": snapshot.rendered_recall,

@@ -20,3 +20,12 @@ export {
   type HealthReport,
   type UsageReport,
 } from './createCore.ts';
+
+export type {
+  ObservedAPI,
+  ObservedEvidenceV1,
+  ObservedPermissionsV1,
+  ObservedPermissionInput,
+  ObservedRetractionInput,
+  ObservedReceiptV1,
+} from '../evidence/observed.ts';

@@ -175,7 +175,7 @@ test('explainCognition：跨 subject → null（拿不到别人的认知）', as
   }
 });
 
-test('explainCognition / recall explain：历史跨 subject 脏链不带出另一人的证据', async () => {
+test('explainCognition filters foreign evidence; destination recall excludes a cognition with cross-subject provenance', async () => {
   const { core, dbPath, cleanup } = freshCore();
   try {
     const id = await seedOne(core, 'u');
@@ -203,10 +203,10 @@ test('explainCognition / recall explain：历史跨 subject 脏链不带出另�
       '按 id 解释过滤跨 subject 脏链',
     );
     const recalled = await core.recall({ subjectId: 'u', query: 'User likes tea', explain: true });
-    assert.ok(recalled.length > 0, '前置：能召回当前 subject 认知');
-    assert.ok(
-      recalled.every((item) => !item.provenance?.some((p) => p.evidenceId === foreignEvidenceId)),
-      '召回解释复用同一隔离护栏',
+    assert.deepEqual(
+      recalled,
+      [],
+      'unresolvable or cross-subject provenance cannot authorize model recall',
     );
   } finally {
     cleanup();

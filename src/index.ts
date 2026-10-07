@@ -203,6 +203,12 @@ export {
   type MemoryGraphAPI,
   type HealthReport,
   type UsageReport,
+  type ObservedAPI,
+  type ObservedEvidenceV1,
+  type ObservedPermissionsV1,
+  type ObservedPermissionInput,
+  type ObservedRetractionInput,
+  type ObservedReceiptV1,
 } from './core/index.ts';
 
 // 受控记忆管理 API：8 操作 + 审计表，管理操作带 reason 留痕

@@ -54,7 +54,7 @@ def delete_evidence(
     evidence_id = command["target_id"]
     row = db.execute(
         "SELECT deleted_at, raw_content, summary, preceding_ai_context, "
-        "origin_id "
+        "origin_id, source_kind "
         "FROM evidence WHERE id = ? AND subject_id = ?",
         (evidence_id, subject_id),
     ).fetchone()
@@ -168,6 +168,12 @@ def delete_evidence(
             )
     affected_ids = ({evidence_id} | event_ids | cognition_ids | relationship_ids
                     | world_event_ids | entity_ids)
+    # Formation/review ledgers can retain derived cognition/event wording too.
+    for ledger_id, content, payload in list(db.execute("SELECT id, content, payload_json FROM evidence_ledger")):
+        if _mentions_id(content, affected_ids) or _mentions_id(payload, affected_ids):
+            db.execute("DELETE FROM evidence_ledger WHERE id=?", (ledger_id,))
+    if row[5] == "observed":
+        _redact_observed_dependencies(db, subject_id, affected_ids)
     for proposal_id, payload, review in list(db.execute(
         "SELECT id, payload_json, review_payload_json FROM proposals"
     )):
@@ -351,3 +357,33 @@ def delete_world_item(
         db.execute("ROLLBACK TO SAVEPOINT delete_world_item_sources")
         db.execute("RELEASE SAVEPOINT delete_world_item_sources")
         raise
+
+
+def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affected: set[str]) -> None:
+    """Erase source-derived assistant text, including transitive interaction reuse.
+
+    User turns remain exact. Keeping the interaction identity with a changed hash
+    also makes an old Portable interaction collide instead of restoring its prose.
+    """
+    from ...store.interaction_context import _context_from_json, hash_context
+    contexts = list(db.execute("SELECT id,context_json FROM interaction_context WHERE subject_id=?", (subject_id,)))
+    tainted = set(affected)
+    while True:
+        added = {str(item_id) for item_id, raw in contexts if str(item_id) not in tainted
+                 and _mentions_id(str(raw), tainted)}
+        if not added:
+            break
+        tainted.update(added)
+    for item_id, raw in contexts:
+        try:
+            turns = json.loads(str(raw))
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(turns, list):
+            continue
+        clean = [turn for turn in turns if not (isinstance(turn, dict) and turn.get("role") == "assistant"
+                 and _mentions_id(json.dumps(turn.get("model_context_dependencies")), tainted))]
+        if clean != turns:
+            next_json = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
+            db.execute("UPDATE interaction_context SET context_json=?,context_hash=? WHERE id=?",
+                       (next_json,hash_context(_context_from_json(next_json)),item_id))

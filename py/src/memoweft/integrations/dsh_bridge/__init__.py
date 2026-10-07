@@ -41,7 +41,7 @@ from .interactions import query_interaction, query_interactions
 from ..trust.currentness import evidence_state, linked_evidence, world_item_visible
 from ...store import open_db
 from ...store.interaction_context import SqliteInteractionContextStore
-from ...types import InteractionContextInput, VisibleTurn
+from ...types import InteractionContextInput, VisibleTurn, ModelTier
 
 logger = logging.getLogger(__name__)
 
@@ -814,6 +814,7 @@ class DshMemoWeftRuntime:
         conversation_id: str | None = None,
         user_message_id: str | None = None,
         search_mode: str | None = None,
+        model_tier: ModelTier = "local",
     ) -> dict[str, object]:
         if not self._enabled or self._ingestor is None:
             raise DshBoundaryError("runtime is not initialized")
@@ -826,10 +827,11 @@ class DshMemoWeftRuntime:
             conversation_id=conversation_id,
             user_message_id=user_message_id,
             search_mode=search_mode,
+            model_tier=model_tier,
         )
 
     def query_interaction(
-        self, interaction_id: str, *, projection: str = "history"
+        self, interaction_id: str, *, projection: str = "history", model_tier: ModelTier = "local"
     ) -> dict[str, object]:
         if not self._enabled or self._ingestor is None:
             raise DshBoundaryError("runtime is not initialized")
@@ -838,6 +840,7 @@ class DshMemoWeftRuntime:
             subject_id=self._ingestor.subject_id,
             interaction_id=interaction_id,
             projection=projection,
+            model_tier=model_tier,
         )
 
     def link_interaction_dependencies(
@@ -880,7 +883,7 @@ class DshMemoWeftRuntime:
             "result_state": state,
         }
 
-    def prefetch(self, query: str, *, session_id: str = "") -> dict[str, object]:
+    def prefetch(self, query: str, *, session_id: str = "", model_tier: ModelTier = "local") -> dict[str, object]:
         """Deterministic read-only Recall (zero model calls, zero writes).
 
         Shares the Hermes graph-aware, permission-gated implementation: entity
@@ -898,7 +901,7 @@ class DshMemoWeftRuntime:
         except sqlite3.Error:
             return {"text": "", "count": 0}
         try:
-            text, count = recall_world_text(db, self._ingestor.subject_id, query)
+            text, count = recall_world_text(db, self._ingestor.subject_id, query, model_tier=model_tier)
             self._last_recall_count = count
             return {"text": text, "count": count}
         except sqlite3.Error:

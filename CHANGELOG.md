@@ -1,5 +1,12 @@
 # Changelog
 
+## MW-2 observed evidence (unreleased)
+
+- Add typed observed source upsert, permission update and true withdrawal to DSH RPC v2 and the TypeScript Core, with version/replay fences and valid time.
+- Filter local/cloud recall through source provenance, including mixed-source World items and assistant interaction dependencies, while preserving unrelated memory.
+- Erase replacement/withdrawal content from derivations, ledgers, indexes, cached snapshots and source-dependent assistant prose; old Portable imports cannot restore withdrawn observations.
+- Add shared lifecycle parity and real Core privacy/withdrawal coverage.
+
 All notable changes to MemoWeft are recorded here. Release publication remains a separate, explicitly verified action.
 
 ## Unreleased — MemoWeft 2.0 integration candidate
@@ -16,7 +23,7 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ### Changed
 
-- The Python database schema advances to version 19.
+- The Python database schema advances to version 21 (observed source lifecycle; Trust true deletion was added in version 20).
 - The formal Portable bundle schema advances to version 4 while retaining v2/v3 reader compatibility.
 - Portable v4 now carries entity support provenance through `entityEvidence`, so imported entities retain their Trust/currentness visibility across hosts.
 - Hermes memory integration now distinguishes Core acceptance, business terminal, durable host event, user presentation, and Recall indicators.

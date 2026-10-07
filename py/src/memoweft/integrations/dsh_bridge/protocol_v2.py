@@ -15,6 +15,7 @@ from typing import Any, Mapping, cast
 from . import DshBoundaryError, DshMemoWeftRuntime
 from ..hermes.boundary_store import BoundaryHardDeletedSourceError
 from .interactions import InteractionQueryError
+from .observed import ObservedError, ObservedService
 from ..trust import (
     CLARIFICATION_SCHEMA_VERSION,
     PORTABLE_CAPABILITIES_VERSION,
@@ -41,6 +42,9 @@ DSH_RPC_METHODS: tuple[str, ...] = (
     "initialize",
     "capabilities",
     "ingest_boundary",
+    "upsert_observed",
+    "update_observed_permissions",
+    "retract_observed",
     "prefetch",
     "query_world",
     "query_evidence",
@@ -351,6 +355,14 @@ class DshRpcV2Server:
             return {"shutdown": True}, "shutdown"
 
         query, command, clarification, portable = self._services()
+        if method in {"upsert_observed", "update_observed_permissions", "retract_observed"}:
+            assert self._runtime.db_path is not None
+            assert self._runtime.subject_id is not None and self._runtime.host_id is not None
+            result = ObservedService(self._runtime.db_path, subject_id=self._runtime.subject_id,
+                host_id=self._runtime.host_id).execute(method, params)
+            # Content-bearing response replays must not survive source mutation.
+            self._replay.clear()
+            return result, "observed_" + str(result["result_state"])
         if method == "ingest_boundary":
             raw = _require_params(
                 params,
@@ -364,7 +376,7 @@ class DshRpcV2Server:
         if method == "prefetch":
             raw = _require_params(
                 params,
-                allowed=frozenset({"query", "session_id"}),
+                allowed=frozenset({"query", "session_id", "model_tier"}),
                 required=frozenset({"query"}),
             )
             text = raw["query"]
@@ -372,7 +384,7 @@ class DshRpcV2Server:
             if not isinstance(text, str) or not isinstance(prefetch_session_id, str):
                 raise DshRpcProtocolError("invalid_recall_parameter")
             return self._runtime.prefetch(
-                text, session_id=prefetch_session_id
+                text, session_id=prefetch_session_id, model_tier=cast(Any, raw.get("model_tier", "cloud"))
             ), "recall_ready"
         if method == "query_world":
             return query.execute_provider_tool(
@@ -402,6 +414,7 @@ class DshRpcV2Server:
                 "memoweft_query_jobs", params
             ), "query_ok"
         if method == "preview_recall":
+            params = {"model_tier": "cloud", **params}
             return query.execute_provider_tool(
                 "memoweft_preview_recall", params
             ), "recall_preview"
@@ -416,6 +429,7 @@ class DshRpcV2Server:
                         "conversation_id",
                         "user_message_id",
                         "search_mode",
+                        "model_tier",
                     }
                 ),
             )
@@ -447,11 +461,12 @@ class DshRpcV2Server:
                 conversation_id=conversation_id,
                 user_message_id=user_message_id,
                 search_mode=search_mode,
+                model_tier=cast(Any, raw.get("model_tier", "cloud")),
             ), "interactions_found"
         if method == "query_interaction":
             raw = _require_params(
                 params,
-                allowed=frozenset({"id", "projection"}),
+                allowed=frozenset({"id", "projection", "model_tier"}),
                 required=frozenset({"id"}),
             )
             interaction_id = raw["id"]
@@ -459,7 +474,7 @@ class DshRpcV2Server:
             if not isinstance(interaction_id, str) or not isinstance(projection, str):
                 raise InteractionQueryError("invalid_interaction_id")
             return self._runtime.query_interaction(
-                interaction_id, projection=projection
+                interaction_id, projection=projection, model_tier=cast(Any, raw.get("model_tier", "cloud"))
             ), "interaction_found"
         if method == "link_interaction_dependencies":
             raw = _require_params(
@@ -691,6 +706,8 @@ class DshRpcV2Server:
             "request_id_conflict": "fail_closed",
             "legacy_unversioned_bridge": True,
             "interaction_dependency_projection": 1,
+            "observed_evidence": 1,
+            "recall_model_tier": True,
             "initialized": initialized,
             "subject_id": self._runtime.subject_id,
             "host_id": self._runtime.host_id,
@@ -747,7 +764,7 @@ class DshRpcV2Server:
     def _exception_code(error: BaseException) -> str:
         if isinstance(error, BoundaryHardDeletedSourceError):
             return "hard_deleted_source"
-        if isinstance(error, DshRpcProtocolError):
+        if isinstance(error, (DshRpcProtocolError, ObservedError)):
             return error.code
         if isinstance(
             error,
@@ -765,7 +782,7 @@ class DshRpcV2Server:
     def _exception_type(error: BaseException) -> str:
         if isinstance(error, BoundaryHardDeletedSourceError):
             return "boundary"
-        if isinstance(error, DshRpcProtocolError):
+        if isinstance(error, (DshRpcProtocolError, ObservedError)):
             return "protocol"
         if isinstance(error, TrustQueryError):
             return "trust_query"

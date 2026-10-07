@@ -15,6 +15,8 @@ export interface RetrievalHit {
 export interface Retriever {
   /** 替换式重建索引（清空后重新索引全部条目）。 */
   indexAll(items: Array<{ id: string; text: string }>): Promise<void>;
+  /** Optional content-free index erasure, including a separately stored vector index. */
+  remove?(ids: string[]): Promise<void>;
   /** 找 top-k 最相关，返回带分的 id（按分降序）。 */
   search(query: string, topK: number): Promise<RetrievalHit[]>;
 }

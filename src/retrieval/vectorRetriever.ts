@@ -103,6 +103,10 @@ export class VectorRetriever implements Retriever {
     }
   }
 
+  async remove(ids: string[]): Promise<void> {
+    for (const id of ids) this.db.prepare('DELETE FROM vectors WHERE id=?').run(id);
+  }
+
   async search(query: string, topK: number): Promise<RetrievalHit[]> {
     const rows = this.db.prepare('SELECT id, vec FROM vectors').all() as unknown as Array<{
       id: string;

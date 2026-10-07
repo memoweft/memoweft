@@ -28,6 +28,10 @@ MemoWeft keeps these boundaries explicit:
 - Portable bundles are versioned, validated, planned before apply, and conflict checked.
 - Hermes host events and user presentation remain distinct from Core business terminals.
 
+## Observed source lifecycle
+
+DSH RPC v2 accepts typed observed evidence revisions, source permission changes and true withdrawal, independently of chat ingest. Recall can filter each source and its derivatives for a local or cloud destination. The TypeScript Core exposes equivalent observed DTOs and lifecycle methods. See the [observed RPC contract](py/src/memoweft/integrations/dsh_bridge/README.md) for version, consent, validity and deletion semantics.
+
 ## Trust boundary
 
 Local-first does not mean that data can never leave the machine. Hosts choose model routes, storage paths, consent flows, authentication, authorization, encryption, backup, and logging policies. MemoWeft permission fields constrain its formal paths; they do not turn arbitrary host code into a security boundary.

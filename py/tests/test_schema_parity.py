@@ -659,7 +659,7 @@ def test_real_v17_to_v18_adds_clarification_and_converges_with_fresh_schema(
 
     migrated = open_db(str(path))
     try:
-        assert user_version(migrated) == SCHEMA_VERSION == 20
+        assert user_version(migrated) == SCHEMA_VERSION == 21
         assert migrated.execute("SELECT COUNT(*) FROM clarification").fetchone() == (0,)
         migrated_signature = _schema_signature(migrated)
     finally:
@@ -731,7 +731,7 @@ def test_real_v18_to_v19_adds_portable_receipt_and_converges_with_fresh_schema(
 
     migrated = open_db(str(path))
     try:
-        assert user_version(migrated) == SCHEMA_VERSION == 20
+        assert user_version(migrated) == SCHEMA_VERSION == 21
         assert migrated.execute(
             "SELECT COUNT(*) FROM portable_import_receipt"
         ).fetchone() == (0,)
