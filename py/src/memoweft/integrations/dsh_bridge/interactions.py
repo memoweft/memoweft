@@ -10,7 +10,7 @@ import sqlite3
 from typing import cast
 
 from ...store.interaction_context import SqliteInteractionContextStore
-from ...types import InteractionContext, VisibleTurn
+from ...types import ModelTier, InteractionContext, VisibleTurn
 from .dependencies import (
     DependencyValidationError,
     WORLD_ITEM_KINDS,
@@ -75,14 +75,14 @@ def _identity_topic_tokens(text: str) -> set[str]:
     return set()
 
 
-def _known_entities(db: sqlite3.Connection, subject_id: str) -> dict[str, tuple[str, ...]]:
+def _known_entities(db: sqlite3.Connection, subject_id: str, model_tier: ModelTier = "local") -> dict[str, tuple[str, ...]]:
     """Use actual current identities and source-backed aliases, never model prose."""
     return {
         str(row[0]): names
         for row in db.execute(
             "SELECT id FROM entity WHERE world_id = ? AND invalid_at IS NULL", (subject_id,)
         )
-        if (names := _entity_names(db, subject_id, str(row[0])))
+        if (names := _entity_names(db, subject_id, str(row[0]), model_tier))
     }
 
 
@@ -157,7 +157,7 @@ def _episode_evidence(
         return None
     placeholders = ",".join("?" for _ in evidence_ids)
     rows = db.execute(
-        "SELECT id, deleted_at, allow_local_read, allow_inference FROM evidence "
+        "SELECT id, deleted_at, allow_local_read, allow_inference, allow_cloud_read FROM evidence "
         f"WHERE subject_id = ? AND id IN ({placeholders})",
         (subject_id, *evidence_ids),
     ).fetchall()
@@ -180,7 +180,7 @@ def _history_readable(
 
 
 def _model_eligible(
-    db: sqlite3.Connection, subject_id: str, episode_id: str
+    db: sqlite3.Connection, subject_id: str, episode_id: str, model_tier: ModelTier = "local"
 ) -> bool:
     """Existing source gate for automatic model recall, excluding stale World."""
 
@@ -189,7 +189,7 @@ def _model_eligible(
         return False
     for evidence in rows:
         evidence_id = str(evidence[0])
-        if evidence[1] is not None or evidence[2] != 1 or evidence[3] != 1:
+        if evidence[1] is not None or evidence[4 if model_tier == "cloud" else 2] != 1 or evidence[3] != 1:
             return False
         blocked_queries = (
             (
@@ -329,6 +329,7 @@ def _dependency_state_for_turn(
     context: InteractionContext,
     turn: VisibleTurn,
     by_id: dict[str, InteractionContext],
+    model_tier: ModelTier = "local",
 ) -> str:
     """Resolve one assistant turn through a bounded causal dependency graph."""
 
@@ -365,7 +366,7 @@ def _dependency_state_for_turn(
                 subject_id,
                 kind,  # type: ignore[arg-type]
                 item_id,
-                surface="recall",
+                surface="model_cloud" if model_tier == "cloud" else "recall",
             ):
                 states.append("stale")
             else:
@@ -391,7 +392,7 @@ def _dependency_state_for_turn(
                     states.append("node_limit")
                     continue
                 seen.add(interaction_id)
-            if not _model_eligible(db, subject_id, child.episode_id):
+            if not _model_eligible(db, subject_id, child.episode_id, model_tier):
                 states.append("stale")
                 continue
             child_states = []
@@ -434,9 +435,10 @@ def _assistant_states(
     subject_id: str,
     context: InteractionContext,
     by_id: dict[str, InteractionContext],
+    model_tier: ModelTier = "local",
 ) -> dict[int, str]:
     return {
-        index: _dependency_state_for_turn(db, subject_id, context, turn, by_id)
+        index: _dependency_state_for_turn(db, subject_id, context, turn, by_id, model_tier)
         for index, turn in enumerate(context.context)
         if turn.role == "assistant"
     }
@@ -567,7 +569,10 @@ def query_interactions(
     conversation_id: str | None = None,
     user_message_id: str | None = None,
     search_mode: str | None = None,
+    model_tier: ModelTier = "local",
 ) -> dict[str, object]:
+    if model_tier not in {"local", "cloud"}:
+        raise InteractionQueryError("invalid_model_tier")
     if projection not in {"history", "model"} or not isinstance(session_id, str):
         raise InteractionQueryError("invalid_interaction_query")
     exact_lookup = conversation_id is not None or user_message_id is not None
@@ -611,7 +616,7 @@ def query_interactions(
         }
         model_eligible = {
             index for index, context in enumerate(contexts)
-            if _model_eligible(db, subject_id, context.episode_id)
+            if _model_eligible(db, subject_id, context.episode_id, model_tier)
         }
         eligible = history_eligible if projection == "history" else model_eligible
         included: list[int]
@@ -646,7 +651,7 @@ def query_interactions(
         else:
             assert isinstance(query, str)
             routed = _entity_history(
-                contexts, eligible, _known_entities(db, subject_id), query, session_id,
+                contexts, eligible, _known_entities(db, subject_id, model_tier), query, session_id,
             )
             included = routed if routed is not None else []
             if routed is None:
@@ -692,7 +697,7 @@ def query_interactions(
         chosen = [contexts[index] for index in included][:_MAX_ITEMS]
         by_id = {item.id: item for item in contexts}
         states = {
-            context.id: _assistant_states(db, subject_id, context, by_id)
+            context.id: _assistant_states(db, subject_id, context, by_id, model_tier)
             for context in chosen
         }
         selected = (
@@ -729,9 +734,9 @@ def query_interactions(
             if projection == "history":
                 if not _history_readable(db, subject_id, context.episode_id):
                     continue
-            elif not _model_eligible(db, subject_id, context.episode_id):
+            elif not _model_eligible(db, subject_id, context.episode_id, model_tier):
                 continue
-            turn_states = _assistant_states(db, subject_id, context, by_id)
+            turn_states = _assistant_states(db, subject_id, context, by_id, model_tier)
             state = turn_states.get(turn_index, "legacy_unknown")
             if projection == "model" and state != "visible":
                 continue
@@ -774,9 +779,11 @@ def query_interaction(
     subject_id: str,
     interaction_id: str,
     projection: str = "history",
+    model_tier: ModelTier = "local",
 ) -> dict[str, object]:
     if (
-        not isinstance(interaction_id, str)
+        model_tier not in {"local", "cloud"}
+        or not isinstance(interaction_id, str)
         or not interaction_id.strip()
         or len(interaction_id) > 512
         or projection not in {"history", "model"}
@@ -791,7 +798,7 @@ def query_interaction(
         if projection == "history":
             if not _history_readable(db, subject_id, context.episode_id):
                 raise InteractionQueryError("interaction_not_found")
-        elif not _model_eligible(db, subject_id, context.episode_id):
+        elif not _model_eligible(db, subject_id, context.episode_id, model_tier):
             raise InteractionQueryError("interaction_not_found")
         all_contexts = SqliteInteractionContextStore(db).all(subject_id)
         states = _assistant_states(
@@ -799,6 +806,7 @@ def query_interaction(
             subject_id,
             context,
             {item.id: item for item in all_contexts},
+            model_tier,
         )
         item = (
             _history_item(context, states)

@@ -2032,6 +2032,7 @@ export async function buildSharedAssets() {
     'parity/update-profile.json': updateProfileFx,
     'parity/import.json': parityImport(),
     'parity/eval-checks.json': parityEvalChecks(),
+    'parity/observed.json': JSON.parse(readFileSync(join(SHARED, 'parity/observed.json'), 'utf8')),
     'parity/schema.json': buildSchema(),
     'parity/fts.json': buildFtsGolden(),
     ...portableV4Assets(),

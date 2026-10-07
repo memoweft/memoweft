@@ -209,7 +209,7 @@ def test_fresh_and_v16_migrated_databases_have_one_current_command_shape(
 ) -> None:
     fresh_path = tmp_path / "fresh.sqlite3"
     with _open(fresh_path) as fresh:
-        assert user_version(fresh) == SCHEMA_VERSION == 20
+        assert user_version(fresh) == SCHEMA_VERSION == 21
         assert application_id(fresh) == PYTHON_APPLICATION_ID
         fresh_shapes = {
             table: tuple(

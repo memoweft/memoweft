@@ -158,6 +158,13 @@ export class KeywordRetriever implements Retriever {
     }
   }
 
+  async remove(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      this.db.prepare('DELETE FROM cognition_fts WHERE cognition_id=?').run(id);
+      this.db.prepare('DELETE FROM kw_meta WHERE id=?').run(id);
+    }
+  }
+
   async search(query: string, topK: number): Promise<RetrievalHit[]> {
     // 空/纯空白 query → 空召回（也避免空 MATCH 串触发 FTS5 语法错）。
     if (query.trim().length === 0) return [];

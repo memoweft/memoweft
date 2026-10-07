@@ -19,6 +19,7 @@ model-free, and byte-stable.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from ...types import ModelTier
 from hashlib import sha256
 import json
 import re
@@ -688,10 +689,10 @@ def format_recall(items: Sequence[Mapping[str, object]]) -> str:
 # ── graph-aware, permission-gated shared recall ─────────────────────────────
 
 
-def _entity_names(db: sqlite3.Connection, world_id: str, entity_id: str) -> tuple[str, ...]:
+def _entity_names(db: sqlite3.Connection, world_id: str, entity_id: str, model_tier: ModelTier = "local") -> tuple[str, ...]:
     """Canonical name + aliases of one current entity (order-stable, deduped)."""
     if not world_item_visible(
-        db, world_id, "entity", entity_id, surface="recall"
+        db, world_id, "entity", entity_id, surface="model_cloud" if model_tier == "cloud" else "recall"
     ):
         return ()
     row = db.execute(
@@ -702,7 +703,7 @@ def _entity_names(db: sqlite3.Connection, world_id: str, entity_id: str) -> tupl
     if row is None:
         return ()
     names: list[str] = [str(row[0])]
-    trusted = current_entity_aliases(db, world_id, entity_id, surface="recall")
+    trusted = current_entity_aliases(db, world_id, entity_id, surface="model_cloud" if model_tier == "cloud" else "recall")
     names.extend(trusted)
     if len(row) > 1 and row[1]:
         try:
@@ -732,6 +733,7 @@ def _graph_match_text(
     kind: str,
     row_id: str,
     content: str,
+    model_tier: ModelTier = "local",
 ) -> str:
     """Compose the searchable text: canonical content + entity names/aliases
     reachable from the row's graph endpoints (relationship endpoints, event
@@ -744,7 +746,7 @@ def _graph_match_text(
         ).fetchone()
         if row is not None:
             for entity_id in (row[0], row[1]):
-                parts.extend(_entity_names(db, world_id, str(entity_id)))
+                parts.extend(_entity_names(db, world_id, str(entity_id), model_tier))
             if len(row) > 2 and row[2]:
                 rel = str(row[2]).strip().lower()
                 parts.append(rel)
@@ -787,13 +789,13 @@ def _graph_match_text(
             (row_id,),
         ).fetchone()
         if row is not None and row[0] is not None:
-            parts.extend(_entity_names(db, world_id, str(row[0])))
+            parts.extend(_entity_names(db, world_id, str(row[0]), model_tier))
         for entity_row in db.execute(
             "SELECT id, canonical_name FROM entity WHERE world_id = ? AND invalid_at IS NULL",
             (world_id,),
         ).fetchall():
             if str(entity_row[1]) in content:
-                parts.extend(_entity_names(db, world_id, str(entity_row[0])))
+                parts.extend(_entity_names(db, world_id, str(entity_row[0]), model_tier))
     return " ".join(dict.fromkeys(part for part in parts if part))
 
 
@@ -802,6 +804,7 @@ def _graph_match_anchors(
     world_id: str,
     kind: str,
     row_id: str,
+    model_tier: ModelTier = "local",
 ) -> tuple[str, ...]:
     """Current, permission-eligible entity names linked to one World row."""
     anchors: list[str] = []
@@ -812,7 +815,7 @@ def _graph_match_anchors(
         ).fetchone()
         if row is not None:
             for entity_id in (row[0], row[1]):
-                anchors.extend(_entity_names(db, world_id, str(entity_id)))
+                anchors.extend(_entity_names(db, world_id, str(entity_id), model_tier))
     elif kind == "event":
         row = db.execute(
             "SELECT participants_json, objects_json FROM world_event WHERE id = ?",
@@ -842,7 +845,7 @@ def _graph_match_anchors(
             (row_id,),
         ).fetchone()
         if row is not None and row[0] is not None:
-            anchors.extend(_entity_names(db, world_id, str(row[0])))
+            anchors.extend(_entity_names(db, world_id, str(row[0]), model_tier))
         cog_content = db.execute(
             "SELECT content FROM cognition WHERE id = ?", (row_id,)
         ).fetchone()
@@ -853,12 +856,12 @@ def _graph_match_anchors(
                 (world_id,),
             ).fetchall():
                 if str(entity_row[1]) in c_text:
-                    anchors.extend(_entity_names(db, world_id, str(entity_row[0])))
+                    anchors.extend(_entity_names(db, world_id, str(entity_row[0]), model_tier))
     return tuple(dict.fromkeys(anchor for anchor in anchors if anchor))
 
 
 def _current_world_rows(
-    db: sqlite3.Connection, subject_id: str
+    db: sqlite3.Connection, subject_id: str, model_tier: ModelTier = "local"
 ) -> list[dict[str, object]]:
     items: list[dict[str, object]] = []
     try:
@@ -900,16 +903,16 @@ def _current_world_rows(
         for row in rows:
             row_id = str(row[0])
             if not world_item_visible(
-                db, subject_id, current_kind, row_id, surface="recall"
+                db, subject_id, current_kind, row_id, surface="model_cloud" if model_tier == "cloud" else "recall"
             ):
                 continue
             content = str(row[1])
-            anchors = _graph_match_anchors(db, subject_id, current_kind, row_id)
+            anchors = _graph_match_anchors(db, subject_id, current_kind, row_id, model_tier)
             if kind == "cognition":
                 target = db.execute(
                     "SELECT target_entity_id FROM cognition_target WHERE cognition_id = ?", (row_id,)
                 ).fetchone()
-                names = _entity_names(db, subject_id, str(target[0])) if target else ()
+                names = _entity_names(db, subject_id, str(target[0]), model_tier) if target else ()
                 if names and not any(name in content for name in names):
                     content = f"{names[0]}：{content}"
                 if str(row[3]) == "naming":
@@ -918,7 +921,7 @@ def _current_world_rows(
                             "SELECT id FROM entity WHERE world_id=? AND invalid_at IS NULL "
                             "AND instr(?, canonical_name)>0", (subject_id, content),
                         )
-                        for name in _entity_names(db, subject_id, str(entity[0]))
+                        for name in _entity_names(db, subject_id, str(entity[0]), model_tier)
                         if _anchor_is_explicit(content, name)
                     ))
             items.append(
@@ -929,7 +932,7 @@ def _current_world_rows(
                     "confidence": int(row[2]),
                     "statement_kind": str(row[3]) if kind == "cognition" else kind,
                     "match_text": _graph_match_text(
-                        db, subject_id, current_kind, row_id, content
+                        db, subject_id, current_kind, row_id, content, model_tier
                     ),
                     "anchors": anchors,
                     "is_superseded": row_id in superseded_ids,
@@ -939,7 +942,7 @@ def _current_world_rows(
 
 
 def recall_world_snapshot(
-    db: sqlite3.Connection, subject_id: str, query: str
+    db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local"
 ) -> RecallSnapshotV1 | None:
     """Read one coherent, deterministic Recall snapshot without writes.
 
@@ -950,6 +953,8 @@ def recall_world_snapshot(
     """
     transaction_started = not db.in_transaction
     try:
+        if model_tier not in {"local", "cloud"}:
+            return None
         if transaction_started:
             db.execute("BEGIN")
         revision_row = db.execute(
@@ -963,11 +968,12 @@ def recall_world_snapshot(
             {
                 "schema_version": 1,
                 "surface": "recall",
+                **({"model_tier": model_tier} if model_tier != "local" else {}),
                 "subject_id": subject_id,
                 "facts": facts,
             }
         )
-        selected = _match_world_rows(query, _current_world_rows(db, subject_id))
+        selected = _match_world_rows(query, _current_world_rows(db, subject_id, model_tier))
         selected_item_ids = tuple(
             (str(item["kind"]), str(item["id"])) for item in selected
         )
@@ -976,6 +982,7 @@ def recall_world_snapshot(
             {
                 "schema_version": 1,
                 "surface": "recall",
+                **({"model_tier": model_tier} if model_tier != "local" else {}),
                 "subject_id": subject_id,
                 "world_revision": world_revision,
                 "selected_item_ids": selected_item_ids,
@@ -1003,10 +1010,10 @@ def recall_world_snapshot(
 
 
 def recall_world_text(
-    db: sqlite3.Connection, subject_id: str, query: str
+    db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local"
 ) -> tuple[str, int]:
     """Compatibility wrapper for the S1 immutable Recall snapshot API."""
-    snapshot = recall_world_snapshot(db, subject_id, query)
+    snapshot = recall_world_snapshot(db, subject_id, query, model_tier=model_tier)
     if snapshot is None:
         return "", 0
     return snapshot.rendered_recall, snapshot.count

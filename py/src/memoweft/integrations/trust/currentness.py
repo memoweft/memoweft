@@ -11,9 +11,10 @@ import sqlite3
 from typing import Any, Literal, Mapping, Sequence
 
 from ...types import ModelTier
+from ...clock import to_iso_z, system_clock
 
 CurrentnessSurface = Literal[
-    "formation", "recall", "export", "trust_local", "trust_cloud"
+    "formation", "recall", "export", "trust_local", "trust_cloud", "model_cloud"
 ]
 WorldItemKind = Literal["cognition", "entity", "relationship", "event"]
 
@@ -55,6 +56,8 @@ def evidence_state(
         if model_tier == "local" and int(row["allow_local_read"]) != 1:
             return "evidence_local_read_denied"
         return None
+    if surface == "model_cloud":
+        return None if int(row["allow_cloud_read"]) == 1 else "evidence_cloud_read_denied"
     if int(row["allow_local_read"]) != 1:
         return "evidence_local_read_denied"
     if surface == "trust_cloud" and int(row["allow_cloud_read"]) != 1:
@@ -351,8 +354,14 @@ def _all_evidence_current(
         tuple(evidence_ids),
     ).fetchall()
     rows_by_id = {str(row[0]): row for row in rows}
+    now = to_iso_z(system_clock())
+    temporal_denied = {str(row[0]) for row in db.execute(
+        "SELECT evidence_id FROM observed_source WHERE evidence_id IS NOT NULL "
+        "AND (valid_at > ? OR (valid_until IS NOT NULL AND valid_until <= ?))", (now, now)
+    )}
     return all(
-        evidence_id in rows_by_id
+        evidence_id not in temporal_denied
+        and evidence_id in rows_by_id
         and str(rows_by_id[evidence_id][1]) == subject_id
         and evidence_state(
             {

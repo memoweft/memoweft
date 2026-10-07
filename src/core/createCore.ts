@@ -11,6 +11,8 @@
  * vectorDbPath 口径：向量索引保持"一个 subject 一个实例"的存储契约；
  *   缺省与 dbPath 同库（vectors 表挂同一文件，testbench 同款）。
  */
+import { ObservedEvidenceService, type ObservedAPI } from '../evidence/observed.ts';
+import type { ModelTier } from '../llm/client.ts';
 import { config as globalConfig, resolveLang, type MemoWeftConfig } from '../config.ts';
 import { systemClock, type Clock } from '../clock.ts';
 import { openStores } from '../store/openStores.ts';
@@ -126,6 +128,8 @@ export interface ToolResultInput {
 }
 
 export interface RecallInput {
+  /** Destination permission filter; omitted keeps the legacy local projection. */
+  modelTier?: ModelTier;
   query: string;
   subjectId?: string;
   /** 召回解释：true → 每条召回认知带上其支撑证据链（provenance）。缺省 false = 不做额外查询、行为不变。 */
@@ -228,6 +232,7 @@ export interface UsageReport {
 
 /** 统一 Core Facade（稳定入口与资源关闭）。 */
 export interface MemoWeftCore {
+  observed: ObservedAPI;
   /** 摄入用户消息 → spoken 证据（perceive + put，只存不答；先存后答纪律里"存"的那半）。 */
   ingestUserMessage(input: UserMessageInput): Promise<Evidence>;
   /** 摄入观察 → observed 证据（默认不进入内建云写模型 prompt；带 originId 幂等）。返回本次新落库的。 */
@@ -320,6 +325,16 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
   const stores = openStores(options.dbPath, cfg, options.clock);
   const { evidenceStore, eventStore, cognitionStore, transaction } = stores;
   const pool = asPool(options.llm);
+  const observedServices = new Map<string, ObservedEvidenceService>();
+  function observedFor(subjectId: string): ObservedEvidenceService {
+    let service = observedServices.get(subjectId);
+    if (!service) {
+      service = new ObservedEvidenceService(stores, subjectId, cfg.identity.hostId, options.clock);
+      observedServices.set(subjectId, service);
+    }
+    return service;
+  }
+  observedFor(cfg.identity.subjectId);
 
   // 召回器解析：注入 > 注入 embedder 建向量召回 > env 有嵌入配置建向量召回 > 空召回（降级不崩）。
   let retriever: Retriever;
@@ -504,7 +519,63 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
       .catch((e) => logPluginError('onLoad', p.id, e));
   }
 
+  async function mutateObserved(
+    operation: 'upsert_observed' | 'update_observed_permissions' | 'retract_observed',
+    params: Record<string, unknown>,
+  ) {
+    ensureOpen();
+    const before = stores.cognitionStore.all().map((item) => item.id);
+    const receipt = observedFor(cfg.identity.subjectId).execute(operation, params);
+    const removed = before.filter((id) => !stores.cognitionStore.get(id));
+    // Content-free cleanup IDs survive an index failure and process restart.
+    for (const id of removed)
+      stores.db.prepare('INSERT OR IGNORE INTO observed_index_cleanup VALUES (?)').run(id);
+    const pendingIndexDeletes = new Set(
+      stores.db
+        .prepare('SELECT id FROM observed_index_cleanup')
+        .all()
+        .map((row) => String(row.id)),
+    );
+    try {
+      if (pendingIndexDeletes.size && retriever.remove) {
+        await retriever.remove([...pendingIndexDeletes]);
+        for (const id of pendingIndexDeletes)
+          stores.db.prepare('DELETE FROM observed_index_cleanup WHERE id=?').run(id);
+      } else if (pendingIndexDeletes.size) {
+        // A custom retriever without remove owns its index. Rebuild only
+        // independently cloud-readable, non-observed survivors.
+        await retriever.indexAll(
+          stores.cognitionStore
+            .all()
+            .filter((c) =>
+              stores.cognitionStore.sourcesOf(c.id).every((link) => {
+                const e = stores.evidenceStore.get(link.evidenceId);
+                return e && e.allowCloudRead && e.sourceKind !== 'observed';
+              }),
+            )
+            .map((c) => ({ id: c.id, text: c.content })),
+        );
+        for (const id of pendingIndexDeletes)
+          stores.db.prepare('DELETE FROM observed_index_cleanup WHERE id=?').run(id);
+      }
+    } catch {
+      receipt.storage_cleanup = { state: 'pending', detail_code: 'index_cleanup_pending' };
+    }
+    return receipt;
+  }
+
   return {
+    observed: {
+      async upsert(evidence) {
+        return mutateObserved('upsert_observed', { evidence });
+      },
+      async updatePermissions(input) {
+        return mutateObserved('update_observed_permissions', { ...input });
+      },
+      async retract(input) {
+        return mutateObserved('retract_observed', { ...input });
+      },
+    },
     async ingestUserMessage(input) {
       ensureOpen();
       // testbench/server.mjs 现行组合（perceive → put）的正式归位：Host 以后调这里，不再自己拼。
@@ -596,10 +667,25 @@ export function createMemoWeftCore(options: CreateCoreOptions): MemoWeftCore {
     async recall(input) {
       // 读路径 now 走注入 clock：前进 clock → 淡了的情绪衰减出局、事实留存。
       const subjectId = subjectOf(input.subjectId);
+      const tier = input.modelTier ?? 'local';
+      if (!['local', 'cloud'].includes(tier)) throw new Error('invalid_model_tier');
+      const observed = observedFor(subjectId);
+      const filteredRetriever: Retriever = {
+        indexAll: (items) => retriever.indexAll(items),
+        async search(query, topK) {
+          const hits = [
+            ...observed.candidates(query, tier),
+            ...(await retriever.search(query, topK)),
+          ];
+          return [...new Map(hits.map((hit) => [hit.id, hit])).values()].filter((hit) =>
+            observed.readable(hit.id, tier),
+          );
+        },
+      };
       let items = await recallCognitions(
         input.query,
         subjectId,
-        { retriever, cognitionStore },
+        { retriever: filteredRetriever, cognitionStore },
         cfg,
         (options.clock ?? systemClock)(),
       );
