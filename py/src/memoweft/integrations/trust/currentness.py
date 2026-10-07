@@ -404,6 +404,8 @@ def world_item_visible(
     )
     if archived_at is not None or muted_at is not None:
         return False
+    if kind == "entity" and not linked_evidence(db, "entity", item_id):
+        return surface != "formation"
     return _all_evidence_current(
         db,
         linked_evidence(db, kind, item_id),

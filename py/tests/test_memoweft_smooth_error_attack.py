@@ -35,7 +35,7 @@ from test_hermes_batch_adapter_v3d import (
 
 
 def _route(script: list[Any]) -> Any:
-    def route(_m: list[dict[str, str]], _sid: str) -> dict[str, object]:
+    def route(_m: list[dict[str, str]], _sid: str = "", **kwargs: Any) -> dict[str, object]:
         return cast(dict[str, object], script.pop(0))
     return route
 
@@ -87,7 +87,7 @@ def test_denial_objection_cannot_form_car_brand(tmp_path: Path) -> None:
         )
     ]
     _run(
-        db_path, clock, script, ("evidence-1",),
+        db_path, clock, list(script), ("evidence-1",),
         lambda path: _seed_evidence_raw(path, "evidence-1", raw),
     )
     row = _job(db_path)
@@ -115,7 +115,7 @@ def test_hedged_past_preference_cannot_form_current_preference(tmp_path: Path) -
         )
     ]
     _run(
-        db_path, clock, script, ("evidence-1",),
+        db_path, clock, list(script), ("evidence-1",),
         lambda path: _seed_evidence_raw(path, "evidence-1", raw),
     )
     row = _job(db_path)
@@ -141,7 +141,7 @@ def test_assistant_claim_cannot_form_owner_cognition(tmp_path: Path) -> None:
         )
     ]
     _run(
-        db_path, clock, script, ("evidence-1",),
+        db_path, clock, list(script), ("evidence-1",),
         lambda path: _seed_evidence_raw(path, "evidence-1", raw),
     )
     row = _job(db_path)
@@ -170,7 +170,7 @@ def test_replay_after_evidence_rewrite_fails_closed(tmp_path: Path) -> None:
         )
     ]
     _run(
-        db_path, clock, script, ("evidence-1",),
+        db_path, clock, list(script), ("evidence-1",),
         lambda path: _seed_evidence_raw(path, "evidence-1", raw),
     )
     first = _job(db_path)
@@ -181,6 +181,7 @@ def test_replay_after_evidence_rewrite_fails_closed(tmp_path: Path) -> None:
     # Reset the surviving job back to pending and re-drive with the SAME script.
     db = sqlite3.connect(db_path, isolation_level=None)
     try:
+        db.execute("DELETE FROM terminal_outcome WHERE job_id='job-1'")
         db.execute(
             "UPDATE memory_world_job SET state='pending', attempts=0, "
             "completed_at=NULL, world_result_json=NULL, result_hash=NULL, "

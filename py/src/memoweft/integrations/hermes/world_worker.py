@@ -1253,12 +1253,18 @@ class WorldJobWorker:
 
         return self.kick()
 
-    def kick(self) -> bool:
+    def kick(self, delay: float = 0.0) -> bool:
         """Wake or lazily start the run-to-quiescence worker."""
 
         with self._lifecycle_lock:
             if self._stop.is_set():
                 return False
+            if delay > 0.0:
+                if self._timer is not None:
+                    self._timer.cancel()
+                    self._timer = None
+                self._schedule_locked(delay)
+                return True
             self._wake.set()
             if self._timer is not None:
                 self._timer.cancel()

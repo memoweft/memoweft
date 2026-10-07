@@ -2,18 +2,21 @@
 from __future__ import annotations
 
 import copy
+import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from memoweft.portable import build_bundle, import_bundle, validate_bundle
+from memoweft.portable import build_bundle, derive_bundle_id, import_bundle, validate_bundle
+from memoweft.integrations.dsh_bridge.interactions import query_interaction
 from memoweft.store import make_transaction, open_db
 from memoweft.store.cognition import SqliteCognitionStore
 from memoweft.store.event import SqliteEventStore
 from memoweft.store.evidence import SqliteEvidenceStore
 from memoweft.store.interaction_context import SqliteInteractionContextStore
 from memoweft.store.semantic_resolution import SqliteSemanticResolutionStore
+from memoweft.types import InteractionContextInput, VisibleTurn
 
 T = "2026-08-14T12:00:00.000Z"
 SUBJECT = "owner"
@@ -151,6 +154,112 @@ def test_bundle_v4_round_trip_build_validate_import(tmp_path: Path) -> None:
         assert again.counts.entities == 0
     finally:
         target.close()
+
+
+def test_linked_interaction_dependency_round_trip_preserves_hash_and_model_projection(
+    tmp_path: Path,
+) -> None:
+    source = open_db(str(tmp_path / "linked-source.sqlite3"))
+    try:
+        _seed_world(source)
+        stored = SqliteInteractionContextStore(source, clock=_clock).record(
+            InteractionContextInput(
+                subject_id=SUBJECT,
+                conversation_id="portable-conversation",
+                episode_id="portable-episode",
+                context=[
+                    VisibleTurn(
+                        role="user",
+                        content="回顾可移植建议。",
+                        message_id="portable-user",
+                        timestamp=1790097927.0,
+                    ),
+                    VisibleTurn(
+                        role="assistant",
+                        content="可移植建议保持原样。",
+                        message_id="portable-assistant",
+                        model_context_dependencies={
+                            "schema_version": 1,
+                            "capture_status": "complete_empty",
+                            "world_items": [],
+                            "interaction_ids": [],
+                            "context_hash": "captured-context",
+                        },
+                    ),
+                ],
+            )
+        )
+        bundle = build_bundle(source, SUBJECT, host_id="host", exported_at=T)
+    finally:
+        source.close()
+
+    validation = validate_bundle(bundle)
+    assert validation.valid, validation.errors
+    exported = bundle["data"]["interactionContexts"][0]
+    assert exported["contextHash"] == stored.context_hash
+    assert exported["context"][1]["model_context_dependencies"]["capture_status"] == (
+        "complete_empty"
+    )
+    wire_round_trip = json.loads(json.dumps(bundle, ensure_ascii=False))
+    wire_round_trip["data"]["interactionContexts"][0]["context"][0]["timestamp"] = int(wire_round_trip["data"]["interactionContexts"][0]["context"][0]["timestamp"])
+    assert wire_round_trip["data"]["interactionContexts"][0]["context"][0]["timestamp"] == 1790097927
+    assert wire_round_trip["bundleId"] == derive_bundle_id(wire_round_trip)
+    assert validate_bundle(wire_round_trip).valid
+
+    target_path = tmp_path / "linked-target.sqlite3"
+    target = open_db(str(target_path))
+    try:
+        plan = import_bundle(
+            bundle,
+            **_stores(target),
+            transaction=make_transaction(target),
+            mode="merge",
+            world_db=target,
+        )
+        assert plan.valid, plan.errors
+        imported = SqliteInteractionContextStore(target).get(stored.id)
+        assert imported is not None
+        assert imported.context_hash == stored.context_hash
+        assert imported.context[1].model_context_dependencies == (
+            stored.context[1].model_context_dependencies
+        )
+        target.execute(
+            "INSERT INTO memory_world_job (job_id, job_schema_version, "
+            "boundary_event_id, boundary_payload_hash, boundary_schema_version, "
+            "provider_name, parent_session_id, result_session_id, boundary_mode, "
+            "formal_target_json, formal_target_hash, subject_id, host_id, "
+            "evidence_ids_json, state, delivery_receipt_json, delivery_receipt_hash, "
+            "created_at, completed_at) VALUES ('portable-job', 1, "
+            "'portable-episode', 'payload', 1, 'memoweft', "
+            "'portable-conversation', 'portable-conversation', 'in_place', '{}', "
+            "'formal', ?, 'host', '[\"ev-1\"]', 'applied', '{}', 'receipt', ?, ?)",
+            (SUBJECT, T, T),
+        )
+        target.commit()
+    finally:
+        target.close()
+
+    projected = query_interaction(
+        target_path,
+        subject_id=SUBJECT,
+        interaction_id=stored.id,
+        projection="model",
+    )
+    assert projected["item"]["dependency_state"] == "visible"
+    assert projected["item"]["turns"][1]["content"] == "可移植建议保持原样。"
+
+    invalid = copy.deepcopy(bundle)
+    invalid_turn = invalid["data"]["interactionContexts"][0]["context"][0]
+    invalid_turn["model_context_dependencies"] = {
+        "schema_version": 1,
+        "capture_status": "complete_empty",
+        "world_items": [],
+        "interaction_ids": [],
+    }
+    invalid["bundleId"] = "invalid-after-mutation"
+    invalid_result = validate_bundle(invalid)
+    assert not invalid_result.valid
+    assert any("model_context_dependencies.role" in error for error in invalid_result.errors)
 
 
 def test_bundle_v3_rejects_dangling_world_references() -> None:

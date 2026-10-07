@@ -19,7 +19,7 @@ def test_interaction_context_record_idempotent_and_roundtrip() -> None:
     try:
         store = SqliteInteractionContextStore(db, clock=_fixed)
         turns = [
-            VisibleTurn(role="assistant", content="你喜欢爬山吧?"),
+            VisibleTurn(role="assistant", content="你喜欢爬山吧?", model_context_dependencies={"schema_version": 1, "capture_status": "complete_empty", "world_items": [], "interaction_ids": []}),
             VisibleTurn(role="user", content="是的"),
         ]
         a = store.record(

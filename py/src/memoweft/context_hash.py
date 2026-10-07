@@ -8,7 +8,17 @@ from .types import VisibleTurn
 
 
 def hash_context(context: list[VisibleTurn]) -> str:
-    """计算 sha256(JSON.stringify(context))，与 TypeScript 的字段序和 UTF-8 字节一致。"""
+    """Legacy role/content hash unless causal metadata is present.
+
+    Old rows retain their exact JSON.stringify-compatible hash.  New linked
+    assistant turns add a canonical dependency summary so a conditional update
+    cannot silently overwrite a concurrent, different causal binding.
+    """
     payload = [{"role": turn.role, "content": turn.content} for turn in context]
-    serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    if any(turn.model_context_dependencies is not None for turn in context):
+        payload = [
+            {**row, **({"model_context_dependencies": turn.model_context_dependencies} if turn.model_context_dependencies is not None else {})}
+            for row, turn in zip(payload, context)
+        ]
+    serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=any(turn.model_context_dependencies is not None for turn in context))
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()

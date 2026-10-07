@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 from collections import Counter
 import json
+from hashlib import sha256
 import sqlite3
 from typing import Any, Optional
 
@@ -71,7 +72,11 @@ def _to_cognition(d: dict[str, Any]) -> Cognition:
 def _to_interaction_context(d: dict[str, Any]) -> InteractionContext:
     return InteractionContext(
         id=d["id"], subject_id=d["subjectId"], conversation_id=d["conversationId"], episode_id=d["episodeId"],
-        context=[VisibleTurn(role=t["role"], content=t["content"]) for t in d["context"]],
+        context=[VisibleTurn(
+            role=t["role"], content=t["content"], source_ref=t.get("source_ref"),
+            message_id=t.get("message_id"), timestamp=t.get("timestamp"),
+            model_context_dependencies=t.get("model_context_dependencies"),
+        ) for t in d["context"]],
         context_hash=d["contextHash"], created_at=d["createdAt"],
     )
 
@@ -829,6 +834,49 @@ def import_bundle(
     )
     data = import_view["data"]
     unconsolidated_set = set(data.get("unconsolidatedEventIds") or [])
+
+    # A hard-deleted row is a content-free suppression marker. Reject the
+    # whole old bundle before planning any World rows, including a copy whose
+    # Evidence has a different id but the same source origin.
+    if world_db is not None:
+        for evidence in data["evidence"]:
+            origin = evidence.get("originId")
+            marker = world_db.execute(
+                "SELECT id FROM evidence WHERE subject_id = ? "
+                "AND deleted_at IS NOT NULL AND raw_content = '' AND summary = '' "
+                "AND (id = ? OR (origin_id IS NOT NULL AND origin_id = ?))",
+                (effective_target_subject_id, evidence["id"], origin),
+            ).fetchone()
+            if marker is not None:
+                plan.valid = False
+                _record_conflict(plan, "evidence", str(evidence["id"]), "hard_deleted_source")
+                plan.errors.append("hard_deleted_source")
+                return _finalize_v4_plan(plan, {}) if is_v4 else plan
+            if origin is not None and world_db.execute(
+                "SELECT 1 FROM hard_deleted_origin WHERE origin_hash = ? "
+                "AND subject_id = ?",
+                (sha256(str(origin).encode("utf-8")).hexdigest(), effective_target_subject_id),
+            ).fetchone():
+                plan.valid = False
+                _record_conflict(plan, "evidence", str(evidence["id"]), "hard_deleted_source")
+                plan.errors.append("hard_deleted_source")
+                return _finalize_v4_plan(plan, {}) if is_v4 else plan
+        for section, kind in (
+            ("entities", "entity"),
+            ("relationships", "relationship"),
+            ("worldEvents", "event"),
+            ("cognitions", "cognition"),
+        ):
+            for item in data.get(section, []):
+                if world_db.execute(
+                    "SELECT 1 FROM world_delete_marker WHERE subject_id = ? "
+                    "AND object_kind = ? AND item_id = ?",
+                    (effective_target_subject_id, kind, item["id"]),
+                ).fetchone():
+                    plan.valid = False
+                    _record_conflict(plan, section, str(item["id"]), "hard_deleted_world_item")
+                    plan.errors.append("hard_deleted_world_item")
+                    return _finalize_v4_plan(plan, {}) if is_v4 else plan
 
     # 同 id 仅在完整实体及其自有关系完全相同时才是安全幂等。否则把包内派生实体
     # 绑定到目标行会造成跨血缘授权漂白；rc.2 选择整包 fail-closed，等待显式冲突解决。

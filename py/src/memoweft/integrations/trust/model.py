@@ -1,7 +1,7 @@
 """Stable JSON-native DTO contracts for read-only Trust Query v1."""
 from __future__ import annotations
 
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 
 TRUST_SCHEMA_VERSION = 1
@@ -14,6 +14,8 @@ TrustCommandOperation = Literal[
     "correct_world_item",
     "retract_world_item",
     "forget_evidence",
+    "delete_evidence",
+    "delete_world_item",
     "archive_world_item",
     "mute_world_item",
 ]
@@ -49,6 +51,8 @@ class CommandReceiptV1(TypedDict):
     transition_ids: list[str]
     result_hash: str
     completed_at: str
+    rejection_code: NotRequired[str]
+    storage_cleanup: NotRequired[dict[str, str]]
 
 
 class PermissionsV1(TypedDict):
@@ -91,6 +95,9 @@ class ProvenanceV1(TypedDict):
     currentness_state: str
     permissions: PermissionsV1
     evidence: EvidenceV1 | None
+    linked_world_items: NotRequired[list[dict[str, object]]]
+    model_content_available: NotRequired[bool]
+    model_denial_reason: NotRequired[str | None]
 
 
 class TransitionV1(TypedDict):

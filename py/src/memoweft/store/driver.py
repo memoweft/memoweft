@@ -35,6 +35,7 @@ from .schema import (
     SCHEMA_VERSION,
     TERMINAL_OUTCOME_SCHEMA_SQL,
     TRUST_COMMAND_SCHEMA_SQL,
+    TRUST_REJECTION_SCHEMA_SQL,
     WORLD_EVENT_COLUMNS,
     WORLD_EVENT_SCHEMA_SQL,
     WORLD_JOB_ALTER_V15_SQL,
@@ -423,6 +424,21 @@ def _migrate(db: sqlite3.Connection, current: int) -> None:
                 # row is backfilled and no historical import is fabricated.
                 for statement in PORTABLE_IMPORT_RECEIPT_SCHEMA_SQL:
                     db.execute(statement)
+            elif version == 20:
+                # Widen the closed Trust operation set while preserving command
+                # identities and immutable receipts. SQLite cannot ALTER CHECK.
+                db.execute("ALTER TABLE trust_command RENAME TO trust_command_v19")
+                db.execute("DROP INDEX ix_trust_command_subject")
+                db.execute(TRUST_COMMAND_SCHEMA_SQL[0])
+                db.execute("INSERT INTO trust_command SELECT * FROM trust_command_v19")
+                db.execute("DROP TABLE trust_command_v19")
+                db.execute(TRUST_COMMAND_SCHEMA_SQL[1])
+                for statement in TRUST_REJECTION_SCHEMA_SQL:
+                    name = statement.split("CREATE TABLE ", 1)[1].split(" (", 1)[0]
+                    if db.execute(
+                        "SELECT 1 FROM sqlite_master WHERE name = ?", (name,)
+                    ).fetchone() is None:
+                        db.execute(statement)
             db.execute(f"PRAGMA user_version = {version}")
             db.execute("COMMIT")
         except BaseException as exc:

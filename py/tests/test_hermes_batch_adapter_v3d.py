@@ -17,9 +17,13 @@ from typing import Any, Callable, cast
 
 from memoweft.integrations.hermes.batch_adapter import (
     HermesBatchAdapterProcessor,
+    _SYSTEM_PROMPT,
+    _SYSTEM_PROMPT_EN,
     relationship_id_for,
     entity_id_for,
 )
+from memoweft.integrations.hermes.recall import recall_world_snapshot
+from memoweft.integrations.trust.query_service import QueryService
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
 
 from test_hermes_world_worker import (
@@ -244,6 +248,74 @@ def test_retract_cognition_invalidates_and_records_sidecar(tmp_path: Path) -> No
         assert any(l["relation"] == "retracts" for l in ledgers)
     finally:
         db.close()
+
+
+def test_owner_preference_misattributed_to_friend_is_retracted_but_traceable(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    target = "cognition-owner-fragrance"
+    original = "我挑洗护用品时不喜欢浓烈香味"
+    correction = "刚才不喜欢浓香的是朋友，不是我本人"
+    script = [
+        _model(
+            _batch(
+                _v6_item(
+                    "preference",
+                    correction,
+                    (0, len(correction)),
+                    action="correct",
+                    retract=True,
+                    corrects_cognition_id=target,
+                )
+            )
+        )
+    ]
+
+    def setup(path: Path) -> None:
+        _set_evidence(path, "evidence-1", correction)
+        _seed_cognition(path, target, "用户挑洗护用品时不喜欢浓烈香味")
+        with sqlite3.connect(path) as db:
+            db.execute(
+                "UPDATE evidence SET raw_content = ?, summary = ? "
+                "WHERE id = 'seed-evidence'",
+                (original, original),
+            )
+
+    _run(db_path, clock, script, ("evidence-1",), setup)
+
+    with sqlite3.connect(db_path) as db:
+        snapshot = recall_world_snapshot(db, "owner", "挑洗护用品先考虑哪些条件")
+        stored = {
+            str(row[0]) for row in db.execute("SELECT raw_content FROM evidence")
+        }
+    assert snapshot is not None and snapshot.count == 0
+    assert stored == {original, correction}
+
+    trace = QueryService(db_path, subject_id="owner").get_world_item_provenance(
+        "cognition", target
+    )
+    assert {entry["evidence"]["raw_content"] for entry in trace["provenance"]} == {
+        original,
+        correction,
+    }
+    assert any(
+        transition["transition_kind"] == "retracts"
+        for transition in trace["transition_history"]
+    )
+
+
+def test_temporary_state_contract_and_unrelated_recall_stay_scoped(tmp_path: Path) -> None:
+    assert "这周不想社交" in _SYSTEM_PROMPT
+    assert "must not become a permanent attribute" in _SYSTEM_PROMPT_EN
+
+    db_path = tmp_path / "memoweft.sqlite3"
+    _initialize_database(db_path)
+    _seed_cognition(db_path, "cognition-fragrance", "用户挑洗护用品时不喜欢浓烈香味")
+    with sqlite3.connect(db_path) as db:
+        snapshot = recall_world_snapshot(db, "owner", "怎样整理 Python 项目的测试目录")
+    assert snapshot is not None and snapshot.count == 0
 
 
 def test_retract_relationship_invalidates(tmp_path: Path) -> None:

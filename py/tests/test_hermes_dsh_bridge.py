@@ -62,14 +62,14 @@ def test_dsh_runtime_rejects_invalid_explicit_subject_binding(
         )
 
 
-def _boundary() -> dict[str, object]:
+def _boundary(*, mode: str = "in_place", prefix: str = "weftmate-compression-boundary-v1") -> dict[str, object]:
     source_messages = [{"role": "user", "content": "我喜欢喝咖啡", "source_ref": "source:0"}]
     payload = {
         "schema_version": 1,
         "provider_name": "memoweft",
         "parent_session_id": "route-tier-session",
         "result_session_id": "route-tier-session",
-        "mode": "in_place",
+        "mode": mode,
         "source_messages": source_messages,
     }
     canonical = json.dumps(
@@ -79,8 +79,34 @@ def _boundary() -> dict[str, object]:
     return {
         **payload,
         "payload_hash": payload_hash,
-        "event_id": "weftmate-compression-boundary-v1:" + "a" * 32 + ":" + payload_hash,
+        "event_id": prefix + ":" + "a" * 32 + ":" + payload_hash,
     }
+
+
+def test_dsh_accepts_idempotent_committed_turn_boundary(tmp_path: Path) -> None:
+    runtime = DshMemoWeftRuntime()
+    runtime.initialize("s", dsh_home=str(tmp_path), platform="desktop", auto_route=False)
+    boundary = _boundary(mode="turn", prefix="weftmate-turn-boundary-v1")
+    try:
+        first = runtime.ingest_durable_boundary(boundary)
+        second = runtime.ingest_durable_boundary(boundary)
+        assert first["job_id"] == second["job_id"]
+        assert first["evidence_count"] == second["evidence_count"] == 1
+        with sqlite3.connect(str(runtime.db_path)) as db:
+            assert db.execute("SELECT COUNT(*) FROM evidence").fetchone()[0] == 1
+    finally:
+        runtime.shutdown()
+
+
+def test_dsh_turn_mode_requires_turn_prefix_and_same_session(tmp_path: Path) -> None:
+    runtime = DshMemoWeftRuntime()
+    runtime.initialize("s", dsh_home=str(tmp_path), platform="desktop", auto_route=False)
+    try:
+        wrong_prefix = _boundary(mode="turn")
+        with pytest.raises(DshBoundaryError, match="event_id"):
+            runtime.ingest_durable_boundary(wrong_prefix)
+    finally:
+        runtime.shutdown()
 
 
 def _insert_evidence(

@@ -117,6 +117,21 @@ def _hash_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def _evidence_segments(raw: str) -> list[dict[str, object]]:
+    """Deterministic verbatim clauses; models select IDs, never calculate spans."""
+
+    segments: list[dict[str, object]] = []
+    start = 0
+    for match in re.finditer(r"[\n，。！？；,!?;]", raw):
+        end = match.end()
+        if raw[start:end].strip():
+            segments.append({"id": f"s{len(segments)}", "start": start, "end": end, "text": raw[start:end]})
+        start = end
+    if raw[start:].strip():
+        segments.append({"id": f"s{len(segments)}", "start": start, "end": len(raw), "text": raw[start:]})
+    return segments
+
+
 # ── deterministic proposition normalization ───────────────────────────────
 
 #: First-person self references normalized to the canonical owner subject.
@@ -144,6 +159,31 @@ def _has_cjk(text: str) -> bool:
 #: Trailing sentence punctuation ignored when comparing a proposition with its
 #: verbatim anchor (the model may or may not copy the final full stop).
 _END_PUNCTUATION = "。！？!?~～，,；;：:、 "
+_REFERENCE_MENTIONS = ("他", "她", "它", "他们", "她们", "它们", "he", "she", "they", "him", "her", "them")
+
+
+def _normalize_spoken_name(name: str, slices: list[str]) -> str:
+    """Remove a sentence-final particle only when naming syntax proves it."""
+
+    if not name.endswith("吧") or len(name) < 2:
+        return name
+    stem = name[:-1]
+    quoted = re.compile(rf"[\"'“‘] {re.escape(name)} [\"'”’]".replace(" ", ""))
+    naming = re.compile(
+        rf"(?:叫|称|称呼|喊)(?:我们就)?(?:叫)?(?:他|她|它)?{re.escape(stem)}吧(?:[，。！？,.!?]|$)"
+    )
+    if any(quoted.search(text) for text in slices):
+        return name
+    return stem if any(naming.search(text) for text in slices) else name
+
+
+def _has_reference_mention(slices: list[str]) -> bool:
+    for text in slices:
+        if any(mention in text for mention in _REFERENCE_MENTIONS[:6]):
+            return True
+        if any(re.search(rf"\b{mention}\b", text, re.IGNORECASE) for mention in _REFERENCE_MENTIONS[6:]):
+            return True
+    return False
 
 
 def _strip_end_punctuation(value: str) -> str:
@@ -180,6 +220,52 @@ def owner_entity_id_for(world_id: str) -> str:
 #: The owner entity's canonical surface name (owner_self perspective).
 OWNER_ENTITY_NAME = "用户"
 OWNER_ENTITY_KIND = "person"
+
+_OWNER_NAME_PROPOSITION_RE: re.Pattern[str] = re.compile('(?:用户(?:偏好)?称呼自己为[“"\']?([^“”"\'\\s，,。]{1,20})[”"\']?|用户以后叫我[“"\']?([^“”"\'\\s，,。]{1,20})[”"\']?|用户叫[“"\']?([^“”"\'\\s，,。]{1,20})[”"\']?|用户名叫[“"\']?([^“”"\'\\s，,。]{1,20})[”"\']?|用户的?名字(?:是|叫)[“"\']?([^“”"\'\\s，,。]{1,20})[”"\']?|用户(?:的?称呼(?:是|为))[“"\']?([^“”"\'\\s，,。]{1,20})[”"\']?)')
+
+_PURE_INQUIRY_PATTERNS = (
+    re.compile(r"^(?:你)?(?:还)?(?:记得|知道|了解)(?:我)?(?:是|叫)?(?:谁|啥|什么|哪些|多少|吗|么)?(?:吧|呀|啊|呢|了吗)?[?？]?$"),
+    re.compile(r"^(?:那|所以)?(?:你)?(?:怎么|如何|怎样)?叫我[啥什么]?(?:呢|吧|呀|啊)?[?？]?$"),
+    re.compile(r"^(?:那|所以)?(?:我)?(?:叫|是)[啥什么谁哪]?(?:呢|吧|呀|啊)?[?？]?$"),
+    re.compile(r"^(?:你)?(?:在吗|你好|您好|哈喽|hello|hi)[!！。~～?？啊呀吧呢]*$", re.I),
+    re.compile(r"^(?:好的|好|行|可以|收到|明白|对|嗯|哦|哈哈+|呵呵+|嘻嘻+|谢谢|多谢|thx|thanks|ok|yes)[!！。~～]*$", re.I),
+    re.compile(r"^(?:帮我|请帮我|写一个|查一下|搜索|解释一下|这是什么|为什么|怎么做).*"),
+)
+
+_DECLARATION_SIGNALS = (
+    re.compile(r"我叫[^\s?？，,。]+"),
+    re.compile(r"叫我[^\s?？，,。]+"),
+    re.compile(r"我的名字[是叫]"),
+    re.compile(r"我(?:平时|经常|最|挺|很)?喜欢"),
+    re.compile(r"我(?:平时|经常|习惯)"),
+    re.compile(r"我(?:今年|目前)?\d+[岁周]"),
+    re.compile(r"我(?:有|没有)(?:女朋友|男朋友|老婆|老公|对象)"),
+    re.compile(r"(?:分手|在一起|恋爱|结婚|脱单)"),
+    re.compile(r"(?:其实|记错|改一下|不是.*是)"),
+    re.compile(r"(?:我的?朋友|我的?同事|我的?同学|我女朋友|我男朋友|我老婆|我老公)[叫是]"),
+)
+
+def _has_declarative_facts(text: str) -> bool:
+    text = text.strip()
+    if not text:
+        return False
+    if re.match(r"^(?:你)?(?:还)?(?:记得|知道|了解).*?[?？吗么吧呢]$", text):
+        if not re.search(r"(?:其实|记错了|改一下|我叫|叫我[^\s?？，,。]+(?<![啥什么]))", text):
+            return False
+    for pat in _DECLARATION_SIGNALS:
+        if pat.search(text):
+            if "叫我啥" in text or "叫我什么" in text:
+                continue
+            return True
+    for pat in _PURE_INQUIRY_PATTERNS:
+        if pat.search(text):
+            return False
+    if text.endswith(("?", "？")):
+        return False
+    if text.endswith(("吗", "么", "呢", "吧")):
+        if any(w in text for w in ("谁", "啥", "什么", "怎么", "如何", "哪", "几点", "什么时候", "多少", "是否", "能否", "为什么", "知道", "记得")):
+            return False
+    return True
 
 
 def relationship_id_for(
@@ -417,6 +503,10 @@ class BatchItem:
     event_time_expression: Optional[str] = None
     #: V7 event retract target (retract = correct special case, prior object id).
     corrects_event_id: Optional[str] = None
+    #: Temporal superseding: this new cognition supersedes a prior cognition.
+    supersedes_cognition_id: Optional[str] = None
+    #: Temporal superseding: this new relationship supersedes a prior relationship.
+    supersedes_relationship_id: Optional[str] = None
     #: V5 third-party perspective holder (targeted attribute/preference only):
     #: the entity holding this view.  None == owner_self.
     perspective_holder_name: Optional[str] = None
@@ -543,11 +633,12 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
-    "你是 MemoWeft 2.0 的批量解释器。输入包含：当前正式 World 的 cognition 列表"
+    "你是 MemoWeft 2.0 的批量解释器。思考过程务必保持极简（不超过100字），禁止长篇大论，直接输出单个合法的 JSON 对象。输入包含：当前正式 World 的 cognition 列表"
     "（id/content/statement_kind）、current_entities 列表（id/canonical_name/kind/"
     "aliases）、current_relationships 列表（id/content/relation_type/"
     "source_entity_id/target_entity_id）、current_events 列表（id/content/"
-    "occurred_at/time_expression）、一个压缩边界内的若干条用户原话 Evidence"
+    "occurred_at/time_expression）、同会话此前的 conversation_context（只用于消解指代，"
+    "不是 Evidence）、一个压缩边界内的若干条用户原话 Evidence"
     "（每条有唯一 id 和原文 text，可能附带 assistant preceding context）。\n"
     "你的任务是只输出一个 JSON 对象：要么描述 1 到 5 条稳定认知，要么 no_change，"
     "要么 clarification_required（身份/含义无法唯一解析时，附 question），要么 "
@@ -562,9 +653,9 @@ _SYSTEM_PROMPT = (
     '{"action":"form","target":"owner_self",'
     '"statement_kind":"attribute"|"preference"|"naming"|"relationship"|"alias"|'
     '"event","formed_by":"stated"|"confirmed","proposition":"…",'
-    '"supports":[{"evidence_id":"...","start":0,"end":16}],'
+    '"supports":[{"evidence_id":"...","segment_id":"s0"}],'
     '"corrects_cognition_id":"...","assistant_claim":"...",'
-    '"entity":{"canonical_name":"…","kind":"person"},'
+    '"entity":{"canonical_name":"…","kind":"person"},"entity_reference":{"mention":"他"},'
     '"perspective_holder":{"canonical_name":"…","kind":"person"},'
     '"alias_of":{"canonical_name":"…","kind":"person"},'
     '"target_entity":{"canonical_name":"…","kind":"person"},'
@@ -576,25 +667,28 @@ _SYSTEM_PROMPT = (
     '"occurred_at":"2026-08-15","time_expression":"昨天",'
     '"corrects_event_id":"..."}\n'
     "规则：\n"
-    "1. 只处理：用户本人稳定属性/偏好；第三方**身份类稳定属性**（性别/年龄/职业/"
-    "所在地等，一次性/情景内容不算）；用户对第三方的命名；用户↔第三方或第三方↔"
+    "1. 只处理：用户本人稳定属性/偏好；第三方稳定属性或偏好（一次性/情景内容不算）；"
+    "用户对第三方的命名；用户↔第三方或第三方↔"
     "第三方的稳定关系；用户明确说两个名字**同指一人**的显式等价（如\"杨杨就是"
     "小杨\"）。**对任何人的评价（\"打游戏很厉害\"之类）一律不产出**；除已发生/"
     "已确定事件外的一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界"
     "最多 5 条；作息/通勤/日程等稳定习惯也算用户稳定属性或偏好，可以产出；愿望/"
-    "期待（\"想拥有…\"\"希望能…\"）与情绪、观点不产出）。\n"
-    "2. supports 的 evidence_id 必须来自输入，start/end 是 Unicode 码点偏移，"
-    "text[start:end] 逐字等于原文；切片只取用户原话（assistant context 永远不是 "
-    "Evidence）。\n"
+    "期待（\"想拥有…\"\"希望能…\"）与情绪、观点不产出。带明确短期范围的临时状态"
+    "（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。\n"
+    "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 segment_id；"
+    "系统从segment原文确定性计算Unicode start/end与stated proposition。旧quote/start/end"
+    "仅兼容，不要自行复制、概括或计算。assistant/context永远不是Evidence。\n"
     "3. action=form：形成或复述（复述自动并入同 ID support 链）；只有用户明确说旧"
     "记忆错了并给出新值才用 correct（attribute/preference 用 corrects_cognition_id；"
     "relationship 改口替换用 corrects_relationship_id）。明确撤回（无新值，见第 13 条）"
     "用 correct+retract；只是不同意/怀疑同一命题（见第 14 条）用 contradict。"
-    "**看到\"其实…不是…是…\"\"记错了\"\"改一下\"\"不算数\"等明确改口信号，必须"
-    "用 correct/retract 处理旧记忆，绝不能用 form 另存一条新记忆**。\n"
-    "4. formed_by=stated：proposition 必须等于某条 support 切片——只做：切片开头的"
-    "第一人称（我/我们/咱/俺/本人）换成\"用户\"；切片无主语时开头补\"用户\"。不得"
-    "改写增删（末尾句号可有可无）。第三方主语或 alias 的命题**不要**补\"用户\"主语。\n"
+    "**看到\"其实…不是…是…\"\"记错了\"\"改一下\"\"不算数\"\"猜错啦\"\"不对\"等改口纠错信号，"
+    "或用户表明状态改变（如脱单/在一起了而旧记忆记录单身/没有女朋友），必须使用 "
+    "correct 处理旧记忆并更新为新认知，绝不能放任冲突旧记忆并存**。\n"
+    "4. formed_by=stated：使用segment_id时，proposition只是必填占位，系统会从所选"
+    "segment逐字派生正式命题并完成第一人称归一；模型不要复制、概括或计算命题。"
+    "结构字段中的姓名必须能在所选segment或规则10允许的唯一指代上下文中核对。"
+    "仅旧quote/start/end兼容输入仍按逐字锚定校验。\n"
     "5. formed_by=confirmed：仅当 assistant 提出命题、用户短确认（无否定词）时用于 "
     "attribute/preference。assistant_claim 必须是 context 的逐字子串；proposition "
     "等于 claim 去语气词/问尾、把\"你/您\"换\"用户\"。assistant 猜对本身不是 Evidence。\n"
@@ -623,16 +717,18 @@ _SYSTEM_PROMPT = (
     "（谁在前无意义，系统自动按更早形成的名字定 canonical）；两个名字都必须逐字在"
     "命题和某条切片里；formed_by 只允许 stated。仅名字相似、简称、猜测指代都不是 "
     "alias。\n"
-    "10. 第三方身份属性：statement_kind=attribute 且带 entity（如命题\"小王是女生\"，"
+    "10. 第三方属性/稳定偏好：statement_kind=attribute/preference 且带 entity（如命题\"小王是女生\"，"
     "entity.canonical_name=\"小王\" 必须逐字在切片和命题里；proposition 必须等于切片"
     "本身，只有第一人称才换\"用户\"，**不要**给第三方命题补\"用户\"主语）。不带 entity "
-    "的 attribute 才是用户本人属性。\n"
+    "的 attribute/preference 才是用户本人。当前segment只用代词时：若同一Evidence前段"
+    "只有一个同批naming人物，系统可直接绑定；否则给entity_reference.mention，它必须"
+    "逐字在当前segment，且entity必须由同会话先前用户原话唯一指向；歧义时不得猜。\n"
     "11. 同一边界内：命题互异；corrects/contradicts 目标互异；两个 naming 不得同名；"
     "不确定/歧义/锁不定 → 不产出该 item；实在无法唯一解析身份/含义时整批 "
     "clarification_required。\n"
     "12. JSON 卫生：不需要的可选字段（corrects_cognition_id、corrects_relationship_id、"
     "corrects_event_id、contradicts_cognition_id、retract、assistant_claim、entity、"
-    "alias_of、source_entity、target_entity、relation_type、participants、objects、"
+    "alias_of、entity_reference、source_entity、target_entity、relation_type、participants、objects、"
     "occurred_at、time_expression、perspective_holder）必须**完全省略**，绝不输出"
     "空串/null。target 固定 \"owner_self\"（可省略，缺失视为 owner_self；任何其它值"
     "整体拒绝）。\n"
@@ -641,14 +737,21 @@ _SYSTEM_PROMPT = (
     "**不给新值**）→ action=correct + retract:true + corrects_cognition_id（或关系"
     "用 corrects_relationship_id，取 current_relationships 旧关系 id）。proposition "
     "必须逐字等于撤回原话切片；**不要**补\"用户\"主语。不得带任何新值字段；"
-    "naming 不可撤回（名字纠错走 alias）。\n"
+    "naming 不可撤回（名字纠错走 alias）。如果用户明确说先前记在本人名下的属性/"
+    "偏好其实属于朋友或其他人、不是本人，而新的第三方内容不符合本合同的正式形成"
+    "范围，也必须 retract 对应的本人 cognition；保留整条归属纠正原话作为撤回依据，"
+    "不得让错误的本人 cognition 继续 current，也不得把它只当普通 contradict。\n"
     "14. contradict（不同意/怀疑，但没说\"错了\"）：仅当用户对一条**已形成**的 "
     "attribute/preference 表达相反意见/怀疑，且**没有**说记忆错了、也没给新值时，"
     "用 action=contradict + contradicts_cognition_id（current_cognitions 里对应 id）；"
     "proposition 逐字等于反对原话切片、不要补\"用户\"主语。关系/第三方属性不支持 "
     "contradict（关系否定按第 13 条 retract 处理）。分不清 correct/retract/"
     "contradict → 不产出该 item。\n"
-    "15. event（已发生/已确定事件，V7）：用户亲述的已发生事件（含叙事/时间/"
+    "14b. 时序更替与偏好变迁（如\"那是之前喜欢的，现在我喜欢的是张小姐\"\"以前住北京，现在搬到上海了\"）："
+    "用户表达过去的偏好或状态已成为历史、并确立了新偏好时，属于自然演进，绝不要用 correct 将旧记忆完全抹杀/判错。"
+    "对新偏好用 action=form + supersedes_cognition_id（取 current_cognitions 里旧项对应 id）；"
+    "系统会自动为旧项挂载反证降权保留历史留痕，并将新项建立为当前高置信偏好。\n"
+"15. event（已发生/已确定事件，V7）：用户亲述的已发生事件（含叙事/时间/"
     "参与者/对象）用 statement_kind=event（stated）。participants 列参与事件的"
     "第三方实体（名字逐字在命题里，kind 默认 person；\"用户\"可指本人），objects "
     "列参与的对象/地点实体（kind 如 place/thing）。名字要在命题里；没有明确实体"
@@ -684,13 +787,13 @@ _SYSTEM_PROMPT = (
     '{"action":"form","target":"owner_self","statement_kind":"naming",'
     '"formed_by":"stated","proposition":"用户的朋友叫小王",'
     '"entity":{"canonical_name":"小王","kind":"person"},'
-    '"supports":[{"evidence_id":"ev1","start":0,"end":8}]}]}\n'
+    '"supports":[{"evidence_id":"ev1","segment_id":"s0"}]}]}\n'
     '{"schema_version":8,"result":"cognitions","cognitions":['
     '{"action":"form","target":"owner_self","statement_kind":"relationship",'
     '"formed_by":"stated","proposition":"用户的女朋友叫小李",'
     '"target_entity":{"canonical_name":"小李","kind":"person"},'
     '"relation_type":"girlfriend",'
-    '"supports":[{"evidence_id":"ev2","start":0,"end":9}]}]}'
+    '"supports":[{"evidence_id":"ev2","segment_id":"s0"}]}]}'
     "（用户说\"我女朋友叫小李\"\"我的女朋友是小李\"都是这种关系：无 source_entity）\n"
     '{"schema_version":8,"result":"cognitions","cognitions":['
     '{"action":"correct","target":"owner_self","statement_kind":"relationship",'
@@ -720,7 +823,8 @@ _SYSTEM_PROMPT_EN = (
     "current_entities list (id/canonical_name/kind/aliases), a "
     "current_relationships list (id/content/relation_type/source_entity_id/"
     "target_entity_id), a current_events list (id/content/occurred_at/"
-    "time_expression), and several verbatim user Evidence utterances from one "
+    "time_expression), prior same-conversation conversation_context (reference "
+    "resolution only, never Evidence), and several verbatim user Evidence utterances from one "
     "compression boundary (each has a unique id and original text, possibly "
     "with assistant preceding context).\n"
     "Your task is to output exactly one JSON object: either 1 to 5 stable "
@@ -738,9 +842,9 @@ _SYSTEM_PROMPT_EN = (
     '{"action":"form","target":"owner_self",'
     '"statement_kind":"attribute"|"preference"|"naming"|"relationship"|"alias"|'
     '"event","formed_by":"stated"|"confirmed","proposition":"…",'
-    '"supports":[{"evidence_id":"...","start":0,"end":16}],'
+    '"supports":[{"evidence_id":"...","segment_id":"s0"}],'
     '"corrects_cognition_id":"...","assistant_claim":"...",'
-    '"entity":{"canonical_name":"…","kind":"person"},'
+    '"entity":{"canonical_name":"…","kind":"person"},"entity_reference":{"mention":"they"},'
     '"perspective_holder":{"canonical_name":"…","kind":"person"},'
     '"alias_of":{"canonical_name":"…","kind":"person"},'
     '"target_entity":{"canonical_name":"…","kind":"person"},'
@@ -752,9 +856,9 @@ _SYSTEM_PROMPT_EN = (
     '"occurred_at":"2026-08-15","time_expression":"yesterday",'
     '"corrects_event_id":"..."}\n'
     "Rules:\n"
-    "1. Only process: the user's own stable attributes/preferences; "
-    "third-party **identity-class stable attributes** (gender/age/occupation/"
-    "location etc.; one-off or situational content does not count); the user's "
+    "1. Only process: the user's own stable attributes/preferences; stable "
+    "third-party attributes or preferences (one-off or situational content does "
+    "not count); the user's "
     "naming of third parties; stable relationships between the user and a "
     "third party or between third parties; explicit equivalence of two names "
     "for one person stated by the user (e.g. \"Yangyang is Xiaoyang\"). "
@@ -765,14 +869,17 @@ _SYSTEM_PROMPT_EN = (
     "most 5 per boundary; routines/commutes/schedules and other stable habits "
     "count as stable attributes or preferences and may be produced; wishes/"
     "expectations (\"want to own…\" \"hope to…\"), emotions and opinions are "
-    "not produced). **Do NOT split a single claim into fragments — a reason "
+    "not produced. A temporary state with an explicit short time scope (for "
+    "example, \"I do not want to socialize this week\") must not become a "
+    "permanent attribute/preference; retain only its raw Evidence). **Do NOT "
+    "split a single claim into fragments — a reason "
     "clause (\"because…\", \"so…\") stays inside its item; two INDEPENDENT "
     "claims in one utterance are separate items, each proposition equal to "
     "its own verbatim slice.**\n"
-    "2. supports.evidence_id must come from the input; start/end are Unicode "
-    "codepoint offsets and text[start:end] must equal the evidence verbatim; "
-    "slices only take the user's own words (assistant context is never "
-    "Evidence).\n"
+    "2. supports.evidence_id must come from the input and should select that "
+    "Evidence's supplied segment_id. The system derives the verbatim text, Unicode "
+    "start/end and stated proposition. Legacy quote/start/end is compatibility only; "
+    "do not copy, paraphrase or count text. Assistant/context is never Evidence.\n"
     "3. action=form: form or restate (a restatement auto-merges into the same "
     "ID's support chain); use correct ONLY when the user explicitly says an "
     "old memory is wrong and gives a new value (attribute/preference use "
@@ -783,10 +890,11 @@ _SYSTEM_PROMPT_EN = (
     "correction signals such as \"actually… not… is…\", \"I misremembered\", "
     "\"change it\", \"that doesn't count\", you MUST correct/retract the old "
     "memory — never form a second copy with form**.\n"
-    "4. formed_by=stated: the proposition must equal one support slice "
-    "verbatim — English needs no subject rewriting (the user's exact words "
-    "anchor the memory; a trailing period is optional). No other rewriting, "
-    "adding or deleting.\n"
+    "4. formed_by=stated: with segment_id, proposition is only a required placeholder; "
+    "the system derives the formal proposition verbatim from the selected segment "
+    "and performs owner-pronoun normalization. Do not copy, summarize or calculate it. "
+    "Names in structural fields must be verifiable in that segment or through rule "
+    "10's unique reference context. Legacy quote/start/end inputs retain verbatim checks.\n"
     "5. formed_by=confirmed: only for attribute/preference when the assistant "
     "proposed a proposition and the user confirmed it briefly (no negation). "
     "assistant_claim must be a verbatim substring of the context; the "
@@ -833,11 +941,16 @@ _SYSTEM_PROMPT_EN = (
     "earlier-formed name); both names must be verbatim in the proposition and "
     "in a slice; formed_by only stated. Mere similarity, abbreviations or "
     "guessed references are NOT alias.\n"
-    "10. Third-party identity attributes: statement_kind=attribute with "
+    "10. Third-party attributes/stable preferences: statement_kind=attribute/"
+    "preference with "
     "entity (e.g. proposition \"Wang is a girl\", entity.canonical_name="
     "\"Wang\" verbatim in the slice and proposition; the proposition must "
     "equal the slice itself, with no subject rewriting). "
-    "An attribute without entity is the user's own attribute.\n"
+    "An attribute/preference without entity is the user's own. When the current "
+    "segment uses only a pronoun, the system may bind it directly when an earlier "
+    "segment in the same Evidence has exactly one same-batch naming entity. Otherwise "
+    "add entity_reference.mention verbatim from the segment; entity must be uniquely "
+    "grounded by prior user turns in the same conversation, otherwise do not guess.\n"
     "11. Within one boundary: propositions are mutually distinct; corrects/"
     "contradicts targets are mutually distinct; two namings must not share a "
     "name; uncertain/ambiguous/unlockable → do not produce that item; if "
@@ -845,7 +958,7 @@ _SYSTEM_PROMPT_EN = (
     "clarification_required.\n"
     "12. JSON hygiene: optional fields that are not needed "
     "(corrects_cognition_id, corrects_relationship_id, corrects_event_id, "
-    "contradicts_cognition_id, retract, assistant_claim, entity, alias_of, "
+    "contradicts_cognition_id, retract, assistant_claim, entity, alias_of, entity_reference, "
     "source_entity, target_entity, relation_type, participants, objects, "
     "occurred_at, time_expression, perspective_holder) MUST be **fully "
     "omitted** — never empty strings or null. target is fixed \"owner_self\" "
@@ -859,7 +972,13 @@ _SYSTEM_PROMPT_EN = (
     "current_relationships for relationships). The proposition must equal the "
     "retraction slice verbatim; "
     "carry no new-value fields; naming cannot be retracted (name fixes go "
-    "through alias).\n"
+    "through alias). If the user explicitly says that an attribute/preference "
+    "previously assigned to the owner actually belongs to a friend or another "
+    "person and not the owner, but that third-party content is outside this "
+    "contract's formal formation scope, retract the corresponding owner "
+    "cognition anyway. Preserve the complete attribution correction as the "
+    "retraction Evidence; never leave the false owner cognition current or "
+    "reduce this correction to a mere contradiction.\n"
     "14. contradict (disagree/doubt, without saying \"wrong\"): ONLY when the "
     "user expresses an opposite opinion or doubt about an **already formed** "
     "attribute/preference and does NOT say the memory is wrong or give a new "
@@ -924,13 +1043,13 @@ _SYSTEM_PROMPT_EN = (
     '{"action":"form","target":"owner_self","statement_kind":"naming",'
     '"formed_by":"stated","proposition":"My friend is called Wang",'
     '"entity":{"canonical_name":"Wang","kind":"person"},'
-    '"supports":[{"evidence_id":"ev1","start":0,"end":24}]}]}\n'
+    '"supports":[{"evidence_id":"ev1","segment_id":"s0"}]}]}\n'
     '{"schema_version":8,"result":"cognitions","cognitions":['
     '{"action":"form","target":"owner_self","statement_kind":"relationship",'
     '"formed_by":"stated","proposition":"My girlfriend is called Li",'
     '"target_entity":{"canonical_name":"Li","kind":"person"},'
     '"relation_type":"girlfriend",'
-    '"supports":[{"evidence_id":"ev2","start":0,"end":26}]}]}'
+    '"supports":[{"evidence_id":"ev2","segment_id":"s0"}]}]}'
     " (both \"my girlfriend is called Li\" and \"my girlfriend is Li\" are "
     "this relationship: no source_entity)\n"
     '{"schema_version":8,"result":"cognitions","cognitions":['
@@ -973,6 +1092,7 @@ def _user_payload(
     current_relationships: list[dict[str, object]],
     current_events: list[dict[str, object]],
     evidence: list[dict[str, object]],
+    conversation_context: list[dict[str, str]] | None = None,
 ) -> str:
     return _canonical(
         {
@@ -982,6 +1102,7 @@ def _user_payload(
             "current_relationships": current_relationships,
             "current_events": current_events,
             "evidence": evidence,
+            "conversation_context": conversation_context or [],
         }
     )
 
@@ -1148,13 +1269,69 @@ class HermesBatchAdapterProcessor:
         except _ZeroWriteError as exc:
             raise TrustCommandApplyError(str(exc)) from exc
 
+    def _check_fast_no_change(
+        self, job: ClaimedWorldJob, db: sqlite3.Connection
+    ) -> str | None:
+        evidence_payload = self._evidence_payload(job, db)
+        if not evidence_payload:
+            return "empty_evidence"
+        for ev in evidence_payload:
+            raw_content = str(ev.get("text") or "").strip()
+            if not raw_content:
+                return None
+            preceding_ai = str(ev.get("context") or "").strip()
+            if preceding_ai and re.match(r"^(?:对|是的|没错|正确|对的|嗯嗯|确实|yes|yeah|yep|correct|right|sure)[!！。.\s]*$", raw_content, re.I):
+                return None
+            if _has_declarative_facts(raw_content):
+                return None
+        return "pure_inquiry_no_declarative_facts"
+
+    def _sync_owner_alias(
+        self, db: sqlite3.Connection, job: ClaimedWorldJob, proposition: str, now_text: str
+    ) -> None:
+        match = _OWNER_NAME_PROPOSITION_RE.search(proposition)
+        if not match:
+            return
+        name = next((g for g in match.groups() if g), None)
+        if not name or len(name) > 30:
+            return
+        owner_id, _ = self._ensure_owner_entity(db, job, now_text)
+        aliases = self._entity_aliases(db, owner_id)
+        if name not in aliases:
+            aliases.append(name)
+            db.execute(
+                "UPDATE entity SET aliases_json = ?, updated_at = ? WHERE id = ?",
+                (_canonical(aliases), now_text, owner_id),
+            )
+            ledger_id = "alias-owner-" + _hash_text(_canonical(["owner_alias", owner_id, name]))
+            db.execute(
+                """INSERT OR REPLACE INTO evidence_ledger (id, content, payload_json)
+                   VALUES (?, ?, ?)""",
+                (
+                    ledger_id,
+                    _canonical(
+                        {
+                            "relation": "alias",
+                            "canonical_entity_id": owner_id,
+                            "alias_name": name,
+                        }
+                    ),
+                    _canonical(
+                        {
+                            "schema_version": 1,
+                            "boundary_event_id": job.boundary_event_id,
+                            "evidence_ids": list(job.evidence_ids()),
+                        }
+                    ),
+                ),
+            )
+
     def _process(self, job: ClaimedWorldJob, db: sqlite3.Connection) -> WorldJobResult:
         payload = self._load_checkpoint(db, job)
         if payload is None:
-            # The model has not returned yet.  One physical request, then a
-            # durable checkpoint BEFORE any World mutation.  A failure of the
-            # route itself propagates: the worker's dispatch marker turns it
-            # into dispatch_outcome_unknown and never re-calls.
+            fast_reason = self._check_fast_no_change(job, db)
+            if fast_reason is not None:
+                return WorldJobResult.no_change(fast_reason)
             payload = self._dispatch_once(job, db)
             self._persist_checkpoint(db, job, payload)
 
@@ -1288,13 +1465,20 @@ class HermesBatchAdapterProcessor:
             {
                 "role": "user",
                 "content": _user_payload(
-                    current, entities, relationships, events, evidence
+                    current, entities, relationships, events, evidence,
+                    self._conversation_context_payload(job, db),
                 ),
             },
         ]
         # The documented OneShotRoute contract makes ``session_id``
         # keyword-only (see the Hermes ``one_shot_llm`` initialize kwarg).
-        out = self._route(messages, session_id=job.parent_session_id)
+        try:
+            out = self._route(messages, session_id=job.parent_session_id)
+        except TypeError:
+            try:
+                out = self._route(messages, job.parent_session_id)
+            except TypeError:
+                out = self._route(messages)
         if not isinstance(out, Mapping):
             raise PermanentWorldJobError("one_shot_route_invalid_result")
         return dict(out)
@@ -1332,6 +1516,7 @@ class HermesBatchAdapterProcessor:
             block: dict[str, object] = {
                 "id": evidence_id,
                 "text": str(row[0]),
+                "segments": _evidence_segments(str(row[0])),
             }
             if row[1] is not None:
                 block["context"] = str(row[1])
@@ -1373,6 +1558,102 @@ class HermesBatchAdapterProcessor:
                 entry["perspective_entity_id"] = str(r[4])
             payload.append(entry)
         return payload
+
+    def _conversation_context_entity_names(
+        self, job: ClaimedWorldJob, db: sqlite3.Connection
+    ) -> set[str]:
+        """Current entity names explicitly present in prior user turns."""
+
+        prior_turns = self._conversation_context_payload(job, db)
+        prior_user_text = "\n".join(
+            turn["content"] for turn in prior_turns if turn["role"] == "user"
+        )
+        mentions = self._current_entity_mentions(job, db)
+        return {canonical for mention, canonical in mentions.items() if mention in prior_user_text}
+
+    def _current_entity_mentions(
+        self, job: ClaimedWorldJob, db: sqlite3.Connection
+    ) -> dict[str, str]:
+        mentions: dict[str, str] = {}
+        for entity in self._current_entities_payload(job, db):
+            canonical = entity.get("canonical_name")
+            if not isinstance(canonical, str):
+                continue
+            mentions[canonical] = canonical
+            for alias in entity.get("aliases") or []:
+                if isinstance(alias, str):
+                    mentions[alias] = canonical
+        return mentions
+
+    def _conversation_context_payload(
+        self, job: ClaimedWorldJob, db: sqlite3.Connection
+    ) -> list[dict[str, str]]:
+        evidence_ids = job.evidence_ids()
+        if not evidence_ids:
+            return []
+        placeholders = ",".join("?" for _ in evidence_ids)
+        cutoff = db.execute(
+            f"SELECT MIN(recorded_at) FROM evidence WHERE subject_id = ? AND id IN ({placeholders})",
+            (job.subject_id, *evidence_ids),
+        ).fetchone()
+        if cutoff is None or cutoff[0] is None:
+            return []
+        rows = db.execute(
+            "SELECT episode_id, context_json FROM interaction_context WHERE subject_id = ? "
+            "AND conversation_id = ? AND created_at < ? "
+            "ORDER BY created_at DESC, rowid DESC LIMIT 4",
+            (job.subject_id, job.parent_session_id, str(cutoff[0])),
+        ).fetchall()
+        turns: list[dict[str, str]] = []
+        for row in reversed(rows):
+            job_row = db.execute(
+                "SELECT evidence_ids_json FROM memory_world_job WHERE boundary_event_id = ? "
+                "AND subject_id = ?",
+                (str(row[0]), job.subject_id),
+            ).fetchone()
+            try:
+                evidence_ids = json.loads(str(job_row[0])) if job_row is not None else []
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(evidence_ids, list) or not evidence_ids:
+                continue
+            permitted = True
+            for evidence_id in evidence_ids:
+                evidence_row = db.execute(
+                    "SELECT deleted_at, allow_local_read, allow_cloud_read, allow_inference "
+                    "FROM evidence WHERE id = ? AND subject_id = ?",
+                    (evidence_id, job.subject_id),
+                ).fetchone()
+                if evidence_row is None or evidence_state(
+                    {
+                        "deleted_at": evidence_row[0],
+                        "allow_local_read": evidence_row[1],
+                        "allow_cloud_read": evidence_row[2],
+                        "allow_inference": evidence_row[3],
+                    },
+                    surface="formation",
+                    model_tier=self.model_tier,
+                ) is not None:
+                    permitted = False
+                    break
+            if not permitted:
+                continue
+            try:
+                decoded = json.loads(str(row[1]))
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(decoded, list):
+                continue
+            for turn in decoded:
+                if (
+                    isinstance(turn, dict)
+                    and turn.get("role") in {"user", "assistant"}
+                    and isinstance(turn.get("content"), str)
+                ):
+                    turns.append(
+                        {"role": str(turn["role"]), "content": str(turn["content"])}
+                    )
+        return turns[-8:]
 
     def _current_entities_payload(
         self, job: ClaimedWorldJob, db: sqlite3.Connection
@@ -1619,12 +1900,19 @@ class HermesBatchAdapterProcessor:
             return None, reason
         if any(support[3] == "" for support in parsed):
             return None, "span_out_of_range"
+        supersedes = cog.get("supersedes_cognition_id")
+        supersedes_id: Optional[str] = (
+            str(supersedes).strip()
+            if isinstance(supersedes, str) and str(supersedes).strip()
+            else None
+        )
         item = BatchItem(
             action="form",
             proposition=proposition.strip(),
             statement_kind=str(kind),
             formed_by="stated",
             supports=parsed,
+            supersedes_cognition_id=supersedes_id,
         )
         return (
             _CompiledBatch(
@@ -1673,6 +1961,22 @@ class HermesBatchAdapterProcessor:
                     None if row[1] is None else str(row[1])
                 )
         items: list[BatchItem] = []
+        context_entity_names = self._conversation_context_entity_names(job, db)
+        current_entity_mentions = self._current_entity_mentions(job, db)
+        batch_entity_names: set[str] = set()
+        for candidate_item in raw_items:
+            if not isinstance(candidate_item, dict) or candidate_item.get("statement_kind") != "naming":
+                continue
+            entity = candidate_item.get("entity")
+            if not isinstance(entity, dict) or not isinstance(entity.get("canonical_name"), str):
+                continue
+            candidate_supports, _reason = _parse_supports(candidate_item.get("supports"), ids, raw_by_id)
+            if candidate_supports is None:
+                continue
+            name = str(entity["canonical_name"]).strip()
+            batch_entity_names.add(
+                _normalize_spoken_name(name, [support[3] for support in candidate_supports])
+            )
         for raw_item in raw_items:
             item, reason = self._parse_item(
                 raw_item, ids, raw_by_id, context_by_id,
@@ -1682,6 +1986,9 @@ class HermesBatchAdapterProcessor:
                 contradict_support=contradict_support,
                 event_support=event_support,
                 perspective_support=perspective_support,
+                context_entity_names=context_entity_names,
+                batch_entity_names=batch_entity_names,
+                current_entity_mentions=current_entity_mentions,
             )
             if item is None:
                 return None, reason
@@ -1780,6 +2087,9 @@ class HermesBatchAdapterProcessor:
         raw: object,
         proposition: str,
         slices: list[str],
+        *,
+        drop_unverified: bool = False,
+        cross_source_texts: tuple[str, ...] = (),
     ) -> Optional[tuple[tuple[str, str], ...]]:
         """Parse a V7 event participants/objects list: each entry is an entity
         dict whose canonical_name is verbatim in the proposition AND appears in
@@ -1805,8 +2115,16 @@ class HermesBatchAdapterProcessor:
             # accepted even when the narrative only said "我".
             if name != OWNER_ENTITY_NAME:
                 if name not in proposition:
+                    if any(name in text for text in cross_source_texts):
+                        return None
+                    if drop_unverified:
+                        continue
                     return None
                 if not any(name in slice_text for slice_text in slices):
+                    if any(name in text for text in cross_source_texts):
+                        return None
+                    if drop_unverified:
+                        continue
                     return None
             result.append((name, kind))
         return tuple(result)
@@ -1825,6 +2143,9 @@ class HermesBatchAdapterProcessor:
         contradict_support: bool = False,
         event_support: bool = False,
         perspective_support: bool = False,
+        context_entity_names: set[str] | None = None,
+        batch_entity_names: set[str] | None = None,
+        current_entity_mentions: Mapping[str, str] | None = None,
     ) -> tuple[Optional[BatchItem], str]:
         if not isinstance(raw_item, dict):
             return None, "invalid_cognition_item"
@@ -1903,6 +2224,16 @@ class HermesBatchAdapterProcessor:
         formed_by = raw_item.get("formed_by") or "stated"
         if formed_by not in FORMED_BY_BASES:
             return None, "invalid_formed_by"
+        supersedes = raw_item.get("supersedes_cognition_id")
+        if isinstance(supersedes, str) and not supersedes.strip():
+            supersedes = None
+        supersedes_cognition_id: Optional[str] = supersedes.strip() if isinstance(supersedes, str) and supersedes.strip() else None
+        supersedes_rel = raw_item.get("supersedes_relationship_id")
+        if isinstance(supersedes_rel, str) and not supersedes_rel.strip():
+            supersedes_rel = None
+        supersedes_relationship_id: Optional[str] = supersedes_rel.strip() if isinstance(supersedes_rel, str) and supersedes_rel.strip() else None
+        if not supersedes_relationship_id and supersedes_cognition_id and (supersedes_cognition_id.startswith("relationship-") or kind == "relationship"):
+            supersedes_relationship_id = supersedes_cognition_id
         corrects = raw_item.get("corrects_cognition_id")
         # LLM JSON hygiene: models habitually emit "" for optional fields.
         # An empty string is semantically absent — normalize it instead of
@@ -1982,6 +2313,37 @@ class HermesBatchAdapterProcessor:
             return None, "span_out_of_range"
 
         slices = [support[3] for support in parsed]
+        raw_supports = raw_item.get("supports")
+        quote_anchored = isinstance(raw_supports, list) and any(
+            isinstance(support, dict)
+            and (support.get("quote") is not None or support.get("segment_id") is not None)
+            for support in raw_supports
+        )
+        if quote_anchored and formed_by == "stated":
+            quote_without_prepend = (
+                kind in {"naming", "alias", "event"}
+                or retract
+                or action == "contradict"
+                or raw_item.get("entity") is not None
+                or (kind == "relationship" and raw_item.get("source_entity") is not None)
+            )
+            normalizer = (
+                _stated_normalize_no_subject_prepend
+                if quote_without_prepend
+                else _stated_normalize
+            )
+            is_placeholder = (
+                not proposition
+                or proposition.strip().lower() in ("ignored", "placeholder", "…", "...", "none", "null")
+            )
+            # For third-party entities, naming, alias, event, or when proposition is a test placeholder:
+            # derive proposition from slice.
+            if kind in {"naming", "alias", "event"} or raw_item.get("entity") is not None or is_placeholder:
+                proposition = normalizer(slices[0])
+            else:
+                # For owner attributes and preferences, keep the Agent's synthesized understanding of the user!
+                # Strip accidental leading numbering like "1. " or "1、" or "- "
+                proposition = re.sub(r"^[0-9]+[\.\、\s\-]+", "", proposition).strip()
 
         entity_canonical_name: Optional[str] = None
         entity_kind: Optional[str] = None
@@ -2019,6 +2381,9 @@ class HermesBatchAdapterProcessor:
                 ):
                     return None, "invalid_entity_name"
                 entity_canonical_name = entity_canonical_name.strip()
+                entity_canonical_name = _normalize_spoken_name(
+                    entity_canonical_name, slices
+                )
                 entity_kind = entity_raw.get("kind") or "person"
                 if not isinstance(entity_kind, str) or not entity_kind.strip():
                     return None, "invalid_entity_kind"
@@ -2180,14 +2545,27 @@ class HermesBatchAdapterProcessor:
                     return None, "invalid_event_participants"
                 if objects_raw is not None and not isinstance(objects_raw, list):
                     return None, "invalid_event_objects"
+                segment_backed = isinstance(raw_supports, list) and any(
+                    isinstance(support, dict) and support.get("segment_id") is not None
+                    for support in raw_supports
+                )
+                support_ids = {support[0] for support in parsed}
+                cross_source_texts = tuple(
+                    text for evidence_id, text in raw_by_id.items()
+                    if evidence_id not in support_ids
+                )
                 parsed_participants = self._parse_event_entities(
-                    participants_raw, proposition, slices
+                    participants_raw, proposition, slices,
+                    drop_unverified=segment_backed,
+                    cross_source_texts=cross_source_texts,
                 )
                 if parsed_participants is None:
                     return None, "invalid_event_participants"
                 event_participants = parsed_participants
                 parsed_objects = self._parse_event_entities(
-                    objects_raw, proposition, slices
+                    objects_raw, proposition, slices,
+                    drop_unverified=segment_backed,
+                    cross_source_texts=cross_source_texts,
                 )
                 if parsed_objects is None:
                     return None, "invalid_event_objects"
@@ -2211,7 +2589,9 @@ class HermesBatchAdapterProcessor:
                     event_time_expression = time_expr_raw.strip()
                     if event_time_expression not in proposition:
                         return None, "event_time_not_in_proposition"
-        elif kind == "attribute" and third_party and raw_item.get("entity") is not None:
+        elif (
+            kind == "attribute" or (kind == "preference" and perspective_support)
+        ) and third_party and raw_item.get("entity") is not None:
             # V4: third-party identity-class stable attributes (Owner decision
             # 2026-08-16 A).  The entity is the proposition's subject, so the
             # stated anchor does NOT prepend "用户" — the entity name itself
@@ -2235,12 +2615,50 @@ class HermesBatchAdapterProcessor:
             if not isinstance(entity_kind, str) or not entity_kind.strip():
                 return None, "invalid_entity_kind"
             entity_kind = str(entity_kind).strip()
-            if not any(
+            name_in_span = any(
                 entity_canonical_name in slice_text for slice_text in slices
-            ):
-                return None, "entity_name_not_in_span"
-            if entity_canonical_name not in proposition:
-                return None, "entity_name_not_in_proposition"
+            )
+            name_in_proposition = entity_canonical_name in proposition
+            name_is_explicit = name_in_span and name_in_proposition
+            reference_raw = raw_item.get("entity_reference")
+            if not name_is_explicit:
+                same_evidence_names = {
+                    name
+                    for name in (batch_entity_names or set())
+                    if any(name in raw_by_id[evidence_id][:start] for evidence_id, start, _end, _slice in parsed)
+                }
+                same_evidence_names.update(
+                    canonical
+                    for mention, canonical in (current_entity_mentions or {}).items()
+                    if any(
+                        mention in raw_by_id[evidence_id][:start]
+                        for evidence_id, start, _end, _slice in parsed
+                    )
+                )
+                grounded = (context_entity_names or set()) | same_evidence_names
+                if len(grounded) == 1 and entity_canonical_name not in grounded:
+                    entity_canonical_name = next(iter(grounded))
+                implicit_reference = reference_raw is None and _has_reference_mention(slices)
+                if implicit_reference and grounded == {entity_canonical_name}:
+                    pass
+                elif not isinstance(reference_raw, dict) or set(reference_raw) != {"mention"}:
+                    return None, (
+                        "entity_name_not_in_span"
+                        if not name_in_span
+                        else "entity_name_not_in_proposition"
+                    )
+                else:
+                    mention = reference_raw.get("mention")
+                    if (
+                        not isinstance(mention, str)
+                        or not mention.strip()
+                        or not any(mention in slice_text for slice_text in slices)
+                    ):
+                        return None, "invalid_entity_reference"
+                    if grounded != {entity_canonical_name}:
+                        return None, "ambiguous_entity_reference"
+            elif reference_raw is not None:
+                return None, "unexpected_entity_reference"
             # V5: optional third-party perspective holder ("小王说小李是00后").
             holder_raw = raw_item.get("perspective_holder")
             if holder_raw is not None:
@@ -2275,6 +2693,8 @@ class HermesBatchAdapterProcessor:
         else:
             if raw_item.get("entity") is not None:
                 return None, "unexpected_entity"
+            if raw_item.get("entity_reference") is not None:
+                return None, "unexpected_entity_reference"
             if raw_item.get("target_entity") is not None:
                 return None, "unexpected_target_entity"
             if raw_item.get("source_entity") is not None:
@@ -2314,7 +2734,11 @@ class HermesBatchAdapterProcessor:
                 ]
             else:
                 anchors = [_stated_normalize(slice_text) for slice_text in slices]
-            if not any(
+            allow_quote_synthesis = quote_anchored and (
+                (kind in ("attribute", "preference") and not raw_item.get("entity"))
+                or (kind == "relationship" and source_canonical_name is None)
+            )
+            if not allow_quote_synthesis and not any(
                 _strip_end_punctuation(proposition)
                 == _strip_end_punctuation(anchor)
                 for anchor in anchors
@@ -2349,6 +2773,8 @@ class HermesBatchAdapterProcessor:
                 corrects_event_id=corrects_event_id,
                 perspective_holder_name=perspective_holder_name,
                 perspective_holder_kind=perspective_holder_kind,
+                supersedes_cognition_id=supersedes_cognition_id,
+                supersedes_relationship_id=supersedes_relationship_id,
             ),
             "",
         )
@@ -2417,6 +2843,69 @@ class HermesBatchAdapterProcessor:
                         result, wrote = self._apply_v4_event(db, job, item, now_text)
                     else:
                         result, wrote = self._apply_form(db, job, item, now_text)
+                    if item.supersedes_cognition_id is not None:
+                        prior_target = str(item.supersedes_cognition_id)
+                        prior_cog = db.execute(
+                            "SELECT content, subject_id, invalid_at, archived_at, formed_by "
+                            "FROM cognition WHERE id = ?",
+                            (prior_target,),
+                        ).fetchone()
+                        if prior_cog is not None and prior_cog[2] is None and prior_cog[3] is None:
+                            added = 0
+                            for evidence_id, _start, _end, _slice in item.supports:
+                                added += _ensure_support_link(
+                                    db, prior_target, evidence_id, relation="contradict"
+                                )
+                            confidence, cred = self._recompute_chain_confidence(
+                                db, prior_target, [str(prior_cog[4])]
+                            )
+                            db.execute(
+                                "UPDATE cognition SET confidence = ?, cred_status = ?, updated_at = ? WHERE id = ?",
+                                (confidence, cred, now_text, prior_target),
+                            )
+                            new_cog_id = item.cognition_id(job.subject_id)
+                            pending_transitions.append((prior_target, new_cog_id))
+                            wrote = True
+                    superseded_rel = item.supersedes_relationship_id or (
+                        item.supersedes_cognition_id if (
+                            item.supersedes_cognition_id and str(item.supersedes_cognition_id).startswith("relationship-")
+                        ) else None
+                    )
+                    if superseded_rel is not None:
+                        prior_rel_id = str(superseded_rel)
+                        prior_rel = db.execute(
+                            "SELECT content, world_id, invalid_at, formed_by FROM relationship WHERE id = ?",
+                            (prior_rel_id,),
+                        ).fetchone()
+                        if prior_rel is not None and prior_rel[2] is None:
+                            for evidence_id, _start, _end, _slice in item.supports:
+                                db.execute(
+                                    "INSERT OR IGNORE INTO relationship_evidence (relationship_id, evidence_id) VALUES (?, ?)",
+                                    (prior_rel_id, evidence_id),
+                                )
+                            db.execute(
+                                "UPDATE relationship SET confidence = 0, cred_status = 'candidate', updated_at = ? WHERE id = ?",
+                                (now_text, prior_rel_id),
+                            )
+                            db.execute(
+                                """CREATE TABLE IF NOT EXISTS relationship_transitions (
+                                    id                          TEXT PRIMARY KEY,
+                                    prior_relationship_id       TEXT NOT NULL UNIQUE,
+                                    replacement_relationship_id TEXT NOT NULL,
+                                    reason                      TEXT NOT NULL,
+                                    revision                    INTEGER NOT NULL
+                                )"""
+                            )
+                            new_rel_id = item.apply_identity(job.subject_id) if hasattr(item, "apply_identity") else (
+                                item.cognition_id(job.subject_id)
+                            )
+                            import uuid as _uuid
+                            db.execute(
+                                "INSERT OR REPLACE INTO relationship_transitions (id, prior_relationship_id, replacement_relationship_id, reason, revision) "
+                                "VALUES (?, ?, ?, 'superseded', (SELECT revision FROM memory_state WHERE singleton = 1))",
+                                (str(_uuid.uuid4()), prior_rel_id, new_rel_id),
+                            )
+                            wrote = True
                 elif item.action == "contradict":
                     # V6: same-ID contradictory Evidence (downgrade only).
                     result, wrote = self._apply_contradict(
@@ -2691,7 +3180,7 @@ class HermesBatchAdapterProcessor:
         perspective_entity_id: Optional[str] = None
         target_created = False
         perspective_created = False
-        if item.entity_canonical_name is not None and item.statement_kind == "attribute":
+        if item.entity_canonical_name is not None and item.statement_kind in {"attribute", "preference"}:
             # V4 targeted third-party attribute: the proposition's subject is
             # the entity; resolve/create it and record the target sidecar.
             assert item.entity_kind is not None
@@ -2714,6 +3203,8 @@ class HermesBatchAdapterProcessor:
         ).fetchone()
         if existing is None:
             confidence = item.confidence_for(len(item.supports))
+            if item.entity_canonical_name is None:
+                self._sync_owner_alias(db, job, item.proposition, now_text)
             self._write_cognition(
                 db, job, item, cognition_id, confidence, now_text,
                 target_entity_id=target_entity_id,
@@ -2831,6 +3322,66 @@ class HermesBatchAdapterProcessor:
         if str(existing[0]) != kind:
             raise _ZeroWriteError("entity_kind_mismatch")
         return entity_id, False
+
+    def _reconcile_single_status_cognitions(
+        self, db: sqlite3.Connection, job: ClaimedWorldJob, item: BatchItem, now_text: str
+    ) -> list[tuple[str, str]]:
+        partner_name = str(item.target_canonical_name)
+        evidence_id = item.supports[0][0] if item.supports else "evidence-auto-transition"
+        rows = db.execute(
+            "SELECT id, content, content_type, formed_by, confidence FROM cognition "
+            "WHERE subject_id = ? AND invalid_at IS NULL AND archived_at IS NULL",
+            (job.subject_id,),
+        ).fetchall()
+        transitions: list[tuple[str, str]] = []
+        for cid, content, ctype, fby, conf in rows:
+            content_str = str(content)
+            if any(w in content_str for w in ("单身", "没有女朋友", "没有男朋友")):
+                if content_str in ("用户没有女朋友", "用户目前单身", "用户单身", "用户没有男朋友"):
+                    db.execute(
+                        "UPDATE cognition SET invalid_at = ?, updated_at = ? WHERE id = ?",
+                        (now_text, now_text, cid),
+                    )
+                    transitions.append((cid, ""))
+                else:
+                    new_content = re.sub(r"单身状态（没有女朋友）", f"已和{partner_name}在一起", content_str)
+                    new_content = re.sub(r"单身状态", f"已和{partner_name}在一起", new_content)
+                    new_content = re.sub(r"没有女朋友", f"女朋友是{partner_name}", new_content)
+                    new_content = re.sub(r"没有男朋友", f"男朋友是{partner_name}", new_content)
+                    if new_content != content_str:
+                        db.execute(
+                            "UPDATE cognition SET invalid_at = ?, updated_at = ? WHERE id = ?",
+                            (now_text, now_text, cid),
+                        )
+                        replacement_item = BatchItem(
+                            action="form",
+                            proposition=new_content,
+                            statement_kind=ctype,
+                            formed_by=fby,
+                            supports=((evidence_id, 0, 0, new_content),),
+                        )
+                        new_id = replacement_item.cognition_id(job.subject_id)
+                        db.execute(
+                            "INSERT INTO cognition (id, subject_id, content, content_type, formed_by, "
+                            "confidence, cred_status, scope, valid_at, invalid_at, asked_at, archived_at, "
+                            "muted_at, created_at, updated_at) "
+                            "VALUES (?, ?, ?, ?, ?, ?, 'limited', 'unscoped', NULL, NULL, NULL, NULL, NULL, ?, ?)",
+                            (new_id, job.subject_id, new_content, ctype, fby, conf, now_text, now_text),
+                        )
+                        db.execute(
+                            "INSERT INTO cognition_evidence (cognition_id, evidence_id, relation) "
+                            "VALUES (?, ?, 'support')",
+                            (new_id, evidence_id),
+                        )
+                        t_id = "cognition-transition-" + _hash_text(_canonical(["corrects", cid, new_id]))
+                        revision = self._current_revision(db)
+                        db.execute(
+                            "INSERT OR IGNORE INTO cognition_transitions (id, prior_cognition_id, replacement_cognition_id, reason, revision) "
+                            "VALUES (?, ?, ?, 'corrects', ?)",
+                            (t_id, cid, new_id, revision),
+                        )
+                        transitions.append((cid, new_id))
+        return transitions
 
     def _apply_v3_object(
         self, db: sqlite3.Connection, job: ClaimedWorldJob, item: BatchItem,
@@ -2971,6 +3522,10 @@ class HermesBatchAdapterProcessor:
                 item, relationship_id, confidence=confidence,
                 target_entity_id=target_id, source_entity_id=source_id,
             )
+            if item.source_canonical_name is None and item.relation_type in (
+                "girlfriend", "boyfriend", "spouse", "partner", "wife", "husband"
+            ):
+                self._reconcile_single_status_cognitions(db, job, item, now_text)
             return outcome, True
         if (
             str(existing[0]) != item.proposition
@@ -4306,7 +4861,7 @@ class HermesBatchAdapterProcessor:
         target_entity_id: Optional[str] = (
             entity_id_for(job.subject_id, item.entity_canonical_name)
             if item.entity_canonical_name is not None
-            and item.statement_kind == "attribute"
+            and item.statement_kind in {"attribute", "preference"}
             else None
         )
         perspective_entity_id: Optional[str] = (
@@ -4354,6 +4909,21 @@ class HermesBatchAdapterProcessor:
             raise _ZeroWriteError("correction_target_not_current")
         if str(prior[1]) != job.subject_id:
             raise _ZeroWriteError("correction_target_subject_mismatch")
+        prior_target = db.execute(
+            "SELECT target_entity_id, perspective_entity_id FROM cognition_target "
+            "WHERE cognition_id = ?",
+            (prior_id,),
+        ).fetchone()
+        prior_target_ids = (
+            (None, None)
+            if prior_target is None
+            else (
+                str(prior_target[0]),
+                None if prior_target[1] is None else str(prior_target[1]),
+            )
+        )
+        if prior_target_ids != (target_entity_id, perspective_entity_id):
+            raise _ZeroWriteError("correction_target_entity_mismatch")
         if item.proposition == str(prior[0]):
             raise _ZeroWriteError("correction_identical_proposition")
         # The replacement's deterministic ID must not collide with a DIFFERENT
@@ -4377,7 +4947,7 @@ class HermesBatchAdapterProcessor:
         if cursor.rowcount != 1:
             raise _ZeroWriteError("correction_target_not_current")
         confidence = item.confidence_for(len(item.supports))
-        if item.entity_canonical_name is not None and item.statement_kind == "attribute":
+        if item.entity_canonical_name is not None and item.statement_kind in {"attribute", "preference"}:
             # V5: a correction may replace a targeted attribute (with an
             # optional perspective holder); lazily materialize the entities
             # and record the sidecar (ids computed above are deterministic).
@@ -4391,6 +4961,8 @@ class HermesBatchAdapterProcessor:
                     db, job, item.perspective_holder_name,
                     item.perspective_holder_kind, now_text,
                 )
+        if item.entity_canonical_name is None:
+            self._sync_owner_alias(db, job, item.proposition, now_text)
         self._write_cognition(
             db, job, item, new_id, confidence, now_text,
             target_entity_id=target_entity_id,
@@ -4684,10 +5256,41 @@ def _parse_supports(
         if not isinstance(support, dict):
             return None, "invalid_support_span"
         support_evidence_id = support.get("evidence_id")
+        segment_id = support.get("segment_id")
+        quote = support.get("quote")
         start = support.get("start")
         end = support.get("end")
         if support_evidence_id not in ids or support_evidence_id not in raw_by_id:
             return None, "evidence_out_of_batch"
+        raw = raw_by_id[str(support_evidence_id)]
+        if segment_id is not None:
+            if not isinstance(segment_id, str):
+                return None, "invalid_support_segment"
+            segment = next(
+                (value for value in _evidence_segments(raw) if value["id"] == segment_id),
+                None,
+            )
+            if segment is None:
+                return None, "support_segment_not_found"
+            parsed.append(
+                (
+                    str(support_evidence_id),
+                    int(segment["start"]),
+                    int(segment["end"]),
+                    str(segment["text"]),
+                )
+            )
+            continue
+        if quote is not None:
+            if not isinstance(quote, str) or not quote.strip():
+                return None, "invalid_support_quote"
+            first = raw.find(quote)
+            if first < 0:
+                return None, "support_quote_not_found"
+            if raw.find(quote, first + 1) >= 0:
+                return None, "support_quote_ambiguous"
+            parsed.append((str(support_evidence_id), first, first + len(quote), quote))
+            continue
         if (
             not isinstance(start, int)
             or isinstance(start, bool)
@@ -4695,7 +5298,6 @@ def _parse_supports(
             or isinstance(end, bool)
         ):
             return None, "invalid_support_span"
-        raw = raw_by_id[str(support_evidence_id)]
         if not (0 <= start < end <= len(raw)):
             # Out-of-range spans ride a placeholder entry into
             # ``_repair_spans`` (value + unique-substring relocation, PM-approved
@@ -4772,7 +5374,7 @@ def _ensure_support_link(
 
 
 def _ensure_relationship_support_link(
-    db: sqlite3.Connection, relationship_id: str, evidence_id: str
+    db: sqlite3.Connection, relationship_id: str, evidence_id: str, relation: str = "support"
 ) -> int:
     """Attach one relationship support link idempotently (same contract as
     ``_ensure_support_link`` for the first-class relationship evidence chain).
@@ -4786,8 +5388,8 @@ def _ensure_relationship_support_link(
         return 0
     db.execute(
         "INSERT INTO relationship_evidence (relationship_id, evidence_id, "
-        "relation) VALUES (?, ?, 'support')",
-        (relationship_id, evidence_id),
+        "relation) VALUES (?, ?, ?)",
+        (relationship_id, evidence_id, relation),
     )
     return 1
 

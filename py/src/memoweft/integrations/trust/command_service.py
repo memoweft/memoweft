@@ -33,6 +33,8 @@ _OPERATIONS: tuple[TrustCommandOperation, ...] = (
     "correct_world_item",
     "retract_world_item",
     "forget_evidence",
+    "delete_evidence",
+    "delete_world_item",
     "archive_world_item",
     "mute_world_item",
 )
@@ -134,6 +136,12 @@ class CommandService:
 
     def get_command_receipt(self, command_id: str) -> CommandReceiptV1:
         return self._store.get_receipt(
+            self._identifier(command_id, "invalid_command_id"),
+            subject_id=self._subject_id,
+        )
+
+    def retry_delete_storage_cleanup(self, command_id: str) -> CommandReceiptV1:
+        return self._store.retry_storage_cleanup(
             self._identifier(command_id, "invalid_command_id"),
             subject_id=self._subject_id,
         )
@@ -285,6 +293,14 @@ class CommandService:
             return self._update_permissions(db, command)
         if operation == "forget_evidence":
             return self._forget(db, command, completed_at)
+        if operation == "delete_evidence":
+            from .true_delete import delete_evidence
+
+            return delete_evidence(db, command, completed_at, self._subject_id)
+        if operation == "delete_world_item":
+            from .true_delete import delete_world_item
+
+            return delete_world_item(db, command, completed_at, self._subject_id)
         if operation in {"archive_world_item", "mute_world_item"}:
             return self._lifecycle(db, command, completed_at)
         if operation == "correct_world_item":
@@ -362,6 +378,12 @@ class CommandService:
             return CommandMutation("rejected")
         if row[0] is not None:
             return CommandMutation("no_change")
+        db.execute(
+            "INSERT OR IGNORE INTO evidence_origin_history (evidence_id, origin_id) "
+            "SELECT id, origin_id FROM evidence WHERE id = ? AND subject_id = ? "
+            "AND origin_id IS NOT NULL",
+            (command["target_id"], self._subject_id),
+        )
         db.execute(
             "UPDATE evidence SET deleted_at = ?, origin_id = NULL "
             "WHERE id = ? AND subject_id = ? AND deleted_at IS NULL",
@@ -556,7 +578,7 @@ class CommandService:
             raise AssertionError("Trust Command correction must not call a model")
 
         return HermesBatchAdapterProcessor(
-            str(self._db_path), no_model, clock=self._clock
+            str(self._db_path), no_model, clock=self._clock, model_tier="local"
         )
 
     def _correct(

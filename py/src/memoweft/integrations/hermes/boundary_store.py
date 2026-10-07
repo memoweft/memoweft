@@ -84,6 +84,10 @@ class BoundaryEvidenceConflictError(RuntimeError):
     """An existing Evidence origin disagrees with the boundary candidate."""
 
 
+class BoundaryHardDeletedSourceError(BoundaryEvidenceConflictError):
+    """An origin-only tombstone permanently forbids this source's ingestion."""
+
+
 @dataclass(frozen=True, slots=True)
 class HermesBoundaryFormalTarget:
     """Compiler-owned destination of one committed Hermes boundary."""
@@ -351,6 +355,12 @@ class HermesBoundaryStore:
                 "Hermes boundary caller-owned transaction is required"
             )
         _validate_boundary(boundary)
+        for candidate in boundary.evidence:
+            if self._db.execute(
+                "SELECT 1 FROM hard_deleted_origin WHERE origin_hash = ?",
+                (_sha256_text(candidate.origin_id),),
+            ).fetchone():
+                raise BoundaryHardDeletedSourceError("hard_deleted_source")
         formal_target_json = _canonical_json(
             _formal_target_data(boundary.formal_target)
         )
@@ -826,6 +836,7 @@ class HermesBoundaryStore:
 
 __all__ = [
     "BoundaryEvidenceConflictError",
+    "BoundaryHardDeletedSourceError",
     "BoundaryReceiptIntegrityError",
     "BoundaryReplayMismatchError",
     "BoundaryStoreInputError",

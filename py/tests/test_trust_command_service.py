@@ -14,6 +14,7 @@ import pytest
 from memoweft.integrations.trust import QueryService
 from memoweft.integrations.trust.command_service import CommandService
 from memoweft.integrations.trust.command_store import TrustCommandError
+from memoweft.integrations.trust.portable_service import PortableService
 from memoweft.integrations.trust.currentness import evidence_state
 from memoweft.integrations.hermes.batch_adapter import owner_entity_id_for
 from memoweft.portable.builder import build_bundle
@@ -206,7 +207,7 @@ def test_fresh_and_v16_migrated_databases_have_one_current_command_shape(
 ) -> None:
     fresh_path = tmp_path / "fresh.sqlite3"
     with _open(fresh_path) as fresh:
-        assert user_version(fresh) == SCHEMA_VERSION == 19
+        assert user_version(fresh) == SCHEMA_VERSION == 20
         assert application_id(fresh) == PYTHON_APPLICATION_ID
         fresh_shapes = {
             table: tuple(
@@ -490,6 +491,213 @@ def test_forget_preserves_evidence_audit_but_removes_current_world_and_recall(
         assert tuple(audit) == ("用户喜欢喝咖啡", "用户喜欢喝咖啡", _T0)
 
 
+def test_delete_evidence_clears_source_world_and_portable_replay(tmp_path: Path) -> None:
+    path = tmp_path / "delete.sqlite3"
+    with _open(path) as db:
+        _seed_cognition(db)
+        db.execute("UPDATE cognition SET cred_status = 'stable' WHERE id = 'cog-coffee'")
+        db.execute("UPDATE evidence SET origin_id = 'source:coffee', "
+                   "preceding_ai_context = 'private context' WHERE id = 'e-coffee'")
+        db.execute("INSERT INTO semantic_resolution (id, evidence_id, resolved_content, "
+                   "resolver_version, created_at) VALUES ('res-coffee', 'e-coffee', "
+                   "'resolved private content', 'test', ?)", (_T0,))
+        db.execute("INSERT INTO proposals (id, kind, base_revision, result_hash, "
+                   "payload_json, review_payload_json, status) VALUES "
+                   "('p-private', 'test', 1, 'hash', ?, NULL, 'pending')",
+                   (json.dumps({"evidence_id": "e-coffee", "content": "derived private"}),))
+        db.execute("INSERT INTO trust_command (command_id, schema_version, subject_id, "
+                   "actor, expected_world_revision, operation, target_kind, target_id, "
+                   "payload_json, request_hash, submitted_at) VALUES "
+                   "('historical-private', 1, ?, 'owner', 0, 'correct_world_item', "
+                   "'evidence', 'e-coffee', ?, 'hash', ?)",
+                   (_SUBJECT, json.dumps({"content": "derived private"}), _T0))
+        _seed_revision(db)
+        old_bundle = build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0)
+    service = _service(path)
+    receipt = service.submit_command(
+        _command("delete-evidence", 1, "delete_evidence", "evidence", "e-coffee")
+    )
+    assert receipt["result_state"] == "applied"
+    assert "用户喜欢喝咖啡" not in json.dumps(receipt, ensure_ascii=False)
+    with _open(path) as db:
+        row = db.execute("SELECT raw_content, summary, preceding_ai_context, "
+                         "origin_id, deleted_at FROM evidence WHERE id = 'e-coffee'").fetchone()
+        assert tuple(row[:4]) == ("", "", None, None)
+        assert row[4] is not None
+        for table in ("cognition", "cognition_evidence", "semantic_resolution", "boundary_evidence_content"):
+            assert db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == 0
+        assert db.execute("SELECT COUNT(*) FROM proposals").fetchone()[0] == 0
+        assert db.execute("SELECT payload_json FROM trust_command WHERE command_id='historical-private'").fetchone()[0] == "{}"
+        new_bundle = build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0)
+        assert "用户喜欢喝咖啡" not in json.dumps(new_bundle, ensure_ascii=False)
+    restarted = PortableService(path, subject_id=_SUBJECT, host_id=_HOST, clock=_clock)
+    assert restarted.plan_import(old_bundle)["valid"] is False
+    assert restarted.plan_import(old_bundle)["errors"] == ["hard_deleted_source"]
+    assert _service(path).get_command_receipt("delete-evidence") == receipt
+    assert _service(path).submit_command(
+        _command("delete-evidence-again", 2, "delete_evidence", "evidence", "e-coffee")
+    )["result_state"] == "no_change"
+
+
+def test_delete_world_item_exclusive_source_and_rejection_reasons(tmp_path: Path) -> None:
+    path = tmp_path / "delete-world.sqlite3"
+    with _open(path) as db:
+        _seed_cognition(db)
+        _seed_revision(db)
+        old_bundle = build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0)
+    receipt = _service(path).submit_command(
+        _command("delete-world", 1, "delete_world_item", "cognition", "cog-coffee")
+    )
+    assert receipt["result_state"] == "applied"
+    assert receipt["affected_ids"] == ["cog-coffee", "e-coffee"]
+    with _open(path) as db:
+        assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 0
+        assert db.execute("SELECT 1 FROM world_delete_marker WHERE item_id = 'cog-coffee'").fetchone()
+    portable = PortableService(path, subject_id=_SUBJECT, host_id=_HOST, clock=_clock)
+    assert portable.plan_import(old_bundle)["valid"] is False
+    assert _service(path).get_command_receipt("delete-world") == receipt
+
+
+def test_delete_world_item_shared_or_untracked_source_is_atomic_rejection(tmp_path: Path) -> None:
+    path = tmp_path / "shared.sqlite3"
+    with _open(path) as db:
+        _seed_cognition(db)
+        db.execute("INSERT INTO cognition (id, subject_id, content, content_type, formed_by, "
+                   "confidence, cred_status, created_at, updated_at) VALUES "
+                   "('cog-shared', ?, 'other understanding', 'preference', 'stated', "
+                   "800, 'trusted', ?, ?)", (_SUBJECT, _T0, _T0))
+        db.execute("INSERT INTO cognition_evidence VALUES ('cog-shared', 'e-coffee', 'support')")
+        db.execute("INSERT INTO cognition (id, subject_id, content, content_type, formed_by, "
+                   "confidence, cred_status, created_at, updated_at) VALUES "
+                   "('cog-untracked', ?, 'untracked', 'preference', 'stated', "
+                   "800, 'trusted', ?, ?)", (_SUBJECT, _T0, _T0))
+        _seed_revision(db)
+    shared = _service(path).submit_command(
+        _command("delete-shared", 1, "delete_world_item", "cognition", "cog-coffee")
+    )
+    assert shared["result_state"] == "rejected"
+    assert shared["rejection_code"] == "source_evidence_shared"
+    unknown = _service(path).submit_command(
+        _command("delete-untracked", 1, "delete_world_item", "cognition", "cog-untracked")
+    )
+    assert unknown["result_state"] == "rejected"
+    assert unknown["rejection_code"] == "source_provenance_missing"
+    assert _service(path).get_command_receipt("delete-shared") == shared
+    with _open(path) as db:
+        assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 3
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='e-coffee'").fetchone()[0] == "用户喜欢喝咖啡"
+
+
+def test_delete_storage_status_tracks_busy_wal_and_retry(tmp_path: Path) -> None:
+    path = tmp_path / "delete-wal.sqlite3"
+    with _open(path) as db:
+        assert db.execute("PRAGMA journal_mode=WAL").fetchone()[0] == "wal"
+        _seed_cognition(db)
+        _seed_revision(db)
+    reader = sqlite3.connect(path, isolation_level=None)
+    try:
+        reader.execute("BEGIN")
+        assert reader.execute("SELECT raw_content FROM evidence WHERE id='e-coffee'").fetchone()
+        receipt = _service(path).submit_command(
+            _command("delete-wal", 1, "delete_evidence", "evidence", "e-coffee")
+        )
+        assert receipt["storage_cleanup"]["state"] == "pending"
+        assert _service(path).get_command_receipt("delete-wal")["storage_cleanup"]["state"] == "pending"
+    finally:
+        reader.execute("ROLLBACK")
+        reader.close()
+    retried = _service(path).retry_delete_storage_cleanup("delete-wal")
+    assert retried["storage_cleanup"] == {
+        "state": "complete", "detail_code": "current_wal_truncated"
+    }
+
+
+def test_soft_forget_then_hard_delete_retains_only_hashed_origin(tmp_path: Path) -> None:
+    path = tmp_path / "forget-then-delete.sqlite3"
+    with _open(path) as db:
+        _seed_cognition(db)
+        db.execute("UPDATE evidence SET origin_id = 'source:coffee' WHERE id = 'e-coffee'")
+        _seed_revision(db)
+    assert _service(path).submit_command(
+        _command("soft", 1, "forget_evidence", "evidence", "e-coffee")
+    )["result_state"] == "applied"
+    with _open(path) as db:
+        assert db.execute("SELECT origin_id FROM evidence WHERE id='e-coffee'").fetchone()[0] is None
+        assert db.execute("SELECT origin_id FROM evidence_origin_history WHERE evidence_id='e-coffee'").fetchone()[0] == "source:coffee"
+    assert _service(path).submit_command(
+        _command("hard", 2, "delete_evidence", "evidence", "e-coffee")
+    )["result_state"] == "applied"
+    with _open(path) as db:
+        assert db.execute("SELECT origin_id FROM evidence WHERE id='e-coffee'").fetchone()[0] is None
+        assert db.execute("SELECT COUNT(*) FROM evidence_origin_history").fetchone()[0] == 0
+        assert db.execute("SELECT origin_hash FROM hard_deleted_origin").fetchone()[0] == sha256(b"source:coffee").hexdigest()
+
+
+def test_historical_soft_delete_without_origin_rejects_hard_delete(tmp_path: Path) -> None:
+    path = tmp_path / "legacy-soft.sqlite3"
+    with _open(path) as db:
+        _seed_cognition(db)
+        db.execute("UPDATE evidence SET deleted_at = ?, origin_id = NULL WHERE id = 'e-coffee'", (_T0,))
+        _seed_revision(db)
+    receipt = _service(path).submit_command(
+        _command("legacy-hard", 1, "delete_evidence", "evidence", "e-coffee")
+    )
+    assert receipt["result_state"] == "rejected"
+    assert receipt["rejection_code"] == "source_origin_unrecoverable"
+    with _open(path) as db:
+        assert db.execute("SELECT raw_content FROM evidence WHERE id = 'e-coffee'").fetchone()[0] == "用户喜欢喝咖啡"
+
+
+def test_delete_world_item_second_source_rejection_rolls_back_first(tmp_path: Path) -> None:
+    path = tmp_path / "world-second-source-reject.sqlite3"
+    with _open(path) as db:
+        _seed_cognition(db)
+        _seed_evidence(db, "z-legacy", "另一条来源")
+        db.execute("INSERT INTO cognition_evidence VALUES ('cog-coffee', 'z-legacy', 'support')")
+        db.execute("UPDATE evidence SET deleted_at = ?, origin_id = NULL WHERE id = 'z-legacy'", (_T0,))
+        _seed_revision(db)
+    receipt = _service(path).submit_command(
+        _command("delete-world-second-reject", 1, "delete_world_item", "cognition", "cog-coffee")
+    )
+    assert receipt["result_state"] == "rejected"
+    assert receipt["rejection_code"] == "source_origin_unrecoverable"
+    assert receipt["affected_ids"] == []
+    with _open(path) as db:
+        assert db.execute("SELECT revision FROM memory_state").fetchone()[0] == 1
+        assert db.execute("SELECT raw_content, deleted_at FROM evidence WHERE id='e-coffee'").fetchone()[:] == ("用户喜欢喝咖啡", None)
+        assert db.execute("SELECT content FROM cognition WHERE id='cog-coffee'").fetchone()[0] == "用户喜欢喝咖啡"
+        assert db.execute("SELECT COUNT(*) FROM cognition_evidence WHERE cognition_id='cog-coffee'").fetchone()[0] == 2
+        assert db.execute("SELECT COUNT(*) FROM world_delete_marker").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize(
+    ("raw", "summary", "expected_code"),
+    [("用户喜欢喝咖啡", "用户喜欢喝咖啡", "source_origin_unrecoverable"),
+     ("", "", "source_already_deleted")],
+)
+def test_delete_world_item_single_source_rejection_never_reports_applied(
+    tmp_path: Path, raw: str, summary: str, expected_code: str
+) -> None:
+    path = tmp_path / f"world-single-{expected_code}.sqlite3"
+    with _open(path) as db:
+        _seed_cognition(db)
+        db.execute(
+            "UPDATE evidence SET deleted_at = ?, origin_id = NULL, raw_content = ?, summary = ? "
+            "WHERE id = 'e-coffee'", (_T0, raw, summary),
+        )
+        _seed_revision(db)
+    receipt = _service(path).submit_command(
+        _command("delete-world-single-reject", 1, "delete_world_item", "cognition", "cog-coffee")
+    )
+    assert receipt["result_state"] == "rejected"
+    assert receipt["rejection_code"] == expected_code
+    with _open(path) as db:
+        assert db.execute("SELECT revision FROM memory_state").fetchone()[0] == 1
+        assert db.execute("SELECT raw_content, summary FROM evidence WHERE id='e-coffee'").fetchone()[:] == (raw, summary)
+        assert db.execute("SELECT content FROM cognition WHERE id='cog-coffee'").fetchone()[0] == "用户喜欢喝咖啡"
+        assert db.execute("SELECT COUNT(*) FROM world_delete_marker").fetchone()[0] == 0
+
+
 @pytest.mark.parametrize("operation,column", [("archive_world_item", "archived_at"), ("mute_world_item", "muted_at")])
 def test_archive_and_mute_share_cross_kind_lifecycle_authority(
     tmp_path: Path, operation: str, column: str
@@ -533,7 +741,45 @@ def test_archive_and_mute_share_cross_kind_lifecycle_authority(
             (_SUBJECT,),
         ).fetchall()
         assert len(rows) == 4
-        assert all(row[1] == _T0 for row in rows)
+    assert all(row[1] == _T0 for row in rows)
+
+
+def test_local_only_correction_applies_without_cloud_permission_or_model_call(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "local-only-correction.sqlite3"
+    with _open(path) as db:
+        _seed_cognition(db)
+        _seed_revision(db)
+
+    correction_text = "用户出门时习惯带一把蓝色雨伞。"
+    receipt = _service(path).submit_command(
+        _command(
+            "cmd-local-only-correct",
+            1,
+            "correct_world_item",
+            "cognition",
+            "cog-coffee",
+            {"correction_text": correction_text, "allow_cloud_read": False},
+        )
+    )
+
+    assert receipt["result_state"] == "applied"
+    assert receipt["before_revision"] == 1
+    assert receipt["after_revision"] == 2
+    replacement_id = str(receipt["affected_ids"][1])
+    correction_evidence_id = str(receipt["affected_ids"][2])
+    query = QueryService(path, subject_id=_SUBJECT)
+    assert query.get_world_item("cognition", replacement_id)["item"]["value"][
+        "content"
+    ] == correction_text
+    evidence = query.get_evidence(correction_evidence_id)["evidence"]
+    assert evidence["permissions"] == {
+        "allow_local_read": True,
+        "allow_cloud_read": False,
+        "allow_inference": True,
+    }
+    assert evidence["raw_content"] == correction_text
 
 
 def test_correction_and_retract_use_exact_evidence_formal_history_and_zero_replay(

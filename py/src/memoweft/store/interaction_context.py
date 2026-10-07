@@ -18,9 +18,17 @@ from ..types import InteractionContext, InteractionContextInput, VisibleTurn
 from ._rows import row_all, row_one
 
 
-def _turns_to_payload(context: list[VisibleTurn]) -> list[dict[str, str]]:
+def _turns_to_payload(context: list[VisibleTurn]) -> list[dict[str, object]]:
     # 字段序 role,content —— 对齐 JS VisibleTurn 的插入序,保证 JSON 字节一致。
-    return [{"role": t.role, "content": t.content} for t in context]
+    payload: list[dict[str, object]] = []
+    for turn in context:
+        item: dict[str, object] = {"role": turn.role, "content": turn.content}
+        for key in ("source_ref", "message_id", "timestamp", "model_context_dependencies"):
+            value = getattr(turn, key)
+            if value is not None:
+                item[key] = value
+        payload.append(item)
+    return payload
 
 
 def _context_to_json(context: list[VisibleTurn]) -> str:
@@ -30,7 +38,17 @@ def _context_to_json(context: list[VisibleTurn]) -> str:
 
 
 def _context_from_json(s: str) -> list[VisibleTurn]:
-    return [VisibleTurn(role=t["role"], content=t["content"]) for t in json.loads(s)]
+    return [
+        VisibleTurn(
+            role=t["role"],
+            content=t["content"],
+            source_ref=t.get("source_ref"),
+            message_id=t.get("message_id"),
+            timestamp=t.get("timestamp"),
+            model_context_dependencies=t.get("model_context_dependencies"),
+        )
+        for t in json.loads(s)
+    ]
 
 
 def _from_row(r: sqlite3.Row) -> InteractionContext:
@@ -64,6 +82,38 @@ class SqliteInteractionContextStore:
         )
         if existing is not None:
             return _from_row(existing)
+        # A legacy boundary can be replayed after its assistant turn has been
+        # causally linked.  The link intentionally changes context_hash; do not
+        # let the old unlinked replay create a second interaction row.
+        if all(turn.model_context_dependencies is None for turn in inp.context):
+            prior_rows = row_all(
+                self._db,
+                "SELECT * FROM interaction_context WHERE subject_id = ? "
+                "AND conversation_id = ? AND episode_id = ? ORDER BY rowid ASC",
+                (inp.subject_id, inp.conversation_id, inp.episode_id),
+            )
+            for prior_row in prior_rows:
+                prior = _from_row(prior_row)
+                if len(prior.context) != len(inp.context):
+                    continue
+                if all(
+                    (
+                        left.role,
+                        left.content,
+                        left.source_ref,
+                        left.message_id,
+                        left.timestamp,
+                    )
+                    == (
+                        right.role,
+                        right.content,
+                        right.source_ref,
+                        right.message_id,
+                        right.timestamp,
+                    )
+                    for left, right in zip(prior.context, inp.context)
+                ):
+                    return prior
         ctx = InteractionContext(
             id=str(uuid.uuid4()),
             subject_id=inp.subject_id,
@@ -119,6 +169,123 @@ class SqliteInteractionContextStore:
 
     def insert(self, ctx: InteractionContext) -> None:
         self._insert_row(ctx)
+
+    def link_dependencies(
+        self,
+        *,
+        subject_id: str,
+        conversation_id: str,
+        user_message_id: str,
+        assistant_message_id: str,
+        expected_context_hash: str,
+        dependencies: dict[str, object],
+    ) -> tuple[str, str, str, str]:
+        """CAS-link one exact user/assistant pair without changing its text.
+
+        Returns ``(state, interaction_id, old_hash, current_hash)``.  Repeating
+        the original request after a successful link is idempotent when the
+        same dependency DTO is supplied; a different DTO always conflicts.
+        """
+
+        rows = row_all(
+            self._db,
+            "SELECT * FROM interaction_context WHERE subject_id = ? "
+            "AND conversation_id = ? ORDER BY created_at ASC, rowid ASC",
+            (subject_id, conversation_id),
+        )
+        candidates: list[tuple[InteractionContext, int]] = []
+        for row in rows:
+            context = _from_row(row)
+            user_matches = [
+                turn
+                for turn in context.context
+                if turn.role == "user" and turn.message_id == user_message_id
+            ]
+            assistant_matches = [
+                index
+                for index, turn in enumerate(context.context)
+                if turn.role == "assistant"
+                and turn.message_id == assistant_message_id
+            ]
+            if len(user_matches) == 1 and len(assistant_matches) == 1:
+                candidates.append((context, assistant_matches[0]))
+        if not candidates:
+            return "not_found", "", "", ""
+
+        exact: list[tuple[InteractionContext, int]] = []
+        for context, index in candidates:
+            turn = context.context[index]
+            if context.context_hash == expected_context_hash:
+                exact.append((context, index))
+                continue
+            if turn.model_context_dependencies == dependencies:
+                unlinked = list(context.context)
+                unlinked[index] = VisibleTurn(
+                    role=turn.role,
+                    content=turn.content,
+                    source_ref=turn.source_ref,
+                    message_id=turn.message_id,
+                    timestamp=turn.timestamp,
+                    model_context_dependencies=None,
+                )
+                if hash_context(unlinked) == expected_context_hash:
+                    exact.append((context, index))
+        if len(exact) != 1:
+            context = candidates[0][0]
+            return (
+                "conflict",
+                context.id,
+                context.context_hash,
+                context.context_hash,
+            )
+
+        current, index = exact[0]
+        prior = current.context[index]
+        if prior.model_context_dependencies == dependencies:
+            return (
+                "no_change",
+                current.id,
+                expected_context_hash,
+                current.context_hash,
+            )
+        if prior.model_context_dependencies is not None:
+            return (
+                "conflict",
+                current.id,
+                current.context_hash,
+                current.context_hash,
+            )
+
+        turns = list(current.context)
+        turns[index] = VisibleTurn(
+            role=prior.role,
+            content=prior.content,
+            source_ref=prior.source_ref,
+            message_id=prior.message_id,
+            timestamp=prior.timestamp,
+            model_context_dependencies=dependencies,
+        )
+        next_hash = hash_context(turns)
+        cursor = self._db.execute(
+            "UPDATE interaction_context SET context_json = ?, context_hash = ? "
+            "WHERE id = ? AND subject_id = ? AND conversation_id = ? "
+            "AND context_hash = ?",
+            (
+                _context_to_json(turns),
+                next_hash,
+                current.id,
+                subject_id,
+                conversation_id,
+                expected_context_hash,
+            ),
+        )
+        if cursor.rowcount != 1:
+            refreshed = self.get(current.id)
+            refreshed_hash = (
+                refreshed.context_hash if refreshed is not None else current.context_hash
+            )
+            return "conflict", current.id, refreshed_hash, refreshed_hash
+        return "applied", current.id, current.context_hash, next_hash
 
     def remove_by_subject(self, subject_id: str) -> int:
         cur = self._db.cursor()

@@ -13,6 +13,7 @@ from memoweft.integrations.hermes.batch_adapter import (
     HermesBatchAdapterProcessor,
 )
 from memoweft.integrations.hermes.recall import (
+    _match_world_rows,
     format_recall,
     match_cognitions,
 )
@@ -21,6 +22,27 @@ from memoweft.integrations.hermes.world_worker import WorldJobWorker
 from test_hermes_world_worker import MutableClock, _job, _policy
 
 _RAW = "用户平时更喜欢冰美式。"
+
+
+def test_named_person_recall_does_not_mix_owner_or_other_person_preferences() -> None:
+    rows = [
+        {"kind": "cognition", "id": "owner", "content": "用户喜欢阅读", "confidence": 600, "anchors": ()},
+        {"kind": "cognition", "id": "yan", "content": "彦：他喜欢阅读", "confidence": 600, "anchors": ("彦",)},
+        {"kind": "cognition", "id": "ning", "content": "宁：她喜欢阅读", "confidence": 600, "anchors": ("宁",)},
+    ]
+    assert [item["id"] for item in _match_world_rows("你猜彦现在喜欢什么？", rows)] == ["yan"]
+    assert {item["id"] for item in _match_world_rows("彦和宁喜欢什么？", rows)} == {"yan", "ning"}
+
+
+def test_person_recall_keeps_identity_and_other_current_facts_beyond_literal_overlap() -> None:
+    rows = [
+        {"kind": "cognition", "id": "identity", "statement_kind": "naming", "content": "用户在大学认识的朋友叫彦", "confidence": 600, "anchors": ("彦",)},
+        {"kind": "cognition", "id": "changed", "content": "彦：他现在不喜欢阅读了", "confidence": 600, "anchors": ("彦",)},
+        {"kind": "cognition", "id": "positive", "content": "彦：他也很喜欢周末和朋友们慢慢拼完一幅大型拼图", "confidence": 600, "anchors": ("彦",)},
+    ]
+    found = _match_world_rows("你猜彦现在喜欢什么？", rows)
+    assert found[0]["id"] == "identity"
+    assert {item["id"] for item in found} == {"identity", "changed", "positive"}
 
 
 def _route(payload: dict[str, Any]) -> Callable[..., dict[str, object]]:
@@ -135,6 +157,23 @@ def test_match_cognitions_is_deterministic_and_thresholded() -> None:
     assert first == second
     # Unrelated query: below threshold, nothing leaks.
     assert match_cognitions("今天天气如何", rows) == []
+
+
+def test_long_chinese_question_recalls_modified_object_without_topic_leakage() -> None:
+    rows = [
+        {"kind": "cognition", "id": "cup", "content": "用户喜欢合成蓝色茶杯", "confidence": 600, "anchors": ()},
+        {"kind": "cognition", "id": "book", "content": "用户喜欢合成红色书本", "confidence": 600, "anchors": ()},
+        {"kind": "cognition", "id": "plate", "content": "用户喜欢绿色茶盘", "confidence": 600, "anchors": ()},
+    ]
+    query = (
+        "请从本次会话可用的账户记忆中找出我喜欢的合成茶杯颜色，"
+        "只回答颜色的两个汉字；若没有相关记忆，只回答未知。不调用工具。"
+    )
+    assert [item["id"] for item in _match_world_rows(query, rows)] == ["cup"]
+    assert [item["id"] for item in match_cognitions(query, rows)] == ["cup"]
+    unrelated = query.replace("合成茶杯", "合成花瓶")
+    assert _match_world_rows(unrelated, rows) == []
+    assert match_cognitions(unrelated, rows) == []
 
 
 def test_match_cognitions_uses_explicit_natural_language_cues_without_long_query_dilution() -> None:
@@ -341,5 +380,49 @@ def test_prefetch_recalls_world_events(tmp_path: Path) -> None:
         assert runtime.last_recall_count == 1
         # Unrelated query: no event leak.
         assert runtime.prefetch("今天天气如何", session_id="sess") == ""
+    finally:
+        runtime.shutdown()
+
+def test_relationship_particle_and_relation_type_recall(tmp_path: Path) -> None:
+    import sqlite3
+    runtime = HermesMemoWeftRuntime()
+    runtime.initialize(
+        "sess",
+        hermes_home=str(tmp_path),
+        platform="cli",
+        agent_context="primary",
+    )
+    try:
+        db_path = tmp_path / "memoweft" / "memoweft.sqlite3"
+        subject = str(runtime._ingestor.subject_id)
+        db = sqlite3.connect(db_path)
+        db.execute(
+            "INSERT INTO relationship (id, world_id, source_entity_id, target_entity_id, "
+            "relation_type, content, formed_by, confidence, cred_status, invalid_at, created_at, updated_at) "
+            "VALUES ('rel-1', ?, 'ent-user', 'ent-xw', 'girlfriend', '用户刚和小王在一起了', 'stated', 600, 'limited', NULL, 't', 't')",
+            (subject,),
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO evidence (id, subject_id, source_kind, host_id, "
+            "occurred_at, recorded_at, raw_content, summary, allow_local_read, "
+            "allow_cloud_read, allow_inference) VALUES "
+            "('ev-rel', ?, 'spoken', 'hermes:test', 't', 't', "
+            "'我和小王在一起了', '用户和小王在一起了', 1, 1, 1)",
+            (subject,),
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO relationship_evidence "
+            "(relationship_id, evidence_id, relation) VALUES ('rel-1', 'ev-rel', 'support')"
+        )
+        db.commit()
+        db.close()
+
+        # Query using particle suffix & question form:
+        text1 = runtime.prefetch("我脱单了吗", session_id="sess")
+        assert "小王" in text1
+
+        # Query using relation synonym ("女朋友"):
+        text2 = runtime.prefetch("你猜我有没有女朋友", session_id="sess")
+        assert "小王" in text2
     finally:
         runtime.shutdown()

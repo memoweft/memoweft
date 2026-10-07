@@ -15,6 +15,7 @@ import pytest
 import memoweft.integrations.hermes.boundary_store as boundary_store_module
 from memoweft.integrations.hermes.boundary_store import (
     BoundaryEvidenceConflictError,
+    BoundaryHardDeletedSourceError,
     BoundaryReceiptIntegrityError,
     BoundaryReplayMismatchError,
     BoundaryStoreInputError,
@@ -24,6 +25,7 @@ from memoweft.integrations.hermes.boundary_store import (
     ValidatedHermesBoundary,
 )
 from memoweft.store import SqliteEvidenceStore, open_db
+from memoweft.integrations.trust.command_service import CommandService
 from memoweft.types import EvidenceInput
 
 
@@ -131,6 +133,38 @@ def _job(db: sqlite3.Connection, event_id: str = "boundary-event-1") -> sqlite3.
     ).fetchone()
     assert row is not None
     return cast(sqlite3.Row, row)
+
+
+def test_hard_delete_fences_queued_job_and_boundary_replay_after_restart(tmp_path: Path) -> None:
+    path = tmp_path / "hard-delete-boundary.sqlite3"
+    boundary = _boundary(_candidate("private", raw_content="private memory"))
+    db = open_db(str(path))
+    try:
+        HermesBoundaryStore(db, clock=_clock).accept(boundary)
+        evidence_id = db.execute("SELECT id FROM evidence").fetchone()[0]
+    finally:
+        db.close()
+    command = {
+        "schema_version": 1, "command_id": "hard-delete-boundary",
+        "subject_id": "owner", "actor": "owner", "expected_world_revision": 0,
+        "operation": "delete_evidence", "target_kind": "evidence",
+        "target_id": evidence_id, "payload": {}, "submitted_at": _NOW_ISO,
+    }
+    receipt = CommandService(path, subject_id="owner", host_id="hermes:weixin", clock=_clock).submit_command(command)
+    assert receipt["result_state"] == "applied"
+    db = open_db(str(path))
+    try:
+        assert db.execute("SELECT COUNT(*) FROM memory_world_job").fetchone()[0] == 0
+        assert db.execute("SELECT raw_content FROM evidence WHERE id = ?", (evidence_id,)).fetchone()[0] == ""
+        with pytest.raises(BoundaryHardDeletedSourceError):
+            HermesBoundaryStore(db, clock=_clock).accept(boundary)
+        with pytest.raises(BoundaryHardDeletedSourceError):
+            HermesBoundaryStore(db, clock=_clock).accept(
+                _boundary(_candidate("private", raw_content="private memory"), event_id="boundary-event-2")
+            )
+        assert db.execute("SELECT COUNT(*) FROM memory_world_job").fetchone()[0] == 0
+    finally:
+        db.close()
 
 
 def test_boundary_accept_atomically_persists_multi_evidence_job_and_receipt(
@@ -488,10 +522,11 @@ def test_origin_content_or_critical_metadata_conflict_rolls_back_entire_batch(
             host_id="hermes:cli" if conflict == "host_id" else "hermes:weixin"
         )
 
-        with pytest.raises(BoundaryEvidenceConflictError):
+        with pytest.raises(BoundaryEvidenceConflictError) as conflict_error:
             HermesBoundaryStore(db, clock=_clock).accept(
                 _boundary(_candidate("new-first"), candidate, target=target)
             )
+        assert type(conflict_error.value) is BoundaryEvidenceConflictError
 
         assert _counts(db) == (1, 0)
         rows = db.execute(

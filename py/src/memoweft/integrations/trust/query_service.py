@@ -385,17 +385,20 @@ class QueryService:
             }
 
     def get_world_item_provenance(
-        self, object_kind: TrustWorldItemKind, item_id: str
+        self, object_kind: TrustWorldItemKind, item_id: str, *, projection: str = "history"
     ) -> dict[str, object]:
+        if projection not in {"history", "model"}:
+            raise TrustQueryError("invalid_provenance_projection")
         kind = self._kind(object_kind)
         item_id = self._identifier(item_id, "invalid_item_id")
         with self._read() as read:
             self._require_item_exists(read.db, kind, item_id)
-            provenance = self._provenance(read.db, read.world_revision, kind, item_id)
+            provenance = self._provenance(read.db, read.world_revision, kind, item_id, projection=projection)
             return {
                 **self._base(read.world_revision),
                 "object_kind": kind,
                 "item_id": item_id,
+                "projection": projection,
                 "provenance": provenance,
                 "transition_history": self._transitions(read.db, kind, item_id),
             }
@@ -695,42 +698,60 @@ class QueryService:
     def _direct_evidence_relations(
         self, db: sqlite3.Connection, kind: TrustWorldItemKind, item_id: str
     ) -> tuple[tuple[str, str], ...]:
+        relations: set[tuple[str, str]] = set()
         if kind == "cognition":
             rows = db.execute(
                 "SELECT evidence_id, relation FROM cognition_evidence "
                 "WHERE cognition_id = ? ORDER BY evidence_id, relation",
                 (item_id,),
             ).fetchall()
-            return tuple((str(row[0]), str(row[1])) for row in rows)
-        if kind == "relationship":
+            relations.update((str(row[0]), str(row[1])) for row in rows)
+        elif kind == "relationship":
             rows = db.execute(
                 "SELECT evidence_id, relation FROM relationship_evidence "
                 "WHERE relationship_id = ? ORDER BY evidence_id, relation",
                 (item_id,),
             ).fetchall()
-            return tuple((str(row[0]), str(row[1])) for row in rows)
-        if kind == "event":
+            relations.update((str(row[0]), str(row[1])) for row in rows)
+        elif kind == "event":
             rows = db.execute(
                 "SELECT evidence_id, relation FROM world_event_evidence "
                 "WHERE world_event_id = ? ORDER BY evidence_id, relation",
                 (item_id,),
             ).fetchall()
-            return tuple((str(row[0]), str(row[1])) for row in rows)
-        relations: set[tuple[str, str]] = set()
+            relations.update((str(row[0]), str(row[1])) for row in rows)
         for _ledger_id, content, payload in db.execute(
             "SELECT id, content, payload_json FROM evidence_ledger ORDER BY id"
         ).fetchall():
             data = _json_mapping(content)
             payload_data = _json_mapping(payload)
-            if data.get("entity_id") == item_id and isinstance(
+            if kind == "entity" and data.get("entity_id") == item_id and isinstance(
                 data.get("evidence_id"), str
             ):
                 relations.add((str(data["evidence_id"]), str(data.get("relation") or "support")))
-            if data.get("canonical_entity_id") == item_id:
+            if kind == "entity" and data.get("canonical_entity_id") == item_id:
                 evidence_ids = payload_data.get("evidence_ids")
                 if isinstance(evidence_ids, list):
                     relations.update(
                         (str(evidence_id), str(data.get("relation") or "alias"))
+                        for evidence_id in evidence_ids
+                        if isinstance(evidence_id, str)
+                    )
+            prior_key = {
+                "cognition": "prior_cognition_id",
+                "relationship": "prior_relationship_id",
+                "event": "prior_event_id",
+                "entity": None,
+            }[kind]
+            if (
+                prior_key is not None
+                and data.get("relation") == "retracts"
+                and data.get(prior_key) == item_id
+            ):
+                evidence_ids = payload_data.get("evidence_ids")
+                if isinstance(evidence_ids, list):
+                    relations.update(
+                        (str(evidence_id), "retracts")
                         for evidence_id in evidence_ids
                         if isinstance(evidence_id, str)
                     )
@@ -742,6 +763,8 @@ class QueryService:
         revision: int,
         kind: TrustWorldItemKind,
         item_id: str,
+        *,
+        projection: str = "history",
     ) -> list[ProvenanceV1]:
         result: list[ProvenanceV1] = []
         for evidence_id, relation in self._direct_evidence_relations(db, kind, item_id):
@@ -766,6 +789,22 @@ class QueryService:
                 )
                 continue
             evidence = self._evidence(revision, row)
+            linked_items, overflow = self._linked_world_items_for_evidence(db, evidence_id)
+            denial: str | None = None
+            if overflow:
+                denial = "linked_world_items_overflow"
+            elif relation != "support" or any(item["relation"] != "support" for item in linked_items):
+                denial = "non_support_relation"
+            elif not world_item_visible(db, self._subject_id, kind, item_id, surface="recall"):
+                denial = "target_not_current"
+            elif int(row["allow_local_read"]) != 1 or int(row["allow_inference"]) != 1 or row["deleted_at"] is not None:
+                denial = "evidence_not_model_readable"
+            elif not any(item["object_kind"] == kind and item["item_id"] == item_id and item["relation"] == "support" for item in linked_items):
+                denial = "provenance_reverse_link_missing"
+            elif any(item["current_state"] != "current" for item in linked_items):
+                denial = "mixed_world_currentness"
+            if projection == "model" and denial is not None:
+                evidence = {**evidence, "raw_content": None, "summary": None, "content_available": False}
             result.append(
                 {
                     "evidence_id": evidence_id,
@@ -773,9 +812,64 @@ class QueryService:
                     "currentness_state": evidence["currentness_state"],
                     "permissions": evidence["permissions"],
                     "evidence": evidence,
+                    "linked_world_items": linked_items,
+                    "model_content_available": denial is None,
+                    "model_denial_reason": denial,
                 }
             )
         return sorted(result, key=lambda value: (value["evidence_id"], value["relation"]))
+
+    def _linked_world_items_for_evidence(
+        self, db: sqlite3.Connection, evidence_id: str
+    ) -> tuple[list[dict[str, object]], bool]:
+        relations: set[tuple[str, str, str]] = set()
+        def belongs(kind: str, linked_item_id: str) -> bool:
+            table, subject_column = {
+                "entity": ("entity", "world_id"),
+                "cognition": ("cognition", "subject_id"),
+                "relationship": ("relationship", "world_id"),
+                "event": ("world_event", "world_id"),
+            }[kind]
+            return db.execute(f"SELECT 1 FROM {table} WHERE id = ? AND {subject_column} = ?", (linked_item_id, self._subject_id)).fetchone() is not None
+        for kind, table, link_table, item_column, subject_column in (
+            ("cognition", "cognition", "cognition_evidence", "cognition_id", "subject_id"),
+            ("relationship", "relationship", "relationship_evidence", "relationship_id", "world_id"),
+            ("event", "world_event", "world_event_evidence", "world_event_id", "world_id"),
+        ):
+            rows = db.execute(
+                f"SELECT l.{item_column}, l.relation FROM {link_table} l JOIN {table} w "
+                f"ON w.id = l.{item_column} WHERE l.evidence_id = ? AND w.{subject_column} = ?",
+                (evidence_id, self._subject_id),
+            ).fetchall()
+            relations.update((kind, str(row[0]), str(row[1])) for row in rows)
+        for _ledger_id, content, payload in db.execute(
+            "SELECT id, content, payload_json FROM evidence_ledger ORDER BY id"
+        ).fetchall():
+            data, payload_data = _json_mapping(content), _json_mapping(payload)
+            entity_id = data.get("entity_id")
+            if isinstance(entity_id, str) and data.get("evidence_id") == evidence_id and belongs("entity", entity_id):
+                relations.add(("entity", entity_id, str(data.get("relation") or "support")))
+            canonical_id = data.get("canonical_entity_id")
+            evidence_ids = payload_data.get("evidence_ids")
+            if isinstance(canonical_id, str) and isinstance(evidence_ids, list) and evidence_id in evidence_ids and belongs("entity", canonical_id):
+                relations.add(("entity", canonical_id, str(data.get("relation") or "alias")))
+            if data.get("relation") == "retracts" and isinstance(evidence_ids, list) and evidence_id in evidence_ids:
+                for item_kind, key in (("cognition", "prior_cognition_id"), ("relationship", "prior_relationship_id"), ("event", "prior_event_id")):
+                    prior_id = data.get(key)
+                    if isinstance(prior_id, str) and belongs(item_kind, prior_id):
+                        relations.add((item_kind, prior_id, "retracts"))
+        ordered = sorted(relations)
+        overflow = len(ordered) > 64
+        items: list[dict[str, object]] = [
+            {
+                "object_kind": kind,
+                "item_id": linked_item_id,
+                "relation": relation,
+                "current_state": "current" if world_item_visible(db, self._subject_id, cast(Any, kind), linked_item_id, surface="recall") else "not_current",
+            }
+            for kind, linked_item_id, relation in ordered[:64]
+        ]
+        return items, overflow
 
     def _evidence(self, revision: int, row: sqlite3.Row) -> EvidenceV1:
         permissions = _permissions(

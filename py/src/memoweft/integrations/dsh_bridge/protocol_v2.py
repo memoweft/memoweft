@@ -13,6 +13,8 @@ import json
 from typing import Any, Mapping, cast
 
 from . import DshBoundaryError, DshMemoWeftRuntime
+from ..hermes.boundary_store import BoundaryHardDeletedSourceError
+from .interactions import InteractionQueryError
 from ..trust import (
     CLARIFICATION_SCHEMA_VERSION,
     PORTABLE_CAPABILITIES_VERSION,
@@ -45,8 +47,12 @@ DSH_RPC_METHODS: tuple[str, ...] = (
     "query_provenance",
     "query_jobs",
     "preview_recall",
+    "query_interactions",
+    "query_interaction",
+    "link_interaction_dependencies",
     "submit_command",
     "query_command_receipt",
+    "retry_delete_storage_cleanup",
     "list_clarifications",
     "answer_clarification",
     "portable_plan",
@@ -82,6 +88,7 @@ _INITIALIZE_KEYS = frozenset(
         "auto_route",
         "model_tier",
         "lang",
+        "model_api_key",
     }
 )
 
@@ -378,16 +385,16 @@ class DshRpcV2Server:
         if method == "query_provenance":
             raw = _require_params(
                 params,
-                allowed=frozenset({"object_kind", "item_id"}),
+                allowed=frozenset({"object_kind", "item_id", "projection"}),
                 required=frozenset({"object_kind", "item_id"}),
             )
-            result = query.execute_provider_tool(
-                "memoweft_query_world",
-                {
-                    "operation": "provenance",
-                    "object_kind": raw["object_kind"],
-                    "item_id": raw["item_id"],
-                },
+            projection = raw.get("projection", "history")
+            if not isinstance(projection, str):
+                raise DshRpcProtocolError("invalid_provenance_projection")
+            result = query.get_world_item_provenance(
+                cast(Any, raw["object_kind"]),
+                cast(str, raw["item_id"]),
+                projection=projection,
             )
             return result, "query_ok"
         if method == "query_jobs":
@@ -398,6 +405,111 @@ class DshRpcV2Server:
             return query.execute_provider_tool(
                 "memoweft_preview_recall", params
             ), "recall_preview"
+        if method == "query_interactions":
+            raw = _require_params(
+                params,
+                allowed=frozenset(
+                    {
+                        "query",
+                        "session_id",
+                        "projection",
+                        "conversation_id",
+                        "user_message_id",
+                        "search_mode",
+                    }
+                ),
+            )
+            query_text = raw.get("query")
+            interaction_session_id = raw.get("session_id", "")
+            projection = raw.get("projection", "history")
+            conversation_id = raw.get("conversation_id")
+            user_message_id = raw.get("user_message_id")
+            search_mode = raw.get("search_mode")
+            if (
+                (query_text is not None and not isinstance(query_text, str))
+                or not isinstance(interaction_session_id, str)
+                or not isinstance(projection, str)
+                or (
+                    conversation_id is not None
+                    and not isinstance(conversation_id, str)
+                )
+                or (
+                    user_message_id is not None
+                    and not isinstance(user_message_id, str)
+                )
+                or (search_mode is not None and not isinstance(search_mode, str))
+            ):
+                raise InteractionQueryError("invalid_interaction_query")
+            return self._runtime.query_interactions(
+                query_text,
+                session_id=interaction_session_id,
+                projection=projection,
+                conversation_id=conversation_id,
+                user_message_id=user_message_id,
+                search_mode=search_mode,
+            ), "interactions_found"
+        if method == "query_interaction":
+            raw = _require_params(
+                params,
+                allowed=frozenset({"id", "projection"}),
+                required=frozenset({"id"}),
+            )
+            interaction_id = raw["id"]
+            projection = raw.get("projection", "history")
+            if not isinstance(interaction_id, str) or not isinstance(projection, str):
+                raise InteractionQueryError("invalid_interaction_id")
+            return self._runtime.query_interaction(
+                interaction_id, projection=projection
+            ), "interaction_found"
+        if method == "link_interaction_dependencies":
+            raw = _require_params(
+                params,
+                allowed=frozenset(
+                    {
+                        "conversation_id",
+                        "user_message_id",
+                        "assistant_message_id",
+                        "expected_context_hash",
+                        "model_context_dependencies",
+                    }
+                ),
+                required=frozenset(
+                    {
+                        "conversation_id",
+                        "user_message_id",
+                        "assistant_message_id",
+                        "expected_context_hash",
+                        "model_context_dependencies",
+                    }
+                ),
+            )
+            conversation_id = _identifier(
+                raw["conversation_id"], "invalid_conversation_id"
+            )
+            user_message_id = _identifier(
+                raw["user_message_id"], "invalid_user_message_id"
+            )
+            assistant_message_id = _identifier(
+                raw["assistant_message_id"], "invalid_assistant_message_id"
+            )
+            expected_context_hash = _identifier(
+                raw["expected_context_hash"], "invalid_context_hash"
+            )
+            if len(expected_context_hash) != 64 or any(
+                char not in "0123456789abcdef" for char in expected_context_hash
+            ):
+                raise DshRpcProtocolError("invalid_context_hash")
+            dependencies = raw["model_context_dependencies"]
+            if not isinstance(dependencies, Mapping):
+                raise DshRpcProtocolError("invalid_model_context_dependencies")
+            result = self._runtime.link_interaction_dependencies(
+                conversation_id=conversation_id,
+                user_message_id=user_message_id,
+                assistant_message_id=assistant_message_id,
+                expected_context_hash=expected_context_hash,
+                model_context_dependencies=dependencies,
+            )
+            return result, f"interaction_dependencies_{result['result_state']}"
         if method == "submit_command":
             raw = _require_params(
                 params,
@@ -429,6 +541,21 @@ class DshRpcV2Server:
                 "world_revision": command_receipt["after_revision"],
                 "receipt": command_receipt,
             }, "command_receipt"
+        if method == "retry_delete_storage_cleanup":
+            raw = _require_params(
+                params,
+                allowed=frozenset({"command_id"}),
+                required=frozenset({"command_id"}),
+            )
+            command_receipt = command.retry_delete_storage_cleanup(
+                _identifier(raw["command_id"], "invalid_command_id")
+            )
+            return {
+                "schema_version": TRUST_SCHEMA_VERSION,
+                "subject_id": self._runtime.subject_id,
+                "world_revision": command_receipt["after_revision"],
+                "receipt": command_receipt,
+            }, "delete_storage_cleanup_checked"
         if method == "list_clarifications":
             raw = _require_params(
                 params,
@@ -563,6 +690,7 @@ class DshRpcV2Server:
             "restart_replay": "core_durable_identity_or_same_revision_query",
             "request_id_conflict": "fail_closed",
             "legacy_unversioned_bridge": True,
+            "interaction_dependency_projection": 1,
             "initialized": initialized,
             "subject_id": self._runtime.subject_id,
             "host_id": self._runtime.host_id,
@@ -617,11 +745,13 @@ class DshRpcV2Server:
 
     @staticmethod
     def _exception_code(error: BaseException) -> str:
+        if isinstance(error, BoundaryHardDeletedSourceError):
+            return "hard_deleted_source"
         if isinstance(error, DshRpcProtocolError):
             return error.code
         if isinstance(
             error,
-            (TrustQueryError, TrustCommandError, ClarificationError),
+            (TrustQueryError, TrustCommandError, ClarificationError, InteractionQueryError),
         ):
             return error.code
         if isinstance(error, PortableError):
@@ -633,6 +763,8 @@ class DshRpcV2Server:
 
     @staticmethod
     def _exception_type(error: BaseException) -> str:
+        if isinstance(error, BoundaryHardDeletedSourceError):
+            return "boundary"
         if isinstance(error, DshRpcProtocolError):
             return "protocol"
         if isinstance(error, TrustQueryError):
@@ -641,6 +773,8 @@ class DshRpcV2Server:
             return "trust_command"
         if isinstance(error, ClarificationError):
             return "clarification"
+        if isinstance(error, InteractionQueryError):
+            return "interaction_query"
         if isinstance(error, PortableError):
             return "portable"
         if isinstance(error, DshBoundaryError):

@@ -1,19 +1,13 @@
-"""WeftMate (DSH host) integration for MemoWeft 2.0 — thin stdio-facing bridge.
+"""WeftMate integration with MemoWeft through the local stdio bridge.
 
-Design rules (WeftMate R7, Owner-approved integration plan):
+Committed chat turns and compression boundaries hand off exact user Evidence
+and role-labelled user/assistant InteractionContext. AI discussion is retained
+for shared-history recall, without becoming a user assertion or current action
+authorization. Formal World processing and historical discussion retrieval are
+separate existing Core paths; history lookup makes no model calls.
 
-* Zero edits to the MemoWeft core or the Hermes integration.  This package only
-  imports host-agnostic pieces (``..hermes.boundary_store``, ``world_worker``,
-  ``batch_adapter``, ``recall``, and the read-only database probe) and adapts
-  the closed boundary envelope to the WeftMate/DSH host.
-* Same durability discipline as Hermes: user messages become ``spoken``
-  Evidence only inside a committed DSH compression boundary; assistant text is
-  only ``preceding_ai_context`` and never becomes Evidence by itself.
-* Same budget invariant (AUTHORITY §6.6): ordinary turns make zero
-  ``memory_world`` calls; a truly committed boundary makes exactly 0 or 1
-  one-shot interpretation call; Recall makes zero model calls and zero writes.
-* Transport is stdio JSON-Lines (``python -m memoweft.integrations.dsh_bridge``),
-  one JSON request/response object per line, driven by the WeftMate host plugin.
+The host owns live conversation execution. MemoWeft owns durable memory, source
+boundaries, currentness and the bounded records returned through this bridge.
 """
 
 from __future__ import annotations
@@ -39,14 +33,23 @@ from ..hermes.boundary_store import (
 )
 from ..hermes.recall import recall_world_text
 from ..hermes.world_worker import WorldJobWorker
+from .dependencies import (
+    DependencyValidationError,
+    validate_model_context_dependencies,
+)
+from .interactions import query_interaction, query_interactions
 from ..trust.currentness import evidence_state, linked_evidence, world_item_visible
 from ...store import open_db
+from ...store.interaction_context import SqliteInteractionContextStore
+from ...types import InteractionContextInput, VisibleTurn
 
 logger = logging.getLogger(__name__)
 
-_BOUNDARY_EVENT_PREFIX = "weftmate-compression-boundary-v1"
+_BOUNDARY_EVENT_PREFIXES = frozenset(
+    {"weftmate-compression-boundary-v1", "weftmate-turn-boundary-v1"}
+)
 _BOUNDARY_PROVIDER_NAME = "memoweft"
-_BOUNDARY_MODES = frozenset({"in_place", "rotation"})
+_BOUNDARY_MODES = frozenset({"in_place", "rotation", "turn"})
 _BOUNDARY_KEYS = frozenset(
     {
         "event_id",
@@ -70,6 +73,7 @@ _BOUNDARY_MESSAGE_KEYS = frozenset(
         "display_kind",
         "synthetic",
         "source_ref",
+        "model_context_dependencies",
     }
 )
 
@@ -277,6 +281,8 @@ def _validate_boundary_envelope(boundary: Mapping[str, object]) -> tuple[str, li
         raise DshBoundaryError("in-place boundary must retain its parent session target")
     if mode == "rotation" and parent_session_id == result_session_id:
         raise DshBoundaryError("rotation boundary must target a distinct result session")
+    if mode == "turn" and parent_session_id != result_session_id:
+        raise DshBoundaryError("turn boundary must retain its session target")
     if (
         not isinstance(payload_hash, str)
         or len(payload_hash) != 64
@@ -299,6 +305,14 @@ def _validate_boundary_envelope(boundary: Mapping[str, object]) -> tuple[str, li
         source_ref = message.get("source_ref")
         if role not in {"user", "assistant"} or not isinstance(content, str):
             raise DshBoundaryError("boundary source message must contain a clean role and text")
+        dependencies = message.get("model_context_dependencies")
+        if dependencies is not None:
+            if role != "assistant":
+                raise DshBoundaryError("model_context_dependencies is assistant-only")
+            try:
+                dependencies = validate_model_context_dependencies(dependencies)
+            except DependencyValidationError as exc:
+                raise DshBoundaryError("model_context_dependencies is invalid") from exc
         if (
             not isinstance(source_ref, str)
             or source_ref != f"source:{message_index}"
@@ -328,7 +342,10 @@ def _validate_boundary_envelope(boundary: Mapping[str, object]) -> tuple[str, li
                 isinstance(scalar, float) and not math.isfinite(scalar)
             ):
                 raise DshBoundaryError("boundary source identity fields must be finite scalars")
-        normalized_messages.append(dict(message))
+        normalized_message = dict(message)
+        if dependencies is not None:
+            normalized_message["model_context_dependencies"] = dependencies
+        normalized_messages.append(normalized_message)
 
     try:
         calculated_payload_hash = _boundary_payload_hash(
@@ -348,27 +365,54 @@ def _validate_boundary_envelope(boundary: Mapping[str, object]) -> tuple[str, li
     event_parts = event_id.split(":")
     if (
         len(event_parts) != 3
-        or event_parts[0] != _BOUNDARY_EVENT_PREFIX
+        or event_parts[0] not in _BOUNDARY_EVENT_PREFIXES
         or len(event_parts[1]) != 32
         or any(char not in "0123456789abcdef" for char in event_parts[1])
         or event_parts[2] != payload_hash
     ):
         raise DshBoundaryError("boundary event_id does not bind its occurrence and payload hash")
+    expected_prefix = (
+        "weftmate-turn-boundary-v1"
+        if mode == "turn"
+        else "weftmate-compression-boundary-v1"
+    )
+    if event_parts[0] != expected_prefix:
+        raise DshBoundaryError("boundary event_id prefix does not match its mode")
     return str(event_id), normalized_messages
 
 
-def default_one_shot_route() -> Callable[..., Mapping[str, object]] | None:
+def _configured_api_key() -> str:
+    """Resolve the route credential without exposing its value in diagnostics."""
+
+    direct = os.environ.get("MEMOWEFT_API_KEY") or ""
+    if direct:
+        return direct
+    key_env = os.environ.get("MEMOWEFT_API_KEY_ENV") or ""
+    return (os.environ.get(key_env) or "") if key_env else ""
+
+
+def default_one_shot_route(
+    *, model_tier: str = "cloud", api_key_override: str | None = None
+) -> Callable[..., Mapping[str, object]] | None:
     """Host-owned strict one-shot route (AUTHORITY budget: exactly 0 or 1 per boundary).
 
     Test support: ``MEMOWEFT_TEST_MODEL_RESPONSE`` pins a canned interpretation so
     WeftMate contract tests can drive a real durable pipeline with zero network
     and zero real model calls.  Guarded behind ``MEMOWEFT_TESTING=1`` so a stray
-    test variable can never hijack a production process.  Production: DeepSeek
-    API via env-injected credentials (``DEEPSEEK_API_KEY`` / ``DEEPSEEK_BASE_URL``,
-    never logged).  Temperature is pinned to 0 — the evaluated optimum
+    test variable can never hijack a production process.  A local host supplies
+    ``MEMOWEFT_BASE_URL``, ``MEMOWEFT_WORLD_MODEL`` and either
+    ``MEMOWEFT_API_KEY`` or ``MEMOWEFT_API_KEY_ENV`` (the name of another
+    process environment variable).  Missing local configuration fails closed;
+    it never falls back to a cloud route.  The legacy cloud route remains
+    available to hosts that explicitly select ``model_tier='cloud'``.
+    Temperature is pinned to 0 — the evaluated optimum
     (deepseek-v4-flash + temperature 0, see the eval harness); the model name
     defaults to the public ``deepseek-chat`` and can be overridden with
-    ``MEMOWEFT_WORLD_MODEL`` to match the host's routed model.
+    ``MEMOWEFT_WORLD_MODEL`` to match the host's routed model.  Local hosts may
+    set it to ``@current``: that is a ModelSwitcher reservation which forwards
+    under the current inference lease without loading or switching a model.  A
+    successful follow-current reply must carry the resolved catalog id in
+    ``X-ModelSwitcher-Model`` so the world-job audit never records the alias.
     """
 
     testing = os.environ.get("MEMOWEFT_TESTING") == "1"
@@ -419,28 +463,98 @@ def default_one_shot_route() -> Callable[..., Mapping[str, object]] | None:
             return {"content": mock, "model": "mock", "usage": {"total_tokens": 0}}
         return mock_route
 
-    api_key = os.environ.get("DEEPSEEK_API_KEY") or ""
+    if model_tier not in ("cloud", "local"):
+        raise DshBoundaryError("model_tier must be 'cloud' or 'local'")
+
+    if model_tier == "local":
+        api_key = api_key_override or _configured_api_key()
+        base = (os.environ.get("MEMOWEFT_BASE_URL") or "").rstrip("/")
+        model = os.environ.get("MEMOWEFT_WORLD_MODEL") or ""
+        if not api_key or not base or not model:
+            return None
+    else:
+        api_key = os.environ.get("DEEPSEEK_API_KEY") or ""
+        base = (
+            os.environ.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com"
+        ).rstrip("/")
+        model = os.environ.get("MEMOWEFT_WORLD_MODEL") or "deepseek-chat"
+        if model == "@current":
+            raise DshBoundaryError("@current is only available for local model routes")
     if not api_key:
         return None  # model-free no_change processor stays the production default
 
     import httpx
 
-    base = (os.environ.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com").rstrip("/")
-    model = os.environ.get("MEMOWEFT_WORLD_MODEL") or "deepseek-chat"
-
     def route(messages: object, session_id: str = "") -> Mapping[str, object]:
         del session_id
+        request_json: dict[str, object] = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "temperature": 0,
+        }
+        if model_tier == "local":
+            request_json["max_tokens"] = 4096
+            request_json["enable_thinking"] = False
         response = httpx.post(
             f"{base}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": model, "messages": messages, "stream": False, "temperature": 0},
-            timeout=120.0,
+            json=request_json,
+            timeout=300.0 if model_tier == "local" else 120.0,
+            trust_env=model_tier != "local",
         )
+        if getattr(response, "status_code", 200) == 400 and "chat_template" in getattr(response, "text", "") and "chat_template_kwargs" in request_json:
+            del request_json["chat_template_kwargs"]
+            response = httpx.post(
+                f"{base}/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=request_json,
+                timeout=300.0 if model_tier == "local" else 120.0,
+                trust_env=model_tier != "local",
+            )
+        # ``@current`` is an explicit no-switch reservation.  A 404 must remain
+        # a failure for the worker to retry; querying /models and choosing its
+        # first entry would silently cause the very model switch this route is
+        # designed to prevent.
+        if (
+            getattr(response, "status_code", 200) == 404
+            and model_tier == "local"
+            and model != "@current"
+        ):
+            try:
+                m_res = httpx.get(f"{base}/models", headers={"Authorization": f"Bearer {api_key}"}, timeout=5.0)
+                if m_res.status_code == 200:
+                    models = [m.get("id") for m in m_res.json().get("data", []) if m.get("id")]
+                    if models and models[0] != model:
+                        request_json["model"] = models[0]
+                        response = httpx.post(
+                            f"{base}/chat/completions",
+                            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                            json=request_json,
+                            timeout=300.0,
+                            trust_env=False,
+                        )
+            except Exception:
+                pass
         response.raise_for_status()
         payload = response.json()
+        choice = payload["choices"][0]
+        if model_tier == "local" and choice.get("finish_reason") == "length":
+            raise RuntimeError("local_model_output_truncated")
+        msg_content = choice["message"].get("content")
+        if not msg_content and choice["message"].get("reasoning_content"):
+            msg_content = choice["message"]["reasoning_content"]
+        resolved_model = model
+        if model == "@current":
+            headers = getattr(response, "headers", {})
+            resolved_model = str(headers.get("X-ModelSwitcher-Model", "")).strip()
+            if not resolved_model or resolved_model == "@current":
+                raise DshBoundaryError(
+                    "follow-current response is missing a resolved ModelSwitcher model"
+                )
         return {
-            "content": payload["choices"][0]["message"]["content"],
-            "model": model,
+            "content": msg_content or "",
+            "model": resolved_model,
             "usage": payload.get("usage") or {},
         }
 
@@ -480,6 +594,60 @@ class _DshRuntimeStore:
             finally:
                 db.close()
 
+    def record_interaction(
+        self,
+        *,
+        conversation_id: str,
+        episode_id: str,
+        messages: Sequence[Mapping[str, object]],
+    ) -> None:
+        turns = [
+            VisibleTurn(
+                role=cast(Any, message["role"]),
+                content=str(message["content"]),
+                source_ref=str(message["source_ref"]),
+                message_id=(
+                    str(message.get("message_id") or message.get("platform_message_id"))
+                    if message.get("message_id") is not None
+                    or message.get("platform_message_id") is not None
+                    else None
+                ),
+                timestamp=(
+                    float(cast(Any, message["timestamp"]))
+                    if message.get("timestamp") is not None
+                    else None
+                ),
+                model_context_dependencies=(
+                    dict(cast(Mapping[str, object], message["model_context_dependencies"]))
+                    if isinstance(message.get("model_context_dependencies"), Mapping)
+                    else None
+                ),
+            )
+            for message in messages
+        ]
+        with self._lock:
+            db = open_db(str(self._db_path))
+            try:
+                SqliteInteractionContextStore(db).record(
+                    InteractionContextInput(
+                        subject_id=self._subject_id,
+                        conversation_id=conversation_id,
+                        episode_id=episode_id,
+                        context=turns,
+                    )
+                )
+                from .commitments import record_commitments_for_episode
+                record_commitments_for_episode(
+                    db,
+                    subject_id=self._subject_id,
+                    conversation_id=conversation_id,
+                    episode_id=episode_id,
+                    messages=messages,
+                )
+                db.commit()
+            finally:
+                db.close()
+
 
 class DshMemoWeftRuntime:
     """WeftMate/DSH-facing runtime behind the stdio bridge."""
@@ -489,6 +657,9 @@ class DshMemoWeftRuntime:
         self._world_worker: WorldJobWorker | None = None
         self._enabled = False
         self._last_recall_count = 0
+        self._model_tier: str | None = None
+        self._route_ready = False
+        self._route_error: str | None = None
 
     @property
     def db_path(self) -> Path | None:
@@ -519,6 +690,7 @@ class DshMemoWeftRuntime:
         model_tier = kwargs.get("model_tier", "cloud")
         if model_tier not in ("cloud", "local"):
             raise DshBoundaryError("model_tier must be 'cloud' or 'local'")
+        self._model_tier = str(model_tier)
         if "subject_id" in kwargs:
             explicit_subject_id = kwargs["subject_id"]
             if (
@@ -541,8 +713,15 @@ class DshMemoWeftRuntime:
         )
         self._ingestor.initialize()
         route = kwargs.get("one_shot_llm")
+        model_api_key = kwargs.get("model_api_key")
+        if model_api_key is not None and (
+            not isinstance(model_api_key, str) or not model_api_key
+        ):
+            raise DshBoundaryError("model_api_key must be a non-empty string")
         if route is None and kwargs.get("auto_route", True):
-            route = default_one_shot_route()
+            route = default_one_shot_route(
+                model_tier=str(model_tier), api_key_override=model_api_key
+            )
         processor = None
         if callable(route):
             lang = kwargs.get("lang")
@@ -551,8 +730,29 @@ class DshMemoWeftRuntime:
             processor = HermesBatchAdapterProcessor(
                 str(db_path), route, lang=lang, model_tier=model_tier
             )
-        self._world_worker = WorldJobWorker(db_path, processor=processor)
-        self._world_worker.start()
+            # A local OpenAI-compatible call has no remote side effect.  It is
+            # safe to retry after connection failure, and the deterministic
+            # Apply path remains idempotent for the same Evidence/job.
+            if model_tier == "local":
+                processor.dispatches_model = False
+            self._route_ready = True
+            self._route_error = None
+        else:
+            self._route_ready = False
+            self._route_error = (
+                "local_route_not_configured"
+                if model_tier == "local"
+                else "world_route_not_configured"
+            )
+        # With no route, leave durable jobs pending.  Starting the historical
+        # model-free processor would terminally settle them as no_change.
+        self._world_worker = (
+            None
+            if processor is None and model_tier == "local"
+            else WorldJobWorker(db_path, processor=processor)
+        )
+        if self._world_worker is not None:
+            self._world_worker.start()
         self._enabled = True
         return {
             "db_path": str(db_path),
@@ -580,21 +780,105 @@ class DshMemoWeftRuntime:
                 provider_name=str(boundary["provider_name"]),
                 parent_session_id=str(boundary["parent_session_id"]),
                 result_session_id=str(boundary["result_session_id"]),
-                mode=str(boundary["mode"]),
+                # Hermes storage has two topology modes. A committed ordinary
+                # turn retains the same session and therefore stores as in_place;
+                # the signed outer envelope still records mode=turn.
+                mode=("in_place" if boundary["mode"] == "turn" else str(boundary["mode"])),
                 subject_id=self._ingestor.subject_id,
                 host_id=self._ingestor.host_id,
             ),
             evidence=candidates,
         )
         receipt = self._ingestor.accept_durable_boundary(accepted_boundary)
+        self._ingestor.record_interaction(
+            conversation_id=str(boundary["parent_session_id"]),
+            episode_id=event_id,
+            messages=normalized_messages,
+        )
         worker = self._world_worker
         if worker is not None:
             try:
-                if not worker.kick():
+                delay = 20.0 if getattr(self, "_model_tier", "") == "local" else 0.0
+                if not worker.kick(delay=delay):
                     logger.warning("MemoWeft World worker was unavailable after receipt")
             except Exception as exc:
                 logger.warning("MemoWeft World worker wake failed: error_type=%s", type(exc).__name__)
         return receipt
+
+    def query_interactions(
+        self,
+        query: str | None = None,
+        *,
+        session_id: str = "",
+        projection: str = "history",
+        conversation_id: str | None = None,
+        user_message_id: str | None = None,
+        search_mode: str | None = None,
+    ) -> dict[str, object]:
+        if not self._enabled or self._ingestor is None:
+            raise DshBoundaryError("runtime is not initialized")
+        return query_interactions(
+            self._ingestor.db_path,
+            subject_id=self._ingestor.subject_id,
+            query=query,
+            session_id=session_id,
+            projection=projection,
+            conversation_id=conversation_id,
+            user_message_id=user_message_id,
+            search_mode=search_mode,
+        )
+
+    def query_interaction(
+        self, interaction_id: str, *, projection: str = "history"
+    ) -> dict[str, object]:
+        if not self._enabled or self._ingestor is None:
+            raise DshBoundaryError("runtime is not initialized")
+        return query_interaction(
+            self._ingestor.db_path,
+            subject_id=self._ingestor.subject_id,
+            interaction_id=interaction_id,
+            projection=projection,
+        )
+
+    def link_interaction_dependencies(
+        self,
+        *,
+        conversation_id: str,
+        user_message_id: str,
+        assistant_message_id: str,
+        expected_context_hash: str,
+        model_context_dependencies: Mapping[str, object],
+    ) -> dict[str, object]:
+        if not self._enabled or self._ingestor is None:
+            raise DshBoundaryError("runtime is not initialized")
+        try:
+            dependencies = validate_model_context_dependencies(
+                model_context_dependencies
+            )
+        except DependencyValidationError as exc:
+            raise DshBoundaryError("model_context_dependencies is invalid") from exc
+        with self._ingestor._lock:
+            db = open_db(str(self._ingestor.db_path))
+            try:
+                state, interaction_id, old_hash, current_hash = (
+                    SqliteInteractionContextStore(db).link_dependencies(
+                        subject_id=self._ingestor.subject_id,
+                        conversation_id=conversation_id,
+                        user_message_id=user_message_id,
+                        assistant_message_id=assistant_message_id,
+                        expected_context_hash=expected_context_hash,
+                        dependencies=dependencies,
+                    )
+                )
+                db.commit()
+            finally:
+                db.close()
+        return {
+            "interaction_id": interaction_id,
+            "old_context_hash": old_hash,
+            "context_hash": current_hash,
+            "result_state": state,
+        }
 
     def prefetch(self, query: str, *, session_id: str = "") -> dict[str, object]:
         """Deterministic read-only Recall (zero model calls, zero writes).
@@ -742,6 +1026,9 @@ class DshMemoWeftRuntime:
             "host_id": self.host_id,
             "last_recall_count": self._last_recall_count,
             "worker_running": self._world_worker is not None,
+            "model_tier": self._model_tier,
+            "route_ready": self._route_ready,
+            "route_error": self._route_error,
         }
 
     def kick_world_worker(self) -> bool:

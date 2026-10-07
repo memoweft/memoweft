@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
+import copy
 import math
 import re
 from datetime import datetime
@@ -13,6 +15,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..context_hash import hash_context
+from ..model_context_dependencies import (
+    DependencyValidationError,
+    validate_model_context_dependencies,
+)
 from ..types import VisibleTurn
 from .model import BUNDLE_FORMAT, BUNDLE_SCHEMA_VERSION, derive_bundle_id
 
@@ -166,7 +172,19 @@ def validate_bundle(bundle: Any) -> ValidateResult:
                 errors.append("bundleId cannot be derived from invalid JSON")
             else:
                 if bundle_id != expected_bundle_id:
-                    errors.append("bundleId does not match the canonical bundle payload")
+                    legacy_payload = copy.deepcopy(b)
+                    legacy_payload.pop("bundleId", None)
+                    contexts = legacy_payload.get("data", {}).get("interactionContexts", []) if isinstance(legacy_payload.get("data"), dict) else []
+                    for context in contexts if isinstance(contexts, list) else []:
+                        for turn in context.get("context", []) if isinstance(context, dict) and isinstance(context.get("context"), list) else []:
+                            if isinstance(turn, dict) and isinstance(turn.get("timestamp"), int) and not isinstance(turn.get("timestamp"), bool):
+                                turn["timestamp"] = float(turn["timestamp"])
+                    legacy_json = json.dumps(legacy_payload, ensure_ascii=False, allow_nan=False, separators=(",", ":"), sort_keys=True)
+                    legacy_id = "portable:v4:" + sha256(legacy_json.encode("utf-8")).hexdigest()
+                    if bundle_id != legacy_id:
+                        errors.append("bundleId does not match the canonical bundle payload")
+                    else:
+                        warnings.append("bundleId uses the legacy integer-float timestamp encoding")
 
     data = b.get("data")
     if data is None or not isinstance(data, dict):
@@ -429,12 +447,40 @@ def validate_bundle(bundle: Any) -> ValidateResult:
                     if not isinstance(turn, dict) or not isinstance(turn.get("content"), str):
                         invalid_field("interactionContext", record_id, "context.content")
                         context_valid = False
+                    dependencies = (
+                        turn.get("model_context_dependencies")
+                        if isinstance(turn, dict)
+                        else None
+                    )
+                    if dependencies is not None:
+                        if turn.get("role") != "assistant":
+                            invalid_field(
+                                "interactionContext",
+                                record_id,
+                                "context.model_context_dependencies.role",
+                            )
+                            context_valid = False
+                        try:
+                            validate_model_context_dependencies(dependencies)
+                        except DependencyValidationError:
+                            invalid_field(
+                                "interactionContext",
+                                record_id,
+                                "context.model_context_dependencies",
+                            )
+                            context_valid = False
                 if (
                     context_valid
                     and _non_empty_string(value.get("contextHash"))
                     and hash_context(
                         [
-                            VisibleTurn(role=turn["role"], content=turn["content"])
+                            VisibleTurn(
+                                role=turn["role"],
+                                content=turn["content"],
+                                model_context_dependencies=turn.get(
+                                    "model_context_dependencies"
+                                ),
+                            )
                             for turn in context
                         ]
                     )

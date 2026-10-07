@@ -32,6 +32,7 @@ class CommandMutation:
     result_state: Literal["applied", "no_change", "rejected"]
     affected_ids: tuple[str, ...] = ()
     transition_ids: tuple[str, ...] = ()
+    rejection_code: str | None = None
 
 
 Mutation = Callable[[sqlite3.Connection, CommandEnvelopeV1, str], CommandMutation]
@@ -75,6 +76,13 @@ class CommandStore:
         db = open_db(str(self._db_path))
         db.row_factory = sqlite3.Row
         try:
+            hard_delete = command["operation"] in {"delete_evidence", "delete_world_item"}
+            if hard_delete:
+                # The default SQLite build can leave prior cell payloads on
+                # free pages. Enable zeroing before any destructive writes.
+                db.execute("PRAGMA secure_delete = ON")
+                if db.execute("PRAGMA secure_delete").fetchone()[0] != 1:
+                    raise TrustCommandError("secure_delete_unavailable")
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute(
                 "SELECT request_hash FROM trust_command WHERE command_id = ?",
@@ -84,7 +92,11 @@ class CommandStore:
                 if str(existing[0]) != request_hash:
                     raise TrustCommandError("command_id_conflict")
                 receipt_row = db.execute(
-                    "SELECT * FROM trust_command_receipt WHERE command_id = ?",
+                    "SELECT r.*, x.reason_code, s.state AS cleanup_state, "
+                    "s.detail_code AS cleanup_detail FROM trust_command_receipt r "
+                    "LEFT JOIN trust_command_rejection x ON x.command_id = r.command_id "
+                    "LEFT JOIN trust_delete_storage_status s ON s.command_id = r.command_id "
+                    "WHERE r.command_id = ?",
                     (command["command_id"],),
                 ).fetchone()
                 if receipt_row is None:
@@ -139,7 +151,15 @@ class CommandStore:
                 "transition_ids": list(mutation.transition_ids),
                 "completed_at": completed_at,
             }
+            if mutation.rejection_code is not None:
+                receipt_base["rejection_code"] = mutation.rejection_code
             result_hash = _hash(receipt_base)
+            if mutation.rejection_code is not None:
+                db.execute(
+                    "INSERT INTO trust_command_rejection (command_id, reason_code) "
+                    "VALUES (?, ?)",
+                    (command["command_id"], mutation.rejection_code),
+                )
             db.execute(
                 "INSERT INTO trust_command_receipt (command_id, schema_version, "
                 "accepted, result_state, before_revision, after_revision, "
@@ -158,10 +178,43 @@ class CommandStore:
                     completed_at,
                 ),
             )
+            if hard_delete and state == "applied":
+                db.execute(
+                    "INSERT INTO trust_delete_storage_status "
+                    "(command_id, state, detail_code) VALUES (?, 'pending', 'checkpoint_pending')",
+                    (command["command_id"],),
+                )
             db.execute("COMMIT")
+            storage_cleanup: dict[str, str] | None = None
+            if hard_delete and state == "applied":
+                cleanup_state = "pending"
+                detail = "checkpoint_pending"
+                try:
+                    mode = str(db.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+                    if mode == "wal":
+                        # Readers can prevent truncation. Never wait for them.
+                        db.execute("PRAGMA busy_timeout = 0")
+                        checkpoint = db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                        if checkpoint is not None and int(checkpoint[0]) == 0:
+                            cleanup_state, detail = "complete", "current_wal_truncated"
+                        else:
+                            detail = "wal_reader_busy"
+                    else:
+                        cleanup_state, detail = "complete", "current_journal_committed"
+                    db.execute(
+                        "UPDATE trust_delete_storage_status SET state = ?, detail_code = ? "
+                        "WHERE command_id = ?",
+                        (cleanup_state, detail, command["command_id"]),
+                    )
+                except sqlite3.Error:
+                    # The committed deletion remains valid. Pending status is
+                    # durable and can be shown without overstating erasure.
+                    cleanup_state, detail = "pending", "checkpoint_status_unconfirmed"
+                storage_cleanup = {"state": cleanup_state, "detail_code": detail}
             return cast(
                 CommandReceiptV1,
-                {**receipt_base, "result_hash": result_hash},
+                {**receipt_base, "result_hash": result_hash,
+                 **({"storage_cleanup": storage_cleanup} if storage_cleanup else {})},
             )
         except BaseException:
             if db.in_transaction:
@@ -188,8 +241,11 @@ class CommandStore:
         try:
             db.execute("PRAGMA query_only = ON")
             row = db.execute(
-                "SELECT r.* FROM trust_command_receipt r "
+                "SELECT r.*, x.reason_code, s.state AS cleanup_state, "
+                "s.detail_code AS cleanup_detail FROM trust_command_receipt r "
                 "JOIN trust_command c ON c.command_id = r.command_id "
+                "LEFT JOIN trust_command_rejection x ON x.command_id = r.command_id "
+                "LEFT JOIN trust_delete_storage_status s ON s.command_id = r.command_id "
                 "WHERE r.command_id = ? AND (? IS NULL OR c.subject_id = ?)",
                 (command_id, subject_id, subject_id),
             ).fetchone()
@@ -202,6 +258,42 @@ class CommandStore:
             raise TrustCommandError("trust_command_receipt_read_failed") from exc
         finally:
             db.close()
+
+    def retry_storage_cleanup(
+        self, command_id: str, *, subject_id: str
+    ) -> CommandReceiptV1:
+        """Retry a nonblocking WAL checkpoint for one already committed delete."""
+        db = open_db(str(self._db_path))
+        try:
+            row = db.execute(
+                "SELECT s.state FROM trust_delete_storage_status s "
+                "JOIN trust_command c ON c.command_id = s.command_id "
+                "WHERE s.command_id = ? AND c.subject_id = ?",
+                (command_id, subject_id),
+            ).fetchone()
+            if row is None:
+                raise TrustCommandError("delete_storage_status_not_found")
+            if str(row[0]) == "pending":
+                state, detail = "pending", "wal_reader_busy"
+                try:
+                    mode = str(db.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+                    if mode == "wal":
+                        db.execute("PRAGMA busy_timeout = 0")
+                        checkpoint = db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                        if checkpoint is not None and int(checkpoint[0]) == 0:
+                            state, detail = "complete", "current_wal_truncated"
+                    else:
+                        state, detail = "complete", "current_journal_committed"
+                    db.execute(
+                        "UPDATE trust_delete_storage_status SET state = ?, detail_code = ? "
+                        "WHERE command_id = ? AND state = 'pending'",
+                        (state, detail, command_id),
+                    )
+                except sqlite3.Error:
+                    pass
+        finally:
+            db.close()
+        return self.get_receipt(command_id, subject_id=subject_id)
 
     @staticmethod
     def _receipt(row: sqlite3.Row) -> CommandReceiptV1:
@@ -228,12 +320,17 @@ class CommandStore:
             "transition_ids": [str(value) for value in transitions],
             "completed_at": str(row["completed_at"]),
         }
+        if "reason_code" in row.keys() and row["reason_code"] is not None:
+            receipt_base["rejection_code"] = str(row["reason_code"])
         if _hash(receipt_base) != str(row["result_hash"]):
             raise TrustCommandError("command_receipt_hash_mismatch")
-        return cast(
-            CommandReceiptV1,
-            {**receipt_base, "result_hash": str(row["result_hash"])},
-        )
+        receipt = {**receipt_base, "result_hash": str(row["result_hash"])}
+        if "cleanup_state" in row.keys() and row["cleanup_state"] is not None:
+            receipt["storage_cleanup"] = {
+                "state": str(row["cleanup_state"]),
+                "detail_code": str(row["cleanup_detail"]),
+            }
+        return cast(CommandReceiptV1, receipt)
 
 
 __all__ = [

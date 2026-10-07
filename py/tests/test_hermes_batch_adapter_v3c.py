@@ -1064,3 +1064,34 @@ def test_corrects_relationship_id_rejected_on_other_kinds(tmp_path: Path) -> Non
         json.loads(str(row["world_result_json"]))["reason"]
         == "unexpected_correction_target"
     )
+
+
+def test_sync_owner_alias_creates_ledger_and_query_service_visible(tmp_path: Path) -> None:
+    from memoweft.integrations.trust.currentness import current_entity_aliases
+    from memoweft.integrations.dsh_bridge.protocol_v2 import QueryService
+    db_path = tmp_path / "memoweft.sqlite3"
+    clock = MutableClock()
+    item = _v5_item("preference", "用户以后叫我云", (7, 12))
+    script = [_model(_batch(item))]
+    _run(
+        db_path, clock, script, ("evidence-1",),
+        lambda path: _set_evidence(path, "evidence-1", "我喜欢吃玉米，以后叫我云"),
+    )
+    row = _job(db_path)
+    assert row["state"] == "applied"
+    db = sqlite3.connect(db_path)
+    try:
+        owner_row = db.execute("SELECT id, canonical_name, aliases_json FROM entity WHERE canonical_name = '用户'").fetchone()
+        assert owner_row is not None
+        owner_id = owner_row[0]
+        aliases = json.loads(owner_row[2])
+        assert aliases == ["云"]
+        current = current_entity_aliases(db, "owner", owner_id, surface="trust_local")
+        assert current == ("云",)
+    finally:
+        db.close()
+    qs = QueryService(db_path, subject_id="owner")
+    world = qs.list_world_items("entity")
+    owner_item = next(it for it in world["items"] if it["item_id"] == owner_id)
+    assert owner_item["value"]["aliases"] == ["云"]
+    assert owner_item["value"]["current_aliases"] == ["云"]

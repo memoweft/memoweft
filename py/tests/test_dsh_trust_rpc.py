@@ -98,6 +98,77 @@ def _boundary() -> dict[str, object]:
     }
 
 
+def _message_boundary(message_id: str, content: str) -> dict[str, object]:
+    payload = {
+        key: value for key, value in _boundary().items()
+        if key not in {"event_id", "payload_hash"}
+    }
+    payload["source_messages"] = [
+        {"role": "user", "content": content, "source_ref": "source:0", "message_id": message_id}
+    ]
+    canonical = json.dumps(
+        payload, ensure_ascii=True, allow_nan=False, separators=(",", ":"), sort_keys=True
+    )
+    payload_hash = sha256(canonical.encode("utf-8")).hexdigest()
+    return {
+        **payload,
+        "payload_hash": payload_hash,
+        "event_id": "weftmate-compression-boundary-v1:" + "b" * 32 + ":" + payload_hash,
+    }
+
+
+def test_rpc_hard_deleted_source_has_dedicated_code_only_for_origin_tombstone(
+    tmp_path: Path,
+) -> None:
+    server = DshRpcV2Server()
+    _initialize(server, tmp_path)
+    try:
+        deleted_boundary = _message_boundary("deleted-message", "private synthetic source")
+        accepted = server.handle(_request("accept-deleted-source", "ingest_boundary", {"boundary": deleted_boundary}))
+        assert accepted["ok"] is True
+        assert server.runtime.db_path is not None
+        assert server.runtime.subject_id is not None
+        db = open_db(str(server.runtime.db_path))
+        try:
+            evidence_id = db.execute(
+                "SELECT id FROM evidence WHERE raw_content = 'private synthetic source'"
+            ).fetchone()[0]
+            revision = db.execute("SELECT revision FROM memory_state WHERE singleton = 1").fetchone()
+            expected_revision = 0 if revision is None else int(revision[0])
+        finally:
+            db.close()
+        deleted = server.handle(_request("delete-source-command", "submit_command", {
+            "command": {
+                "schema_version": 1,
+                "command_id": "delete-source-command",
+                "subject_id": server.runtime.subject_id,
+                "actor": "owner",
+                "expected_world_revision": expected_revision,
+                "operation": "delete_evidence",
+                "target_kind": "evidence",
+                "target_id": evidence_id,
+                "payload": {},
+                "submitted_at": _T,
+            }
+        }))
+        assert deleted["ok"] is True
+        assert deleted["result"]["receipt"]["result_state"] == "applied"  # type: ignore[index]
+        replay = server.handle(_request("replay-deleted-source", "ingest_boundary", {"boundary": deleted_boundary}))
+        assert replay["ok"] is False
+        assert replay["result_code"] == "hard_deleted_source"
+        assert replay["error"] == {"type": "boundary", "code": "hard_deleted_source"}
+        assert "private synthetic source" not in json.dumps(replay, ensure_ascii=False)
+
+        ordinary = _message_boundary("ordinary-message", "first ordinary source")
+        assert server.handle(_request("accept-ordinary", "ingest_boundary", {"boundary": ordinary}))["ok"] is True
+        conflicting = _message_boundary("ordinary-message", "different ordinary source")
+        conflict_response = server.handle(_request("conflict-ordinary", "ingest_boundary", {"boundary": conflicting}))
+        assert conflict_response["ok"] is False
+        assert conflict_response["result_code"] != "hard_deleted_source"
+    finally:
+        server.runtime.shutdown()
+
+
 def test_initialize_accepts_one_subject_binding_but_query_methods_cannot_switch_it(
     tmp_path: Path,
 ) -> None:
@@ -324,8 +395,12 @@ def test_rpc_v2_protocol_identity_is_frozen() -> None:
         "query_provenance",
         "query_jobs",
         "preview_recall",
+        "query_interactions",
+        "query_interaction",
+        "link_interaction_dependencies",
         "submit_command",
         "query_command_receipt",
+        "retry_delete_storage_cleanup",
         "list_clarifications",
         "answer_clarification",
         "portable_plan",

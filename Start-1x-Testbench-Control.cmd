@@ -2,5 +2,5 @@
 setlocal
 where pwsh.exe >nul 2>nul
 if errorlevel 1 (set "MEMOWEFT_POWERSHELL=powershell.exe") else (set "MEMOWEFT_POWERSHELL=pwsh.exe")
-"%MEMOWEFT_POWERSHELL%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\control-1x\Start-1x-Testbench-Control.ps1" %*
+"%MEMOWEFT_POWERSHELL%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0Control\Scripts\control-1x\Start-1x-Testbench-Control.ps1" %*
 exit /b %ERRORLEVEL%

@@ -260,6 +260,40 @@ def test_history_provenance_and_tombstones_remain_explainable(trust_db: Path) ->
     assert old_event["lifecycle"]["invalid_at"] == "2026-08-24T00:04:00Z"
 
 
+def test_model_provenance_withholds_mixed_world_evidence_but_history_keeps_raw(
+    trust_db: Path,
+) -> None:
+    service = QueryService(trust_db, subject_id=SUBJECT)
+    history = _any_result(
+        service.get_world_item_provenance("cognition", "cognition-1", projection="history")
+    )["provenance"][0]
+    assert history["evidence"]["raw_content"] == "用户说小王是同事"
+    model = _any_result(
+        service.get_world_item_provenance("cognition", "cognition-1", projection="model")
+    )["provenance"][0]
+    assert model["evidence"]["raw_content"] is None
+    assert model["model_denial_reason"] == "mixed_world_currentness"
+    assert {(item["object_kind"], item["item_id"], item["current_state"]) for item in model["linked_world_items"]} >= {
+        ("cognition", "cognition-1", "current"),
+        ("cognition", "cognition-old", "not_current"),
+    }
+    with sqlite3.connect(trust_db) as db:
+        db.execute("UPDATE cognition SET invalid_at = NULL WHERE id = 'cognition-old'")
+        db.execute("UPDATE world_event SET invalid_at = NULL WHERE id = 'event-old'")
+    current = _any_result(
+        service.get_world_item_provenance("cognition", "cognition-1", projection="model")
+    )["provenance"][0]
+    assert current["evidence"]["raw_content"] == "用户说小王是同事"
+    assert current["model_content_available"] is True
+    with sqlite3.connect(trust_db) as db:
+        db.execute("UPDATE cognition SET muted_at = '2026-08-24T00:05:00Z' WHERE id = 'cognition-old'")
+    muted = _any_result(
+        service.get_world_item_provenance("cognition", "cognition-1", projection="model")
+    )["provenance"][0]
+    assert muted["evidence"]["raw_content"] is None
+    assert muted["model_denial_reason"] == "mixed_world_currentness"
+
+
 def test_jobs_separate_acceptance_core_terminal_delivery_and_host_scope(trust_db: Path) -> None:
     job = _any_result(QueryService(trust_db, subject_id=SUBJECT).get_job("job-1"))["job"]
 

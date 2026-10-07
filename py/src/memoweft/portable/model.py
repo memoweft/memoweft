@@ -10,6 +10,7 @@ import copy
 from dataclasses import dataclass, field
 from hashlib import sha256
 import json
+import math
 from typing import Any, Literal
 
 #: 便携包格式标记。
@@ -94,8 +95,17 @@ def canonical_json(value: object) -> str:
     contract and keeps the hashed bytes equal to the user's UTF-8 memory.
     """
 
+    def wire_stable(item: object) -> object:
+        if isinstance(item, float) and math.isfinite(item) and item.is_integer():
+            return 0 if item == 0 else int(item)
+        if isinstance(item, list):
+            return [wire_stable(child) for child in item]
+        if isinstance(item, dict):
+            return {key: wire_stable(child) for key, child in item.items()}
+        return item
+
     return json.dumps(
-        value,
+        wire_stable(value),
         ensure_ascii=False,
         allow_nan=False,
         separators=(",", ":"),

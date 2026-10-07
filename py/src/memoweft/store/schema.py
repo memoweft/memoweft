@@ -23,7 +23,7 @@ from __future__ import annotations
 PYTHON_APPLICATION_ID = 0x4D575059
 
 #: Python-owned ``PRAGMA user_version``。TypeScript/shared parity 的版本仍为 6。
-SCHEMA_VERSION = 19
+SCHEMA_VERSION = 20
 
 #: 幂等的建表与索引 DDL；shared/parity/schema.json 验证列序、NOT NULL、DEFAULT 与主键契约。
 BASE_SCHEMA_SQL: tuple[str, ...] = (
@@ -445,7 +445,8 @@ TRUST_COMMAND_SCHEMA_SQL: tuple[str, ...] = (
   operation                TEXT    NOT NULL CHECK(operation IN (
                                'update_evidence_permissions',
                                'correct_world_item', 'retract_world_item',
-                               'forget_evidence', 'archive_world_item',
+                               'forget_evidence', 'delete_evidence',
+                               'delete_world_item', 'archive_world_item',
                                'mute_world_item'
                              )),
   target_kind              TEXT    NOT NULL CHECK(target_kind IN (
@@ -488,6 +489,40 @@ ON trust_command(subject_id, submitted_at, command_id)""",
     """CREATE INDEX ix_world_item_lifecycle_current
 ON world_item_lifecycle(subject_id, object_kind, archived_at, muted_at, item_id)""",
 )
+
+# v20 keeps rejection reasons separate so v17 receipts remain byte-for-byte
+# valid and their historical hashes need no reinterpretation.
+TRUST_REJECTION_SCHEMA_SQL: tuple[str, ...] = (
+    """CREATE TABLE trust_command_rejection (
+  command_id TEXT PRIMARY KEY,
+  reason_code TEXT NOT NULL
+)""",
+    """CREATE TABLE world_delete_marker (
+  subject_id TEXT NOT NULL,
+  object_kind TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  deleted_at TEXT NOT NULL,
+  PRIMARY KEY(subject_id, object_kind, item_id)
+)""",
+    """CREATE TABLE trust_delete_storage_status (
+  command_id TEXT PRIMARY KEY,
+  state TEXT NOT NULL CHECK(state IN ('pending', 'complete')),
+  detail_code TEXT NOT NULL
+)""",
+    """CREATE TABLE evidence_origin_history (
+  evidence_id TEXT PRIMARY KEY,
+  origin_id TEXT NOT NULL
+)""",
+    """CREATE TABLE hard_deleted_origin (
+  origin_hash TEXT PRIMARY KEY,
+  subject_id TEXT NOT NULL,
+  evidence_id TEXT NOT NULL
+)""",
+)
+TRUST_REJECTION_SCHEMA_OBJECTS = frozenset({
+    "trust_command_rejection", "world_delete_marker", "trust_delete_storage_status",
+    "evidence_origin_history", "hard_deleted_origin"
+})
 
 TRUST_COMMAND_COLUMNS: tuple[str, ...] = (
     "command_id",
@@ -938,6 +973,7 @@ CURRENT_REQUIRED_SCHEMA_OBJECTS = (
     | WORLD_EVENT_SCHEMA_OBJECTS
     | TERMINAL_OUTCOME_SCHEMA_OBJECTS
     | TRUST_COMMAND_SCHEMA_OBJECTS
+    | TRUST_REJECTION_SCHEMA_OBJECTS
     | CLARIFICATION_SCHEMA_OBJECTS
     | PORTABLE_IMPORT_RECEIPT_SCHEMA_OBJECTS
 )
@@ -957,6 +993,7 @@ CURRENT_WORLD_SCHEMA_SQL: tuple[str, ...] = (
     + WORLD_EVENT_SCHEMA_SQL
     + TERMINAL_OUTCOME_SCHEMA_SQL
     + TRUST_COMMAND_SCHEMA_SQL
+    + TRUST_REJECTION_SCHEMA_SQL
     + CLARIFICATION_SCHEMA_SQL
     + PORTABLE_IMPORT_RECEIPT_SCHEMA_SQL
 )
