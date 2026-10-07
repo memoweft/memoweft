@@ -69,7 +69,7 @@ def test_agent_understanding_is_preserved(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     raw_utterance = "1.打游戏-王者荣耀，刷抖音、看书听书\n2.习惯了吧\n3.有但是不多"
-    
+
     agent_understanding = "用户平时的娱乐习惯主要是打《王者荣耀》，闲暇时也会刷抖音、看书或听书；平时习惯独处，朋友不多"
 
     item = {
