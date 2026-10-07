@@ -35,8 +35,8 @@ class _TupleSubclass(tuple[object, ...]):
 
 
 def _base() -> MemoryWorldGraph:
-    owner = Entity("person:yun", "world:yun", "person", "Yun")
-    graph = MemoryWorldGraph(PersonalWorld("world:yun", owner.id))
+    owner = Entity("person:example", "world:example", "person", "Casey")
+    graph = MemoryWorldGraph(PersonalWorld("world:example", owner.id))
     graph.add_entity(owner)
     return graph
 
@@ -118,17 +118,17 @@ def _inferred_relationship_delta(
         sha256(other_content.encode("utf-8")).hexdigest(),
     )
     resolved_bindings = bindings if bindings is not None else (
-        _content_binding("person:yun", claim_span=owner_span),
+        _content_binding("person:example", claim_span=owner_span),
         _content_binding("person:lin", claim_span=other_span),
     )
     owner_cognition = WorldCognition(
-        "cog:owner-side", "world:yun", MemoryTarget("entity", "person:yun"), owner_content,
-        "fact", "stated", 600, "limited", Perspective("entity", ("person:yun",)),
+        "cog:owner-side", "world:example", MemoryTarget("entity", "person:example"), owner_content,
+        "fact", "stated", 600, "limited", Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:nanjing", "support"),),
     )
     other_cognition = WorldCognition(
-        "cog:other-side", "world:yun", MemoryTarget("entity", "person:lin"), other_content,
-        "fact", "stated", 600, "limited", Perspective("entity", ("person:yun",)),
+        "cog:other-side", "world:example", MemoryTarget("entity", "person:lin"), other_content,
+        "fact", "stated", 600, "limited", Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:nanjing", "support"),),
     )
     cognition = replace(
@@ -197,7 +197,7 @@ def _direct_relationship_cognition_delta(template: WorldDelta) -> WorldDelta:
         formed_by="stated",
         confidence=600,
         cred_status="limited",
-        perspective=Perspective("entity", ("person:yun",)),
+        perspective=Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:nanjing", "support"),),
     )
     relationship_trace = _formation_trace(relationship_cognition)
@@ -209,20 +209,20 @@ def _direct_relationship_cognition_delta(template: WorldDelta) -> WorldDelta:
 
 
 def _nanjing_delta() -> WorldDelta:
-    friend = Entity("person:lin", "world:yun", "person", "Lin")
-    relationship = Relationship("relationship:yun-lin", "world:yun", "person:yun", friend.id, "friend")
+    friend = Entity("person:lin", "world:example", "person", "Lin")
+    relationship = Relationship("relationship:example-lin", "world:example", "person:example", friend.id, "friend")
     event = WorldEvent(
-        "event:nanjing", "world:yun", "trip", "Yun and Lin visited Nanjing", "2026-05-01",
-        participants=(EventParticipant("person:yun"), EventParticipant(friend.id)),
+        "event:nanjing", "world:example", "trip", "Casey and Lin visited Nanjing", "2026-05-01",
+        participants=(EventParticipant("person:example"), EventParticipant(friend.id)),
         relationship_ids=(relationship.id,), evidence_ids=("e:nanjing",),
     )
     cognition = WorldCognition(
-        "cog:nanjing", "world:yun", MemoryTarget("event", event.id), "The Nanjing trip was meaningful",
-        "fact", "stated", 600, "limited", Perspective("entity", ("person:yun",)),
+        "cog:nanjing", "world:example", MemoryTarget("event", event.id), "The Nanjing trip was meaningful",
+        "fact", "stated", 600, "limited", Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:nanjing", "support"),),
     )
     return WorldDelta(
-        world_id="world:yun",
+        world_id="world:example",
         source_evidence_ids=("e:nanjing",),
         new_entities=(friend,),
         new_relationships=(relationship,),
@@ -247,8 +247,8 @@ def test_apply_valid_nanjing_delta_builds_new_graph_without_mutating_base() -> N
     result = _nanjing_delta().apply_to(base, {"e:nanjing"})
 
     assert result is not base
-    assert set(result.entities) == {"person:yun", "person:lin"}
-    assert set(result.relationships) == {"relationship:yun-lin"}
+    assert set(result.entities) == {"person:example", "person:lin"}
+    assert set(result.relationships) == {"relationship:example-lin"}
     assert set(result.events) == {"event:nanjing"}
     assert set(result.cognitions) == {"cog:nanjing"}
     assert _snapshot(base) == before
@@ -274,25 +274,25 @@ def test_structured_claim_is_optional_hashable_and_serializable_without_changing
 @pytest.mark.parametrize(
     ("structured_claim", "perspective", "expected_issue"),
     [
-        ("not-a-claim", Perspective("entity", ("person:yun",)), "cognition[0].structured_claim.invalid_type"),
+        ("not-a-claim", Perspective("entity", ("person:example",)), "cognition[0].structured_claim.invalid_type"),
         (
             StructuredClaim("unknown"),  # type: ignore[arg-type]
-            Perspective("entity", ("person:yun",)),
+            Perspective("entity", ("person:example",)),
             "cognition[0].structured_claim.statement_kind.invalid",
         ),
         (
             StructuredClaim("attribute", predicate=""),
-            Perspective("entity", ("person:yun",)),
+            Perspective("entity", ("person:example",)),
             "cognition[0].structured_claim.predicate.invalid",
         ),
         (
             StructuredClaim("attribute", polarity="maybe"),  # type: ignore[arg-type]
-            Perspective("entity", ("person:yun",)),
+            Perspective("entity", ("person:example",)),
             "cognition[0].structured_claim.polarity.invalid",
         ),
         (
             StructuredClaim("attribute", epistemic_status="model_guess"),  # type: ignore[arg-type]
-            Perspective("entity", ("person:yun",)),
+            Perspective("entity", ("person:example",)),
             "cognition[0].structured_claim.epistemic_status.invalid",
         ),
         (
@@ -393,8 +393,8 @@ def test_top_level_collections_fail_closed_before_any_cross_record_work(
     ("delta", "expected_issue"),
     [
         (replace(_nanjing_delta(), source_evidence_ids=("e:invented",)), "source_evidence_ids[0].not_eligible"),
-        (replace(_nanjing_delta(), new_relationships=(Relationship("rel:bad", "world:yun", "person:yun", "person:missing", "friend"),)), "relationship[0].target_entity_id.dangling"),
-        (replace(_nanjing_delta(), new_entities=(Entity("person:yun", "world:yun", "person", "Duplicate"),)), "entity[0].id.conflicts_with_base"),
+        (replace(_nanjing_delta(), new_relationships=(Relationship("rel:bad", "world:example", "person:example", "person:missing", "friend"),)), "relationship[0].target_entity_id.dangling"),
+        (replace(_nanjing_delta(), new_entities=(Entity("person:example", "world:example", "person", "Duplicate"),)), "entity[0].id.conflicts_with_base"),
         (replace(_nanjing_delta(), new_cognitions=(replace(_nanjing_delta().new_cognitions[0], confidence=True),)), "cognition[0].confidence.invalid"),
     ],
 )
@@ -415,7 +415,7 @@ def test_runtime_literal_and_evidence_relation_are_validated_without_partial_wri
     bad_cognition = replace(
         _nanjing_delta().new_cognitions[0],
         content_type="not-a-content-type",  # type: ignore[arg-type]
-        perspective=Perspective("entity", ("person:yun",)),
+        perspective=Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:nanjing", "not-a-relation"),),  # type: ignore[arg-type]
     )
     delta = replace(_nanjing_delta(), new_cognitions=(bad_cognition,))
@@ -430,7 +430,7 @@ def test_runtime_literal_and_evidence_relation_are_validated_without_partial_wri
 
 def test_allowlist_and_base_owner_are_independently_validated() -> None:
     delta = _nanjing_delta()
-    owner_missing = MemoryWorldGraph(PersonalWorld("world:yun", "person:missing"))
+    owner_missing = MemoryWorldGraph(PersonalWorld("world:example", "person:missing"))
 
     with pytest.raises(WorldDeltaValidationError) as raised:
         delta.validate_against(owner_missing, ("e:nanjing", 7, ""))  # type: ignore[arg-type]
@@ -521,7 +521,7 @@ def test_runtime_record_shape_fields_fail_closed_before_apply() -> None:
         event_type=1,  # type: ignore[arg-type]
         summary=None,  # type: ignore[arg-type]
         occurred_at=object(),  # type: ignore[arg-type]
-        participants=(EventParticipant("person:yun", role=7),),  # type: ignore[arg-type]
+        participants=(EventParticipant("person:example", role=7),),  # type: ignore[arg-type]
         facets=(EventFacet(7, None),),  # type: ignore[arg-type]
     )
     cognition = replace(
@@ -534,8 +534,8 @@ def test_runtime_record_shape_fields_fail_closed_before_apply() -> None:
     )
     delta = replace(
         template,
-        new_entities=(Entity("person:lin", "world:yun", 7, None, aliases=[]),),  # type: ignore[arg-type]
-        new_relationships=(Relationship("relationship:yun-lin", "world:yun", "person:yun", "person:lin", 7),),  # type: ignore[arg-type]
+        new_entities=(Entity("person:lin", "world:example", 7, None, aliases=[]),),  # type: ignore[arg-type]
+        new_relationships=(Relationship("relationship:example-lin", "world:example", "person:example", "person:lin", 7),),  # type: ignore[arg-type]
         new_events=(event,),
         new_cognitions=(cognition,),
     )
@@ -567,9 +567,9 @@ def test_runtime_record_shape_fields_fail_closed_before_apply() -> None:
 def test_object_namespaces_cannot_be_collapsed_into_entities() -> None:
     base = _base()
     collapsed = WorldDelta(
-        world_id="world:yun",
+        world_id="world:example",
         source_evidence_ids=("e:nanjing",),
-        new_entities=(Entity("event:nanjing-conflict", "world:yun", "event", "Conflict"),),
+        new_entities=(Entity("event:nanjing-conflict", "world:example", "event", "Conflict"),),
     )
 
     with pytest.raises(WorldDeltaValidationError) as raised:
@@ -584,7 +584,7 @@ def test_formation_trace_is_keyword_only_without_rebinding_existing_issue_fields
     unresolved = (UnresolvedReference("朋友", ("e:nanjing",)),)
     uncertain = (SemanticUncertainty("身份未解析", ("e:nanjing",)),)
 
-    delta = WorldDelta("world:yun", ("e:nanjing",), (), (), (), (), unresolved, uncertain)
+    delta = WorldDelta("world:example", ("e:nanjing",), (), (), (), (), unresolved, uncertain)
 
     assert delta.formation_traces == ()
     assert delta.unresolved_references == unresolved
@@ -1097,7 +1097,7 @@ def test_conflict_relationship_projection_rejects_missing_or_mismatched_direct_s
 def test_conflict_relationship_projection_rejects_inference_targeting_an_unlinked_relationship() -> None:
     template = _conflict_relationship_projection_delta()
     unlinked = Relationship(
-        "relationship:yun-lin-unlinked", "world:yun", "person:yun", "person:lin", "friend"
+        "relationship:example-lin-unlinked", "world:example", "person:example", "person:lin", "friend"
     )
     cognition = replace(template.new_cognitions[2], target=MemoryTarget("relationship", unlinked.id))
     delta = replace(template, new_relationships=(*template.new_relationships, unlinked), new_cognitions=(*template.new_cognitions[:2], cognition))
@@ -1129,14 +1129,14 @@ def test_conflict_with_one_missing_endpoint_direct_does_not_trigger_projection()
     ("bindings", "cognition_sources", "trace_sources", "expected_issue"),
     [
         (("not-a-binding",), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].invalid_type"),
-        ((replace(_content_binding("person:yun"), semantic_role="other"),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].semantic_role.invalid"),  # type: ignore[arg-type]
+        ((replace(_content_binding("person:example"), semantic_role="other"),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].semantic_role.invalid"),  # type: ignore[arg-type]
         ((_content_binding(""),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].about_entity_id.invalid"),
-        ((replace(_content_binding("person:yun"), evidence_id=""),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].evidence_id.invalid"),
-        ((replace(_content_binding("person:yun"), claim_span=ClaimSpan(1, 1, "a" * 64, "b" * 64)),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].claim_span.range.invalid"),
-        ((_content_binding("person:yun"), _content_binding("person:yun", start_codepoint=2, end_codepoint=3)), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[1].about_entity_id.duplicate"),
-        ((_content_binding("person:yun"), _content_binding("person:lin")), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[1].claim_span.duplicate"),
-        ((_content_binding("person:yun", evidence_id="e:other"),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].evidence_id.not_cognition_support"),
-        ((_content_binding("person:yun"),), (EvidenceLink("e:nanjing", "support"),), (_source_trace(EvidenceLink("e:other", "support"), decision="inference_grounding"),), "formation_trace[2].content_bindings[0].evidence_id.not_formation_support"),
+        ((replace(_content_binding("person:example"), evidence_id=""),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].evidence_id.invalid"),
+        ((replace(_content_binding("person:example"), claim_span=ClaimSpan(1, 1, "a" * 64, "b" * 64)),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].claim_span.range.invalid"),
+        ((_content_binding("person:example"), _content_binding("person:example", start_codepoint=2, end_codepoint=3)), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[1].about_entity_id.duplicate"),
+        ((_content_binding("person:example"), _content_binding("person:lin")), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[1].claim_span.duplicate"),
+        ((_content_binding("person:example", evidence_id="e:other"),), (EvidenceLink("e:nanjing", "support"),), None, "formation_trace[2].content_bindings[0].evidence_id.not_cognition_support"),
+        ((_content_binding("person:example"),), (EvidenceLink("e:nanjing", "support"),), (_source_trace(EvidenceLink("e:other", "support"), decision="inference_grounding"),), "formation_trace[2].content_bindings[0].evidence_id.not_formation_support"),
     ],
 )
 def test_content_binding_validator_rejects_tampering_and_non_supporting_evidence(
@@ -1157,10 +1157,10 @@ def test_content_binding_validator_rejects_tampering_and_non_supporting_evidence
     ("bindings", "expected_issue"),
     [
         ((), "formation_trace[2].content_bindings.count.invalid"),
-        ((_content_binding("person:yun"),), "formation_trace[2].content_bindings.count.invalid"),
+        ((_content_binding("person:example"),), "formation_trace[2].content_bindings.count.invalid"),
         (
             (
-                _content_binding("person:yun"),
+                _content_binding("person:example"),
                 _content_binding("person:lin", start_codepoint=2, end_codepoint=3),
                 _content_binding("person:extra", start_codepoint=4, end_codepoint=5),
             ),
@@ -1181,7 +1181,7 @@ def test_inferred_relationship_requires_exactly_two_content_bindings(
 
 def test_content_bindings_remain_limited_to_inferred_relationship_cognitions() -> None:
     template = _nanjing_delta()
-    trace = replace(template.formation_traces[0], content_bindings=(_content_binding("person:yun"),))
+    trace = replace(template.formation_traces[0], content_bindings=(_content_binding("person:example"),))
     delta = replace(template, formation_traces=(trace,))
 
     with pytest.raises(WorldDeltaValidationError) as raised:
@@ -1268,7 +1268,7 @@ def test_inferred_relationship_rejects_tampered_projection() -> None:
 
 def test_inferred_relationship_rejects_owner_outside_relationship() -> None:
     template = _inferred_relationship_delta()
-    other = Entity("person:mei", "world:yun", "person", "Mei")
+    other = Entity("person:mei", "world:example", "person", "Mei")
     relationship = replace(template.new_relationships[0], source_entity_id="person:lin", target_entity_id=other.id)
     delta = replace(template, new_entities=(*template.new_entities, other), new_relationships=(relationship,))
 
@@ -1281,10 +1281,10 @@ def test_inferred_relationship_rejects_owner_outside_relationship() -> None:
 def test_inferred_relationship_self_loop_is_rejected_without_raw_exception_or_apply() -> None:
     template = _inferred_relationship_delta()
     bindings = template.formation_traces[2].content_bindings
-    relationship = replace(template.new_relationships[0], source_entity_id="person:yun", target_entity_id="person:yun")
+    relationship = replace(template.new_relationships[0], source_entity_id="person:example", target_entity_id="person:example")
     trace = replace(
         template.formation_traces[2],
-        content_bindings=(bindings[0], replace(bindings[1], about_entity_id="person:yun")),
+        content_bindings=(bindings[0], replace(bindings[1], about_entity_id="person:example")),
     )
     delta = replace(template, new_relationships=(relationship,), formation_traces=(*template.formation_traces[:2], trace))
     base = _base()
@@ -1298,7 +1298,7 @@ def test_inferred_relationship_self_loop_is_rejected_without_raw_exception_or_ap
     expected_issue = "formation_trace[2].content_bindings.relationship.endpoints.not_distinct"
     assert expected_issue in validated.value.issues
     assert expected_issue in applied.value.issues
-    assert all("person:yun" not in issue and "raw" not in issue for issue in validated.value.issues)
+    assert all("person:example" not in issue and "raw" not in issue for issue in validated.value.issues)
     assert _snapshot(base) == before
 
 
@@ -1318,7 +1318,7 @@ def test_inferred_relationship_grounding_span_cannot_reuse_a_direct_side_span() 
     expected_issue = "formation_trace[2].content_bindings.inference_support.claim_span.identity.reused"
     assert expected_issue in validated.value.issues
     assert expected_issue in applied.value.issues
-    assert all("person:yun" not in issue and "raw" not in issue for issue in validated.value.issues)
+    assert all("person:example" not in issue and "raw" not in issue for issue in validated.value.issues)
     assert _snapshot(base) == before
 
 
@@ -1363,7 +1363,7 @@ def test_malformed_content_bindings_fail_closed_before_cross_record_validation(
 
     assert expected_issue in validated.value.issues
     assert expected_issue in applied.value.issues
-    assert all("person:yun" not in issue and "raw" not in issue for issue in validated.value.issues)
+    assert all("person:example" not in issue and "raw" not in issue for issue in validated.value.issues)
     assert _snapshot(base) == before
 
 

@@ -22,18 +22,18 @@ from memoweft.world import (
 
 
 def build_nanjing_world() -> MemoryWorldGraph:
-    graph = MemoryWorldGraph(PersonalWorld(world_id="world:yun", owner_entity_id="person:user"))
+    graph = MemoryWorldGraph(PersonalWorld(world_id="world:example", owner_entity_id="person:user"))
 
-    graph.add_entity(Entity("person:user", "world:yun", "person", "User"))
-    graph.add_entity(Entity("person:friend-x", "world:yun", "person", "Friend_X"))
-    graph.add_entity(Entity("activity:nanjing-trip", "world:yun", "activity", "Nanjing trip"))
-    graph.add_entity(Entity("place:nanjing", "world:yun", "place", "Nanjing"))
+    graph.add_entity(Entity("person:user", "world:example", "person", "User"))
+    graph.add_entity(Entity("person:friend-x", "world:example", "person", "Friend_X"))
+    graph.add_entity(Entity("activity:nanjing-trip", "world:example", "activity", "Nanjing trip"))
+    graph.add_entity(Entity("place:nanjing", "world:example", "place", "Nanjing"))
     graph.validate_owner()
 
     graph.add_relationship(
         Relationship(
             id="relationship:user-friend-x",
-            world_id="world:yun",
+            world_id="world:example",
             source_entity_id="person:user",
             target_entity_id="person:friend-x",
             relation_type="friend",
@@ -45,7 +45,7 @@ def build_nanjing_world() -> MemoryWorldGraph:
     graph.add_event(
         WorldEvent(
             id="event:nanjing-conflict",
-            world_id="world:yun",
+            world_id="world:example",
             event_type="interpersonal_conflict",
             summary="User and Friend_X argued while planning a trip to Nanjing because they preferred different travel styles.",
             occurred_at="2026-08-06T12:00:00+08:00",
@@ -79,7 +79,7 @@ def build_nanjing_world() -> MemoryWorldGraph:
     graph.add_cognition(
         WorldCognition(
             id="cog:user-travel-style",
-            world_id="world:yun",
+            world_id="world:example",
             target=MemoryTarget("entity", "person:user"),
             content="旅行时偏好随性、低计划性，并重视未知和临场探索",
             content_type="preference",
@@ -97,7 +97,7 @@ def build_nanjing_world() -> MemoryWorldGraph:
     graph.add_cognition(
         WorldCognition(
             id="cog:friend-planning-style",
-            world_id="world:yun",
+            world_id="world:example",
             target=MemoryTarget("entity", "person:friend-x"),
             content="做事倾向提前规划；旅行时偏好按攻略和行程安排游玩",
             content_type="trait",
@@ -113,7 +113,7 @@ def build_nanjing_world() -> MemoryWorldGraph:
     graph.add_cognition(
         WorldCognition(
             id="cog:relationship-planning-friction",
-            world_id="world:yun",
+            world_id="world:example",
             target=MemoryTarget("relationship", "relationship:user-friend-x"),
             content="计划性与自由度的差异可能是双方在共同出行中的潜在摩擦点",
             content_type="hypothesis",

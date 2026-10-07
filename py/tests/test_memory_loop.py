@@ -68,12 +68,12 @@ class _Answerer:
     def chat(self, messages: list[ChatMessage]) -> str:
         self.call_count += 1
         self.messages = messages
-        return "Yun likes tea."
+        return "Casey likes tea."
 
 
 def _graph() -> MemoryWorldGraph:
-    owner = Entity("person:yun", "world:yun", "person", "Yun")
-    graph = MemoryWorldGraph(PersonalWorld("world:yun", owner.id))
+    owner = Entity("person:example", "world:example", "person", "Casey")
+    graph = MemoryWorldGraph(PersonalWorld("world:example", owner.id))
     graph.add_entity(owner)
     return graph
 
@@ -138,10 +138,10 @@ def _score(
 
 
 def _delta(*, cognition_id: str = "cog:tea", evidence_id: str = "e:tea") -> WorldDelta:
-    content = "Yun likes tea"
+    content = "Casey likes tea"
     cognition = WorldCognition(
-        cognition_id, "world:yun", MemoryTarget("entity", "person:yun"), content,
-        "preference", "stated", 600, "limited", Perspective("entity", ("person:yun",)),
+        cognition_id, "world:example", MemoryTarget("entity", "person:example"), content,
+        "preference", "stated", 600, "limited", Perspective("entity", ("person:example",)),
         sources=(EvidenceLink(evidence_id, "support"),),
     )
     trace = FormationTrace(
@@ -153,7 +153,7 @@ def _delta(*, cognition_id: str = "cog:tea", evidence_id: str = "e:tea") -> Worl
         ),),
         "stated", 1, 1, 0,
     )
-    return WorldDelta("world:yun", (evidence_id,), new_cognitions=(cognition,), formation_traces=(trace,))
+    return WorldDelta("world:example", (evidence_id,), new_cognitions=(cognition,), formation_traces=(trace,))
 
 
 def _lifecycle_evidence(
@@ -453,11 +453,11 @@ def _typed_evaluation_correction(
 
 def _typed_correction_loop(path: Path) -> MemoryLoop:
     graph = _graph()
-    graph.add_entity(Entity("person:lihua", "world:yun", "person", "李华"))
-    graph.add_entity(Entity("project:xinggang", "world:yun", "organization", "星港项目"))
+    graph.add_entity(Entity("person:lihua", "world:example", "person", "李华"))
+    graph.add_entity(Entity("project:xinggang", "world:example", "organization", "星港项目"))
     relationship = Relationship(
         "relationship:lihua-supports-xinggang",
-        "world:yun",
+        "world:example",
         "person:lihua",
         "project:xinggang",
         "支持",
@@ -467,7 +467,7 @@ def _typed_correction_loop(path: Path) -> MemoryLoop:
     graph.add_relationship(relationship)
     graph.add_cognition(WorldCognition(
         "cog:relationship-evaluation:prior",
-        "world:yun",
+        "world:example",
         MemoryTarget("relationship", relationship.id),
         "我觉得这段支持很可靠",
         "fact",
@@ -495,14 +495,14 @@ def _product_bundle_delta(
     content = "晨星项目已经启动"
     cognition = WorldCognition(
         cognition_id,
-        "world:yun",
+        "world:example",
         MemoryTarget("entity", "project:morningstar"),
         content,
         "project",
         "stated",
         600,
         "limited",
-        Perspective("entity", ("person:yun",)),
+        Perspective("entity", ("person:example",)),
         sources=(EvidenceLink(evidence_id, "support"),),
         structured_claim=StructuredClaim("attribute", "状态", "已经启动"),
     )
@@ -516,12 +516,12 @@ def _product_bundle_delta(
         ),),
         "stated", 1, 1, 0,
     )
-    artifact = Entity("object:morningstar-brief", "world:yun", "document", "晨星简报")
+    artifact = Entity("object:morningstar-brief", "world:example", "document", "晨星简报")
     relationship = Relationship(
-        "relationship:morningstar-brief", "world:yun", "project:morningstar", artifact.id, "has_document"
+        "relationship:morningstar-brief", "world:example", "project:morningstar", artifact.id, "has_document"
     )
     event = WorldEvent(
-        "event:morningstar-start", "world:yun", "project_started", content,
+        "event:morningstar-start", "world:example", "project_started", content,
         "2026-08-12T09:00:00+00:00",
         participants=(EventParticipant("project:morningstar"),),
         related_entity_ids=(artifact.id,),
@@ -529,7 +529,7 @@ def _product_bundle_delta(
         evidence_ids=(evidence_id,),
     )
     return WorldDelta(
-        "world:yun",
+        "world:example",
         (evidence_id,),
         new_entities=(artifact,),
         new_relationships=(relationship,),
@@ -541,11 +541,11 @@ def _product_bundle_delta(
 
 def _product_bundle_graph() -> MemoryWorldGraph:
     graph = _graph()
-    graph.add_entity(Entity("project:morningstar", "world:yun", "project", "晨星"))
+    graph.add_entity(Entity("project:morningstar", "world:example", "project", "晨星"))
     graph.add_cognition(WorldCognition(
-        "cog:project-prior", "world:yun", MemoryTarget("entity", "project:morningstar"),
+        "cog:project-prior", "world:example", MemoryTarget("entity", "project:morningstar"),
         "晨星项目尚未启动", "project", "stated", 600, "limited",
-        Perspective("entity", ("person:yun",)),
+        Perspective("entity", ("person:example",)),
         structured_claim=StructuredClaim("attribute", "状态", "尚未启动"),
     ))
     return graph
@@ -564,11 +564,11 @@ def _product_cognition_update_bundle(
     """One valid product cognition update rooted in an accepted Relationship."""
 
     graph = _graph()
-    graph.add_entity(Entity("person:lihua", "world:yun", "person", "李华"))
-    graph.add_entity(Entity("project:xinggang", "world:yun", "project", "星港项目"))
+    graph.add_entity(Entity("person:lihua", "world:example", "person", "李华"))
+    graph.add_entity(Entity("project:xinggang", "world:example", "project", "星港项目"))
     relationship = Relationship(
         "relationship:lihua-supports-xinggang",
-        "world:yun",
+        "world:example",
         "person:lihua",
         "project:xinggang",
         "支持",
@@ -576,14 +576,14 @@ def _product_cognition_update_bundle(
     graph.add_relationship(relationship)
     prior = WorldCognition(
         "cog:lihua-supports-xinggang-reliable",
-        "world:yun",
+        "world:example",
         MemoryTarget("relationship", relationship.id),
         "我觉得李华支持星港项目很可靠。",
         "fact",
         "stated",
         600,
         "limited",
-        Perspective("entity", ("person:yun",)),
+        Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:relationship-evaluation-initial", "support"),),
         structured_claim=StructuredClaim(
             "evaluation",
@@ -616,7 +616,7 @@ def _product_cognition_update_bundle(
         occurred_at,
         (evidence.id,),
     )
-    return graph, WorldDelta("world:yun", (evidence.id,)), evidence, step, updated
+    return graph, WorldDelta("world:example", (evidence.id,)), evidence, step, updated
 
 
 def _seed_product_cognition_update_source(loop: MemoryLoop) -> None:
@@ -796,22 +796,22 @@ def _relationship_security_graph() -> tuple[
 ]:
     graph = _graph()
     for entity in (
-        Entity("person:lihua", "world:yun", "person", "李华"),
-        Entity("project:xinggang", "world:yun", "project", "星港项目"),
-        Entity("person:wangqiang", "world:yun", "person", "王强"),
-        Entity("project:beichen", "world:yun", "project", "北辰项目"),
+        Entity("person:lihua", "world:example", "person", "李华"),
+        Entity("project:xinggang", "world:example", "project", "星港项目"),
+        Entity("person:wangqiang", "world:example", "person", "王强"),
+        Entity("project:beichen", "world:example", "project", "北辰项目"),
     ):
         graph.add_entity(entity)
     first = Relationship(
         "relationship:lihua-supports-xinggang",
-        "world:yun",
+        "world:example",
         "person:lihua",
         "project:xinggang",
         "支持",
     )
     second = Relationship(
         "relationship:wangqiang-supports-beichen",
-        "world:yun",
+        "world:example",
         "person:wangqiang",
         "project:beichen",
         "支持",
@@ -1083,16 +1083,16 @@ def _claim_selection_bundle() -> tuple[WorldDelta, EvidenceRecord, tuple[Reviewe
         },
     )
     phase = WorldCognition(
-        "cog:phase", "world:yun", MemoryTarget("entity", "project:morningstar"),
+        "cog:phase", "world:example", MemoryTarget("entity", "project:morningstar"),
         "晨星已启动", "project", "stated", 600, "limited",
-        Perspective("entity", ("person:yun",)),
+        Perspective("entity", ("person:example",)),
         sources=(EvidenceLink(evidence.id, "support"),),
         structured_claim=StructuredClaim("attribute", "状态", "已启动"),
     )
     color = WorldCognition(
-        "cog:color", "world:yun", MemoryTarget("entity", "project:morningstar"),
+        "cog:color", "world:example", MemoryTarget("entity", "project:morningstar"),
         "晨星主色深蓝", "project", "stated", 600, "limited",
-        Perspective("entity", ("person:yun",)),
+        Perspective("entity", ("person:example",)),
         sources=(EvidenceLink(evidence.id, "support"),),
         structured_claim=StructuredClaim("attribute", "主色", "深蓝"),
     )
@@ -1110,8 +1110,8 @@ def _claim_selection_bundle() -> tuple[WorldDelta, EvidenceRecord, tuple[Reviewe
         for cognition in (phase, color)
     )
     delta = WorldDelta(
-        "world:yun", (evidence.id,),
-        new_entities=(Entity("project:morningstar", "world:yun", "project", "晨星"),),
+        "world:example", (evidence.id,),
+        new_entities=(Entity("project:morningstar", "world:example", "project", "晨星"),),
         new_cognitions=(phase, color),
         formation_traces=traces,
     )
@@ -1143,14 +1143,14 @@ def _cognition(
 ) -> WorldCognition:
     return WorldCognition(
         cognition_id,
-        "world:yun",
-        target or MemoryTarget("entity", "person:yun"),
+        "world:example",
+        target or MemoryTarget("entity", "person:example"),
         content,
         content_type,
         "inferred",
         440,
         "low",
-        perspective or Perspective("entity", ("person:yun",)),
+        perspective or Perspective("entity", ("person:example",)),
         scope=scope,
     )
 
@@ -1174,7 +1174,7 @@ def test_pending_reject_accept_and_reopen_roundtrip(tmp_path: Path) -> None:
     loop.close()
     with MemoryLoop(path, _graph()) as reopened:
         assert reopened.view().revision == 1
-        assert reopened.view().graph.cognitions["cog:tea"].content == "Yun likes tea"
+        assert reopened.view().graph.cognitions["cog:tea"].content == "Casey likes tea"
 
 
 def test_decision_receipt_preserves_original_accept_outcome_after_later_world_change(tmp_path: Path) -> None:
@@ -1281,7 +1281,7 @@ def test_memory_loop_can_share_the_v3_main_store_connection() -> None:
         loop = MemoryLoop(db, _graph())
         assert loop.connection is db
         assert user_version(db) == SCHEMA_VERSION
-        assert loop.view().graph.world.world_id == "world:yun"
+        assert loop.view().graph.world.world_id == "world:example"
         loop.close()
         assert db.execute("SELECT revision FROM memory_state WHERE singleton = 1").fetchone()[0] == 0
     finally:
@@ -1429,11 +1429,11 @@ def test_product_bundle_new_cognition_targets_only_a_current_relationship(
     is_current: bool,
 ) -> None:
     graph = _graph()
-    graph.add_entity(Entity("person:lin", "world:yun", "person", "Lin"))
+    graph.add_entity(Entity("person:lin", "world:example", "person", "Lin"))
     relationship = Relationship(
-        "relationship:yun-lin",
-        "world:yun",
-        "person:yun",
+        "relationship:example-lin",
+        "world:example",
+        "person:example",
         "person:lin",
         "friend",
         status=cast(Any, status),
@@ -1445,14 +1445,14 @@ def test_product_bundle_new_cognition_targets_only_a_current_relationship(
     content = "I think this relationship is reliable."
     cognition = WorldCognition(
         cognition_id,
-        "world:yun",
+        "world:example",
         MemoryTarget("relationship", relationship.id),
         content,
         "fact",
         "stated",
         600,
         "limited",
-        Perspective("entity", ("person:yun",)),
+        Perspective("entity", ("person:example",)),
         sources=(EvidenceLink(evidence_id, "support"),),
         structured_claim=StructuredClaim(
             "evaluation",
@@ -1484,7 +1484,7 @@ def test_product_bundle_new_cognition_targets_only_a_current_relationship(
         0,
     )
     delta = WorldDelta(
-        "world:yun",
+        "world:example",
         (evidence_id,),
         new_cognitions=(cognition,),
         formation_traces=(trace,),
@@ -1761,7 +1761,7 @@ def test_rehashed_indirect_relationship_shape_downgrade_is_zero_write(
             dict[str, object],
             _json_data(Entity(
                 "object:actual-world-target-decoy",
-                "world:yun",
+                "world:example",
                 "object",
                 "干扰对象",
             )),
@@ -1771,7 +1771,7 @@ def test_rehashed_indirect_relationship_shape_downgrade_is_zero_write(
             dict[str, object],
             _json_data(Entity(
                 "object:shape-downgrade-decoy",
-                "world:yun",
+                "world:example",
                 "object",
                 "干扰对象",
             )),
@@ -1938,16 +1938,16 @@ def test_rehashed_indirect_relationship_marker_removal_cannot_hide_actual_world_
 
 def _event_security_graph() -> tuple[MemoryWorldGraph, WorldEvent, WorldEvent]:
     graph = _graph()
-    graph.add_entity(Entity("person:lihua", "world:yun", "person", "李华"))
-    graph.add_entity(Entity("place:xinggang", "world:yun", "place", "星港"))
+    graph.add_entity(Entity("person:lihua", "world:example", "person", "李华"))
+    graph.add_entity(Entity("place:xinggang", "world:example", "place", "星港"))
     first = WorldEvent(
         "event:xinggang-meeting",
-        "world:yun",
+        "world:example",
         "occurrence",
         "昨天我和李华在星港开会。",
         "2026-08-12T12:00:00+08:00",
         (
-            EventParticipant("person:yun", "owner"),
+            EventParticipant("person:example", "owner"),
             EventParticipant("person:lihua", "focus"),
         ),
         ("place:xinggang",),
@@ -1956,12 +1956,12 @@ def _event_security_graph() -> tuple[MemoryWorldGraph, WorldEvent, WorldEvent]:
     )
     second = WorldEvent(
         "event:xinggang-review",
-        "world:yun",
+        "world:example",
         "occurrence",
         "今天我和李华在星港复盘。",
         "2026-08-13T12:00:00+08:00",
         (
-            EventParticipant("person:yun", "owner"),
+            EventParticipant("person:example", "owner"),
             EventParticipant("person:lihua", "focus"),
         ),
         ("place:xinggang",),
@@ -2313,18 +2313,18 @@ def test_product_bundle_relationship_successor_failure_rolls_back_world_evidence
     """A successor edge is part of the one product-bundle transaction."""
 
     graph = _graph()
-    graph.add_entity(Entity("organization:old", "world:yun", "organization", "Old Org"))
-    graph.add_entity(Entity("project:old", "world:yun", "project", "Old Project"))
+    graph.add_entity(Entity("organization:old", "world:example", "organization", "Old Org"))
+    graph.add_entity(Entity("project:old", "world:example", "project", "Old Project"))
     predecessor = Relationship(
-        "relationship:ended", "world:yun", "organization:old", "project:old", "supports",
+        "relationship:ended", "world:example", "organization:old", "project:old", "supports",
         status="ended", valid_to="2026-08-12T00:00:00+00:00",
     )
     graph.add_relationship(predecessor)
     successor = Relationship(
-        "relationship:successor", "world:yun", "organization:old", "project:old", "supports",
+        "relationship:successor", "world:example", "organization:old", "project:old", "supports",
         valid_from="2026-08-13T00:00:00+00:00",
     )
-    delta = WorldDelta("world:yun", ("e:successor",), new_relationships=(successor,))
+    delta = WorldDelta("world:example", ("e:successor",), new_relationships=(successor,))
     evidence = EvidenceRecord(
         "e:successor",
         "Old Org supports Old Project again.",
@@ -2366,11 +2366,11 @@ def test_product_bundle_updates_one_relationship_evaluation_with_contradiction_t
 
     path = tmp_path / "product-bundle-cognition-update.sqlite"
     graph = _graph()
-    graph.add_entity(Entity("person:lihua", "world:yun", "person", "李华"))
-    graph.add_entity(Entity("project:xinggang", "world:yun", "project", "星港项目"))
+    graph.add_entity(Entity("person:lihua", "world:example", "person", "李华"))
+    graph.add_entity(Entity("project:xinggang", "world:example", "project", "星港项目"))
     relationship = Relationship(
         "relationship:lihua-supports-xinggang",
-        "world:yun",
+        "world:example",
         "person:lihua",
         "project:xinggang",
         "支持",
@@ -2380,14 +2380,14 @@ def test_product_bundle_updates_one_relationship_evaluation_with_contradiction_t
     initial_text = "我觉得李华支持星港项目很可靠。"
     prior = WorldCognition(
         "cog:lihua-supports-xinggang-reliable",
-        "world:yun",
+        "world:example",
         MemoryTarget("relationship", relationship.id),
         initial_text,
         "fact",
         "stated",
         600,
         "limited",
-        Perspective("entity", ("person:yun",)),
+        Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:reliable", "support"),),
         structured_claim=StructuredClaim(
             "evaluation",
@@ -2398,7 +2398,7 @@ def test_product_bundle_updates_one_relationship_evaluation_with_contradiction_t
     )
     initial_hash = sha256(initial_text.encode("utf-8")).hexdigest()
     initial_delta = WorldDelta(
-        "world:yun",
+        "world:example",
         ("e:reliable",),
         new_cognitions=(prior,),
         formation_traces=(
@@ -2459,7 +2459,7 @@ def test_product_bundle_updates_one_relationship_evaluation_with_contradiction_t
         (contradict_evidence.id,),
     )
     pending = loop.stage_product_bundle(
-        WorldDelta("world:yun", (contradict_evidence.id,)),
+        WorldDelta("world:example", (contradict_evidence.id,)),
         (contradict_evidence,),
         evolution_steps=(contradiction,),
         cognition_updates=(contradicted,),
@@ -2523,7 +2523,7 @@ def test_product_bundle_updates_one_relationship_evaluation_with_contradiction_t
             (reaffirm_evidence.id,),
         )
         reaffirm_pending = reopened.stage_product_bundle(
-            WorldDelta("world:yun", (reaffirm_evidence.id,)),
+            WorldDelta("world:example", (reaffirm_evidence.id,)),
             (reaffirm_evidence,),
             evolution_steps=(reaffirmation,),
             cognition_updates=(reaffirmed,),
@@ -2875,7 +2875,7 @@ def test_product_bundle_rejects_noncurrent_or_incompatible_transition_intents(tm
         loop.decide(accepted.id, accepted.result_hash, "accept")
         again_full = _product_bundle_delta(evidence_id="e:again", cognition_id="cog:again")
         again = WorldDelta(
-            "world:yun",
+            "world:example",
             ("e:again",),
             new_cognitions=again_full.new_cognitions,
             formation_traces=again_full.formation_traces,
@@ -2931,7 +2931,7 @@ def test_legacy_memory_loop_database_upgrades_into_the_v3_main_store(tmp_path: P
     with MemoryLoop(path, _graph()) as upgraded:
         assert user_version(upgraded.connection) == SCHEMA_VERSION
         assert upgraded.view().revision == 1
-        assert upgraded.view().graph.cognitions["cog:tea"].content == "Yun likes tea"
+        assert upgraded.view().graph.cognitions["cog:tea"].content == "Casey likes tea"
         tables = {
             row[0]
             for row in upgraded.connection.execute(
@@ -3065,12 +3065,12 @@ def test_recall_no_memory_and_answer_context_are_evidence_bounded(tmp_path: Path
         assert loop.ask("what is the weather", answerer).status == "no_memory"
         assert answerer.call_count == 0
         _accept_addition(loop)
-        answer = loop.ask("What does Yun like?", answerer)
-        assert answer.status == "answered" and answer.answer == "Yun likes tea."
+        answer = loop.ask("What does Casey like?", answerer)
+        assert answer.status == "answered" and answer.answer == "Casey likes tea."
         assert answerer.call_count == 1
         assert [item.id for item in answer.evidence_context] == ["e:tea"]
         prompt = answerer.messages[-1].content
-        assert "content=Yun likes tea" in prompt
+        assert "content=Casey likes tea" in prompt
         assert "cognition:cog:tea --support--> e:tea" in prompt
         assert "I like tea." not in prompt
 
@@ -3086,7 +3086,7 @@ def test_recall_marks_pre_envelope_evidence_as_legacy_without_backfilling_it(
             "SELECT payload_json FROM evidence_ledger WHERE id = 'e:tea'"
         ).fetchone()[0]
 
-        answer = loop.ask("What does Yun like?")
+        answer = loop.ask("What does Casey like?")
 
         assert answer.status == "recalled"
         assert answer.evidence_traces == (
@@ -3133,7 +3133,7 @@ def test_recall_fails_closed_on_a_malformed_stored_system_evidence_envelope(
             MemoryLoopIntegrityError,
             match="invalid system Evidence envelope",
         ):
-            loop.ask("What does Yun like?")
+            loop.ask("What does Casey like?")
 
         assert loop.view() == before
         assert loop.connection.execute(
@@ -3145,15 +3145,15 @@ def test_correction_reject_accept_history_and_reopen(tmp_path: Path) -> None:
     path = tmp_path / "memory.sqlite"
     loop = MemoryLoop(path, _graph())
     prior = _accept_addition(loop)
-    rejected = loop.stage_correction(prior, "Yun does not like tea", EvidenceRecord("e:correction", "Actually I do not like tea."))
+    rejected = loop.stage_correction(prior, "Casey does not like tea", EvidenceRecord("e:correction", "Actually I do not like tea."))
     loop.decide(rejected.id, rejected.result_hash, "reject")
     assert tuple(item.id for item in loop.view().current_cognitions) == (prior,)
-    accepted = loop.stage_correction(prior, "Yun does not like tea", EvidenceRecord("e:correction", "Actually I do not like tea."))
+    accepted = loop.stage_correction(prior, "Casey does not like tea", EvidenceRecord("e:correction", "Actually I do not like tea."))
     view = loop.decide(accepted.id, accepted.result_hash, "accept")
     assert prior in view.graph.cognitions and prior in view.superseded_cognition_ids
     assert len(view.current_cognitions) == 1
-    assert view.current_cognitions[0].content == "Yun does not like tea"
-    assert loop.ask("Does Yun like tea?").recalled_cognitions[0].content == "Yun does not like tea"
+    assert view.current_cognitions[0].content == "Casey does not like tea"
+    assert loop.ask("Does Casey like tea?").recalled_cognitions[0].content == "Casey does not like tea"
     loop.close()
     with MemoryLoop(path, _graph()) as reopened:
         assert prior in reopened.view().superseded_cognition_ids
@@ -3230,7 +3230,7 @@ def test_correction_bundle_rejects_invalid_or_incoherent_prior_sets(tmp_path: Pa
     base = _cognition("cog:base", "基础认知")
     same = _cognition("cog:same", "同槽认知")
     variants = (
-        (replace(base, id="cog:target", target=MemoryTarget("world", "world:yun")), "target"),
+        (replace(base, id="cog:target", target=MemoryTarget("world", "world:example")), "target"),
         (replace(base, id="cog:perspective", perspective=Perspective("system")), "perspective"),
         (replace(base, id="cog:type", content_type="preference"), "content_type"),
         (replace(base, id="cog:scope", scope="只限过去"), "scope"),
@@ -3348,11 +3348,11 @@ def test_snapshot_tamper_fails_closed(tmp_path: Path) -> None:
 
 def test_chinese_query_reconstructs_cat_entity_and_current_cognition(tmp_path: Path) -> None:
     graph = _graph()
-    graph.add_entity(Entity("pet:doubao", "world:yun", "pet", "豆包"))
+    graph.add_entity(Entity("pet:doubao", "world:example", "pet", "豆包"))
     content = "豆包害怕吸尘器"
     cognition = WorldCognition(
-        "cog:doubao-fear", "world:yun", MemoryTarget("entity", "pet:doubao"), content,
-        "preference", "stated", 600, "limited", Perspective("entity", ("person:yun",)),
+        "cog:doubao-fear", "world:example", MemoryTarget("entity", "pet:doubao"), content,
+        "preference", "stated", 600, "limited", Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:doubao", "support"),),
     )
     trace = FormationTrace(
@@ -3361,7 +3361,7 @@ def test_chinese_query_reconstructs_cat_entity_and_current_cognition(tmp_path: P
         "stated", 1, 1, 0,
     )
     with MemoryLoop(tmp_path / "cat.sqlite", graph) as loop:
-        review = loop.stage_addition(WorldDelta("world:yun", ("e:doubao",), new_cognitions=(cognition,), formation_traces=(trace,)), (EvidenceRecord("e:doubao", "豆包很怕吸尘器。"),))
+        review = loop.stage_addition(WorldDelta("world:example", ("e:doubao",), new_cognitions=(cognition,), formation_traces=(trace,)), (EvidenceRecord("e:doubao", "豆包很怕吸尘器。"),))
         loop.decide(review.id, review.result_hash, "accept")
         answer = loop.ask("豆包害怕什么")
         assert answer.status == "recalled"
@@ -3371,11 +3371,11 @@ def test_chinese_query_reconstructs_cat_entity_and_current_cognition(tmp_path: P
 
 def test_recall_requires_an_explicit_entity_name_or_strong_lexical_overlap(tmp_path: Path) -> None:
     graph = _graph()
-    graph.add_entity(Entity("pet:doubao", "world:yun", "pet", "豆包"))
+    graph.add_entity(Entity("pet:doubao", "world:example", "pet", "豆包"))
     content = "豆包是我的猫"
     cognition = WorldCognition(
-        "cog:doubao-cat", "world:yun", MemoryTarget("entity", "pet:doubao"), content,
-        "fact", "stated", 600, "limited", Perspective("entity", ("person:yun",)),
+        "cog:doubao-cat", "world:example", MemoryTarget("entity", "pet:doubao"), content,
+        "fact", "stated", 600, "limited", Perspective("entity", ("person:example",)),
         sources=(EvidenceLink("e:doubao-cat", "support"),),
     )
     trace = FormationTrace(
@@ -3385,7 +3385,7 @@ def test_recall_requires_an_explicit_entity_name_or_strong_lexical_overlap(tmp_p
     )
     with MemoryLoop(tmp_path / "cat-relevance.sqlite", graph) as loop:
         review = loop.stage_addition(
-            WorldDelta("world:yun", ("e:doubao-cat",), new_cognitions=(cognition,), formation_traces=(trace,)),
+            WorldDelta("world:example", ("e:doubao-cat",), new_cognitions=(cognition,), formation_traces=(trace,)),
             (EvidenceRecord("e:doubao-cat", "豆包是我的猫。"),),
         )
         loop.decide(review.id, review.result_hash, "accept")
@@ -3401,7 +3401,7 @@ def test_recall_requires_an_explicit_entity_name_or_strong_lexical_overlap(tmp_p
 
 def test_romance_recall_does_not_leak_an_unnamed_cat_or_owner_sibling_memory(tmp_path: Path) -> None:
     graph = _graph()
-    graph.add_entity(Entity("pet:erwu", "world:yun", "pet", "二五"))
+    graph.add_entity(Entity("pet:erwu", "world:example", "pet", "二五"))
     cat_memory = _cognition(
         "cog:erwu-smoking",
         "二五不喜欢我抽",
@@ -3438,7 +3438,7 @@ def test_romance_recall_does_not_leak_an_unnamed_cat_or_owner_sibling_memory(tmp
 
 def test_cognition_content_name_can_anchor_age_recall_without_becoming_an_entity_alias(tmp_path: Path) -> None:
     graph = _graph()
-    pet = Entity("pet:kitten", "world:yun", "pet", "小猫")
+    pet = Entity("pet:kitten", "world:example", "pet", "小猫")
     graph.add_entity(pet)
     age_memory = _cognition(
         "cog:kitten-age",
@@ -3476,37 +3476,37 @@ def test_cognition_content_name_can_anchor_age_recall_without_becoming_an_entity
 def test_pending_rejected_and_superseded_cognitions_do_not_enter_recalled_cognitions(tmp_path: Path) -> None:
     with _loop(tmp_path) as loop:
         pending = loop.stage_addition(_delta(), (EvidenceRecord("e:tea", "I like tea."),))
-        assert loop.ask("What does Yun like about tea?").recalled_cognitions == ()
+        assert loop.ask("What does Casey like about tea?").recalled_cognitions == ()
         loop.decide(pending.id, pending.result_hash, "reject")
-        assert loop.ask("What does Yun like about tea?").recalled_cognitions == ()
+        assert loop.ask("What does Casey like about tea?").recalled_cognitions == ()
 
         prior = _accept_addition(loop)
         correction = loop.stage_correction(
             prior,
-            "Yun does not like tea",
+            "Casey does not like tea",
             EvidenceRecord("e:tea-correction", "Actually I do not like tea."),
         )
         replacement = loop.decide(correction.id, correction.result_hash, "accept").current_cognitions[0]
-        recalled = loop.ask("Does Yun like tea?")
+        recalled = loop.ask("Does Casey like tea?")
         assert [item.id for item in recalled.recalled_cognitions] == [replacement.id]
         assert prior not in {item.id for item in recalled.recalled_cognitions}
 
 
 def test_nanjing_why_query_returns_event_relationship_facets_and_prompt_context(tmp_path: Path) -> None:
     graph = _graph()
-    friend = Entity("person:lin", "world:yun", "person", "Lin")
+    friend = Entity("person:lin", "world:example", "person", "Lin")
     graph.add_entity(friend)
-    relationship = Relationship("relationship:yun-lin", "world:yun", "person:yun", friend.id, "friend")
+    relationship = Relationship("relationship:example-lin", "world:example", "person:example", friend.id, "friend")
     graph.add_relationship(relationship)
     event = WorldEvent(
-        "event:nanjing", "world:yun", "interpersonal_conflict", "南京旅行时两人因行程安排争执", "2026-05-01",
-        participants=(EventParticipant("person:yun"), EventParticipant(friend.id)), relationship_ids=(relationship.id,),
+        "event:nanjing", "world:example", "interpersonal_conflict", "南京旅行时两人因行程安排争执", "2026-05-01",
+        participants=(EventParticipant("person:example"), EventParticipant(friend.id)), relationship_ids=(relationship.id,),
         facets=(EventFacet("cause", "Yun想要明确行程，Lin想临时决定"), EventFacet("destination", "南京")),
     )
     graph.add_event(event)
     graph.add_cognition(WorldCognition(
-        "cog:nanjing-conflict", "world:yun", MemoryTarget("event", event.id), "争执源于两人对行程安排的不同偏好",
-        "fact", "stated", 600, "limited", Perspective("entity", ("person:yun",)),
+        "cog:nanjing-conflict", "world:example", MemoryTarget("event", event.id), "争执源于两人对行程安排的不同偏好",
+        "fact", "stated", 600, "limited", Perspective("entity", ("person:example",)),
     ))
     answerer = _Answerer()
     with MemoryLoop(tmp_path / "nanjing.sqlite", graph) as loop:
@@ -3525,35 +3525,35 @@ def test_event_provenance_is_hydrated_after_anchor_selection_but_raw_text_is_not
 ) -> None:
     path = tmp_path / "event-provenance.sqlite"
     graph = _graph()
-    friend = Entity("person:friend", "world:yun", "person", "Friend_X")
-    trip = Entity("activity:nanjing", "world:yun", "activity", "Nanjing trip")
-    place = Entity("place:nanjing", "world:yun", "place", "Nanjing")
+    friend = Entity("person:friend", "world:example", "person", "Friend_X")
+    trip = Entity("activity:nanjing", "world:example", "activity", "Nanjing trip")
+    place = Entity("place:nanjing", "world:example", "place", "Nanjing")
     relationship = Relationship(
         "relationship:friend",
-        "world:yun",
-        "person:yun",
+        "world:example",
+        "person:example",
         friend.id,
         "friend",
         True,
     )
     event = WorldEvent(
         "event:nanjing-conflict",
-        "world:yun",
+        "world:example",
         "interpersonal_conflict",
-        "Yun and Friend_X argued while planning the Nanjing trip.",
+        "Casey and Friend_X argued while planning the Nanjing trip.",
         "2026-08-06T12:00:00+08:00",
-        (EventParticipant("person:yun"), EventParticipant(friend.id)),
+        (EventParticipant("person:example"), EventParticipant(friend.id)),
         (trip.id, place.id),
         (relationship.id,),
         (
             EventFacet("cause", "They wanted different levels of advance planning."),
-            EventFacet("position", "Preferred flexibility.", "person:yun"),
+            EventFacet("position", "Preferred flexibility.", "person:example"),
             EventFacet("position", "Preferred an itinerary.", friend.id),
         ),
         ("turn:event-one", "turn:event-two"),
     )
     delta = WorldDelta(
-        "world:yun",
+        "world:example",
         event.evidence_ids,
         (friend, trip, place),
         (relationship,),
@@ -3597,7 +3597,7 @@ def test_event_provenance_is_hydrated_after_anchor_selection_but_raw_text_is_not
         assert {item.id for item in answer.evidence_context} == set(event.evidence_ids)
         prompt = answerer.messages[-1].content
         assert "They wanted different levels of advance planning." in prompt
-        assert "position[about=Yun]=Preferred flexibility." in prompt
+        assert "position[about=Casey]=Preferred flexibility." in prompt
         assert "position[about=Friend_X]=Preferred an itinerary." in prompt
         assert "turn:event-one" in prompt and "turn:event-two" in prompt
         assert "RAW_TRANSCRIPT_SENTINEL" not in prompt
@@ -3650,7 +3650,7 @@ def test_recall_projects_available_lifecycle_and_filters_transient_cognition_wit
     path = tmp_path / f"recall-decay-{expected_reason}.sqlite"
     clock = lambda: now  # noqa: E731 - compact immutable clock fixture
     with MemoryLoop(path, _graph(), recall_clock=clock) as loop:
-        state_text = "Yun is temporarily exhausted."
+        state_text = "Casey is temporarily exhausted."
         state_record = _lifecycle_evidence(
             "e:lifecycle-state",
             state_text,
@@ -3663,7 +3663,7 @@ def test_recall_projects_available_lifecycle_and_filters_transient_cognition_wit
             content_type="state",
             records=(state_record,),
         )
-        preference_text = "Yun prefers tea."
+        preference_text = "Casey prefers tea."
         preference_record = _lifecycle_evidence(
             "e:lifecycle-preference",
             preference_text,
@@ -3689,7 +3689,7 @@ def test_recall_projects_available_lifecycle_and_filters_transient_cognition_wit
         }
 
         answer = loop.ask(
-            "Does Yun prefer tea while temporarily exhausted?",
+            "Does Casey prefer tea while temporarily exhausted?",
             resolved_entity_ids=(before.graph.world.owner_entity_id,),
         )
 
@@ -3719,7 +3719,7 @@ def test_recall_projects_available_lifecycle_and_filters_transient_cognition_wit
 
     with MemoryLoop(path, _graph(), recall_clock=clock) as reopened:
         replay = reopened.ask(
-            "Does Yun prefer tea while temporarily exhausted?",
+            "Does Casey prefer tea while temporarily exhausted?",
             resolved_entity_ids=(reopened.view().graph.world.owner_entity_id,),
         )
         assert replay.cognition_lifecycles == answer.cognition_lifecycles
@@ -3734,7 +3734,7 @@ def test_recall_uses_latest_exact_support_recorded_time_as_corroboration(
         _graph(),
         recall_clock=lambda: "2026-08-05T00:00:00Z",
     ) as loop:
-        content = "Yun is temporarily exhausted."
+        content = "Casey is temporarily exhausted."
         old = _lifecycle_evidence(
             "e:lifecycle-old-support",
             content,
@@ -3755,7 +3755,7 @@ def test_recall_uses_latest_exact_support_recorded_time_as_corroboration(
         before = loop.view()
 
         answer = loop.ask(
-            "Is Yun temporarily exhausted?",
+            "Is Casey temporarily exhausted?",
             resolved_entity_ids=(before.graph.world.owner_entity_id,),
         )
 
@@ -3784,7 +3784,7 @@ def test_recall_never_guesses_legacy_or_missing_corroboration_time(
     expected_status: str,
 ) -> None:
     graph = _graph()
-    content = "Yun is temporarily exhausted."
+    content = "Casey is temporarily exhausted."
     missing = WorldCognition(
         "cog:lifecycle-unavailable",
         graph.world.world_id,
@@ -3829,7 +3829,7 @@ def test_recall_never_guesses_legacy_or_missing_corroboration_time(
         before = loop.view()
 
         answer = loop.ask(
-            "Is Yun temporarily exhausted?",
+            "Is Casey temporarily exhausted?",
             resolved_entity_ids=(before.graph.world.owner_entity_id,),
         )
 
@@ -3859,7 +3859,7 @@ def test_recall_fails_closed_on_invalid_or_pre_evidence_server_time(
         _graph(),
         recall_clock=lambda: now,
     ) as loop:
-        content = "Yun is temporarily exhausted."
+        content = "Casey is temporarily exhausted."
         record = _lifecycle_evidence(
             "e:lifecycle-clock",
             content,
@@ -3884,7 +3884,7 @@ def test_recall_fails_closed_on_invalid_or_pre_evidence_server_time(
 
         with pytest.raises(MemoryLoopIntegrityError, match="lifecycle time"):
             loop.ask(
-                "Is Yun temporarily exhausted?",
+                "Is Casey temporarily exhausted?",
                 resolved_entity_ids=(before.graph.world.owner_entity_id,),
             )
 
@@ -3909,26 +3909,26 @@ def test_asking_projection_selects_one_best_recalled_hypothesis_without_writes(
     with MemoryLoop(path, _graph(), recall_clock=clock) as loop:
         inferred_record = _lifecycle_evidence(
             "e:asking-inferred",
-            "Yun has been staying up late.",
+            "Casey has been staying up late.",
             occurred_at="2026-08-01T09:00:00Z",
         )
         _accept_lifecycle_cognition(
             loop,
             cognition_id="cog:asking-inferred",
-            content="Late nights may be making Yun tired.",
+            content="Late nights may be making Casey tired.",
             content_type="hypothesis",
             records=(inferred_record,),
             formed_by="inferred",
         )
         confirmed_record = _lifecycle_evidence(
             "e:asking-confirmed",
-            "Maybe tea is affecting Yun's sleep.",
+            "Maybe tea is affecting Casey's sleep.",
             occurred_at="2026-08-01T10:00:00Z",
         )
         selected = _accept_lifecycle_cognition(
             loop,
             cognition_id="cog:asking-confirmed",
-            content="Tea may be affecting Yun's sleep.",
+            content="Tea may be affecting Casey's sleep.",
             content_type="hypothesis",
             records=(confirmed_record,),
             formed_by="confirmed",
@@ -3949,7 +3949,7 @@ def test_asking_projection_selects_one_best_recalled_hypothesis_without_writes(
         }
 
         proposal = loop.propose_ask(
-            "What should Yun clarify about sleep?",
+            "What should Casey clarify about sleep?",
             resolved_entity_ids=(before.graph.world.owner_entity_id,),
         )
 
@@ -3959,8 +3959,8 @@ def test_asking_projection_selects_one_best_recalled_hypothesis_without_writes(
         assert proposal.reason == "low_confidence"
         assert proposal.content == selected.content
         assert proposal.question == (
-            'I noticed "Maybe tea is affecting Yun\'s sleep.", which got me '
-            "wondering: Tea may be affecting Yun's sleep.. Is that right?"
+            'I noticed "Maybe tea is affecting Casey\'s sleep.", which got me '
+            "wondering: Tea may be affecting Casey's sleep.. Is that right?"
         )
         assert [asdict(item) for item in proposal.support_evidence] == [
             {"id": confirmed_record.id, "summary": confirmed_record.content}
@@ -3980,7 +3980,7 @@ def test_asking_projection_selects_one_best_recalled_hypothesis_without_writes(
 
     with MemoryLoop(path, _graph(), recall_clock=clock) as reopened:
         replay = reopened.propose_ask(
-            "What should Yun clarify about sleep?",
+            "What should Casey clarify about sleep?",
             resolved_entity_ids=(reopened.view().graph.world.owner_entity_id,),
         )
         assert replay == proposal
@@ -3998,31 +3998,31 @@ def test_asking_projection_prioritizes_explicit_conflict_as_a_distinct_reason(
     ) as loop:
         hypothesis_record = _lifecycle_evidence(
             "e:asking-low-hypothesis",
-            "Yun may prefer quiet mornings.",
+            "Casey may prefer quiet mornings.",
             occurred_at="2026-08-01T08:00:00Z",
         )
         _accept_lifecycle_cognition(
             loop,
             cognition_id="cog:asking-low-hypothesis",
-            content="Yun may work best in quiet mornings.",
+            content="Casey may work best in quiet mornings.",
             content_type="hypothesis",
             records=(hypothesis_record,),
             formed_by="inferred",
         )
         support = _lifecycle_evidence(
             "e:asking-conflict-support",
-            "Yun likes early mornings.",
+            "Casey likes early mornings.",
             occurred_at="2026-08-01T09:00:00Z",
         )
         contradict = _lifecycle_evidence(
             "e:asking-conflict-contradict",
-            "Yun usually sleeps until noon.",
+            "Casey usually sleeps until noon.",
             occurred_at="2026-08-01T10:00:00Z",
         )
         conflicted = _accept_lifecycle_cognition(
             loop,
             cognition_id="cog:asking-conflict",
-            content="Yun prefers early mornings.",
+            content="Casey prefers early mornings.",
             content_type="preference",
             records=(support, contradict),
             formed_by="inferred",
@@ -4031,7 +4031,7 @@ def test_asking_projection_prioritizes_explicit_conflict_as_a_distinct_reason(
         before = loop.view()
 
         proposal = loop.propose_ask(
-            "What should Yun clarify about mornings?",
+            "What should Casey clarify about mornings?",
             resolved_entity_ids=(before.graph.world.owner_entity_id,),
         )
 
@@ -4040,8 +4040,8 @@ def test_asking_projection_prioritizes_explicit_conflict_as_a_distinct_reason(
         assert proposal.kind == "conflict"
         assert proposal.reason == "unresolved_conflict"
         assert proposal.question == (
-            'About "Yun prefers early mornings." — on one hand "Yun likes early '
-            'mornings.", but on the other hand "Yun usually sleeps until noon.". '
+            'About "Casey prefers early mornings." — on one hand "Casey likes early '
+            'mornings.", but on the other hand "Casey usually sleeps until noon.". '
             "Which is it actually now?"
         )
         assert [item.id for item in proposal.support_evidence] == [support.id]
@@ -4056,7 +4056,7 @@ def test_asking_projection_excludes_legacy_expired_and_unrelated_cognitions(
     tmp_path: Path,
 ) -> None:
     graph = _graph()
-    friend = Entity("person:friend", "world:yun", "person", "Friend")
+    friend = Entity("person:friend", "world:example", "person", "Friend")
     graph.add_entity(friend)
     with MemoryLoop(
         tmp_path / "asking-ineligible.sqlite",
@@ -4065,27 +4065,27 @@ def test_asking_projection_excludes_legacy_expired_and_unrelated_cognitions(
     ) as loop:
         legacy = _lifecycle_evidence(
             "e:asking-legacy",
-            "Yun may be avoiding crowds.",
+            "Casey may be avoiding crowds.",
             occurred_at="2026-08-19T00:00:00Z",
             legacy=True,
         )
         _accept_lifecycle_cognition(
             loop,
             cognition_id="cog:asking-legacy",
-            content="Yun may dislike crowds.",
+            content="Casey may dislike crowds.",
             content_type="hypothesis",
             records=(legacy,),
             formed_by="inferred",
         )
         expired = _lifecycle_evidence(
             "e:asking-expired",
-            "Yun stayed up late once.",
+            "Casey stayed up late once.",
             occurred_at="2026-08-01T00:00:00Z",
         )
         _accept_lifecycle_cognition(
             loop,
             cognition_id="cog:asking-expired",
-            content="Late nights may be making Yun tired.",
+            content="Late nights may be making Casey tired.",
             content_type="hypothesis",
             records=(expired,),
             formed_by="inferred",
@@ -4108,7 +4108,7 @@ def test_asking_projection_excludes_legacy_expired_and_unrelated_cognitions(
 
         assert (
             loop.propose_ask(
-                "What should Yun clarify?",
+                "What should Casey clarify?",
                 resolved_entity_ids=(before.graph.world.owner_entity_id,),
             )
             is None
@@ -4126,14 +4126,14 @@ def test_asking_projection_fails_closed_on_permission_ineligible_evidence(
     ) as loop:
         record = _lifecycle_evidence(
             "e:asking-permission",
-            "Yun may prefer cycling.",
+            "Casey may prefer cycling.",
             occurred_at="2026-08-01T10:00:00Z",
             allow_inference=False,
         )
         _accept_lifecycle_cognition(
             loop,
             cognition_id="cog:asking-permission",
-            content="Yun may enjoy cycling.",
+            content="Casey may enjoy cycling.",
             content_type="hypothesis",
             records=(record,),
             formed_by="inferred",
@@ -4142,7 +4142,7 @@ def test_asking_projection_fails_closed_on_permission_ineligible_evidence(
 
         with pytest.raises(MemoryLoopIntegrityError, match="does not match"):
             loop.propose_ask(
-                "What should Yun clarify?",
+                "What should Casey clarify?",
                 resolved_entity_ids=(before.graph.world.owner_entity_id,),
             )
 
@@ -4154,21 +4154,21 @@ def test_ambiguous_experience_anchor_does_not_call_answerer_or_union_bundles(
 ) -> None:
     graph = _graph()
     for item in (
-        Entity("person:a", "world:yun", "person", "Friend A"),
-        Entity("person:b", "world:yun", "person", "Friend B"),
-        Entity("activity:nanjing", "world:yun", "activity", "Nanjing trip"),
-        Entity("place:nanjing", "world:yun", "place", "Nanjing"),
+        Entity("person:a", "world:example", "person", "Friend A"),
+        Entity("person:b", "world:example", "person", "Friend B"),
+        Entity("activity:nanjing", "world:example", "activity", "Nanjing trip"),
+        Entity("place:nanjing", "world:example", "place", "Nanjing"),
     ):
         graph.add_entity(item)
     for suffix, friend_id in (("a", "person:a"), ("b", "person:b")):
         graph.add_event(
             WorldEvent(
                 f"event:{suffix}",
-                "world:yun",
+                "world:example",
                 "interpersonal_conflict",
-                "Yun argued with a friend about the Nanjing trip.",
+                "Casey argued with a friend about the Nanjing trip.",
                 f"2026-08-0{1 if suffix == 'a' else 2}T12:00:00+08:00",
-                (EventParticipant("person:yun"), EventParticipant(friend_id)),
+                (EventParticipant("person:example"), EventParticipant(friend_id)),
                 ("activity:nanjing", "place:nanjing"),
                 facets=(EventFacet("cause", "Different travel styles"),),
                 evidence_ids=(f"e:{suffix}",),

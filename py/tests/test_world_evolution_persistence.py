@@ -35,10 +35,10 @@ from memoweft.world import (
 from memoweft.world.loop import EvidenceRecord, MemoryLoop, MemoryLoopIntegrityError
 
 
-WORLD_ID = "world:yun"
-OWNER_ID = "person:yun"
+WORLD_ID = "world:example"
+OWNER_ID = "person:example"
 FRIEND_ID = "person:friend-x"
-RELATIONSHIP_ID = "relationship:yun-friend-x"
+RELATIONSHIP_ID = "relationship:example-friend-x"
 
 
 def _score(content_type: str, formed_by: str, support: int, contradict: int) -> tuple[int, str]:
@@ -125,7 +125,7 @@ def _event(event_id: str, event_type: str, occurred_at: str, evidence_id: str) -
 
 def _relationship_graph() -> MemoryWorldGraph:
     graph = MemoryWorldGraph(PersonalWorld(WORLD_ID, OWNER_ID))
-    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Yun"))
+    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Casey"))
     graph.add_entity(Entity(FRIEND_ID, WORLD_ID, "person", "Friend_X"))
     graph.add_relationship(
         Relationship(
@@ -490,7 +490,7 @@ def test_structured_evaluation_correction_is_one_typed_successor_with_exact_trac
 
     path = tmp_path / "structured-evaluation-correction.sqlite"
     graph = MemoryWorldGraph(PersonalWorld(WORLD_ID, OWNER_ID))
-    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Yun"))
+    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Casey"))
     graph.add_entity(Entity(FRIEND_ID, WORLD_ID, "person", "Friend_X"))
     graph.add_relationship(
         Relationship(
@@ -660,12 +660,12 @@ def test_structured_evaluation_correction_is_one_typed_successor_with_exact_trac
 
 def test_contradiction_persists_same_id_without_supersession(tmp_path: Path) -> None:
     graph = MemoryWorldGraph(PersonalWorld(WORLD_ID, OWNER_ID))
-    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Yun"))
+    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Casey"))
     loop = MemoryLoop(tmp_path / "contradiction.sqlite", graph)
     prior = _cognition(
         "cog:likes-crowds",
         MemoryTarget("entity", OWNER_ID),
-        "Yun likes crowded places.",
+        "Casey likes crowded places.",
         "e:crowds",
         content_type="fact",
         scope=None,
@@ -715,7 +715,7 @@ def test_contradiction_persists_same_id_without_supersession(tmp_path: Path) -> 
     assert view.transitions == ()
     assert view.superseded_cognition_ids == frozenset()
     assert tuple(item.step.relation for item in view.evolution_steps) == ("contradicts",)
-    recall_query = "Does Yun like crowded places?"
+    recall_query = "Does Casey like crowded places?"
     recall_before_reopen = loop.recall(recall_query)
     assert recall_before_reopen.status == "resolved"
     assert recall_before_reopen.current_cognition_ids == (prior.id,)

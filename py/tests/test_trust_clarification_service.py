@@ -154,7 +154,7 @@ def test_host_bound_inbox_lists_only_clarifications_this_host_can_answer(
     cli_id, _ = _seed_open_clarification(
         path,
         clock,
-        source_text="The owner said he is Yun.",
+        source_text="The owner said he is Casey.",
         question="Who does he refer to?",
         result_session_id="cli-session",
         source_host_id="hermes:cli",
@@ -179,7 +179,7 @@ def test_host_bound_inbox_lists_only_clarifications_this_host_can_answer(
     receipt = cli_service.answer(
         clarification_id=cli_id,
         result_session_id="cli-session",
-        answer="He refers to the owner, Yun.",
+        answer="He refers to the owner, Casey.",
     )
     assert receipt["state"] == "answered"
 

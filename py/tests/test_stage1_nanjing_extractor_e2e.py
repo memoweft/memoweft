@@ -62,8 +62,8 @@ def _turns() -> list[ConversationTurn]:
 
 
 def _base() -> MemoryWorldGraph:
-    graph = MemoryWorldGraph(PersonalWorld("world:yun", "person:user"))
-    graph.add_entity(Entity("person:user", "world:yun", "person", "User"))
+    graph = MemoryWorldGraph(PersonalWorld("world:example", "person:user"))
+    graph.add_entity(Entity("person:user", "world:example", "person", "User"))
     return graph
 
 
@@ -71,25 +71,25 @@ def _wire_payload() -> str:
     """A generic-model wire proposal matching the frozen semantic oracle."""
     return json.dumps(
         {
-            "world_id": "world:yun",
+            "world_id": "world:example",
             "new_entities": [
                 {
                     "id": "person:friend-x",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "kind": "person",
                     "canonical_name": "Friend_X",
                     "aliases": [],
                 },
                 {
                     "id": "place:nanjing",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "kind": "place",
                     "canonical_name": "南京",
                     "aliases": [],
                 },
                 {
                     "id": "activity:nanjing-trip",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "kind": "activity",
                     "canonical_name": "南京旅行",
                     "aliases": [],
@@ -98,7 +98,7 @@ def _wire_payload() -> str:
             "new_relationships": [
                 {
                     "id": "relationship:user-friend-x",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "source_entity_id": "person:user",
                     "target_entity_id": "person:friend-x",
                     "relation_type": "friend",
@@ -108,7 +108,7 @@ def _wire_payload() -> str:
             "new_events": [
                 {
                     "id": "event:nanjing-conflict",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "event_type": "interpersonal_conflict",
                     "summary": "关于旅行计划方式的分歧导致的争执",
                     "occurred_at": "2026-08-06T09:01:00+08:00",
@@ -144,7 +144,7 @@ def _wire_payload() -> str:
             "new_cognitions": [
                 {
                     "id": "cog:user-travel-style",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "target": {"kind": "entity", "id": "person:user"},
                     "content": None,
                     "content_type": "preference",
@@ -164,7 +164,7 @@ def _wire_payload() -> str:
                 },
                 {
                     "id": "cog:friend-travel-style",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "target": {"kind": "entity", "id": "person:friend-x"},
                     "content": None,
                     "content_type": "preference",
@@ -184,7 +184,7 @@ def _wire_payload() -> str:
                 },
                 {
                     "id": "cog:relationship-travel-friction",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "target": {
                         "kind": "relationship",
                         "id": "relationship:user-friend-x",

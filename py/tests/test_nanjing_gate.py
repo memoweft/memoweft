@@ -122,7 +122,7 @@ def _formation_traces(graph: MemoryWorldGraph) -> tuple[FormationTrace, ...]:
 def _graph() -> MemoryWorldGraph:
     """A valid graph whose ids deliberately do not resemble generated slugs."""
     graph = MemoryWorldGraph(PersonalWorld("world-varying-id", "entity-owner-17"))
-    graph.add_entity(Entity("entity-owner-17", "world-varying-id", "person", "Yun"))
+    graph.add_entity(Entity("entity-owner-17", "world-varying-id", "person", "Casey"))
     graph.add_entity(Entity("peer-42", "world-varying-id", "person", "Ｆｒｉｅｎｄ＿Ｘ"))
     graph.add_entity(Entity("activity-72", "world-varying-id", "activity", "南京 旅行"))
     graph.add_entity(Entity("locale-58", "world-varying-id", "place", "NANJING"))

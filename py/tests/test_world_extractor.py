@@ -67,8 +67,8 @@ class TimeoutOnSecondLLM(ScriptedLLM):
 
 
 def _base() -> MemoryWorldGraph:
-    graph = MemoryWorldGraph(PersonalWorld("world:yun", "person:user"))
-    graph.add_entity(Entity("person:user", "world:yun", "person", "User"))
+    graph = MemoryWorldGraph(PersonalWorld("world:example", "person:user"))
+    graph.add_entity(Entity("person:user", "world:example", "person", "User"))
     return graph
 
 
@@ -81,11 +81,11 @@ def _turns() -> list[ConversationTurn]:
 
 def _payload(**override: object) -> str:
     value: dict[str, object] = {
-        "world_id": "world:yun",
+        "world_id": "world:example",
         "new_entities": [
             {
                 "id": "person:friend-x",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "person",
                 "canonical_name": "Friend_X",
                 "aliases": [],
@@ -113,7 +113,7 @@ def _trip_payload(
     entities: list[dict[str, object]] = [
         {
             "id": resolved_activity_id,
-            "world_id": "world:yun",
+            "world_id": "world:example",
             "kind": "activity",
             "canonical_name": f"{anchor.title()} trip",
             "aliases": [],
@@ -123,7 +123,7 @@ def _trip_payload(
         entities.append(
             {
                 "id": f"place:{anchor}",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "place",
                 "canonical_name": anchor.title(),
                 "aliases": [],
@@ -132,7 +132,7 @@ def _trip_payload(
     entities.extend(
         {
             "id": f"place:{place_anchor}",
-            "world_id": "world:yun",
+            "world_id": "world:example",
             "kind": "place",
             "canonical_name": place_anchor.title(),
             "aliases": [],
@@ -147,7 +147,7 @@ def _trip_payload(
         new_events=[
             {
                 "id": f"event:{anchor}-trip-planning",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "event_type": "travel_planning",
                 "summary": f"Planning a trip anchored at {anchor.title()}.",
                 "occurred_at": "2026-08-08T10:00:00+08:00",
@@ -210,7 +210,7 @@ def _cognition_payload(
         new_cognitions=[
             {
                 "id": "cog:user-preference",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "target": {"kind": "entity", "id": "person:user"},
                 "content": content,
                 "content_type": "preference",
@@ -238,7 +238,7 @@ def _relationship_projection_payload(
         new_entities=[
             {
                 "id": "person:friend-x",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "person",
                 "canonical_name": "Friend_X",
                 "aliases": [],
@@ -247,7 +247,7 @@ def _relationship_projection_payload(
         new_relationships=[
             {
                 "id": "relationship:user-friend-x",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "source_entity_id": "person:user",
                 "target_entity_id": "person:friend-x",
                 "relation_type": "friend",
@@ -257,7 +257,7 @@ def _relationship_projection_payload(
         new_cognitions=[
             {
                 "id": "cog:user-travel",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "target": {"kind": "entity", "id": "person:user"},
                 "content": None,
                 "content_type": "preference",
@@ -270,7 +270,7 @@ def _relationship_projection_payload(
             },
             {
                 "id": "cog:friend-travel",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "target": {"kind": "entity", "id": "person:friend-x"},
                 "content": None,
                 "content_type": "preference",
@@ -283,7 +283,7 @@ def _relationship_projection_payload(
             },
             {
                 "id": "cog:relationship-travel",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "target": {"kind": "relationship", "id": "relationship:user-friend-x"},
                 "content": relationship_content,
                 "content_type": "hypothesis",
@@ -323,7 +323,7 @@ def _conflict_relationship_projection_payload(
     payload["new_events"] = [
         {
             "id": "event:travel-conflict",
-            "world_id": "world:yun",
+            "world_id": "world:example",
             "event_type": event_type,
             "summary": "A conflict happened.",
             "occurred_at": "2026-08-08T10:00:00+08:00",
@@ -365,7 +365,7 @@ def _conflict_payload(position: str, *, segment_id: str = "seg-0000") -> str:
         new_relationships=[
             {
                 "id": "relationship:user-friend-x",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "source_entity_id": "person:user",
                 "target_entity_id": "person:friend-x",
                 "relation_type": "friend",
@@ -375,7 +375,7 @@ def _conflict_payload(position: str, *, segment_id: str = "seg-0000") -> str:
         new_events=[
             {
                 "id": "event:travel-conflict",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "event_type": "interpersonal_conflict",
                 "summary": "A conflict happened.",
                 "occurred_at": "2026-08-08T10:00:00+08:00",
@@ -603,7 +603,7 @@ def test_trip_activity_with_new_matching_place_and_event_links_passes_without_re
 
 def test_trip_activity_accepts_exact_matching_place_already_in_base() -> None:
     base = _base()
-    base.add_entity(Entity("place:kyoto", "world:yun", "place", "Kyoto"))
+    base.add_entity(Entity("place:kyoto", "world:example", "place", "Kyoto"))
     llm = ScriptedLLM([_trip_payload(include_place=False)])
 
     delta = WorldExtractor(llm).extract(base, _trip_turns(), {"turn:user"})
@@ -615,7 +615,7 @@ def test_trip_activity_accepts_exact_matching_place_already_in_base() -> None:
 
 def test_trip_activity_rejects_exact_base_place_id_with_the_wrong_kind() -> None:
     base = _base()
-    base.add_entity(Entity("place:kyoto", "world:yun", "activity", "Kyoto"))
+    base.add_entity(Entity("place:kyoto", "world:example", "activity", "Kyoto"))
     invalid = _trip_payload(include_place=False)
     llm = ScriptedLLM([invalid, invalid])
 
@@ -720,14 +720,14 @@ def test_decoder_discards_only_an_exact_base_entity_echo_before_create_only_vali
         new_entities=[
             {
                 "id": "animal:pet-two-five",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "animal",
                 "canonical_name": "Pet_Two_Five",
                 "aliases": [],
             },
             {
                 "id": "person:user",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "person",
                 "canonical_name": "User",
                 "aliases": [],
@@ -745,7 +745,7 @@ def test_decoder_keeps_a_same_id_base_entity_with_changed_fields_for_create_only
         new_entities=[
             {
                 "id": "person:user",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "person",
                 "canonical_name": "Changed User",
                 "aliases": [],
@@ -778,7 +778,7 @@ def test_decoder_enforces_top_level_response_array_maximum_before_domain_validat
     [
         (
             lambda: _payload(new_entities=[{
-                "id": "person:friend-x", "world_id": "world:yun", "kind": "person",
+                "id": "person:friend-x", "world_id": "world:example", "kind": "person",
                 "canonical_name": "Friend_X", "aliases": ["one", "two", "three", "four", "five"],
             }]),
             "ARRAY_MAX_ITEMS@$.new_entities[0].aliases",
@@ -1827,7 +1827,7 @@ def test_cross_evidence_projection_repair_omits_the_unsatisfiable_cognition_tran
     invalid["new_events"] = [
         {
             "id": "event:travel-conflict",
-            "world_id": "world:yun",
+            "world_id": "world:example",
             "event_type": "interpersonal_conflict",
             "summary": "A conflict happened.",
             "occurred_at": "2026-08-08T10:00:02+08:00",
@@ -2617,7 +2617,7 @@ def test_domain_failure_is_repaired_with_the_same_budget() -> None:
         new_relationships=[
             {
                 "id": "relationship:user-missing",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "source_entity_id": "person:user",
                 "target_entity_id": "person:missing",
                 "relation_type": "friend",
@@ -2822,7 +2822,7 @@ def test_owner_relationship_coverage_does_not_require_an_extra_owner_cognition()
             new_entities=[
                 {
                     "id": "animal:erwu",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "kind": "animal",
                     "canonical_name": "二五",
                     "aliases": [],
@@ -2831,7 +2831,7 @@ def test_owner_relationship_coverage_does_not_require_an_extra_owner_cognition()
             new_relationships=[
                 {
                     "id": "relationship:user-erwu",
-                    "world_id": "world:yun",
+                    "world_id": "world:example",
                     "source_entity_id": "person:user",
                     "target_entity_id": "animal:erwu",
                     "relation_type": "owns",
@@ -2862,7 +2862,7 @@ def test_owner_pet_introduction_falls_back_to_animal_and_ownership_after_repeate
         new_entities=[
             {
                 "id": "animal:local-cat",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "animal",
                 "canonical_name": "小猫",
                 "aliases": [],
@@ -2871,7 +2871,7 @@ def test_owner_pet_introduction_falls_back_to_animal_and_ownership_after_repeate
         new_relationships=[
             {
                 "id": "relationship:user-local-cat",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "source_entity_id": "person:user",
                 "target_entity_id": "animal:local-cat",
                 "relation_type": "owns",
@@ -2881,7 +2881,7 @@ def test_owner_pet_introduction_falls_back_to_animal_and_ownership_after_repeate
         new_events=[
             {
                 "id": "event:pet-introduction",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "event_type": "pet_ownership",
                 "summary": content,
                 "occurred_at": "2026-08-10T15:15:34+08:00",
@@ -2923,17 +2923,17 @@ def test_owner_pet_introduction_falls_back_to_animal_and_ownership_after_repeate
     assert not delta.new_events
     assert not delta.new_cognitions
     assert base.entities == {
-        "person:user": Entity("person:user", "world:yun", "person", "User")
+        "person:user": Entity("person:user", "world:example", "person", "User")
     }
 
 
 def test_accepted_pet_and_prior_user_mention_bind_a_followup_pronoun_to_exact_pet_facts() -> None:
     base = _base()
-    base.add_entity(Entity("animal:pet-cat", "world:yun", "animal", "小猫"))
+    base.add_entity(Entity("animal:pet-cat", "world:example", "animal", "小猫"))
     base.add_relationship(
         Relationship(
             "relationship:user-pet-cat",
-            "world:yun",
+            "world:example",
             "person:user",
             "animal:pet-cat",
             "owns",
@@ -2998,11 +2998,11 @@ def test_accepted_pet_and_prior_user_mention_bind_a_followup_pronoun_to_exact_pe
 
 def test_stale_optional_event_does_not_block_trusted_accepted_pet_direct_fallback() -> None:
     base = _base()
-    base.add_entity(Entity("animal:pet-cat", "world:yun", "animal", "小猫"))
+    base.add_entity(Entity("animal:pet-cat", "world:example", "animal", "小猫"))
     base.add_relationship(
         Relationship(
             "relationship:user-pet-cat",
-            "world:yun",
+            "world:example",
             "person:user",
             "animal:pet-cat",
             "owns",
@@ -3045,7 +3045,7 @@ def test_stale_optional_event_does_not_block_trusted_accepted_pet_direct_fallbac
     raw["new_events"] = [
         {
             "id": "event:stale-pet-introduction",
-            "world_id": "world:yun",
+            "world_id": "world:example",
             "event_type": "pet_profile",
             "summary": "我有一只小猫",
             "occurred_at": "2026-08-10T15:15:34+08:00",
@@ -3103,7 +3103,7 @@ def test_explicit_owner_third_party_introduction_materializes_reviewable_coverag
         new_entities=[
             {
                 "id": "person:romantic-contact",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "person",
                 "canonical_name": "喜欢的人",
                 "aliases": [],
@@ -3112,7 +3112,7 @@ def test_explicit_owner_third_party_introduction_materializes_reviewable_coverag
         new_relationships=[
             {
                 "id": "relationship:user-romantic-contact",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "source_entity_id": "person:user",
                 "target_entity_id": "person:romantic-contact",
                 "relation_type": "romantic_interest",
@@ -3122,7 +3122,7 @@ def test_explicit_owner_third_party_introduction_materializes_reviewable_coverag
         new_events=[
             {
                 "id": "event:dessert-order",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "event_type": "lived_occurrence",
                 "summary": "喜欢的人给用户点了一份甜点。",
                 "occurred_at": "2026-08-09T10:00:00+08:00",
@@ -3139,7 +3139,7 @@ def test_explicit_owner_third_party_introduction_materializes_reviewable_coverag
         new_cognitions=[
             {
                 "id": "cog:romantic-contact-dessert-order",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "target": {"kind": "entity", "id": "person:romantic-contact"},
                 "content": None,
                 "content_type": "fact",
@@ -3186,7 +3186,7 @@ def test_explicit_owner_third_party_introduction_materializes_reviewable_coverag
     assert cognition.perspective.holder_entity_ids == ("person:user",)
     assert trace.model_inferred_proposal is False
     assert trace.sources[0].local_origin_decision == "exact_user_claim"
-    assert base.entities == {"person:user": Entity("person:user", "world:yun", "person", "User")}
+    assert base.entities == {"person:user": Entity("person:user", "world:example", "person", "User")}
 
 
 def test_explicit_owner_third_party_introduction_uses_trusted_fallback_after_two_empty_repairs() -> None:
@@ -3233,7 +3233,7 @@ def test_explicit_owner_third_party_introduction_uses_trusted_fallback_after_two
     assert event.evidence_ids == ("turn:user",)
     assert not delta.new_cognitions
     assert not delta.formation_traces
-    assert base.entities == {"person:user": Entity("person:user", "world:yun", "person", "User")}
+    assert base.entities == {"person:user": Entity("person:user", "world:example", "person", "User")}
 
 
 @pytest.mark.parametrize("content", ["她喜欢稳定。", "她反正很温柔。"])
@@ -3241,7 +3241,7 @@ def test_mislabeled_inferred_direct_third_party_statement_uses_unique_person_con
     content: str,
 ) -> None:
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3285,7 +3285,7 @@ def test_mislabeled_inferred_direct_third_party_statement_uses_unique_person_con
 
 def test_cross_session_accepted_reference_binds_a_current_pronoun_without_old_turn_replay() -> None:
     base = _base()
-    base.add_entity(Entity("person:known-across-sessions", "world:yun", "person", "小林"))
+    base.add_entity(Entity("person:known-across-sessions", "world:example", "person", "小林"))
     current_content = "她喜欢稳定。"
     turns = [
         ConversationTurn(
@@ -3408,7 +3408,7 @@ def test_exact_unresolved_pronoun_does_not_bless_an_extra_unsupported_mention() 
 
 def test_short_latin_entity_name_does_not_match_inside_prior_user_words() -> None:
     base = _base()
-    base.add_entity(Entity("person:ann", "world:yun", "person", "Ann"))
+    base.add_entity(Entity("person:ann", "world:example", "person", "Ann"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3442,7 +3442,7 @@ def test_short_latin_entity_name_does_not_match_inside_prior_user_words() -> Non
 
 def test_pronoun_named_entity_cannot_hijack_prior_user_context() -> None:
     base = _base()
-    base.add_entity(Entity("person:her", "world:yun", "person", "Her"))
+    base.add_entity(Entity("person:her", "world:example", "person", "Her"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3478,7 +3478,7 @@ def test_pronoun_named_entity_cannot_hijack_prior_user_context() -> None:
 
 def test_explicit_trusted_reference_mode_never_uses_unreviewed_lexical_fallback() -> None:
     base = _base()
-    base.add_entity(Entity("person:will", "world:yun", "person", "Will"))
+    base.add_entity(Entity("person:will", "world:example", "person", "Will"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3559,7 +3559,7 @@ def test_unresolved_mentions_on_other_eligible_evidence_must_also_be_grounded() 
 def test_mixed_reported_direct_clause_is_kept_when_model_mislabels_the_whole_turn_inferred_null() -> None:
     content = "感觉她喜欢我，但是又不喜欢我的感觉，她还说：她喜欢稳定，所以我猜她害怕不确定"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的女生"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的女生"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3628,7 +3628,7 @@ def test_mixed_reported_direct_clause_is_kept_when_model_mislabels_the_whole_tur
 def test_exact_reported_preference_span_collapses_a_duplicate_trait_classification() -> None:
     content = "她还说：她喜欢稳定，所以我猜她害怕不确定"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3700,7 +3700,7 @@ def test_exact_preference_claim_is_canonical_across_nondeterministic_model_shape
 ) -> None:
     content = "她还说：她喜欢稳定，所以我猜她害怕不确定"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3760,7 +3760,7 @@ def test_exact_preference_claim_is_canonical_across_nondeterministic_model_shape
 def test_duplicate_negative_preference_claim_is_not_canonicalized_as_positive() -> None:
     content = "她还说：她不喜欢冒险，所以我猜她比较谨慎"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3805,7 +3805,7 @@ def test_duplicate_negative_preference_claim_is_not_canonicalized_as_positive() 
 def test_same_exact_direct_span_with_no_unique_semantic_classification_fails_closed() -> None:
     content = "她还说：她做事靠谱，所以我猜她比较谨慎"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3850,7 +3850,7 @@ def test_same_exact_direct_span_with_no_unique_semantic_classification_fails_clo
 def test_same_id_direct_duplicates_are_not_collapsed_before_create_only_validation() -> None:
     content = "她还说：她喜欢稳定，所以我猜她害怕不确定"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3892,7 +3892,7 @@ def test_same_id_direct_duplicates_are_not_collapsed_before_create_only_validati
 def test_mixed_reported_direct_clause_does_not_downgrade_a_separate_supported_guess() -> None:
     content = "她还说：她喜欢稳定，所以我猜她害怕不确定"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3946,7 +3946,7 @@ def test_mixed_reported_direct_clause_does_not_downgrade_a_separate_supported_gu
 def test_optional_inferred_null_does_not_block_an_exact_reported_third_party_action() -> None:
     content = "我也不知道她喜不喜欢我，因为她还说之前给一个不认识的网友还买过衣服"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的女生"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的女生"))
     turns = [
         ConversationTurn(
             "turn:context",
@@ -3998,11 +3998,11 @@ def test_optional_inferred_null_does_not_block_an_exact_reported_third_party_act
 def test_base_cognition_id_collision_is_remapped_without_changing_current_direct_claim() -> None:
     content = "她反正很温柔"
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的女生"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的女生"))
     base.add_cognition(
         WorldCognition(
             "cog:reused-by-local-model",
-            "world:yun",
+            "world:example",
             MemoryTarget("entity", "person:context-person"),
             "她喜欢稳定",
             "preference",
@@ -4064,7 +4064,7 @@ def test_base_cognition_id_collision_is_remapped_without_changing_current_direct
 
 @pytest.mark.parametrize(
     "extra_people",
-    [[], [Entity("person:second-context", "world:yun", "person", "另一个人")]],
+    [[], [Entity("person:second-context", "world:example", "person", "另一个人")]],
     ids=["no-third-party", "ambiguous-third-parties"],
 )
 def test_mislabeled_pronoun_claim_without_one_unique_person_fails_closed(
@@ -4072,7 +4072,7 @@ def test_mislabeled_pronoun_claim_without_one_unique_person_fails_closed(
 ) -> None:
     base = _base()
     if extra_people:
-        base.add_entity(Entity("person:first-context", "world:yun", "person", "第一个人"))
+        base.add_entity(Entity("person:first-context", "world:example", "person", "第一个人"))
     for entity in extra_people:
         base.add_entity(entity)
     turns = [
@@ -4104,7 +4104,7 @@ def test_mislabeled_pronoun_claim_without_one_unique_person_fails_closed(
 
 def test_mixed_third_party_guess_is_not_normalized_into_a_direct_claim() -> None:
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     content = "她喜欢稳定，所以我猜她害怕不确定。"
     turns = [
         ConversationTurn(
@@ -4135,7 +4135,7 @@ def test_mixed_third_party_guess_is_not_normalized_into_a_direct_claim() -> None
 
 def test_assistant_third_party_statement_cannot_supply_direct_evidence_for_a_user_carrier() -> None:
     base = _base()
-    base.add_entity(Entity("person:context-person", "world:yun", "person", "喜欢的人"))
+    base.add_entity(Entity("person:context-person", "world:example", "person", "喜欢的人"))
     turns = [
         ConversationTurn(
             "turn:assistant",
@@ -4178,7 +4178,7 @@ def _multi_role_new_person_payload(
         new_entities=[
             {
                 "id": "person:private-contact",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "person",
                 "canonical_name": canonical_name,
                 "aliases": [],
@@ -4187,7 +4187,7 @@ def _multi_role_new_person_payload(
         new_relationships=[
             {
                 "id": "relationship:user-private-contact",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "source_entity_id": "person:user",
                 "target_entity_id": "person:private-contact",
                 "relation_type": relation_type,
@@ -4197,7 +4197,7 @@ def _multi_role_new_person_payload(
         new_cognitions=[
             {
                 "id": "cog:private-contact-preference",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "target": {"kind": "entity", "id": "person:private-contact"},
                 "content": None,
                 "content_type": "preference",
@@ -4210,7 +4210,7 @@ def _multi_role_new_person_payload(
             },
             {
                 "id": "cog:owner-chosen-name",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "target": {"kind": "entity", "id": "person:user"},
                 "content": None,
                 "content_type": "fact",
@@ -4339,7 +4339,7 @@ def test_carried_reference_and_clarification_keep_third_party_and_owner_claims_s
         == earlier_content.index(expected_owner_claim)
     )
     assert base.entities == {
-        "person:user": Entity("person:user", "world:yun", "person", "User"),
+        "person:user": Entity("person:user", "world:example", "person", "User"),
     }
 
 
@@ -4379,21 +4379,21 @@ def test_mixed_subject_naming_candidate_drops_model_materialized_role_objects() 
         [
             {
                 "id": "person:chosen-alias",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "person",
                 "canonical_name": "小盐",
                 "aliases": [],
             },
             {
                 "id": "activity:bread-preference",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "activity",
                 "canonical_name": "海盐面包",
                 "aliases": [],
             },
             {
                 "id": "activity:nickname-label",
-                "world_id": "world:yun",
+                "world_id": "world:example",
                 "kind": "activity",
                 "canonical_name": "昵称",
                 "aliases": [],
@@ -4403,7 +4403,7 @@ def test_mixed_subject_naming_candidate_drops_model_materialized_role_objects() 
     payload["new_relationships"].append(
         {
             "id": "relationship:user-chosen-alias",
-            "world_id": "world:yun",
+            "world_id": "world:example",
             "source_entity_id": "person:user",
             "target_entity_id": "person:chosen-alias",
             "relation_type": "friend",

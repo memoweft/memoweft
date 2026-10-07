@@ -60,14 +60,14 @@ def _cognition(
 ) -> WorldCognition:
     return WorldCognition(
         cognition_id,
-        "world:yun",
+        "world:example",
         MemoryTarget("entity", target_id),
         content,
         "fact",
         "stated",
         600,
         "limited",
-        perspective or Perspective("entity", ("person:yun",)),
+        perspective or Perspective("entity", ("person:example",)),
         sources=(EvidenceLink(f"evidence:{cognition_id}", "support"),),
     )
 
@@ -75,10 +75,10 @@ def _cognition(
 def _view(
     *, superseded: frozenset[str] = frozenset(), extra_same_target: int = 0
 ) -> MemoryView:
-    graph = MemoryWorldGraph(PersonalWorld("world:yun", "person:yun"))
-    graph.add_entity(Entity("person:yun", "world:yun", "person", "Yun"))
-    graph.add_entity(Entity("entity:doubao", "world:yun", "animal", "豆包"))
-    graph.add_entity(Entity("entity:vacuum", "world:yun", "device", "吸尘器"))
+    graph = MemoryWorldGraph(PersonalWorld("world:example", "person:example"))
+    graph.add_entity(Entity("person:example", "world:example", "person", "Casey"))
+    graph.add_entity(Entity("entity:doubao", "world:example", "animal", "豆包"))
+    graph.add_entity(Entity("entity:vacuum", "world:example", "device", "吸尘器"))
     graph.add_cognition(_cognition("cog:doubao-cat", "我的猫叫豆包。"))
     graph.add_cognition(_cognition("cog:doubao-fake", "豆包其实是假的。"))
     graph.add_cognition(
@@ -165,7 +165,7 @@ def test_two_current_cognitions_can_be_replaced_by_exact_current_user_turn() -> 
     )
     assert plan.evidence_id == current.turn_id
     assert plan.target == MemoryTarget("entity", "entity:doubao")
-    assert plan.perspective == Perspective("entity", ("person:yun",))
+    assert plan.perspective == Perspective("entity", ("person:example",))
     assert plan.structure_hints == ("entity_reclassification",)
     assert [message.role for message in llm.messages] == ["system", "assistant", "user"]
     assert llm.messages[1].content == preceding.content

@@ -21,12 +21,12 @@ from memoweft.world import (
 
 def build_repaired_friendship_world() -> MemoryWorldGraph:
     graph = MemoryWorldGraph(
-        PersonalWorld(world_id="world:yun", owner_entity_id="person:user")
+        PersonalWorld(world_id="world:example", owner_entity_id="person:user")
     )
     graph.add_entity(
         Entity(
             id="person:user",
-            world_id="world:yun",
+            world_id="world:example",
             kind="person",
             canonical_name="User",
         )
@@ -34,7 +34,7 @@ def build_repaired_friendship_world() -> MemoryWorldGraph:
     graph.add_entity(
         Entity(
             id="person:friend-x",
-            world_id="world:yun",
+            world_id="world:example",
             kind="person",
             canonical_name="Friend_X",
         )
@@ -43,7 +43,7 @@ def build_repaired_friendship_world() -> MemoryWorldGraph:
     graph.add_relationship(
         Relationship(
             id="relationship:user-friend-x",
-            world_id="world:yun",
+            world_id="world:example",
             source_entity_id="person:user",
             target_entity_id="person:friend-x",
             relation_type="friend",
@@ -76,7 +76,7 @@ def build_repaired_friendship_world() -> MemoryWorldGraph:
         graph.add_event(
             WorldEvent(
                 id=event_id,
-                world_id="world:yun",
+                world_id="world:example",
                 event_type=event_type,
                 summary=summary,
                 occurred_at=occurred_at,
@@ -92,7 +92,7 @@ def build_repaired_friendship_world() -> MemoryWorldGraph:
     graph.add_cognition(
         WorldCognition(
             id="cog:relationship-repaired",
-            world_id="world:yun",
+            world_id="world:example",
             target=MemoryTarget("relationship", "relationship:user-friend-x"),
             content="The friendship was repaired after the conflict and apology.",
             content_type="hypothesis",

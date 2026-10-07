@@ -30,7 +30,7 @@ def build_confirmed_ai_interpretation_world() -> tuple[
 ]:
     user_confirmation = Evidence(
         id="e:user-confirmation",
-        subject_id="world:yun",
+        subject_id="world:example",
         source_kind="spoken",
         host_id="local",
         origin_id="turn:user-2",
@@ -46,7 +46,7 @@ def build_confirmed_ai_interpretation_world() -> tuple[
     assistant_proposal = "Planning differences may explain the friction."
     interaction_context = InteractionContext(
         id="interaction:planning-interpretation",
-        subject_id="world:yun",
+        subject_id="world:example",
         conversation_id="conversation:planning",
         episode_id="episode:planning-1",
         context=[
@@ -70,12 +70,12 @@ def build_confirmed_ai_interpretation_world() -> tuple[
     )
 
     graph = MemoryWorldGraph(
-        PersonalWorld(world_id="world:yun", owner_entity_id="person:user")
+        PersonalWorld(world_id="world:example", owner_entity_id="person:user")
     )
     graph.add_entity(
         Entity(
             id="person:user",
-            world_id="world:yun",
+            world_id="world:example",
             kind="person",
             canonical_name="User",
         )
@@ -83,7 +83,7 @@ def build_confirmed_ai_interpretation_world() -> tuple[
     graph.add_entity(
         Entity(
             id="agent:memoweft",
-            world_id="world:yun",
+            world_id="world:example",
             kind="agent",
             canonical_name="MemoWeft Agent",
         )
@@ -92,7 +92,7 @@ def build_confirmed_ai_interpretation_world() -> tuple[
     graph.add_relationship(
         Relationship(
             id="relationship:user-agent",
-            world_id="world:yun",
+            world_id="world:example",
             source_entity_id="person:user",
             target_entity_id="agent:memoweft",
             relation_type="conversation_partner",
@@ -102,7 +102,7 @@ def build_confirmed_ai_interpretation_world() -> tuple[
     graph.add_event(
         WorldEvent(
             id="event:planning-interpretation",
-            world_id="world:yun",
+            world_id="world:example",
             event_type="shared_conversation",
             summary="User and MemoWeft Agent discussed an interpretation of travel-planning friction.",
             occurred_at="2026-08-07T10:01:00+08:00",
@@ -123,7 +123,7 @@ def build_confirmed_ai_interpretation_world() -> tuple[
     graph.add_cognition(
         WorldCognition(
             id="cog:confirmed-planning-interpretation",
-            world_id="world:yun",
+            world_id="world:example",
             target=MemoryTarget("event", "event:planning-interpretation"),
             content="Planning differences were confirmed as relevant to the friction.",
             content_type="hypothesis",

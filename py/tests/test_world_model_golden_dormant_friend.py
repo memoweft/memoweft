@@ -17,12 +17,12 @@ from memoweft.world import (
 
 def build_dormant_friend_world() -> MemoryWorldGraph:
     graph = MemoryWorldGraph(
-        PersonalWorld(world_id="world:yun", owner_entity_id="person:user")
+        PersonalWorld(world_id="world:example", owner_entity_id="person:user")
     )
     graph.add_entity(
         Entity(
             id="person:user",
-            world_id="world:yun",
+            world_id="world:example",
             kind="person",
             canonical_name="User",
         )
@@ -30,7 +30,7 @@ def build_dormant_friend_world() -> MemoryWorldGraph:
     graph.add_entity(
         Entity(
             id="person:friend-x",
-            world_id="world:yun",
+            world_id="world:example",
             kind="person",
             canonical_name="Friend_X",
         )
@@ -39,7 +39,7 @@ def build_dormant_friend_world() -> MemoryWorldGraph:
     graph.add_relationship(
         Relationship(
             id="relationship:user-friend-x",
-            world_id="world:yun",
+            world_id="world:example",
             source_entity_id="person:user",
             target_entity_id="person:friend-x",
             relation_type="friend",
@@ -49,7 +49,7 @@ def build_dormant_friend_world() -> MemoryWorldGraph:
     graph.add_event(
         WorldEvent(
             id="event:graduation",
-            world_id="world:yun",
+            world_id="world:example",
             event_type="milestone",
             summary="User and Friend_X celebrated graduation together.",
             occurred_at="2018-06-30T12:00:00+08:00",

@@ -141,7 +141,7 @@ def test_nanjing_query_reconstructs_one_experience_from_graph_and_provenance() -
     graph.add_cognition(
         WorldCognition(
             "cog:owner-swimming",
-            "world:yun",
+            "world:example",
             MemoryTarget("entity", "person:user"),
             "每周六去游泳",
             "fact",
@@ -267,7 +267,7 @@ def test_narrowing_lineage_separates_current_and_relevant_history() -> None:
     prior_id = "cog:friend-planning-style"
     successor = WorldCognition(
         "cog:friend-first-trip-nervous",
-        "world:yun",
+        "world:example",
         MemoryTarget("entity", "person:friend-x"),
         "Friend_X wanted a plan because this was the first Nanjing trip and she was nervous.",
         "state",

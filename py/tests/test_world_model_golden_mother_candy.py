@@ -21,12 +21,12 @@ from memoweft.world import (
 
 def build_mother_candy_world() -> MemoryWorldGraph:
     graph = MemoryWorldGraph(
-        PersonalWorld(world_id="world:yun", owner_entity_id="person:user")
+        PersonalWorld(world_id="world:example", owner_entity_id="person:user")
     )
     graph.add_entity(
         Entity(
             id="person:user",
-            world_id="world:yun",
+            world_id="world:example",
             kind="person",
             canonical_name="User",
         )
@@ -34,7 +34,7 @@ def build_mother_candy_world() -> MemoryWorldGraph:
     graph.add_entity(
         Entity(
             id="person:mother",
-            world_id="world:yun",
+            world_id="world:example",
             kind="person",
             canonical_name="Mother",
         )
@@ -43,7 +43,7 @@ def build_mother_candy_world() -> MemoryWorldGraph:
     graph.add_relationship(
         Relationship(
             id="relationship:user-mother",
-            world_id="world:yun",
+            world_id="world:example",
             source_entity_id="person:user",
             target_entity_id="person:mother",
             relation_type="child_of",
@@ -58,7 +58,7 @@ def build_mother_candy_world() -> MemoryWorldGraph:
         graph.add_event(
             WorldEvent(
                 id=event_id,
-                world_id="world:yun",
+                world_id="world:example",
                 event_type="gift",
                 summary="Mother gave User candy.",
                 occurred_at=occurred_at,
@@ -74,7 +74,7 @@ def build_mother_candy_world() -> MemoryWorldGraph:
     graph.add_cognition(
         WorldCognition(
             id="cog:mother-user-candy-pattern",
-            world_id="world:yun",
+            world_id="world:example",
             target=MemoryTarget("relationship", "relationship:user-mother"),
             content="Mother has repeatedly given User candy.",
             content_type="trend",

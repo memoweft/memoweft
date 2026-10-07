@@ -37,10 +37,10 @@ from memoweft.world import (
 )
 
 
-WORLD_ID = "world:yun"
-OWNER_ID = "person:yun"
+WORLD_ID = "world:example"
+OWNER_ID = "person:example"
 FRIEND_ID = "person:friend-x"
-RELATIONSHIP_ID = "relationship:yun-friend-x"
+RELATIONSHIP_ID = "relationship:example-friend-x"
 
 
 def _score(content_type: str, formed_by: str, support: int, contradict: int) -> tuple[int, str]:
@@ -133,7 +133,7 @@ def _event(event_id: str, event_type: str, summary: str, occurred_at: str, evide
 
 def _relationship_graph() -> MemoryWorldGraph:
     graph = MemoryWorldGraph(PersonalWorld(WORLD_ID, OWNER_ID))
-    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Yun"))
+    graph.add_entity(Entity(OWNER_ID, WORLD_ID, "person", "Casey"))
     graph.add_entity(Entity(FRIEND_ID, WORLD_ID, "person", "Friend_X"))
     graph.add_relationship(
         Relationship(
@@ -149,7 +149,7 @@ def _relationship_graph() -> MemoryWorldGraph:
         _event(
             "event:argument",
             "interpersonal_conflict",
-            "Yun and Friend_X argued.",
+            "Casey and Friend_X argued.",
             "2026-06-01T09:00:00+08:00",
             "e:argument",
         )
@@ -230,7 +230,7 @@ def test_argument_apology_repair_keeps_history_and_derives_current_state() -> No
         predecessor_state_id="cog:relationship-strained",
         event_id="event:apology",
         event_type="apology",
-        summary="Friend_X apologised to Yun.",
+        summary="Friend_X apologised to Casey.",
         occurred_at="2026-06-02T09:00:00+08:00",
         evidence_id="e:apology",
         state_id="cog:relationship-repairing",
@@ -243,7 +243,7 @@ def test_argument_apology_repair_keeps_history_and_derives_current_state() -> No
         predecessor_state_id="cog:relationship-repairing",
         event_id="event:repair",
         event_type="relationship_repair",
-        summary="Yun and Friend_X repaired the friendship.",
+        summary="Casey and Friend_X repaired the friendship.",
         occurred_at="2026-06-03T09:00:00+08:00",
         evidence_id="e:repair",
         state_id="cog:relationship-repaired",
@@ -458,7 +458,7 @@ def test_lifecycle_projection_uses_explicit_corroboration_time_without_mutation(
     cognition = _cognition(
         "cog:temporary-state",
         MemoryTarget("entity", OWNER_ID),
-        "Yun is temporarily exhausted.",
+        "Casey is temporarily exhausted.",
         "e:tired",
         content_type="state",
     )
@@ -483,7 +483,7 @@ def test_plan_codec_is_closed_and_event_cycle_fails() -> None:
         predecessor_state_id="cog:relationship-strained",
         event_id="event:apology",
         event_type="apology",
-        summary="Friend_X apologised to Yun.",
+        summary="Friend_X apologised to Casey.",
         occurred_at="2026-06-02T09:00:00+08:00",
         evidence_id="e:apology",
         state_id="cog:relationship-repairing",
@@ -501,7 +501,7 @@ def test_plan_codec_is_closed_and_event_cycle_fails() -> None:
         _event(
             "event:apology",
             "apology",
-            "Friend_X apologised to Yun.",
+            "Friend_X apologised to Casey.",
             "2026-06-02T09:00:00+08:00",
             "e:apology",
         )
