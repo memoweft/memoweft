@@ -8,6 +8,7 @@ from typing import Any, cast
 import pytest
 
 from memoweft.integrations.hermes.recall import recall_world_snapshot
+from memoweft.integrations.hermes.batch_adapter import _confirm_normalize
 from memoweft.integrations.trust.query_service import QueryService
 from test_formation_accuracy import _item, _run
 from test_hermes_batch_adapter_v5 import _batch, _model, _run as run_job, _set_evidence
@@ -131,3 +132,39 @@ def test_replacement_explanation_cannot_read_revoked_predecessor(tmp_path: Path)
         snapshot = recall_world_snapshot(db, 'owner', '林遥修乐器，为什么旧说法不算了？', model_tier='cloud')
         assert snapshot and '初学水平' in snapshot.rendered_recall
         assert '很熟练' not in snapshot.rendered_recall
+
+
+@pytest.mark.parametrize('raw,query,topic', [
+    ('好，以后我想修乐器时，就提醒我找林遥。', '修乐器可以找谁？', '修乐器'),
+    ('今后需要校对文稿的时候，请提醒我找林遥。', '校对文稿应该找谁？', '校对文稿'),
+])
+def test_explicit_conditional_decision_retains_topic_when_model_omits_it(
+    tmp_path: Path, raw: str, query: str, topic: str,
+) -> None:
+    path = tmp_path / 'world.sqlite3'
+    item = _item('ignored')
+    item['supports'] = [{'evidence_id': 'evidence-1', 'sentence_id': 't0'}]
+    row, _ = _run(path, raw, [_model(_batch(item))])
+    assert row['state'] == 'applied'
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT canonical_name FROM entity WHERE kind='topic'").fetchone()[0] == topic
+        snapshot = recall_world_snapshot(db, 'owner', query)
+        assert snapshot and snapshot.count == 1 and '林遥' in snapshot.rendered_recall
+
+
+def test_short_assent_confirms_a_situational_decision_without_inventing_evidence(tmp_path: Path) -> None:
+    path = tmp_path / 'world.sqlite3'
+    claim = '以后你想修乐器时，我提醒你找林遥？'
+    raw = '好'
+    item = dict(_item(_confirm_normalize(claim)), formed_by='confirmed', assistant_claim=claim)
+    item['supports'] = [{'evidence_id': 'evidence-1', 'start': 0, 'end': len(raw)}]
+    def setup(p: Path) -> None:
+        _set_evidence(p, 'evidence-1', raw)
+        with sqlite3.connect(p) as db:
+            db.execute("UPDATE evidence SET preceding_ai_context=? WHERE id='evidence-1'", (claim,))
+    run_job(path, MutableClock(), [_model(_batch(item))], ('evidence-1',), setup)
+    assert _job(path)['state'] == 'applied'
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', '修乐器可以找谁？')
+        assert snapshot and snapshot.count == 1 and '林遥' in snapshot.rendered_recall
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='evidence-1'").fetchone()[0] == raw

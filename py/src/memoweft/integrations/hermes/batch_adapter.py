@@ -1192,7 +1192,7 @@ class HermesBatchAdapterProcessor:
             if not raw_content:
                 return None
             preceding_ai = str(ev.get("context") or "").strip()
-            if preceding_ai and re.match(r"^(?:对|是的|没错|正确|对的|嗯嗯|确实|yes|yeah|yep|correct|right|sure)[!！。.\s]*$", raw_content, re.I):
+            if preceding_ai and _AFFIRM_RE.fullmatch(raw_content.strip('!！。.，, \t\r\n')):
                 return None
             if _has_declarative_facts(raw_content):
                 return None
@@ -2839,6 +2839,16 @@ class HermesBatchAdapterProcessor:
             ):
                 return None, "proposition_not_anchored"
 
+        if kind == 'preference' and formed_by in {'stated', 'confirmed'} and not retract and topic_canonical_name is None and entity_canonical_name is None:
+            # A confirmed situational decision has an explicit condition in its
+            # selected source. Preserve that verbatim retrieval cue even when
+            # the interpreter omits the optional topic field; infer no aliases.
+            condition = re.search(
+                r'(?:以后|今后|下次|将来)(?:我|我们|用户)?(?:想|需要|要|打算|准备)?'
+                r'([^，,。？！；;]+?)(?:的时候|时)(?=[，,]|就|请)', proposition if formed_by == 'confirmed' else ''.join(slices),
+            )
+            if condition:
+                topic_canonical_name = condition.group(1).strip()
         return (
             BatchItem(
                 action=str(action),
