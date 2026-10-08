@@ -645,6 +645,7 @@ class BatchItem:
 @dataclass(frozen=True, slots=True)
 class _CompiledBatch:
     items: tuple[BatchItem, ...]
+    normalizations: tuple[dict[str, object], ...] = ()
     #: True when the envelope was the legacy V1 shape: single form, stated,
     #: and the legacy world-outcome shape (kept for V1 replay compatibility).
     legacy: bool = False
@@ -682,6 +683,7 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "来源标识按所在列表逐字复制：sentences 的 id 是 t0、t1…，填 sentence_id；segments 的 id 是 s0、s1…，填 segment_id。不能把 s0 填到 sentence_id，也不能把 t0 填到 segment_id；不要自行造标识。\n"
     "先按完整主题选择来源，再分类。Evidence 同时提供 sentences（完整句）和 segments（细分句）。同一句中的主题引导、限制条件和偏好值属于一个命题时，优先用 supports 中的 sentence_id 选择完整句；不要只留下末尾的值。只有该句包含独立的不同命题时才选择各自的 segment_id。每个 support 只给 sentence_id 或 segment_id 其中一个，不能同时选覆盖相同范围的句和片段。proposition 必须给非空占位文本，系统仍从所选原话逐字派生。\n"
     "稳定的使用方式、固定数值或设置也是当前安排，不需要用户另说‘记住’；只要是用户本人的持续约束就应形成。\n"
     "人物已被明确说成与用户有某种关系时，优先形成 relationship，而不是 naming 或第三方 attribute。职业/身份与‘和用户的关系’要区分；关系背景与同主题补充也须选择完整来源。naming 用于仅命名、未陈述关系的内容。\n"
@@ -786,6 +788,9 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "Copy source IDs exactly from their own list: sentences use t0, t1, ... with sentence_id; "
+    "segments use s0, s1, ... with segment_id. Never put s0 in sentence_id or t0 in segment_id, "
+    "and never invent a selector ID.\n"
     "Select the complete source topic before classifying. Evidence offers sentences (intact sentences) "
     "and segments (fine clauses). When the topic introduction, constraints and value in one sentence "
     "are one claim, prefer supports with sentence_id for the intact sentence, rather than its final "
@@ -1950,12 +1955,16 @@ class HermesBatchAdapterProcessor:
             batch_entity_names.add(
                 _normalize_spoken_name(name, [support[3] for support in candidate_supports])
             )
-        for raw_item in raw_items:
+        normalizations: list[dict[str, object]] = []
+        current = {str(entry["id"]): entry for entry in self._current_cognitions_payload(job, db)}
+        for item_index, raw_item in enumerate(raw_items):
             if isinstance(raw_item, dict):
                 raw_item = dict(raw_item)
                 for field in ("corrects_cognition_id", "supersedes_cognition_id", "contradicts_cognition_id"):
                     if field in raw_item:
                         raw_item[field] = self._canonical_cognition_reference(raw_item[field], job, db)
+                raw_item, changes = self._normalize_item_structure(raw_item, current)
+                normalizations.extend({"item_index": item_index, "rule": rule} for rule in changes)
             item, reason = self._parse_item(
                 raw_item, ids, raw_by_id, context_by_id,
                 extended_kinds=extended_kinds, third_party=third_party,
@@ -2056,9 +2065,47 @@ class HermesBatchAdapterProcessor:
             _CompiledBatch(
                 items=tuple(items),
                 envelope_version=envelope_version,
+                normalizations=tuple(normalizations),
             ),
             "",
         )
+
+    @staticmethod
+    def _normalize_item_structure(
+        raw: dict[str, object], current: Mapping[str, dict[str, object]],
+    ) -> tuple[dict[str, object], tuple[str, ...]]:
+        """Repair only unambiguous field combinations; facts/supports stay intact.
+
+        Current is the permission-eligible formation projection, not a loose ID
+        lookup. The ordinary compiler and transactional Apply still validate
+        the replacement, identity, evidence and target currentness.
+        """
+        item = dict(raw)
+        changes: list[str] = []
+        target = item.get("corrects_cognition_id")
+        prior = current.get(target.strip()) if isinstance(target, str) else None
+        conflicts = ("corrects_relationship_id", "corrects_event_id", "contradicts_cognition_id",
+                     "supersedes_cognition_id", "supersedes_relationship_id", "retract", "alias_of")
+        if (item.get("action") == "form" and prior is not None
+                and item.get("statement_kind") in ("attribute", "preference")
+                and item.get("statement_kind") == prior.get("statement_kind")
+                and not any(item.get(field) not in (None, "", False) for field in conflicts)):
+            item["action"] = "correct"
+            changes.append("form_with_current_correction_target")
+        if item.get("statement_kind") == "relationship" and item.get("entity") is not None:
+            entity, endpoint = item.get("entity"), item.get("target_entity")
+            # Do not discard extra fields or equate different entity kinds.
+            if (isinstance(entity, dict) and isinstance(endpoint, dict)
+                    and set(entity) <= {"canonical_name", "kind"}
+                    and set(endpoint) <= {"canonical_name", "kind"}
+                    and isinstance(entity.get("canonical_name"), str)
+                    and isinstance(endpoint.get("canonical_name"), str)
+                    and str(entity["canonical_name"]).strip()
+                    and str(entity["canonical_name"]).strip() == str(endpoint["canonical_name"]).strip()
+                    and (entity.get("kind") or "person") == (endpoint.get("kind") or "person")):
+                del item["entity"]
+                changes.append("redundant_relationship_entity")
+        return item, tuple(changes)
 
     @staticmethod
     def _parse_event_entities(
@@ -5154,6 +5201,8 @@ class HermesBatchAdapterProcessor:
         }
         if reason is not None:
             outcome["reason"] = reason
+        if batch.normalizations:
+            outcome["normalizations"] = list(batch.normalizations)
         return outcome
 
 
