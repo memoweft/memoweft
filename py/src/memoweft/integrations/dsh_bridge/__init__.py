@@ -504,7 +504,15 @@ def default_one_shot_route(
         }
         if model_tier == "local":
             request_json["max_tokens"] = 4096
-            request_json["enable_thinking"] = False
+            # llama.cpp consumes template arguments here, not at the top level.
+            # Otherwise local formation silently spends its read deadline on
+            # hidden reasoning before producing the interpretation JSON.
+            request_json["chat_template_kwargs"] = {"enable_thinking": False}
+            # The deadline is transport inactivity, not a generation budget.
+            # Streaming keeps a progressing single-slot model alive even when
+            # its full completion takes longer than the 300s read timeout.
+            request_json["stream"] = True
+            request_json["stream_options"] = {"include_usage": True}
         response = httpx.post(
             f"{base}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -546,7 +554,7 @@ def default_one_shot_route(
             except Exception:
                 pass
         response.raise_for_status()
-        payload = response.json()
+        payload = _formation_completion_payload(response)
         choice = payload["choices"][0]
         msg_content = choice["message"].get("content")
         resolved_model = model
@@ -565,6 +573,42 @@ def default_one_shot_route(
         }
 
     return route
+
+
+def _formation_completion_payload(response: Any) -> dict[str, Any]:
+    """Assemble local SSE without ever interpreting hidden reasoning as facts."""
+    import httpx
+
+    if "text/event-stream" not in getattr(response, "headers", {}).get("content-type", ""):
+        return cast(dict[str, Any], response.json())
+    content: list[str] = []
+    usage: object = {}
+    finish_reason: object = None
+    done = False
+    for line in response.text.splitlines():
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if data == "[DONE]":
+            done = True
+            break
+        payload = json.loads(data)
+        if payload.get("error"):
+            raise httpx.RemoteProtocolError("formation_stream_error")
+        if payload.get("usage") is not None:
+            usage = payload["usage"]
+        for choice in payload.get("choices", []):
+            if choice.get("index", 0) != 0:
+                continue
+            text = choice.get("delta", {}).get("content")
+            if isinstance(text, str):
+                content.append(text)
+            if choice.get("finish_reason") is not None:
+                finish_reason = choice["finish_reason"]
+    if not done or finish_reason is None:
+        raise httpx.RemoteProtocolError("incomplete_formation_stream")
+    return {"choices": [{"message": {"content": "".join(content)},
+                         "finish_reason": finish_reason}], "usage": usage}
 
 
 class _DshRuntimeStore:
