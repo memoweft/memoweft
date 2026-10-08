@@ -36,6 +36,7 @@ def _isolate_route_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "MEMOWEFT_WORLD_MODEL",
         "MEMOWEFT_API_KEY",
         "MEMOWEFT_API_KEY_ENV",
+        "MEMOWEFT_DSH_SESSION_SCOPE",
         "DEEPSEEK_BASE_URL",
         "DEEPSEEK_API_KEY",
     ):
@@ -321,6 +322,26 @@ def test_host_route_uses_openai_compatible_endpoint_model_and_key(
     assert headers[0]["Authorization"] == f"Bearer {expected_key}"
     assert result["model"] == "host-selected-model"
     assert result["content"] == "{}"
+
+
+@pytest.mark.parametrize("model_tier", ["cloud", "local"])
+def test_scoped_host_route_attributes_each_job_to_its_source_session(
+    monkeypatch: pytest.MonkeyPatch, model_tier: str,
+) -> None:
+    payload = {"choices": [{"message": {"content": "{}"}}], "usage": {}}
+    with _local_route_server([(200, {}, payload), (200, {}, payload)]) as (base_url, received):
+        scope = base_url.removesuffix('/v1') + '/gateway/inference/model/scope/owner'
+        monkeypatch.setenv("MEMOWEFT_BASE_URL", scope + '/session-initial/v1')
+        monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "host-selected-model")
+        monkeypatch.setenv("MEMOWEFT_DSH_SESSION_SCOPE", "1")
+        route = default_one_shot_route(model_tier=model_tier, api_key_override="synthetic-key")
+        assert route is not None
+        route([{"role": "user", "content": "first"}], session_id="source-first")
+        route([{"role": "user", "content": "second"}], session_id="source-second")
+    assert [r[0] for r in received] == [
+        '/gateway/inference/model/scope/owner/source-first/v1/chat/completions',
+        '/gateway/inference/model/scope/owner/source-second/v1/chat/completions',
+    ]
 
 
 @pytest.mark.parametrize("model", [None, "legacy-configured-model"])

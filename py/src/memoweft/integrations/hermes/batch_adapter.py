@@ -47,6 +47,7 @@ from .world_worker import (
     WorldJobResult,
 )
 from .terminal_outcome import persist_terminal_outcome_in_transaction
+from .recall import _predecessor_match_texts
 
 logger = logging.getLogger(__name__)
 
@@ -660,455 +661,280 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
-    "你是 MemoWeft 2.0 的批量解释器。思考过程务必保持极简（不超过100字），禁止长篇大论，直接输出单个合法的 JSON 对象。输入包含：当前正式 World 的 cognition 列表"
-    "（id/content/statement_kind）、current_entities 列表（id/canonical_name/kind/"
-    "aliases）、current_relationships 列表（id/content/relation_type/"
-    "source_entity_id/target_entity_id）、current_events 列表（id/content/"
-    "occurred_at/time_expression）、同会话此前的 conversation_context（只用于消解指代，"
-    "不是 Evidence）、一个压缩边界内的若干条用户原话 Evidence"
-    "（每条有唯一 id 和原文 text，可能附带 assistant preceding context）。\n"
-    "你的任务是只输出一个 JSON 对象：要么描述 1 到 5 条稳定认知，要么 no_change，"
-    "要么 clarification_required（身份/含义无法唯一解析时，附 question），要么 "
-    "out_of_scope（理解但超出正式合同时，附 note）。"
-    "**只输出 JSON，不要任何解释、不要思考过程、不要多余文字。**\n"
-    '{"schema_version":8,"result":"no_change"}\n'
-    '{"schema_version":8,"result":"cognitions","cognitions":[<item>, ...]}'
-    "（1..5 个 item）\n"
-    '{"schema_version":8,"result":"clarification_required","question":"…"}\n'
-    '{"schema_version":8,"result":"out_of_scope","note":"…"}\n'
+    "先判断用户是否明确提出持续适用的偏好或安排：‘以后推荐早餐时避开乳制品’是明确表达偏好，不是愿望闲聊；‘最近通勤都坐地铁’是当前持续安排，不是仅限这周的一次性情绪。两者都应形成，不应 no_chang"
+    "e。只有无可形成内容才用 no_change。\n"
+    "省略主题的纠正（‘不是精装，改成电子版’）应从 current_cognitions 中相关安排及其 predecessor_context 消解主题，corrects_cognition_id 必须"
+    "指向有效的当前项，同时 action 必须为 correct。主题沿正式取代链保留，不能从不相关的最近条目猜主题；不要把旧日期复制为当前日期。同一纠正的改口信号、新值、旧值否定、补充主题是同一件事，只"
+    "输出一个 item 并选择全部相关相邻 segments。按整段原话的主题及被否定旧值选目标，不要把其中省略主题的一句另用于纠正其他安排。纠正旧项时先决定 action=correct，再复制纠正目标"
+    "；action=form 绝不能带任何 corrects_* 字段。同一纠正要选择包括改口信号在内的完整相邻原话。corrects_cognition_id 完整复制输入 id，包括 cognitio"
+    "n- 前缀；不是只复制摘要部分。id 是不透明标识，只能从输入逐字符复制；不要生成、压缩、截断或根据命题推导 id。选择 supports 时包含完整偏好/安排及主题的所有相邻 segments；不要"
+    "只选引导句或单独日期。proposition 仍从所选当前原话派生，绝不把上下文改写或冒充新 Evidence。\n"
+    "用户与第三方的 relationship 必须给 target_entity，省略 source_entity；不要仅给 source_entity 却漏掉 target_entity。用全部相关相邻"
+    " segments 保留关系背景；如另提取代词所指人物的属性，要同时选择含姓名的相邻原话段，以便姓名可核对，不能凭空补姓名。\n"
+    "你是 MemoWeft 2.0 的批量解释器。思考过程务必保持极简（不超过100字），禁止长篇大论，直接输出单个合法的 JSON 对象。输入包含：当前正式 World 的 cognition 列表（i"
+    "d/content/statement_kind）、current_entities 列表（id/canonical_name/kind/aliases）、current_relationships "
+    "列表（id/content/relation_type/source_entity_id/target_entity_id）、current_events 列表（id/content/occurred"
+    "_at/time_expression）、同会话此前的 conversation_context（只用于消解指代，不是 Evidence）、一个压缩边界内的若干条用户原话 Evidence（每条有唯一"
+    " id 和原文 text，可能附带 assistant preceding context）。\n"
+    "你的任务是只输出一个 JSON 对象：要么描述 1 到 5 条稳定认知，要么 no_change，要么 clarification_required（身份/含义无法唯一解析时，附 question），"
+    "要么 out_of_scope（理解但超出正式合同时，附 note）。**只输出 JSON，不要任何解释、不要思考过程、不要多余文字。**\n"
+    "{\"schema_version\":8,\"result\":\"cognitions\",\"cognitions\":[<item>, ...]}（1..5 个 item）\n"
+    "{\"schema_version\":8,\"result\":\"no_change\"}\n"
+    "{\"schema_version\":8,\"result\":\"clarification_required\",\"question\":\"…\"}\n"
+    "{\"schema_version\":8,\"result\":\"out_of_scope\",\"note\":\"…\"}\n"
     "item 形状（statement_kind 决定额外字段）：\n"
-    '{"action":"form","target":"owner_self",'
-    '"statement_kind":"attribute"|"preference"|"naming"|"relationship"|"alias"|'
-    '"event","formed_by":"stated"|"confirmed","proposition":"…",'
-    '"supports":[{"evidence_id":"...","segment_id":"s0"}],'
-    '"corrects_cognition_id":"...","assistant_claim":"...",'
-    '"entity":{"canonical_name":"…","kind":"person"},"entity_reference":{"mention":"他"},'
-    '"perspective_holder":{"canonical_name":"…","kind":"person"},'
-    '"alias_of":{"canonical_name":"…","kind":"person"},'
-    '"target_entity":{"canonical_name":"…","kind":"person"},'
-    '"source_entity":{"canonical_name":"…","kind":"person"},'
-    '"relation_type":"girlfriend","corrects_relationship_id":"...",'
-    '"retract":true,"contradicts_cognition_id":"...",'
-    '"participants":[{"canonical_name":"…","kind":"person"}],'
-    '"objects":[{"canonical_name":"…","kind":"place"}],'
-    '"occurred_at":"2026-08-15","time_expression":"昨天",'
-    '"corrects_event_id":"..."}\n'
+    "{\"action\":\"form\",\"target\":\"owner_self\",\"statement_kind\":\"attribute\"|\"preference\"|\"naming\"|\"relations"
+    "hip\"|\"alias\"|\"event\",\"formed_by\":\"stated\"|\"confirmed\",\"proposition\":\"…\",\"supports\":[{\"evidence_id\":\""
+    "...\",\"segment_id\":\"s0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
+    "name\":\"…\",\"kind\":\"person\"},\"entity_reference\":{\"mention\":\"他\"},\"perspective_holder\":{\"canonical_name\""
+    ":\"…\",\"kind\":\"person\"},\"alias_of\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"target_entity\":{\"canonical_"
+    "name\":\"…\",\"kind\":\"person\"},\"source_entity\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"relation_type\":\"g"
+    "irlfriend\",\"corrects_relationship_id\":\"...\",\"retract\":true,\"contradicts_cognition_id\":\"...\",\"partici"
+    "pants\":[{\"canonical_name\":\"…\",\"kind\":\"person\"}],\"objects\":[{\"canonical_name\":\"…\",\"kind\":\"place\"}],\"o"
+    "ccurred_at\":\"2026-08-15\",\"time_expression\":\"昨天\",\"corrects_event_id\":\"...\"}\n"
     "规则：\n"
-    "1. 只处理：用户本人稳定属性/偏好；第三方稳定属性或偏好（一次性/情景内容不算）；"
-    "用户对第三方的命名；用户↔第三方或第三方↔"
-    "第三方的稳定关系；用户明确说两个名字**同指一人**的显式等价（如\"杨杨就是"
-    "小杨\"）。**对任何人的评价（\"打游戏很厉害\"之类）一律不产出**；除已发生/"
-    "已确定事件外的一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界"
-    "最多 5 条；作息/通勤/日程等稳定习惯也算用户稳定属性或偏好，可以产出；愿望/"
-    "期待（\"想拥有…\"\"希望能…\"）与情绪、观点不产出。带明确短期范围的临时状态"
-    "（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。\n"
-    "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 segment_id；"
-    "系统从segment原文确定性计算Unicode start/end与stated proposition。旧quote/start/end"
-    "仅兼容，不要自行复制、概括或计算。assistant/context永远不是Evidence。\n"
-    "3. action=form：形成或复述（复述自动并入同 ID support 链）；只有用户明确说旧"
-    "记忆错了并给出新值才用 correct（attribute/preference 用 corrects_cognition_id；"
-    "relationship 改口替换用 corrects_relationship_id）。明确撤回（无新值，见第 13 条）"
-    "用 correct+retract；只是不同意/怀疑同一命题（见第 14 条）用 contradict。"
-    "**看到\"其实…不是…是…\"\"记错了\"\"改一下\"\"不算数\"\"猜错啦\"\"不对\"等改口纠错信号，"
-    "或用户表明状态改变（如脱单/在一起了而旧记忆记录单身/没有女朋友），必须使用 "
-    "correct 处理旧记忆并更新为新认知，绝不能放任冲突旧记忆并存**。\n"
-    "4. formed_by=stated：使用segment_id时，proposition只是必填占位，系统会从所选"
-    "segment逐字派生正式命题并完成第一人称归一；模型不要复制、概括或计算命题。"
-    "结构字段中的姓名必须能在所选segment或规则10允许的唯一指代上下文中核对。"
-    "姓名、称呼、数字、日期必须保留用户原话写法，不得改写或猜测；无法核对就不产出。quote同样逐字派生命题，start/end输入按逐字锚定校验。\n"
-    "5. formed_by=confirmed：仅当 assistant 提出命题、用户短确认（无否定词）时用于 "
-    "attribute/preference。assistant_claim 必须是 context 的逐字子串；proposition "
-    "等于 claim 去语气词/问尾、把\"你/您\"换\"用户\"。assistant 猜对本身不是 Evidence。\n"
-    "6. naming：命题如\"用户的朋友叫小王\"（stated）；entity.canonical_name 必须是某"
-    "条切片的逐字子串；kind 默认 person。同一实体名已存在就别重复 naming。"
-    "**「我的X叫Y」句式：X 是亲密关系词（女朋友/男朋友/老婆/老公/对象）→ 发 "
-    "relationship（见第 7 条）；X 是描述词（最好的朋友/同学/同事/室友…）→ 发 "
-    "naming。「取名叫X」一律 naming**。\n"
-    "7. relationship：命题如\"用户的女朋友是小王\"或\"小王是小杨的女朋友\"（stated，"
-    "按用户原话措辞 + 第 4 条归一化；\"我女朋友叫小李\"\"我的女朋友是小李\"= 主语"
-    "是用户 → 省略 source_entity）；relation_type 开放（girlfriend/"
-    "friend/colleague…）；target_entity.canonical_name 必须逐字在命题里。主语是"
-    "用户时**省略** source_entity；主语是第三方时 source_entity.canonical_name "
-    "必须逐字在命题里。两端不能同名。**同一 source 已有同类型关系也不拦：用户"
-    "怎么说就如实 form 并存（只有明确改口才用 correct，见第 8 条）**。\n"
-    "8. relationship 改口替换（correct）：仅当用户明确纠正既有关系并给出新关系（如"
-    "\"其实小王不是小杨的女朋友，是小李的女朋友\"）时用 action=correct，"
-    "corrects_relationship_id 取 current_relationships 里对应**旧**关系的 id，"
-    "**原样逐字复制那个 id 字符串**；relation_type/target_entity/source_entity "
-    "描述**新**关系，规则同第 7 条；formed_by 只允许 stated。**proposition 必须"
-    "逐字等于支持切片原句**（可含\"不是/其实\"等改口措辞，不要提炼成\"小王是小李"
-    "的女朋友\"这类改写句）。**如果用 form 另存新关系，旧关系会仍然存在、两条"
-    "冲突并存——这是错误状态，必须用 correct**。\n"
-    "9. alias（显式等价）：仅当用户明确说两个名字是同一个人（如\"杨杨就是小杨\"）"
-    "且**两个名字都在 current_entities 里**时产出。entity 与 alias_of 各给一个名字"
-    "（谁在前无意义，系统自动按更早形成的名字定 canonical）；两个名字都必须逐字在"
-    "命题和某条切片里；formed_by 只允许 stated。仅名字相似、简称、猜测指代都不是 "
-    "alias。\n"
-    "10. 第三方属性/稳定偏好：statement_kind=attribute/preference 且带 entity（如命题\"小王是女生\"，"
-    "entity.canonical_name=\"小王\" 必须逐字在切片和命题里；proposition 必须等于切片"
-    "本身，只有第一人称才换\"用户\"，**不要**给第三方命题补\"用户\"主语）。不带 entity "
-    "的 attribute/preference 才是用户本人。当前segment只用代词时：若同一Evidence前段"
-    "只有一个同批naming人物，系统可直接绑定；否则给entity_reference.mention，它必须"
-    "逐字在当前segment，且entity必须由同会话先前用户原话唯一指向；歧义时不得猜。\n"
-    "11. 同一边界内：命题互异；corrects/contradicts 目标互异；两个 naming 不得同名；"
-    "不确定/歧义/锁不定 → 不产出该 item；实在无法唯一解析身份/含义时整批 "
-    "clarification_required。\n"
-    "12. JSON 卫生：不需要的可选字段（corrects_cognition_id、corrects_relationship_id、"
-    "corrects_event_id、contradicts_cognition_id、retract、assistant_claim、entity、"
-    "alias_of、entity_reference、source_entity、target_entity、relation_type、participants、objects、"
-    "occurred_at、time_expression、perspective_holder）必须**完全省略**，绝不输出"
-    "空串/null。target 固定 \"owner_self\"（可省略，缺失视为 owner_self；任何其它值"
-    "整体拒绝）。\n"
-    "13. retract（明确撤回、无新值）：用户明确说一条已形成的记忆是错的并要撤回/"
-    "删除/别记（如\"那条删掉吧\"\"别记我喜欢咖啡了\"\"小王不是小杨的女朋友\"且"
-    "**不给新值**）→ action=correct + retract:true + corrects_cognition_id（或关系"
-    "用 corrects_relationship_id，取 current_relationships 旧关系 id）。proposition "
-    "必须逐字等于撤回原话切片；**不要**补\"用户\"主语。不得带任何新值字段；"
-    "naming 不可撤回（名字纠错走 alias）。如果用户明确说先前记在本人名下的属性/"
-    "偏好其实属于朋友或其他人、不是本人，而新的第三方内容不符合本合同的正式形成"
-    "范围，也必须 retract 对应的本人 cognition；保留整条归属纠正原话作为撤回依据，"
-    "不得让错误的本人 cognition 继续 current，也不得把它只当普通 contradict。\n"
-    "14. contradict（不同意/怀疑，但没说\"错了\"）：仅当用户对一条**已形成**的 "
-    "attribute/preference 表达相反意见/怀疑，且**没有**说记忆错了、也没给新值时，"
-    "用 action=contradict + contradicts_cognition_id（current_cognitions 里对应 id）；"
-    "proposition 逐字等于反对原话切片、不要补\"用户\"主语。关系/第三方属性不支持 "
-    "contradict（关系否定按第 13 条 retract 处理）。分不清 correct/retract/"
-    "contradict → 不产出该 item。\n"
-    "14b. 时序更替与偏好变迁（如\"那是之前喜欢的，现在我喜欢的是张小姐\"\"以前住北京，现在搬到上海了\"）："
-    "用户表达过去的偏好或状态已成为历史、并确立了新偏好时，属于自然演进，绝不要用 correct 将旧记忆完全抹杀/判错。"
-    "对新偏好用 action=form + supersedes_cognition_id（取 current_cognitions 里旧项对应 id）；"
-    "系统会自动为旧项挂载反证降权保留历史留痕，并将新项建立为当前高置信偏好。\n"
-"15. event（已发生/已确定事件，V7）：用户亲述的已发生事件（含叙事/时间/"
-    "参与者/对象）用 statement_kind=event（stated）。participants 列参与事件的"
-    "第三方实体（名字逐字在命题里，kind 默认 person；\"用户\"可指本人），objects "
-    "列参与的对象/地点实体（kind 如 place/thing）。名字要在命题里；没有明确实体"
-    "就省略对应列表。时间：仅原话明确包含唯一完整日期时，occurred_at 用 YYYY-MM-DD；"
-    "把命题里的时间短语逐字放进 time_expression，不把昨天/上周等相对时间猜成日期。"
-    "没有明确日期就省略 occurred_at（事件仍形成）。未发生/不确定是否发生/含糊"
-    "内容不产出。**proposition 必须逐字等于支持切片原句——含\"上周末/昨天\"等时间"
-    "词在内，一个字都不许增删改写（如切片是\"上周末我和小王去了南京\"，proposition"
-    "就必须原样是它）**。event 撤回（说\"没这事/别记了\"）用 correct+retract+"
-    "corrects_event_id；event 改口替换（明确说旧事件记错了并给新叙事，如\"其实"
-    "上周末没去南京，去的是杭州\"）用 correct+corrects_event_id（取 **current_"
-    "events** 里对应旧事件的 id，原样逐字复制那个 id 字符串）+ 新事件的 "
-    "participants/objects/occurred_at/time_expression（同 event 字段合同，"
-    "proposition=新叙事逐字切片）；event 不"
-    "支持 contradict。**用 form 另存新事件会让旧事件仍然存在、两条并存——错误"
-    "状态，必须用 correct**。\n"
-    "16. perspective holder（第三方视角，V8）：仅当用户转述**第三方对第三方/对"
-    "用户**的身份类稳定属性/偏好（如\"小王说小李是00后\"\"小王说我不爱运动\"）时，"
-    "用 attribute/preference + entity=被陈述对象（名字逐字在命题）+ "
-    "perspective_holder=说话人（第三方名，逐字在命题；**不得**是\"用户\"；"
-    "说话人=被陈述对象也不行）。用户自己说的稳定属性/偏好**不要**带 "
-    "perspective_holder（那才是 owner_self）。第三方视角的**评价**（\"小王说小李"
-    "很厉害\"）仍一律不产出。\n"
-    "17. clarification_required：用户明显在陈述需要记住的内容，但身份或含义无法"
-    "唯一解析（锁不定）且不产出任何 item 时，整批输出 clarification_required，"
-    "question 是一句话中文澄清问题（≤100 字，只问最关键的歧义）。out_of_scope："
-    "理解了内容但超出当前正式合同（不属于可归属的稳定属性/偏好/命名/关系/事件）"
-    "且用户明显要求记忆时，整批输出 out_of_scope，note 是一句话中文说明（≤100 "
-    "字）。两者都零 World 写入；无关的闲聊/情绪/观点/评价仍用 no_change，不要"
-    "滥用这两个结果。\n"
-    "示例：\n"
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"form","target":"owner_self","statement_kind":"naming",'
-    '"formed_by":"stated","proposition":"用户的朋友叫小王",'
-    '"entity":{"canonical_name":"小王","kind":"person"},'
-    '"supports":[{"evidence_id":"ev1","segment_id":"s0"}]}]}\n'
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"form","target":"owner_self","statement_kind":"relationship",'
-    '"formed_by":"stated","proposition":"用户的女朋友叫小李",'
-    '"target_entity":{"canonical_name":"小李","kind":"person"},'
-    '"relation_type":"girlfriend",'
-    '"supports":[{"evidence_id":"ev2","segment_id":"s0"}]}]}'
-    "（用户说\"我女朋友叫小李\"\"我的女朋友是小李\"都是这种关系：无 source_entity）\n"
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"correct","target":"owner_self","statement_kind":"relationship",'
-    '"formed_by":"stated","proposition":"其实小王不是小杨的女朋友，是小李的女朋友",'
-    '"corrects_relationship_id":"<current_relationships 里的旧关系 id>",'
-    '"source_entity":{"canonical_name":"小王","kind":"person"},'
-    '"target_entity":{"canonical_name":"小李","kind":"person"},'
-    '"relation_type":"girlfriend",'
-    '"supports":[{"evidence_id":"ev3","start":0,"end":20}]}]}'
-    "（改口替换必须 action=correct + 旧关系 id，**绝不**用 form 另存）\n"
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"correct","target":"owner_self","statement_kind":"event",'
-    '"formed_by":"stated","proposition":"其实上周末我和小王去的是杭州",'
-    '"corrects_event_id":"<current_relationships 同理，world 事件列表里的旧事件 id>",'
-    '"participants":[{"canonical_name":"小王","kind":"person"}],'
-    '"objects":[{"canonical_name":"杭州","kind":"place"}],'
-    '"supports":[{"evidence_id":"ev4","start":0,"end":14}]}]}'
-    "（事件改口同样必须 action=correct + 旧事件 id，**绝不**用 form 另存）\n"
+    "1. 只处理：用户本人稳定属性/偏好；第三方稳定属性或偏好（一次性/情景内容不算）；用户对第三方的命名；用户↔第三方或第三方↔第三方的稳定关系；用户明确说两个名字**同指一人**的显式等价。**对任何"
+    "人的评价一律不产出**；除已发生/已确定事件外的一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界最多 5 条；作息/通勤/日程等稳定习惯也算用户稳定属性或偏好，可"
+    "以产出；愿望/期待与情绪、观点不产出。带明确短期范围的临时状态（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。这里的愿望不包括对助手以后持"
+    "续生效的明确要求，答复方式要求是 preference；没有明确截止范围的当前习惯或安排属于持续约束，必须 form。‘最近’本身不能作为 no_change 的理由；形成当前约束，之后有新说法再 c"
+    "orrect 或 supersede。\n"
+    "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 segment_id；系统从segment原文确定性计算Unicode start/end与s"
+    "tated proposition。旧quote/start/end仅兼容，不要自行复制、概括或计算。assistant/context永远不是Evidence。\n"
+    "3. action=form：形成或复述（复述自动并入同 ID support 链）；只有用户明确说旧记忆错了并给出新值才用 correct（attribute/preference 用 correc"
+    "ts_cognition_id；relationship 改口替换用 corrects_relationship_id）。明确撤回（无新值，见第 13 条）用 correct+retract；只是不同"
+    "意/怀疑同一命题（见第 14 条）用 contradict。**看到\"其实…不是…是…\"\"记错了\"\"改一下\"\"不算数\"\"猜错啦\"\"不对\"等改口纠错信号，或用户表明状态改变，必须使用 correct 处"
+    "理旧记忆并更新为新认知，绝不能放任冲突旧记忆并存**。\n"
+    "4. formed_by=stated：使用segment_id时，proposition只是必填占位，系统会从所选segment逐字派生正式命题并完成第一人称归一；模型不要复制、概括或计算命题。结构"
+    "字段中的姓名必须能在所选segment或规则10允许的唯一指代上下文中核对。姓名、称呼、数字、日期必须保留用户原话写法，不得改写或猜测；无法核对就不产出。quote同样逐字派生命题，start/end"
+    "输入按逐字锚定校验。\n"
+    "5. formed_by=confirmed：仅当 assistant 提出命题、用户短确认（无否定词）时用于 attribute/preference。assistant_claim 必须是 con"
+    "text 的逐字子串；proposition 等于 claim 去语气词/问尾、把\"你/您\"换\"用户\"。assistant 猜对本身不是 Evidence。\n"
+    "6. naming：命题如\"我的表弟叫阿硕\"（stated）；entity.canonical_name 必须是某条切片的逐字子串；kind 默认 person。同一实体名已存在就别重复 naming"
+    "。**「我的X叫Y」句式：X 是亲密关系词（女朋友/男朋友/老婆/老公/对象）→ 发 relationship（见第 7 条）；X 是描述词（最好的朋友/同学/同事/室友…）→ 发 naming。「取"
+    "名叫X」一律 naming**。\n"
+    "7. relationship：命题如\"秋禾是我的阿姨\"（stated，按用户原话措辞 + 第 4 条归一化；主语是用户 → 省略 source_entity）；relation_type 开放（gi"
+    "rlfriend/friend/colleague…）；target_entity.canonical_name 必须逐字在命题里。主语是用户时**省略** source_entity；主语是第三方时"
+    " source_entity.canonical_name 必须逐字在命题里。两端不能同名。**同一 source 已有同类型关系也不拦：用户怎么说就如实 form 并存（只有明确改口才用 corre"
+    "ct，见第 8 条）**。\n"
+    "8. relationship 改口替换（correct）：仅当用户明确纠正既有关系并给出新关系（如\"明澄不是我表弟，是我堂弟\"）时用 action=correct，corrects_relation"
+    "ship_id 取 current_relationships 里对应**旧**关系的 id，**原样逐字复制那个 id 字符串**；relation_type/target_entity/sourc"
+    "e_entity 描述**新**关系，规则同第 7 条；formed_by 只允许 stated。**proposition 必须逐字等于支持切片原句**（可含\"不是/其实\"等改口措辞，不要提炼或改写"
+    "）。**如果用 form 另存新关系，旧关系会仍然存在、两条冲突并存——这是错误状态，必须用 correct**。\n"
+    "9. alias（显式等价）：仅当用户明确说两个名字是同一个人且**两个名字都在 current_entities 里**时产出。entity 与 alias_of 各给一个名字（谁在前无意义，系统自"
+    "动按更早形成的名字定 canonical）；两个名字都必须逐字在命题和某条切片里；formed_by 只允许 stated。仅名字相似、简称、猜测指代都不是 alias。\n"
+    "10. 第三方属性/稳定偏好：statement_kind=attribute/preference 且带 entity（如命题\"小王是女生\"，entity.canonical_name=\"小王\" 必"
+    "须逐字在切片和命题里；proposition 必须等于切片本身，只有第一人称才换\"用户\"，**不要**给第三方命题补\"用户\"主语）。不带 entity 的 attribute/preference 才"
+    "是用户本人。当前segment只用代词时：若同一Evidence前段只有一个同批naming人物，系统可直接绑定；否则给entity_reference.mention，它必须逐字在当前segment"
+    "，且entity必须由同会话先前用户原话唯一指向；歧义时不得猜。\n"
+    "11. 同一边界内：命题互异；corrects/contradicts 目标互异；两个 naming 不得同名；不确定/歧义/锁不定 → 不产出该 item；实在无法唯一解析身份/含义时整批 clar"
+    "ification_required。\n"
+    "12. JSON 卫生：不需要的可选字段（corrects_cognition_id、corrects_relationship_id、corrects_event_id、contradicts_co"
+    "gnition_id、retract、assistant_claim、entity、alias_of、entity_reference、source_entity、target_entity、rela"
+    "tion_type、participants、objects、occurred_at、time_expression、perspective_holder）必须**完全省略**，绝不输出空串/null"
+    "。target 固定 \"owner_self\"（可省略，缺失视为 owner_self；任何其它值整体拒绝）。\n"
+    "13. retract（明确撤回、无新值）：用户明确说一条已形成的记忆是错的并要撤回/删除/别记（如\"别记我喜欢咖啡了\"且**不给新值**）→ action=correct + retract:tru"
+    "e + corrects_cognition_id（或关系用 corrects_relationship_id，取 current_relationships 旧关系 id）。proposition "
+    "必须逐字等于撤回原话切片；**不要**补\"用户\"主语。不得带任何新值字段；naming 不可撤回（名字纠错走 alias）。如果用户明确说先前记在本人名下的属性/偏好其实属于朋友或其他人、不是本人，而"
+    "新的第三方内容不符合本合同的正式形成范围，也必须 retract 对应的本人 cognition；保留整条归属纠正原话作为撤回依据，不得让错误的本人 cognition 继续 current，也不得把"
+    "它只当普通 contradict。\n"
+    "14. contradict（不同意/怀疑，但没说\"错了\"）：仅当用户对一条**已形成**的 attribute/preference 表达相反意见/怀疑，且**没有**说记忆错了、也没给新值时，用 "
+    "action=contradict + contradicts_cognition_id（current_cognitions 里对应 id）；proposition 逐字等于反对原话切片、不要补\"用"
+    "户\"主语。关系/第三方属性不支持 contradict（关系否定按第 13 条 retract 处理）。分不清 correct/retract/contradict → 不产出该 item。\n"
+    "14b. 时序更替与偏好变迁（如\"那是之前喜欢的，现在我喜欢的是张小姐\"\"以前住北京，现在搬到上海了\"）：用户表达过去的偏好或状态已成为历史、并确立了新偏好时，属于自然演进，绝不要用 correct "
+    "将旧记忆完全抹杀/判错。对新偏好用 action=form + supersedes_cognition_id（取 current_cognitions 里旧项对应 id）；系统会自动为旧项挂载反证降"
+    "权保留历史留痕，并将新项建立为当前高置信偏好。\n"
+    "15. event（已发生/已确定事件，V7）：用户亲述的已发生事件（含叙事/时间/参与者/对象）用 statement_kind=event（stated）。participants 列参与事件的第"
+    "三方实体（名字逐字在命题里，kind 默认 person；\"用户\"可指本人），objects 列参与的对象/地点实体（kind 如 place/thing）。名字要在命题里；没有明确实体就省略对应列表"
+    "。时间：仅原话明确包含唯一完整日期时，occurred_at 用 YYYY-MM-DD；把命题里的时间短语逐字放进 time_expression，不把昨天/上周等相对时间猜成日期。没有明确日期就省略"
+    " occurred_at（事件仍形成）。未发生/不确定是否发生/含糊内容不产出。**proposition 必须逐字等于支持切片原句——含\"上周末/昨天\"等时间词在内，一个字都不许增删改写（如切片是\""
+    "上周末我和小王去了南京\"，proposition就必须原样是它）**。event 撤回（说\"没这事/别记了\"）用 correct+retract+corrects_event_id；event 改口替"
+    "换（明确说旧事件记错了并给新叙事）用 correct+corrects_event_id（取 **current_events** 里对应旧事件的 id，原样逐字复制那个 id 字符串）+ 新事件的 "
+    "participants/objects/occurred_at/time_expression（同 event 字段合同，proposition=新叙事逐字切片）；event 不支持 contrad"
+    "ict。**用 form 另存新事件会让旧事件仍然存在、两条并存——错误状态，必须用 correct**。\n"
+    "16. perspective holder（第三方视角，V8）：仅当用户转述**第三方对第三方/对用户**的身份类稳定属性/偏好（如\"阿姨说表弟是00后\"）时，用 attribute/prefere"
+    "nce + entity=被陈述对象（名字逐字在命题）+ perspective_holder=说话人（第三方名，逐字在命题；**不得**是\"用户\"；说话人=被陈述对象也不行）。用户自己说的稳定属性/"
+    "偏好**不要**带 perspective_holder（那才是 owner_self）。第三方视角的**评价**仍一律不产出。\n"
+    "17. clarification_required：用户明显在陈述需要记住的内容，但身份或含义无法唯一解析（锁不定）且不产出任何 item 时，整批输出 clarification_required"
+    "，question 是一句话中文澄清问题（≤100 字，只问最关键的歧义）。out_of_scope：理解了内容但超出当前正式合同（不属于可归属的稳定属性/偏好/命名/关系/事件）且用户明显要求记忆时"
+    "，整批输出 out_of_scope，note 是一句话中文说明（≤100 字）。两者都零 World 写入；无关的闲聊/情绪/观点/评价仍用 no_change，不要滥用这两个结果。\n"
 )
 
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
-#: Semantically equivalent to _SYSTEM_PROMPT; the worked examples are the same
-#: cases in English with correctly recomputed codepoint spans.
+#: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
-    "You are MemoWeft 2.0's batch interpreter. The input contains: the current "
-    "formal World's cognition list (id/content/statement_kind), a "
-    "current_entities list (id/canonical_name/kind/aliases), a "
-    "current_relationships list (id/content/relation_type/source_entity_id/"
-    "target_entity_id), a current_events list (id/content/occurred_at/"
-    "time_expression), prior same-conversation conversation_context (reference "
-    "resolution only, never Evidence), and several verbatim user Evidence utterances from one "
-    "compression boundary (each has a unique id and original text, possibly "
-    "with assistant preceding context).\n"
-    "Your task is to output exactly one JSON object: either 1 to 5 stable "
-    "cognitions, or no_change, or clarification_required (when identity or "
-    "meaning cannot be uniquely resolved, with a question), or out_of_scope "
-    "(understood but outside the formal contract, with a note). "
-    "**Output ONLY JSON — no explanations, no chain of thought, no extra "
-    "text.**\n"
-    '{"schema_version":8,"result":"no_change"}\n'
-    '{"schema_version":8,"result":"cognitions","cognitions":[<item>, ...]}'
-    " (1..5 items)\n"
-    '{"schema_version":8,"result":"clarification_required","question":"…"}\n'
-    '{"schema_version":8,"result":"out_of_scope","note":"…"}\n'
+    "First distinguish explicit ongoing instructions from wishes: 'Avoid dairy when suggesting breakfast "
+    "in future' is an explicit preference; 'Recently I commute by metro' is an ongoing arrangement, not a"
+    " one-week mood. Form these, rather than no_change. Use no_change only when there is no eligible cont"
+    "ent. For a short correction omitting the topic ('Not hardcover; switch to ebooks'), resolve the topi"
+    "c from the related current_cognitions and their predecessor_context, and use action=correct with the"
+    " current item's id. Never guess a topic from an unrelated recent item or copy an old date as current"
+    ". Select all adjacent source segments needed for the complete preference and topic. A correction's s"
+    "ignal, new value, negation of the old value and topic clause are ONE claim: emit one item selecting "
+    "all related adjacent segments. Choose the target from the whole correction's topic and rejected old "
+    "value; never use an isolated topic-free clause to correct an unrelated arrangement. For a correction"
+    ", choose action=correct first, then copy the correction target; action=form must never carry any cor"
+    "rects_* field. Select the complete adjacent evidence including the correction signal. Copy the entir"
+    "e corrects_cognition_id including its cognition- prefix, not just the digest. An id is opaque: copy "
+    "it character for character from the input; never generate, compress, truncate or derive it from the "
+    "proposition. The proposition must still derive from the current verbatim Evidence; context is not ne"
+    "w Evidence.\n"
+    "A relationship to the user must give target_entity and omit source_entity; do not supply only source"
+    "_entity with no target_entity. Select the adjacent source segments needed for the relationship conte"
+    "xt. If separately forming a pronoun's attribute, also select the adjacent segment naming the person "
+    "so the name is verifiable. Never invent a name.\n"
+    "You are MemoWeft 2.0's batch interpreter. The input contains: the current formal World's cognition l"
+    "ist (id/content/statement_kind), a current_entities list (id/canonical_name/kind/aliases), a current"
+    "_relationships list (id/content/relation_type/source_entity_id/target_entity_id), a current_events l"
+    "ist (id/content/occurred_at/time_expression), prior same-conversation conversation_context (referenc"
+    "e resolution only, never Evidence), and several verbatim user Evidence utterances from one compressi"
+    "on boundary (each has a unique id and original text, possibly with assistant preceding context).\n"
+    "Your task is to output exactly one JSON object: either 1 to 5 stable cognitions, or no_change, or cl"
+    "arification_required (when identity or meaning cannot be uniquely resolved, with a question), or out"
+    "_of_scope (understood but outside the formal contract, with a note). **Output ONLY JSON — no explana"
+    "tions, no chain of thought, no extra text.**\n"
+    "{\"schema_version\":8,\"result\":\"cognitions\",\"cognitions\":[<item>, ...]} (1..5 items)\n"
+    "{\"schema_version\":8,\"result\":\"no_change\"}\n"
+    "{\"schema_version\":8,\"result\":\"clarification_required\",\"question\":\"…\"}\n"
+    "{\"schema_version\":8,\"result\":\"out_of_scope\",\"note\":\"…\"}\n"
     "Item shape (statement_kind decides the extra fields):\n"
-    '{"action":"form","target":"owner_self",'
-    '"statement_kind":"attribute"|"preference"|"naming"|"relationship"|"alias"|'
-    '"event","formed_by":"stated"|"confirmed","proposition":"…",'
-    '"supports":[{"evidence_id":"...","segment_id":"s0"}],'
-    '"corrects_cognition_id":"...","assistant_claim":"...",'
-    '"entity":{"canonical_name":"…","kind":"person"},"entity_reference":{"mention":"they"},'
-    '"perspective_holder":{"canonical_name":"…","kind":"person"},'
-    '"alias_of":{"canonical_name":"…","kind":"person"},'
-    '"target_entity":{"canonical_name":"…","kind":"person"},'
-    '"source_entity":{"canonical_name":"…","kind":"person"},'
-    '"relation_type":"girlfriend","corrects_relationship_id":"...",'
-    '"retract":true,"contradicts_cognition_id":"...",'
-    '"participants":[{"canonical_name":"…","kind":"person"}],'
-    '"objects":[{"canonical_name":"…","kind":"place"}],'
-    '"occurred_at":"2026-08-15","time_expression":"yesterday",'
-    '"corrects_event_id":"..."}\n'
+    "{\"action\":\"form\",\"target\":\"owner_self\",\"statement_kind\":\"attribute\"|\"preference\"|\"naming\"|\"relations"
+    "hip\"|\"alias\"|\"event\",\"formed_by\":\"stated\"|\"confirmed\",\"proposition\":\"…\",\"supports\":[{\"evidence_id\":\""
+    "...\",\"segment_id\":\"s0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
+    "name\":\"…\",\"kind\":\"person\"},\"entity_reference\":{\"mention\":\"they\"},\"perspective_holder\":{\"canonical_na"
+    "me\":\"…\",\"kind\":\"person\"},\"alias_of\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"target_entity\":{\"canonic"
+    "al_name\":\"…\",\"kind\":\"person\"},\"source_entity\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"relation_type\""
+    ":\"girlfriend\",\"corrects_relationship_id\":\"...\",\"retract\":true,\"contradicts_cognition_id\":\"...\",\"part"
+    "icipants\":[{\"canonical_name\":\"…\",\"kind\":\"person\"}],\"objects\":[{\"canonical_name\":\"…\",\"kind\":\"place\"}]"
+    ",\"occurred_at\":\"2026-08-15\",\"time_expression\":\"yesterday\",\"corrects_event_id\":\"...\"}\n"
     "Rules:\n"
-    "1. Only process: the user's own stable attributes/preferences; stable "
-    "third-party attributes or preferences (one-off or situational content does "
-    "not count); the user's "
-    "naming of third parties; stable relationships between the user and a "
-    "third party or between third parties; explicit equivalence of two names "
-    "for one person stated by the user (e.g. \"Yangyang is Xiaoyang\"). "
-    "**Never produce evaluations of anyone (\"plays games really well\" and "
-    "the like)**; one-off facts other than happened/confirmed events and vague "
-    "content are never produced. "
-    "Review the Evidence one by one; produce everything that is definite (at "
-    "most 5 per boundary; routines/commutes/schedules and other stable habits "
-    "count as stable attributes or preferences and may be produced; wishes/"
-    "expectations (\"want to own…\" \"hope to…\"), emotions and opinions are "
-    "not produced. A temporary state with an explicit short time scope (for "
-    "example, \"I do not want to socialize this week\") must not become a "
-    "permanent attribute/preference; retain only its raw Evidence). **Do NOT "
-    "split a single claim into fragments — a reason "
-    "clause (\"because…\", \"so…\") stays inside its item; two INDEPENDENT "
-    "claims in one utterance are separate items, each proposition equal to "
-    "its own verbatim slice.**\n"
-    "2. supports.evidence_id must come from the input and should select that "
-    "Evidence's supplied segment_id. The system derives the verbatim text, Unicode "
-    "start/end and stated proposition. Legacy quote/start/end is compatibility only; "
-    "do not copy, paraphrase or count text. Assistant/context is never Evidence.\n"
-    "3. action=form: form or restate (a restatement auto-merges into the same "
-    "ID's support chain); use correct ONLY when the user explicitly says an "
-    "old memory is wrong and gives a new value (attribute/preference use "
-    "corrects_cognition_id; relationship replacement uses "
-    "corrects_relationship_id). An explicit retraction with no new value (see "
-    "rule 13) uses correct+retract; mere disagreement or doubt about the same "
-    "proposition (see rule 14) uses contradict. **When you see explicit "
-    "correction signals such as \"actually… not… is…\", \"I misremembered\", "
-    "\"change it\", \"that doesn't count\", you MUST correct/retract the old "
-    "memory — never form a second copy with form**.\n"
-    "4. formed_by=stated: with segment_id, proposition is only a required placeholder; "
-    "the system derives the formal proposition verbatim from the selected segment "
-    "and performs owner-pronoun normalization. Do not copy, summarize or calculate it. "
-    "Names in structural fields must be verifiable in that segment or through rule "
-    "10's unique reference context. Preserve names, forms of address, numbers and dates exactly as written in user evidence; omit unverifiable facts. Quotes also derive verbatim propositions; legacy start/end inputs retain verbatim checks.\n"
-    "5. formed_by=confirmed: only for attribute/preference when the assistant "
-    "proposed a proposition and the user confirmed it briefly (no negation). "
-    "assistant_claim must be a verbatim substring of the context; the "
-    "proposition equals the claim with discourse particles and question tails "
-    "removed (no pronoun rewriting). The "
-    "assistant guessing right is never Evidence by itself.\n"
-    "6. naming: propositions like \"My friend is called Wang\" "
-    "(stated); entity.canonical_name must be a verbatim substring of a slice; "
-    "kind defaults to person. Do not repeat naming when the same entity name "
-    "already exists. **\"My X is called Y\" sentences: when X is an intimate "
-    "relation word (girlfriend/boyfriend/wife/husband/partner) → emit "
-    "relationship (see rule 7); when X is a descriptor (best friend/"
-    "classmate/colleague/roommate…) → emit naming. \"Named X\" is always "
-    "naming. A sentence like \"X is the kitten/dog I <got/bought> from…, "
-    "because…, so I named it X\" is ONE pet naming (kind=animal) whose "
-    "proposition equals the ENTIRE sentence — never split it into fragments "
-    "and never emit a relationship for a pet.**\n"
-    "7. relationship: propositions like \"My girlfriend is called Li\" or "
-    "\"Wang is Yang's girlfriend\" (stated, the user's own wording; "
-    "\"my girlfriend is called Li\" = the subject is "
-    "the user → omit source_entity); relation_type is open (girlfriend/friend/"
-    "colleague…); target_entity.canonical_name must be verbatim in the "
-    "proposition. When the subject is the user, **omit** source_entity; when "
-    "the subject is a third party, source_entity.canonical_name must be "
-    "verbatim in the proposition. The two endpoints must not be the same "
-    "name. **An existing relationship of the same type from the same source "
-    "does not block: record exactly what the user said and let them coexist "
-    "(only an explicit correction uses correct, see rule 8)**.\n"
-    "8. relationship replacement (correct): ONLY when the user explicitly "
-    "corrects an existing relationship and gives a new one (e.g. \"Actually "
-    "Wang is not Yang's girlfriend, she is Li's girlfriend\") use "
-    "action=correct with corrects_relationship_id copied verbatim from the "
-    "**old** relationship's id in current_relationships; relation_type/"
-    "target_entity/source_entity describe the **new** relationship per rule 7; "
-    "formed_by only stated. **The proposition must equal the supporting slice "
-    "verbatim** (it may contain \"not/actually\" correction wording — do not "
-    "distill it into a rewritten sentence). **Using form for the new "
-    "relationship would leave the old one current — two conflicting rows — "
-    "which is a wrong state; you MUST use correct**.\n"
-    "9. alias (explicit equivalence): ONLY when the user explicitly says two "
-    "names are the same person (e.g. \"Yangyang is Xiaoyang\") and **both "
-    "names are in current_entities**. Give one name in entity and the other "
-    "in alias_of (order does not matter; the system canonicalizes to the "
-    "earlier-formed name); both names must be verbatim in the proposition and "
-    "in a slice; formed_by only stated. Mere similarity, abbreviations or "
-    "guessed references are NOT alias.\n"
-    "10. Third-party attributes/stable preferences: statement_kind=attribute/"
-    "preference with "
-    "entity (e.g. proposition \"Wang is a girl\", entity.canonical_name="
-    "\"Wang\" verbatim in the slice and proposition; the proposition must "
-    "equal the slice itself, with no subject rewriting). "
-    "An attribute/preference without entity is the user's own. When the current "
-    "segment uses only a pronoun, the system may bind it directly when an earlier "
-    "segment in the same Evidence has exactly one same-batch naming entity. Otherwise "
-    "add entity_reference.mention verbatim from the segment; entity must be uniquely "
-    "grounded by prior user turns in the same conversation, otherwise do not guess.\n"
-    "11. Within one boundary: propositions are mutually distinct; corrects/"
-    "contradicts targets are mutually distinct; two namings must not share a "
-    "name; uncertain/ambiguous/unlockable → do not produce that item; if "
-    "identity or meaning truly cannot be resolved, emit a whole-batch "
-    "clarification_required.\n"
-    "12. JSON hygiene: optional fields that are not needed "
-    "(corrects_cognition_id, corrects_relationship_id, corrects_event_id, "
-    "contradicts_cognition_id, retract, assistant_claim, entity, alias_of, entity_reference, "
-    "source_entity, target_entity, relation_type, participants, objects, "
-    "occurred_at, time_expression, perspective_holder) MUST be **fully "
-    "omitted** — never empty strings or null. target is fixed \"owner_self\" "
-    "(omittable; missing means owner_self; any other value rejects the whole "
-    "batch).\n"
-    "13. retract (explicit retraction, no new value): when the user explicitly "
-    "says a formed memory is wrong and to retract/delete/forget it (e.g. "
-    "\"delete that one\", \"stop remembering that I like coffee\", \"Wang is "
-    "not Yang's girlfriend\" with **no new value**) → action=correct + "
-    "retract:true + corrects_cognition_id (or corrects_relationship_id from "
-    "current_relationships for relationships). The proposition must equal the "
-    "retraction slice verbatim; "
-    "carry no new-value fields; naming cannot be retracted (name fixes go "
-    "through alias). If the user explicitly says that an attribute/preference "
-    "previously assigned to the owner actually belongs to a friend or another "
-    "person and not the owner, but that third-party content is outside this "
-    "contract's formal formation scope, retract the corresponding owner "
-    "cognition anyway. Preserve the complete attribution correction as the "
-    "retraction Evidence; never leave the false owner cognition current or "
-    "reduce this correction to a mere contradiction.\n"
-    "14. contradict (disagree/doubt, without saying \"wrong\"): ONLY when the "
-    "user expresses an opposite opinion or doubt about an **already formed** "
-    "attribute/preference and does NOT say the memory is wrong or give a new "
-    "value, use action=contradict + contradicts_cognition_id (the "
-    "corresponding id in current_cognitions); the proposition equals the "
-    "opposing slice verbatim. **The disagreeing statement is ONLY a "
-    "contradict anchor — never emit it as a new form/cognition, and never "
-    "correct or retract the memory it disagrees with.** "
-    "Relationships and third-party attributes do not support contradict "
-    "(relationship negation goes through rule 13 retract). When correct/"
-    "retract/contradict cannot be told apart → do not produce that item.\n"
-    "15. event (happened/confirmed events, V7): user-stated events that "
-    "happened (with narrative/time/participants/objects) use "
-    "statement_kind=event (stated). participants lists the third-party "
-    "entities involved (names verbatim in the proposition, kind defaults to "
-    "person; \"The user\" may stand for the user themselves), objects lists "
-    "the objects/places involved (kind e.g. place/thing). Names must be in "
-    "the proposition; omit a list when there are no definite entities. Time: "
-    "occurred_at uses YYYY-MM-DD only when user evidence contains one explicit full date. "
-    "Keep the time phrase verbatim in time_expression; never guess a date from yesterday "
-    "or last week. Omit occurred_at if no full date is explicit (the event still forms). Not-yet-happened/uncertain/"
-    "vague content is not produced. **The proposition must equal the "
-    "supporting slice verbatim — including \"last weekend/yesterday\" time "
-    "words, not a single character added, deleted or rewritten** (if the "
-    "slice is \"Last weekend I went to Nanjing with Wang\", the proposition "
-    "must be exactly that). Event retraction (\"that never happened/forget "
-    "it\") uses correct+retract+corrects_event_id; event replacement (the old "
-    "event was wrong and a new narrative is given, e.g. \"Actually last "
-    "weekend I did not go to Nanjing — I went to Hangzhou\") uses "
-    "correct+corrects_event_id (the **old** event's id from current_events, "
-    "copied verbatim) + the new event's participants/objects/occurred_at/"
-    "time_expression (same event field contract, proposition = the new "
-    "narrative verbatim slice); events do not support contradict. **Using "
-    "form for a replacement would leave the old event current — two "
-    "conflicting rows — which is a wrong state; you MUST use correct**.\n"
-    "16. perspective holder (third-party perspective, V8): ONLY when the user "
-    "relays a **third party's** identity-class stable attribute/preference "
-    "about another third party or about the user (e.g. \"Wang says Li is "
-    "Gen Z\" \"Wang says I don't like sports\"), use attribute/preference + "
-    "entity = the person being described (name verbatim in the proposition) "
-    "+ perspective_holder = the speaker (third-party name, verbatim in the "
-    "proposition; **not** \"The user\"; the speaker must not equal the "
-    "described person). The user's own stated attributes/preferences must "
-    "**not** carry perspective_holder (those are owner_self). Third-party "
-    "perspective **evaluations** (\"Wang says Li is amazing\") are still "
-    "never produced.\n"
-    "17. clarification_required: when the user is clearly stating something "
-    "to remember but the identity or meaning cannot be uniquely resolved "
-    "(unlockable) and you produce no item, emit a whole-batch "
-    "clarification_required; question is a one-sentence clarification in the "
-    "conversation language (<=100 chars, ask only the most critical "
-    "ambiguity). out_of_scope: when you understood the content but it is "
-    "outside the current formal contract (not an attributable stable "
-    "attribute/preference/naming/relationship/event) and the user clearly "
-    "asked to remember it, emit a whole-batch out_of_scope; note is a "
-    "one-sentence explanation (<=100 chars). Both are zero World writes; "
-    "unrelated chitchat/emotions/opinions/evaluations still use no_change — "
-    "do not overuse these two results.\n"
-    "Examples:\n"
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"form","target":"owner_self","statement_kind":"naming",'
-    '"formed_by":"stated","proposition":"My friend is called Wang",'
-    '"entity":{"canonical_name":"Wang","kind":"person"},'
-    '"supports":[{"evidence_id":"ev1","segment_id":"s0"}]}]}\n'
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"form","target":"owner_self","statement_kind":"relationship",'
-    '"formed_by":"stated","proposition":"My girlfriend is called Li",'
-    '"target_entity":{"canonical_name":"Li","kind":"person"},'
-    '"relation_type":"girlfriend",'
-    '"supports":[{"evidence_id":"ev2","segment_id":"s0"}]}]}'
-    " (both \"my girlfriend is called Li\" and \"my girlfriend is Li\" are "
-    "this relationship: no source_entity)\n"
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"correct","target":"owner_self","statement_kind":"relationship",'
-    '"formed_by":"stated","proposition":"Actually Wang is not Yang\'s girlfriend, she is Li\'s girlfriend",'
-    '"corrects_relationship_id":"<the old relationship id from current_relationships>",'
-    '"source_entity":{"canonical_name":"Wang","kind":"person"},'
-    '"target_entity":{"canonical_name":"Li","kind":"person"},'
-    '"relation_type":"girlfriend",'
-    '"supports":[{"evidence_id":"ev3","start":0,"end":62}]}]}'
-    " (replacement MUST use action=correct + the old relationship id, **never** form)\n"
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"correct","target":"owner_self","statement_kind":"event",'
-    '"formed_by":"stated","proposition":"Actually last weekend I went to Hangzhou, not Nanjing",'
-    '"corrects_event_id":"<likewise the old event id from the world event list>",'
-    '"participants":[],'
-    '"objects":[{"canonical_name":"Hangzhou","kind":"place"}],'
-    '"supports":[{"evidence_id":"ev4","start":0,"end":53}]}]}'
-    " (event replacement likewise MUST use action=correct + the old event id, **never** form)\n"
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"form","target":"owner_self","statement_kind":"naming",'
-    '"formed_by":"stated","proposition":"Erwu is the kitten I bought from someone back in my hometown, because her birthday is February 5th, so I named her Erwu",'
-    '"entity":{"canonical_name":"Erwu","kind":"animal"},'
-    '"supports":[{"evidence_id":"ev5","start":0,"end":119}]}]}'
-    " (one long pet sentence = ONE naming with the full sentence as the "
-    "proposition; never split it and never emit a relationship for a pet)\n"
-    '{"schema_version":8,"result":"cognitions","cognitions":['
-    '{"action":"contradict","target":"owner_self","statement_kind":"preference",'
-    '"formed_by":"stated","proposition":"Coffee actually doesn\'t taste good",'
-    '"contradicts_cognition_id":"<the existing cognition id from current_cognitions>",'
-    '"supports":[{"evidence_id":"ev6","start":0,"end":34}]}]}'
-    " (disagreement = contradict only; the disagreeing words never become a "
-    "new memory and the old memory stays current)\n"
+    "1. Only process: the user's own stable attributes/preferences; stable third-party attributes or pref"
+    "erences (one-off or situational content does not count); the user's naming of third parties; stable "
+    "relationships between the user and a third party or between third parties; explicit equivalence of t"
+    "wo names for one person stated by the user . **Never produce evaluations of anyone **; one-off facts"
+    " other than happened/confirmed events and vague content are never produced. Review the Evidence one "
+    "by one; produce everything that is definite (at most 5 per boundary; routines/commutes/schedules and"
+    " other stable habits count as stable attributes or preferences and may be produced; wishes/expectati"
+    "ons , emotions and opinions are not produced. A temporary state with an explicit short time scope (f"
+    "or example, \"I do not want to socialize this week\") must not become a permanent attribute/preference"
+    "; retain only its raw Evidence). Wishes do not include explicit ongoing instructions to the assistan"
+    "t: ongoing response requirements are preferences. Current routines or arrangements without an explic"
+    "it cutoff MUST form an ongoing constraint. 'Recently' alone is never a no_change reason; form the cu"
+    "rrent constraint and use later corrections or supersession for changes. **Do NOT split a single clai"
+    "m into fragments — a reason clause (\"because…\", \"so…\") stays inside its item; two INDEPENDENT claims"
+    " in one utterance are separate items, each proposition equal to its own verbatim slice.**\n"
+    "2. supports.evidence_id must come from the input and should select that Evidence's supplied segment_"
+    "id. The system derives the verbatim text, Unicode start/end and stated proposition. Legacy quote/sta"
+    "rt/end is compatibility only; do not copy, paraphrase or count text. Assistant/context is never Evid"
+    "ence.\n"
+    "3. action=form: form or restate (a restatement auto-merges into the same ID's support chain); use co"
+    "rrect ONLY when the user explicitly says an old memory is wrong and gives a new value (attribute/pre"
+    "ference use corrects_cognition_id; relationship replacement uses corrects_relationship_id). An expli"
+    "cit retraction with no new value (see rule 13) uses correct+retract; mere disagreement or doubt abou"
+    "t the same proposition (see rule 14) uses contradict. **When you see explicit correction signals suc"
+    "h as \"actually… not… is…\", \"I misremembered\", \"change it\", \"that doesn't count\", you MUST correct/re"
+    "tract the old memory — never form a second copy with form**.\n"
+    "4. formed_by=stated: with segment_id, proposition is only a required placeholder; the system derives"
+    " the formal proposition verbatim from the selected segment and performs owner-pronoun normalization."
+    " Do not copy, summarize or calculate it. Names in structural fields must be verifiable in that segme"
+    "nt or through rule 10's unique reference context. Preserve names, forms of address, numbers and date"
+    "s exactly as written in user evidence; omit unverifiable facts. Quotes also derive verbatim proposit"
+    "ions; legacy start/end inputs retain verbatim checks.\n"
+    "5. formed_by=confirmed: only for attribute/preference when the assistant proposed a proposition and "
+    "the user confirmed it briefly (no negation). assistant_claim must be a verbatim substring of the con"
+    "text; the proposition equals the claim with discourse particles and question tails removed (no prono"
+    "un rewriting). The assistant guessing right is never Evidence by itself.\n"
+    "6. naming: propositions like \"My cousin is called Ashuo\" (stated); entity.canonical_name must be a v"
+    "erbatim substring of a slice; kind defaults to person. Do not repeat naming when the same entity nam"
+    "e already exists. **\"My X is called Y\" sentences: when X is an intimate relation word (girlfriend/bo"
+    "yfriend/wife/husband/partner) → emit relationship (see rule 7); when X is a descriptor (best friend/"
+    "classmate/colleague/roommate…) → emit naming. \"Named X\" is always naming. A pet naming (kind=animal)"
+    " with acquisition background and a reason for the name is ONE naming whose proposition equals the EN"
+    "TIRE sentence — never split it into fragments and never emit a relationship for a pet.**\n"
+    "7. relationship: propositions like \"Qiuhe is my aunt\" (stated, the user's own wording; when the subj"
+    "ect is the user → omit source_entity); relation_type is open (girlfriend/friend/colleague…); target_"
+    "entity.canonical_name must be verbatim in the proposition. When the subject is the user, **omit** so"
+    "urce_entity; when the subject is a third party, source_entity.canonical_name must be verbatim in the"
+    " proposition. The two endpoints must not be the same name. **An existing relationship of the same ty"
+    "pe from the same source does not block: record exactly what the user said and let them coexist (only"
+    " an explicit correction uses correct, see rule 8)**.\n"
+    "8. relationship replacement (correct): ONLY when the user explicitly corrects an existing relationsh"
+    "ip and gives a new one (e.g. \"Mingcheng is my paternal cousin, not my maternal cousin\") use action=c"
+    "orrect with corrects_relationship_id copied verbatim from the **old** relationship's id in current_r"
+    "elationships; relation_type/target_entity/source_entity describe the **new** relationship per rule 7"
+    "; formed_by only stated. **The proposition must equal the supporting slice verbatim** (it may contai"
+    "n \"not/actually\" correction wording — do not distill it into a rewritten sentence). **Using form for"
+    " the new relationship would leave the old one current — two conflicting rows — which is a wrong stat"
+    "e; you MUST use correct**.\n"
+    "9. alias (explicit equivalence): ONLY when the user explicitly says two names are the same person an"
+    "d **both names are in current_entities**. Give one name in entity and the other in alias_of (order d"
+    "oes not matter; the system canonicalizes to the earlier-formed name); both names must be verbatim in"
+    " the proposition and in a slice; formed_by only stated. Mere similarity, abbreviations or guessed re"
+    "ferences are NOT alias.\n"
+    "10. Third-party attributes/stable preferences: statement_kind=attribute/preference with entity (e.g."
+    " proposition \"Wang is a girl\", entity.canonical_name=\"Wang\" verbatim in the slice and proposition; t"
+    "he proposition must equal the slice itself, with no subject rewriting). An attribute/preference with"
+    "out entity is the user's own. When the current segment uses only a pronoun, the system may bind it d"
+    "irectly when an earlier segment in the same Evidence has exactly one same-batch naming entity. Other"
+    "wise add entity_reference.mention verbatim from the segment; entity must be uniquely grounded by pri"
+    "or user turns in the same conversation, otherwise do not guess.\n"
+    "11. Within one boundary: propositions are mutually distinct; corrects/contradicts targets are mutual"
+    "ly distinct; two namings must not share a name; uncertain/ambiguous/unlockable → do not produce that"
+    " item; if identity or meaning truly cannot be resolved, emit a whole-batch clarification_required.\n"
+    "12. JSON hygiene: optional fields that are not needed (corrects_cognition_id, corrects_relationship_"
+    "id, corrects_event_id, contradicts_cognition_id, retract, assistant_claim, entity, alias_of, entity_"
+    "reference, source_entity, target_entity, relation_type, participants, objects, occurred_at, time_exp"
+    "ression, perspective_holder) MUST be **fully omitted** — never empty strings or null. target is fixe"
+    "d \"owner_self\" (omittable; missing means owner_self; any other value rejects the whole batch).\n"
+    "13. retract (explicit retraction, no new value): when the user explicitly says a formed memory is wr"
+    "ong and to retract/delete/forget it (e.g. \"stop remembering that I like coffee\" with **no new value*"
+    "*) → action=correct + retract:true + corrects_cognition_id (or corrects_relationship_id from current"
+    "_relationships for relationships). The proposition must equal the retraction slice verbatim; carry n"
+    "o new-value fields; naming cannot be retracted (name fixes go through alias). If the user explicitly"
+    " says that an attribute/preference previously assigned to the owner actually belongs to a friend or "
+    "another person and not the owner, but that third-party content is outside this contract's formal for"
+    "mation scope, retract the corresponding owner cognition anyway. Preserve the complete attribution co"
+    "rrection as the retraction Evidence; never leave the false owner cognition current or reduce this co"
+    "rrection to a mere contradiction.\n"
+    "14. contradict (disagree/doubt, without saying \"wrong\"): ONLY when the user expresses an opposite op"
+    "inion or doubt about an **already formed** attribute/preference and does NOT say the memory is wrong"
+    " or give a new value, use action=contradict + contradicts_cognition_id (the corresponding id in curr"
+    "ent_cognitions); the proposition equals the opposing slice verbatim. **The disagreeing statement is "
+    "ONLY a contradict anchor — never emit it as a new form/cognition, and never correct or retract the m"
+    "emory it disagrees with.** Relationships and third-party attributes do not support contradict (relat"
+    "ionship negation goes through rule 13 retract). When correct/retract/contradict cannot be told apart"
+    " → do not produce that item.\n"
+    "15. event (happened/confirmed events, V7): user-stated events that happened (with narrative/time/par"
+    "ticipants/objects) use statement_kind=event (stated). participants lists the third-party entities in"
+    "volved (names verbatim in the proposition, kind defaults to person; \"The user\" may stand for the use"
+    "r themselves), objects lists the objects/places involved (kind e.g. place/thing). Names must be in t"
+    "he proposition; omit a list when there are no definite entities. Time: occurred_at uses YYYY-MM-DD o"
+    "nly when user evidence contains one explicit full date. Keep the time phrase verbatim in time_expres"
+    "sion; never guess a date from yesterday or last week. Omit occurred_at if no full date is explicit ("
+    "the event still forms). Not-yet-happened/uncertain/vague content is not produced. **The proposition "
+    "must equal the supporting slice verbatim — including \"last weekend/yesterday\" time words, not a sing"
+    "le character added, deleted or rewritten** (if the slice is \"Last weekend I went to Nanjing with Wan"
+    "g\", the proposition must be exactly that). Event retraction (\"that never happened/forget it\") uses c"
+    "orrect+retract+corrects_event_id; event replacement (the old event was wrong and a new narrative is "
+    "given) uses correct+corrects_event_id (the **old** event's id from current_events, copied verbatim) "
+    "+ the new event's participants/objects/occurred_at/time_expression (same event field contract, propo"
+    "sition = the new narrative verbatim slice); events do not support contradict. **Using form for a rep"
+    "lacement would leave the old event current — two conflicting rows — which is a wrong state; you MUST"
+    " use correct**.\n"
+    "16. perspective holder (third-party perspective, V8): ONLY when the user relays a **third party's** "
+    "identity-class stable attribute/preference about another third party or about the user (e.g. \"My aun"
+    "t says my cousin is Gen Z\"), use attribute/preference + entity = the person being described (name ve"
+    "rbatim in the proposition) + perspective_holder = the speaker (third-party name, verbatim in the pro"
+    "position; **not** \"The user\"; the speaker must not equal the described person). The user's own state"
+    "d attributes/preferences must **not** carry perspective_holder (those are owner_self). Third-party p"
+    "erspective **evaluations** are still never produced.\n"
+    "17. clarification_required: when the user is clearly stating something to remember but the identity "
+    "or meaning cannot be uniquely resolved (unlockable) and you produce no item, emit a whole-batch clar"
+    "ification_required; question is a one-sentence clarification in the conversation language (<=100 cha"
+    "rs, ask only the most critical ambiguity). out_of_scope: when you understood the content but it is o"
+    "utside the current formal contract (not an attributable stable attribute/preference/naming/relations"
+    "hip/event) and the user clearly asked to remember it, emit a whole-batch out_of_scope; note is a one"
+    "-sentence explanation (<=100 chars). Both are zero World writes; unrelated chitchat/emotions/opinion"
+    "s/evaluations still use no_change — do not overuse these two results.\n"
 )
 
 
@@ -1621,12 +1447,37 @@ class HermesBatchAdapterProcessor:
                 "content": str(r[1]),
                 "statement_kind": str(r[2]),
             }
+            # Same formal transition/source checks as recall, on the formation
+            # surface. Old wording resolves omitted topics, never new facts.
+            predecessors = _predecessor_match_texts(
+                db, job.subject_id, cognition_id, self.model_tier, surface="formation"
+            )
+            if predecessors:
+                entry["predecessor_context"] = list(predecessors)
             if r[3] is not None:
                 entry["target_entity_id"] = str(r[3])
             if r[4] is not None:
                 entry["perspective_entity_id"] = str(r[4])
             payload.append(entry)
         return payload
+
+    def _canonical_cognition_reference(
+        self, value: object, job: ClaimedWorldJob, db: sqlite3.Connection,
+    ) -> object:
+        """Resolve an exact digest spelling, never a shortened or fuzzy id.
+
+        Some local interpreters omit the kind prefix. The authoritative record
+        must already exist for this subject; normal mutation/source validation
+        still decides whether that record can be corrected or superseded.
+        """
+        if not isinstance(value, str) or re.fullmatch(r"[0-9a-fA-F]{64}", value.strip()) is None:
+            return value
+        canonical = "cognition-" + value.strip().lower()
+        row = db.execute(
+            "SELECT 1 FROM cognition WHERE id = ? AND subject_id = ?",
+            (canonical, job.subject_id),
+        ).fetchone()
+        return canonical if row is not None else value
 
     def _conversation_context_entity_names(
         self, job: ClaimedWorldJob, db: sqlite3.Connection
@@ -1877,7 +1728,11 @@ class HermesBatchAdapterProcessor:
         self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection
     ) -> _CompiledOutcome:
         try:
-            data = json.loads(content)
+            # Accept a single JSON code fence; never extract a guessed object
+            # from commentary or repair facts/fields supplied by the model.
+            normalized = content.strip()
+            fenced = re.fullmatch(r"```(?:json)?\s*\n([\s\S]*?)\n\s*```", normalized, re.IGNORECASE)
+            data = json.loads(fenced.group(1) if fenced else normalized)
         except (TypeError, ValueError):
             return _CompiledOutcome(None, "invalid_model_result")
         if not isinstance(data, dict):
@@ -2060,6 +1915,11 @@ class HermesBatchAdapterProcessor:
                 _normalize_spoken_name(name, [support[3] for support in candidate_supports])
             )
         for raw_item in raw_items:
+            if isinstance(raw_item, dict):
+                raw_item = dict(raw_item)
+                for field in ("corrects_cognition_id", "supersedes_cognition_id", "contradicts_cognition_id"):
+                    if field in raw_item:
+                        raw_item[field] = self._canonical_cognition_reference(raw_item[field], job, db)
             item, reason = self._parse_item(
                 raw_item, ids, raw_by_id, context_by_id,
                 extended_kinds=extended_kinds, third_party=third_party,

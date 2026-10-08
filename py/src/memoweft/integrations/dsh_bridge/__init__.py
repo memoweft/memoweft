@@ -18,10 +18,12 @@ import json
 import logging
 import math
 import os
+import re
 from pathlib import Path
 import sqlite3
 import threading
 from typing import Any, Callable, Mapping, Sequence, cast
+from urllib.parse import quote, urlsplit, urlunsplit
 
 from ..hermes import _assert_existing_database_is_current  # host-agnostic probe
 from ..hermes.batch_adapter import HermesBatchAdapterProcessor
@@ -494,7 +496,14 @@ def default_one_shot_route(
     import httpx
 
     def route(messages: object, session_id: str = "") -> Mapping[str, object]:
-        del session_id
+        request_base = base
+        if os.environ.get("MEMOWEFT_DSH_SESSION_SCOPE") == "1" and session_id:
+            parsed_base = urlsplit(base)
+            scoped = re.fullmatch(r"(.*?/inference/[^/]+/scope/[^/]+/)[^/]+(/v1)", parsed_base.path)
+            if parsed_base.scheme == "http" and parsed_base.hostname == "127.0.0.1" and scoped:
+                request_base = urlunsplit(parsed_base._replace(
+                    path=scoped.group(1) + quote(session_id, safe="") + scoped.group(2)
+                ))
         request_json: dict[str, object] = {
             "model": model,
             "messages": messages,
@@ -514,7 +523,7 @@ def default_one_shot_route(
             request_json["stream"] = True
             request_json["stream_options"] = {"include_usage": True}
         response = httpx.post(
-            f"{base}/chat/completions",
+            f"{request_base}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=request_json,
             timeout=300.0 if model_tier == "local" else 120.0,
@@ -523,7 +532,7 @@ def default_one_shot_route(
         if getattr(response, "status_code", 200) == 400 and "chat_template" in getattr(response, "text", "") and "chat_template_kwargs" in request_json:
             del request_json["chat_template_kwargs"]
             response = httpx.post(
-                f"{base}/chat/completions",
+                f"{request_base}/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 json=request_json,
                 timeout=300.0 if model_tier == "local" else 120.0,
@@ -539,13 +548,13 @@ def default_one_shot_route(
             and model != "@current"
         ):
             try:
-                m_res = httpx.get(f"{base}/models", headers={"Authorization": f"Bearer {api_key}"}, timeout=5.0)
+                m_res = httpx.get(f"{request_base}/models", headers={"Authorization": f"Bearer {api_key}"}, timeout=5.0)
                 if m_res.status_code == 200:
                     models = [m.get("id") for m in m_res.json().get("data", []) if m.get("id")]
                     if models and models[0] != model:
                         request_json["model"] = models[0]
                         response = httpx.post(
-                            f"{base}/chat/completions",
+                            f"{request_base}/chat/completions",
                             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                             json=request_json,
                             timeout=300.0,
