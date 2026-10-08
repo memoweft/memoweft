@@ -1008,7 +1008,7 @@ def _current_world_rows(
                         for name in _entity_names(db, subject_id, str(entity[0]), model_tier)
                         if _anchor_is_explicit(content, name)
                     ))
-            predecessor_texts = _predecessor_match_texts(db, subject_id, row_id, model_tier) if kind == "cognition" else ()
+            predecessor_texts = _predecessor_match_texts(db, subject_id, row_id, model_tier, kind=kind) if kind in {'cognition', 'relationship'} else ()
             items.append(
                 {
                     "kind": current_kind,
@@ -1033,7 +1033,7 @@ def _current_world_rows(
 
 def _predecessor_match_texts(
     db: sqlite3.Connection, subject_id: str, current_id: str, model_tier: ModelTier,
-    *, surface: CurrentnessSurface | None = None,
+    *, surface: CurrentnessSurface | None = None, kind: str = 'cognition',
 ) -> tuple[str, ...]:
     """Permission-checked transition context, never current successor content.
 
@@ -1044,13 +1044,16 @@ def _predecessor_match_texts(
     seen = {current_id}
     texts: list[str] = []
     surface = surface or ("model_cloud" if model_tier == "cloud" else "recall")
+    if kind not in {'cognition', 'relationship'}:
+        return ()
+    subject_column = 'subject_id' if kind == 'cognition' else 'world_id'
     while pending:
         try:
             rows = db.execute(
-                "SELECT c.id, c.content, c.archived_at, c.muted_at "
-                "FROM cognition_transitions t JOIN cognition c ON c.id = t.prior_cognition_id "
-                "WHERE t.replacement_cognition_id = ? AND c.subject_id = ? "
-                "AND t.reason IN ('corrects', 'superseded') ORDER BY c.id",
+                f"SELECT c.id, c.content, c.archived_at, c.muted_at "
+                f"FROM {kind}_transitions t JOIN {kind} c ON c.id = t.prior_{kind}_id "
+                f"WHERE t.replacement_{kind}_id = ? AND c.{subject_column} = ? "
+                "AND t.reason IN ('corrects', 'superseded', 'name_corrected') ORDER BY c.id",
                 (pending.pop(), subject_id),
             ).fetchall()
         except sqlite3.OperationalError:
@@ -1062,15 +1065,15 @@ def _predecessor_match_texts(
                 continue
             seen.add(prior_id)
             if archived is not None or muted is not None or any(
-                world_item_lifecycle(db, subject_id, "cognition", prior_id)
+                world_item_lifecycle(db, subject_id, cast(Any, kind), prior_id)
             ):
                 continue
             if not world_item_evidence_visible(
-                db, subject_id, "cognition", prior_id, surface=surface, model_tier=model_tier
+                db, subject_id, cast(Any, kind), prior_id, surface=surface, model_tier=model_tier
             ):
                 continue
             texts.append(str(content) if surface == "formation" else
-                         _graph_match_text(db, subject_id, "cognition", prior_id, str(content), model_tier))
+                         _graph_match_text(db, subject_id, cast(Any, kind), prior_id, str(content), model_tier))
             pending.append(prior_id)
     return tuple(texts)
 
@@ -1099,7 +1102,8 @@ def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
                 f'WHERE t.replacement_{kind}_id=? AND w.{subject_column}=? ORDER BY t.revision, t.id',
                 (successor, subject_id),
             ).fetchall():
-                if not world_item_evidence_visible(db, subject_id, cast(Any, kind), str(prior), surface='recall', model_tier=model_tier):
+                if not world_item_evidence_visible(db, subject_id, cast(Any, kind), str(prior),
+                    surface='model_cloud' if model_tier == 'cloud' else 'recall', model_tier=model_tier):
                     continue
                 lines.append(f'取代原因（旧理解不再有效）：{content}；后经用户纠正取代（{reason}），以当前理解为准。')
                 pending.append(str(prior))
