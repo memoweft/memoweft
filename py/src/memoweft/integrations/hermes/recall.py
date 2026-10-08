@@ -980,7 +980,11 @@ def _predecessor_match_texts(
     db: sqlite3.Connection, subject_id: str, current_id: str, model_tier: ModelTier,
     *, surface: CurrentnessSurface | None = None,
 ) -> tuple[str, ...]:
-    """Follow Core's existing transitions for retrieval cues, never injection."""
+    """Permission-checked transition context, never current successor content.
+
+    Recall uses it only for matching; formation may use it to resolve an
+    omitted topic without treating historical wording as new Evidence.
+    """
     pending = [current_id]
     seen = {current_id}
     texts: list[str] = []
