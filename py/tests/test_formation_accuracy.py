@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from memoweft.integrations.hermes.batch_adapter import HermesBatchAdapterProcessor
+from memoweft.integrations.hermes.recall import recall_world_snapshot
 from memoweft.integrations.hermes.world_worker import WorldJobStore, WorldJobWorker
 from test_hermes_batch_adapter_v5 import _batch, _model, _set_evidence
 from test_hermes_world_worker import MutableClock, _initialize_database, _insert_job, _job, _policy
@@ -100,6 +101,18 @@ def test_legacy_envelope_cannot_bypass_fact_grounding(tmp_path: Path) -> None:
         content = db.execute("SELECT content FROM cognition").fetchone()[0]
     assert "小禾" in content
     assert "小莓" not in content
+
+
+def test_exact_style_source_is_recalled_with_explicit_communication_cues(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    row, _ = _run(path, "先用一个买菜的小例子讲明白。", [_model(_batch(_item("ignored")))])
+    assert row["state"] == "applied"
+    with sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True) as db:
+        old = recall_world_snapshot(db, "owner", "用户希望我如何称呼和讲解？")
+        current = recall_world_snapshot(db, "owner", "“语言”“例子”“术语”的表达偏好？")
+    assert old.count == 0
+    assert current.count == 1
+    assert "先用一个买菜的小例子讲明白" in current.rendered_recall
 
 
 def test_unverifiable_entity_name_is_rejected_then_rewritten(tmp_path: Path) -> None:
