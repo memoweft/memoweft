@@ -7,6 +7,11 @@ responses and generation chunks can keep slow work alive without increasing that
 timeout. Core assembles only content into the checkpointed interpretation, keeps
 usage and the finish reason, and rejects interrupted streams before compilation.
 Cloud formation keeps its existing non-streamed route and 120-second timeout.
+Formation prompts and rewrite feedback display Unicode source text directly,
+without expanding names into ASCII escape sequences; persisted canonical hashes
+remain unchanged. When an interpretation selects adjacent source segments for
+one statement, the compiler coalesces their exact range before deriving the stated
+proposition. It never includes an unselected gap between source segments.
 
 All calls use the existing `memoweft.dsh_rpc` / protocol version 2 / schema version 1 envelope. Initialize binds the subject and host; observed calls cannot select another subject, impersonate a chat role, or change `source_kind`. Capabilities advertise `observed_evidence: 1`, `recall_model_tier: true` and the three methods below. Python databases migrate atomically from schema 20 to 21; TypeScript retains its separate database ownership.
 

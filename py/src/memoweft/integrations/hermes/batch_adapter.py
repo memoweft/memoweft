@@ -116,6 +116,12 @@ def _canonical(value: object) -> str:
     )
 
 
+def _prompt_json(value: object) -> str:
+    """Show source spelling directly to the model; storage hashes stay canonical."""
+    return json.dumps(value, ensure_ascii=False, allow_nan=False,
+                      separators=(",", ":"), sort_keys=True)
+
+
 def _hash_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
@@ -1114,7 +1120,7 @@ def _user_payload(
     evidence: list[dict[str, object]],
     conversation_context: list[dict[str, str]] | None = None,
 ) -> str:
-    return _canonical(
+    return _prompt_json(
         {
             "subject": "owner",
             "current_cognitions": current_cognitions,
@@ -1528,7 +1534,7 @@ class HermesBatchAdapterProcessor:
         if previous is not None:
             messages.extend([
                 {"role": "assistant", "content": str(previous.get("content") or "")},
-                {"role": "user", "content": _canonical({
+                {"role": "user", "content": _prompt_json({
                     "compiler_error": feedback,
                     "source_evidence": evidence,
                 })},
@@ -5385,7 +5391,22 @@ def _parse_supports(
                 b0, b1 = parsed[j][1], parsed[j][2]
                 if a0 < b1 and b0 < a1:
                     return None, "overlapping_spans"
-    return tuple(parsed), ""
+    # A model can select a complete statement as several adjacent segments.
+    # Keep their exact source range together before deriving the proposition;
+    # otherwise slices[0] silently retains only an introductory clause and
+    # drops the actual preference. Never bridge an unselected source gap.
+    joined: list[tuple[str, int, int, str]] = []
+    for evidence_id in dict.fromkeys(support[0] for support in parsed):
+        spans = sorted((support for support in parsed if support[0] == evidence_id),
+                       key=lambda support: support[1])
+        for support in spans:
+            if joined and joined[-1][0] == evidence_id and joined[-1][2] == support[1]:
+                previous = joined[-1]
+                joined[-1] = (evidence_id, previous[1], support[2],
+                              raw_by_id[evidence_id][previous[1]:support[2]])
+            else:
+                joined.append(support)
+    return tuple(joined), ""
 
 
 class _ZeroWriteError(Exception):
