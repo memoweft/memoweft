@@ -1075,6 +1075,37 @@ def _predecessor_match_texts(
     return tuple(texts)
 
 
+def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
+                             selected: Sequence[Mapping[str, object]], model_tier: ModelTier) -> str:
+    """Explain formal replacement chains only on explicit history questions."""
+    lines: list[str] = []
+    for item in selected:
+        kind = str(item['kind'])
+        if kind not in {'cognition', 'relationship'}:
+            continue
+        table, subject_column = ('cognition', 'subject_id') if kind == 'cognition' else ('relationship', 'world_id')
+        if not db.execute('SELECT 1 FROM sqlite_master WHERE name=?', (kind + '_transitions',)).fetchone():
+            continue
+        pending = [str(item['id'])]
+        seen: set[str] = set()
+        while pending:
+            successor = pending.pop()
+            if successor in seen:
+                continue
+            seen.add(successor)
+            for prior, reason, content in db.execute(
+                f'SELECT t.prior_{kind}_id, t.reason, w.content FROM {kind}_transitions t '
+                f'JOIN {table} w ON w.id=t.prior_{kind}_id '
+                f'WHERE t.replacement_{kind}_id=? AND w.{subject_column}=? ORDER BY t.revision, t.id',
+                (successor, subject_id),
+            ).fetchall():
+                if not world_item_evidence_visible(db, subject_id, cast(Any, kind), str(prior), surface='recall', model_tier=model_tier):
+                    continue
+                lines.append(f'取代原因（旧理解不再有效）：{content}；后经用户纠正取代（{reason}），以当前理解为准。')
+                pending.append(str(prior))
+    return '\n'.join(dict.fromkeys(lines))
+
+
 def recall_world_snapshot(
     db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local"
 ) -> RecallSnapshotV1 | None:
@@ -1112,6 +1143,9 @@ def recall_world_snapshot(
             (str(item["kind"]), str(item["id"])) for item in selected
         )
         rendered_recall = format_recall(selected)
+        if _HISTORICAL_QUERY_PATTERN.search(query) or re.search(r'为什么|为何|不算|失效|why|invalid', query, re.I):
+            explanations = _replacement_explanations(db, subject_id, selected, model_tier)
+            rendered_recall = '\n'.join(filter(None, (rendered_recall, explanations)))[:MAX_OUTPUT_CHARS]
         recall_snapshot_token = _digest(
             {
                 "schema_version": 1,
