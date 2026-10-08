@@ -684,9 +684,9 @@ _SYSTEM_PROMPT = (
     "要么 clarification_required（身份/含义无法唯一解析时，附 question），要么 "
     "out_of_scope（理解但超出正式合同时，附 note）。"
     "**只输出 JSON，不要任何解释、不要思考过程、不要多余文字。**\n"
-    '{"schema_version":8,"result":"no_change"}\n'
     '{"schema_version":8,"result":"cognitions","cognitions":[<item>, ...]}'
     "（1..5 个 item）\n"
+    '{"schema_version":8,"result":"no_change"}\n'
     '{"schema_version":8,"result":"clarification_required","question":"…"}\n'
     '{"schema_version":8,"result":"out_of_scope","note":"…"}\n'
     "item 形状（statement_kind 决定额外字段）：\n"
@@ -714,7 +714,10 @@ _SYSTEM_PROMPT = (
     "已确定事件外的一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界"
     "最多 5 条；作息/通勤/日程等稳定习惯也算用户稳定属性或偏好，可以产出；愿望/"
     "期待（\"想拥有…\"\"希望能…\"）与情绪、观点不产出。带明确短期范围的临时状态"
-    "（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。\n"
+    "（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。"
+    "这里的愿望不包括对助手以后持续生效的明确要求，‘希望你以后…’的答复方式要求是 preference；"
+    "‘最近只能周三晚上锻炼，安排运动时帮我记着’没有‘仅本次/仅这周’截止范围，是持续安排，必须 form。"
+    "‘最近’本身不能作为 no_change 的理由；形成当前约束，之后有新说法再 correct 或 supersede。\n"
     "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 segment_id；"
     "系统从segment原文确定性计算Unicode start/end与stated proposition。旧quote/start/end"
     "仅兼容，不要自行复制、概括或计算。assistant/context永远不是Evidence。\n"
@@ -881,9 +884,9 @@ _SYSTEM_PROMPT_EN = (
     "(understood but outside the formal contract, with a note). "
     "**Output ONLY JSON — no explanations, no chain of thought, no extra "
     "text.**\n"
-    '{"schema_version":8,"result":"no_change"}\n'
     '{"schema_version":8,"result":"cognitions","cognitions":[<item>, ...]}'
     " (1..5 items)\n"
+    '{"schema_version":8,"result":"no_change"}\n'
     '{"schema_version":8,"result":"clarification_required","question":"…"}\n'
     '{"schema_version":8,"result":"out_of_scope","note":"…"}\n'
     "Item shape (statement_kind decides the extra fields):\n"
@@ -919,7 +922,9 @@ _SYSTEM_PROMPT_EN = (
     "expectations (\"want to own…\" \"hope to…\"), emotions and opinions are "
     "not produced. A temporary state with an explicit short time scope (for "
     "example, \"I do not want to socialize this week\") must not become a "
-    "permanent attribute/preference; retain only its raw Evidence). **Do NOT "
+    "permanent attribute/preference; retain only its raw Evidence). Wishes do not include explicit ongoing instructions to the assistant: 'I hope you will explain this way in future' is a preference. "
+    "'Recently I can only exercise on Wednesday evenings; remember this for planning' has no 'only this once/this week' cutoff and MUST form an ongoing arrangement. "
+    "'Recently' alone is never a no_change reason; form the current constraint and use later corrections or supersession for changes. **Do NOT "
     "split a single claim into fragments — a reason "
     "clause (\"because…\", \"so…\") stays inside its item; two INDEPENDENT "
     "claims in one utterance are separate items, each proposition equal to "
