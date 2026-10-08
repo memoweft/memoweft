@@ -1,7 +1,7 @@
 """V3 formal batch adapter: one committed boundary -> typed World changes.
 
-One committed Hermes boundary is interpreted with AT MOST ONE physical model
-request (the host-owned strict ``memory_world`` route).  The result is
+One committed Hermes boundary is interpreted with one physical model request,
+plus one feedback rewrite if deterministic compilation rejects it. Each result is
 checkpointed durably before any World mutation, then compiled deterministically
 (compiler-owned spans, target, identity, and fields) and applied in one fenced
 atomic transaction.
@@ -59,8 +59,8 @@ LEGACY_V6_INTERPRETATION_SCHEMA_VERSION = 6
 LEGACY_V7_INTERPRETATION_SCHEMA_VERSION = 7
 
 #: Owner decision (§4.12, 2026-08-15 → 2026-08-16 更新为 5): at most this many
-#: supported cognitions per committed boundary, still a single physical
-#: memory_world request.
+#: supported cognitions per committed boundary. Invalid interpretation may
+#: receive one feedback rewrite before the fenced atomic Apply.
 MAX_COGNITIONS_PER_BATCH = 5
 
 #: V3 supports Owner self-targeted stable statement kinds plus first-class
@@ -695,7 +695,7 @@ _SYSTEM_PROMPT = (
     "4. formed_by=stated：使用segment_id时，proposition只是必填占位，系统会从所选"
     "segment逐字派生正式命题并完成第一人称归一；模型不要复制、概括或计算命题。"
     "结构字段中的姓名必须能在所选segment或规则10允许的唯一指代上下文中核对。"
-    "仅旧quote/start/end兼容输入仍按逐字锚定校验。\n"
+    "姓名、称呼、数字、日期必须保留用户原话写法，不得改写或猜测；无法核对就不产出。quote同样逐字派生命题，start/end输入按逐字锚定校验。\n"
     "5. formed_by=confirmed：仅当 assistant 提出命题、用户短确认（无否定词）时用于 "
     "attribute/preference。assistant_claim 必须是 context 的逐字子串；proposition "
     "等于 claim 去语气词/问尾、把\"你/您\"换\"用户\"。assistant 猜对本身不是 Evidence。\n"
@@ -901,7 +901,7 @@ _SYSTEM_PROMPT_EN = (
     "the system derives the formal proposition verbatim from the selected segment "
     "and performs owner-pronoun normalization. Do not copy, summarize or calculate it. "
     "Names in structural fields must be verifiable in that segment or through rule "
-    "10's unique reference context. Legacy quote/start/end inputs retain verbatim checks.\n"
+    "10's unique reference context. Preserve names, forms of address, numbers and dates exactly as written in user evidence; omit unverifiable facts. Quotes also derive verbatim propositions; legacy start/end inputs retain verbatim checks.\n"
     "5. formed_by=confirmed: only for attribute/preference when the assistant "
     "proposed a proposition and the user confirmed it briefly (no negation). "
     "assistant_claim must be a verbatim substring of the context; the "
@@ -1342,6 +1342,43 @@ class HermesBatchAdapterProcessor:
             payload = self._dispatch_once(job, db)
             self._persist_checkpoint(db, job, payload)
 
+        compiled = self._compile_checked(str(payload.get("content") or ""), job, db)
+        if (
+            compiled.batch is None
+            and compiled.terminal == "no_change"
+            and compiled.reason != "model_no_change"
+            and "formation_rewrite" not in payload
+        ):
+            first = dict(payload)
+            feedback = {
+                "code": compiled.reason,
+                "instruction": (
+                    "Rewrite the complete interpretation JSON once. Fix the reported "
+                    "compiler error; every cognition must include a nonempty proposition "
+                    "and valid supports. Copy names, forms of address, numbers and dates "
+                    "exactly from user evidence. Never invent facts."
+                ),
+            }
+            # Persist the attempt reservation before dispatch: recovery never
+            # repeats a rewrite whose response was lost in a crash.
+            payload["formation_rewrite"] = {"state": "reserved", "error": feedback}
+            self._persist_checkpoint(db, job, payload)
+            try:
+                payload = self._dispatch_once(job, db, previous=first, feedback=feedback)
+                compiled = self._compile_checked(str(payload.get("content") or ""), job, db)
+                payload["formation_rewrite"] = {
+                    "state": "completed", "error": feedback, "first_result": first,
+                    "final_error": compiled.reason if compiled.batch is None else None,
+                }
+            except Exception as exc:
+                # Do not persist provider exception text (it may contain secrets).
+                payload = first
+                payload["formation_rewrite"] = {
+                    "state": "failed", "error": feedback,
+                    "failure_type": type(exc).__name__,
+                }
+            self._persist_checkpoint(db, job, payload)
+
         model_kwargs: dict[str, Any] = {
             "model_provider": payload.get("provider"),
             "model_name": payload.get("model"),
@@ -1351,10 +1388,6 @@ class HermesBatchAdapterProcessor:
             "model_result": payload,
         }
 
-        try:
-            compiled = self._compile(str(payload.get("content") or ""), job, db)
-        except _ZeroWriteError as exc:
-            return WorldJobResult.no_change(str(exc), **model_kwargs)
         batch = compiled.batch
         if batch is None:
             if compiled.terminal == "clarification_required":
@@ -1415,8 +1448,6 @@ class HermesBatchAdapterProcessor:
         payload: Mapping[str, object],
     ) -> None:
         content = str(payload.get("content") or "")
-        if not content.strip():
-            raise PermanentWorldJobError("one_shot_route_empty_result")
         usage = payload.get("usage")
         provider = payload.get("provider")
         model = payload.get("model")
@@ -1455,7 +1486,9 @@ class HermesBatchAdapterProcessor:
     # ── one-shot dispatch ──────────────────────────────────────────────────
 
     def _dispatch_once(
-        self, job: ClaimedWorldJob, db: sqlite3.Connection
+        self, job: ClaimedWorldJob, db: sqlite3.Connection, *,
+        previous: Optional[Mapping[str, object]] = None,
+        feedback: Optional[Mapping[str, object]] = None,
     ) -> dict[str, object]:
         evidence = self._evidence_payload(job, db)
         current = self._current_cognitions_payload(job, db)
@@ -1477,6 +1510,11 @@ class HermesBatchAdapterProcessor:
                 ),
             },
         ]
+        if previous is not None:
+            messages.extend([
+                {"role": "assistant", "content": str(previous.get("content") or "")},
+                {"role": "user", "content": _canonical({"compiler_error": feedback})},
+            ])
         # The documented OneShotRoute contract makes ``session_id``
         # keyword-only (see the Hermes ``one_shot_llm`` initialize kwarg).
         try:
@@ -1800,6 +1838,14 @@ class HermesBatchAdapterProcessor:
         return payload
 
     # ── deterministic compile ──────────────────────────────────────────────
+
+    def _compile_checked(
+        self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection
+    ) -> _CompiledOutcome:
+        try:
+            return self._compile(content, job, db)
+        except _ZeroWriteError as exc:
+            return _CompiledOutcome(None, str(exc))
 
     def _compile(
         self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection
@@ -2342,18 +2388,10 @@ class HermesBatchAdapterProcessor:
                 if quote_without_prepend
                 else _stated_normalize
             )
-            is_placeholder = (
-                not proposition
-                or proposition.strip().lower() in ("ignored", "placeholder", "…", "...", "none", "null")
-            )
-            # For third-party entities, naming, alias, event, or when proposition is a test placeholder:
-            # derive proposition from slice.
-            if kind in {"naming", "alias", "event"} or raw_item.get("entity") is not None or is_placeholder:
-                proposition = normalizer(slices[0])
-            else:
-                # For owner attributes and preferences, keep the Agent's synthesized understanding of the user!
-                # Strip accidental leading numbering like "1. " or "1、" or "- "
-                proposition = re.sub(r"^[0-9]+[\.\、\s\-]+", "", proposition).strip()
+            # The model selects evidence, but cannot rewrite facts. Derive all
+            # stated propositions from the selected verbatim slice, including
+            # owner preferences (e.g. a requested form of address).
+            proposition = normalizer(slices[0])
 
         entity_canonical_name: Optional[str] = None
         entity_kind: Optional[str] = None
@@ -2744,11 +2782,7 @@ class HermesBatchAdapterProcessor:
                 ]
             else:
                 anchors = [_stated_normalize(slice_text) for slice_text in slices]
-            allow_quote_synthesis = quote_anchored and (
-                (kind in ("attribute", "preference") and not raw_item.get("entity"))
-                or (kind == "relationship" and source_canonical_name is None)
-            )
-            if not allow_quote_synthesis and not any(
+            if not any(
                 _strip_end_punctuation(proposition)
                 == _strip_end_punctuation(anchor)
                 for anchor in anchors

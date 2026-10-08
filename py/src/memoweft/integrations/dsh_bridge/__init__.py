@@ -500,6 +500,7 @@ def default_one_shot_route(
             "messages": messages,
             "stream": False,
             "temperature": 0,
+            "response_format": {"type": "json_object"},
         }
         if model_tier == "local":
             request_json["max_tokens"] = 4096

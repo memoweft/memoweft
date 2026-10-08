@@ -165,6 +165,8 @@ def test_local_route_accepts_in_memory_key_without_exposing_it(monkeypatch: pyte
         "messages": [],
         "stream": False,
         "temperature": 0,
+        "response_format": {"type": "json_object"},
+        "response_format": {"type": "json_object"},
         "max_tokens": 4096,
         "enable_thinking": False,
     }
@@ -252,6 +254,7 @@ def test_cloud_route_without_host_config_keeps_legacy_environment(
         "messages": [],
         "stream": False,
         "temperature": 0,
+        "response_format": {"type": "json_object"},
     })]
     assert headers[0]["Authorization"] == "Bearer synthetic-legacy-key"
     assert result["model"] == (model or "deepseek-chat")
@@ -446,6 +449,7 @@ def test_cloud_route_keeps_120_second_timeout(monkeypatch: pytest.MonkeyPatch) -
         "messages": [],
         "stream": False,
         "temperature": 0,
+        "response_format": {"type": "json_object"},
     }
 
 

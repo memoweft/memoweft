@@ -21,6 +21,14 @@ The repository candidate may be newer than the latest published package. A succe
 MemoWeft keeps these boundaries explicit:
 
 - Raw user content remains exact Evidence with provenance and permissions.
+- Stated formation propositions selected by segment or quote are derived from
+  verbatim Evidence, preserving names, forms of address, numbers and dates.
+  Invalid interpretation JSON or compiler fields receive one model rewrite
+  with the concrete compiler error before the job settles without a write.
+  The durable model checkpoint retains the first response, error and rewrite
+  outcome; recovery never repeats a reserved or completed rewrite. The default
+  DSH HTTP route requests `response_format: {"type": "json_object"}`; Core
+  validation still checks required fields and evidence grounding.
 - Entity, Relationship, Event, Cognition, and Evaluation records are formal World objects.
 - Recall is deterministic for the same revision and performs no World writes.
 - Correction, retract, forget, archive, mute, and permission changes produce durable receipts.
