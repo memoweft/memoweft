@@ -5400,7 +5400,8 @@ def _parse_supports(
         spans = sorted((support for support in parsed if support[0] == evidence_id),
                        key=lambda support: support[1])
         for support in spans:
-            if joined and joined[-1][0] == evidence_id and joined[-1][2] == support[1]:
+            if (joined and joined[-1][0] == evidence_id and joined[-1][2] == support[1]
+                    and joined[-1][3] and support[3]):
                 previous = joined[-1]
                 joined[-1] = (evidence_id, previous[1], support[2],
                               raw_by_id[evidence_id][previous[1]:support[2]])

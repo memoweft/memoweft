@@ -173,6 +173,17 @@ def test_model_prompt_and_rewrite_show_source_spelling_without_unicode_escapes(t
     assert json.loads(rewrite_source)["source_evidence"][0]["text"] == raw
 
 
+def test_adjacent_invalid_spans_cannot_become_a_valid_source_range(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    item = _item("unlocatable placeholder")
+    item["supports"] = [{"evidence_id": "evidence-1", "start": start, "end": end}
+                        for start, end in [(0, 20), (20, 30)]]
+    row, _ = _run(path, "我喜欢中文。", [_model(_batch(item)), _model(_batch(item))])
+    assert row["state"] == "no_change"
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT count(*) FROM cognition").fetchone()[0] == 0
+
+
 @pytest.mark.parametrize(("raw", "model_date", "expected"), [
     ("2026年10月8日我去了南京。", "2026-10-08", "2026-10-08"),
     ("2026年10月8日我去了南京。", "2049-10-08", "2026-10-08"),
