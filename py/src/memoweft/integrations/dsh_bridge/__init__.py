@@ -399,12 +399,13 @@ def default_one_shot_route(
     Test support: ``MEMOWEFT_TEST_MODEL_RESPONSE`` pins a canned interpretation so
     WeftMate contract tests can drive a real durable pipeline with zero network
     and zero real model calls.  Guarded behind ``MEMOWEFT_TESTING=1`` so a stray
-    test variable can never hijack a production process.  A local host supplies
+    test variable can never hijack a production process.  Hosts supply
     ``MEMOWEFT_BASE_URL``, ``MEMOWEFT_WORLD_MODEL`` and either
-    ``MEMOWEFT_API_KEY`` or ``MEMOWEFT_API_KEY_ENV`` (the name of another
-    process environment variable).  Missing local configuration fails closed;
-    it never falls back to a cloud route.  The legacy cloud route remains
-    available to hosts that explicitly select ``model_tier='cloud'``.
+    ``api_key_override``, ``MEMOWEFT_API_KEY`` or ``MEMOWEFT_API_KEY_ENV``
+    (the name of another process environment variable).  The in-memory key
+    takes precedence for both tiers.  Missing local configuration fails closed;
+    it never falls back to a cloud route.  Cloud routes fall back per missing
+    field to ``DEEPSEEK_API_KEY``, ``DEEPSEEK_BASE_URL`` and the legacy defaults.
     Temperature is pinned to 0 — the evaluated optimum
     (deepseek-v4-flash + temperature 0, see the eval harness); the model name
     defaults to the public ``deepseek-chat`` and can be overridden with
@@ -473,9 +474,16 @@ def default_one_shot_route(
         if not api_key or not base or not model:
             return None
     else:
-        api_key = os.environ.get("DEEPSEEK_API_KEY") or ""
+        api_key = (
+            api_key_override
+            or _configured_api_key()
+            or os.environ.get("DEEPSEEK_API_KEY")
+            or ""
+        )
         base = (
-            os.environ.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com"
+            os.environ.get("MEMOWEFT_BASE_URL")
+            or os.environ.get("DEEPSEEK_BASE_URL")
+            or "https://api.deepseek.com"
         ).rstrip("/")
         model = os.environ.get("MEMOWEFT_WORLD_MODEL") or "deepseek-chat"
         if model == "@current":
