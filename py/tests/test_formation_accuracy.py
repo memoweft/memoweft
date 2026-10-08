@@ -110,6 +110,7 @@ def test_exact_style_source_is_recalled_with_explicit_communication_cues(tmp_pat
     with sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True) as db:
         old = recall_world_snapshot(db, "owner", "用户希望我如何称呼和讲解？")
         current = recall_world_snapshot(db, "owner", "“语言”“例子”“术语”的表达偏好？")
+    assert old is not None and current is not None
     assert old.count == 0
     assert current.count == 1
     assert "先用一个买菜的小例子讲明白" in current.rendered_recall
