@@ -1,10 +1,13 @@
 """V3 formal batch adapter: one committed boundary -> typed World changes.
 
-One committed Hermes boundary is interpreted with one physical model request,
+One committed Hermes boundary is compiled from a checkpointed interpretation,
 plus one feedback rewrite if deterministic compilation rejects it. Each result is
 checkpointed durably before any World mutation, then compiled deterministically
 (compiler-owned spans, target, identity, and fields) and applied in one fenced
 atomic transaction.
+
+The existing World worker transport retry policy is separate from this single
+interpretation rewrite; an HTTP failure may have no interpretation to validate.
 
 V3 semantics (Owner decision 2026-08-16, §4.12): on top of V2 (up to 3 items
 per boundary, typed corrects, confirmed 280 contract) the closed contract adds

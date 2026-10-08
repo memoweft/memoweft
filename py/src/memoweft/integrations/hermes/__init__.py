@@ -624,8 +624,8 @@ class HermesMemoWeftRuntime:
         self._outcome_store = TerminalOutcomeStore(db_path)
         # The host may inject its own strict one-shot model route
         # (``one_shot_llm`` initialize kwarg).  With it, the V1 formal batch
-        # adapter interprets each committed boundary with one physical
-        # model request and one compiler-feedback rewrite if invalid;
+        # adapter compiles the model interpretation and reserves one
+        # compiler-feedback rewrite if invalid;
         # without it, the production default stays the
         # deterministic model- and World-free no_change processor.
         route = kwargs.get("one_shot_llm")
