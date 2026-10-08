@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 from test_formation_accuracy import _item, _run
-from test_hermes_batch_adapter_v5 import _batch, _model
+from test_hermes_batch_adapter_v5 import _batch, _model, _run as run_job, _set_evidence, _v8_item
+from test_hermes_world_worker import MutableClock, _job
 
 
 @pytest.mark.parametrize('raw', [
@@ -75,6 +76,22 @@ def test_current_file_operation_is_already_excluded_before_model_dispatch(tmp_pa
     with sqlite3.connect(path) as db:
         assert db.execute('SELECT count(*) FROM cognition').fetchone()[0] == 0
         assert db.execute('SELECT raw_content FROM evidence').fetchone()[0] == raw
+
+
+def test_one_task_override_cannot_correct_an_ongoing_preference(tmp_path: Path) -> None:
+    path = tmp_path / 'world.sqlite3'
+    _run(path, '我一直使用竖版页面。', [_model(_batch(_item('ignored')))])
+    with sqlite3.connect(path) as db:
+        prior = str(db.execute('SELECT id FROM cognition').fetchone()[0])
+    raw = '这次先用横版页面。'
+    item = _v8_item('preference', '用户这次先用横版页面', (0, len(raw)), action='correct',
+                    corrects_cognition_id=prior, evidence_id='evidence-2')
+    run_job(path, MutableClock(), [_model(_batch(item))], ('evidence-2',),
+            lambda p: _set_evidence(p, 'evidence-2', raw), job_id='job-2')
+    assert _job(path, 'job-2')['state'] == 'no_change'
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT count(*) FROM cognition').fetchone()[0] == 1
+        assert db.execute('SELECT invalid_at FROM cognition WHERE id=?', (prior,)).fetchone()[0] is None
 
 
 def test_mixed_selected_sentences_are_rewritten_without_silent_source_trimming(tmp_path: Path) -> None:

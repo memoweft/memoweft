@@ -2359,7 +2359,7 @@ class HermesBatchAdapterProcessor:
             return None, "span_out_of_range"
 
         slices = [support[3] for support in parsed]
-        if kind in ("attribute", "preference") and formed_by == "stated" and action == "form":
+        if kind in ("attribute", "preference") and formed_by == "stated" and action in ("form", "correct") and not retract:
             scope_units = [str(sentence["text"]) for text in slices for sentence in _evidence_sentences(text)]
             temporary = [_is_task_scoped_instruction(text) for text in scope_units]
             if temporary and all(temporary):
