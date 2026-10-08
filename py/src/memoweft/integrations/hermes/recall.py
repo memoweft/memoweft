@@ -635,11 +635,18 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     query = _query_signal(query)
     is_historical = bool(_HISTORICAL_QUERY_PATTERN.search(raw_query))
     if not is_historical:
-        # Naming the person/topic does not make a superseded value current.
-        # Explicit historical questions may still recall retained past claims.
+        # Naming a person in a current preference question does not make the
+        # superseded value current. Preserve existing "Who is X?" lookups of
+        # retained people, rendered explicitly as past memory.
+        named_identity = {
+            str(anchor) for row in rows_list for anchor in _row_anchors(row)
+            if _IDENTITY_QUERY_PATTERN.search(raw_query)
+            and _anchor_is_explicit(query.casefold(), str(anchor).casefold())
+        }
         rows_list = [
             row for row in rows_list
             if not row.get("is_superseded")
+            or bool(named_identity.intersection(_row_anchors(row)))
         ]
     named = {
         str(anchor) for row in rows_list for anchor in _row_anchors(row)
