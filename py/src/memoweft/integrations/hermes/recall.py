@@ -1102,6 +1102,8 @@ def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
                 f'WHERE t.replacement_{kind}_id=? AND w.{subject_column}=? ORDER BY t.revision, t.id',
                 (successor, subject_id),
             ).fetchall():
+                if any(world_item_lifecycle(db, subject_id, cast(Any, kind), str(prior))):
+                    continue
                 if not world_item_evidence_visible(db, subject_id, cast(Any, kind), str(prior),
                     surface='model_cloud' if model_tier == 'cloud' else 'recall', model_tier=model_tier):
                     continue

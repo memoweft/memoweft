@@ -137,6 +137,7 @@ def test_replacement_explanation_cannot_read_revoked_predecessor(tmp_path: Path)
 @pytest.mark.parametrize('raw,query,topic', [
     ('好，以后我想修乐器时，就提醒我找林遥。', '修乐器可以找谁？', '修乐器'),
     ('今后需要校对文稿的时候，请提醒我找林遥。', '校对文稿应该找谁？', '校对文稿'),
+    ('以后我们想校对文稿时，就提醒我们找林遥。', '校对文稿应该找谁？', '校对文稿'),
 ])
 def test_explicit_conditional_decision_retains_topic_when_model_omits_it(
     tmp_path: Path, raw: str, query: str, topic: str,
@@ -168,3 +169,35 @@ def test_short_assent_confirms_a_situational_decision_without_inventing_evidence
         snapshot = recall_world_snapshot(db, 'owner', '修乐器可以找谁？')
         assert snapshot and snapshot.count == 1 and '林遥' in snapshot.rendered_recall
         assert db.execute("SELECT raw_content FROM evidence WHERE id='evidence-1'").fetchone()[0] == raw
+
+
+@pytest.mark.parametrize('field', ['muted_at', 'archived_at'])
+def test_replacement_explanation_respects_hidden_predecessors(tmp_path: Path, field: str) -> None:
+    path = tmp_path / 'world.sqlite3'
+    ids = seed(path)
+    item = dict(_item('ignored'), action='correct', statement_kind='attribute',
+                entity={'canonical_name': '林遥', 'kind': 'person'}, corrects_cognition_id=ids['cognition'])
+    assert correct(path, '更正：林遥修乐器其实是初学水平。', item)['state'] == 'applied'
+    with sqlite3.connect(path) as db:
+        db.execute(f'INSERT INTO world_item_lifecycle(subject_id,object_kind,item_id,{field},updated_at) VALUES(?,?,?,?,?)',
+                   ('owner', 'cognition', ids['cognition'], '2026-10-09', '2026-10-09'))
+        snapshot = recall_world_snapshot(db, 'owner', '林遥修乐器，为什么以前的说法不算了？')
+        assert snapshot and '初学水平' in snapshot.rendered_recall
+        assert '很熟练' not in snapshot.rendered_recall
+
+
+def test_name_corrected_relationship_is_retrievable_by_its_former_identity(tmp_path: Path) -> None:
+    path = tmp_path / 'world.sqlite3'
+    item = dict(_item('ignored'), statement_kind='relationship', relation_type='friend',
+                target_entity={'canonical_name': '林遥', 'kind': 'person'},
+                supports=[{'evidence_id': 'evidence-1', 'sentence_id': 't0'}])
+    row, _ = _run(path, '林遥是我的朋友。', [_model(_batch(item))])
+    assert row['state'] == 'applied'
+    correction = dict(_item('ignored'), action='correct', statement_kind='alias',
+                      entity={'canonical_name': '林澜', 'kind': 'person'},
+                      alias_of={'canonical_name': '林遥', 'kind': 'person'})
+    assert correct(path, '更正：林遥的名字我说错了，其实叫林澜。', correction)['state'] == 'applied'
+    with sqlite3.connect(path) as db:
+        for tier in ('local', 'cloud'):
+            snapshot = recall_world_snapshot(db, 'owner', '林遥是谁？', model_tier=tier)
+            assert snapshot and snapshot.count == 1 and '林澜' in snapshot.rendered_recall

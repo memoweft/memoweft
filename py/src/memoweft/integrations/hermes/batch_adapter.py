@@ -2843,10 +2843,14 @@ class HermesBatchAdapterProcessor:
             # A confirmed situational decision has an explicit condition in its
             # selected source. Preserve that verbatim retrieval cue even when
             # the interpreter omits the optional topic field; infer no aliases.
-            condition = re.search(
-                r'(?:以后|今后|下次|将来)(?:我|我们|用户)?(?:想|需要|要|打算|准备)?'
-                r'([^，,。？！；;]+?)(?:的时候|时)(?=[，,]|就|请)', proposition if formed_by == 'confirmed' else ''.join(slices),
-            )
+            condition = None
+            for condition_source in ([proposition] if formed_by == 'confirmed' else slices):
+                condition = re.search(
+                    r'(?:以后|今后|下次|将来)(?:我们|用户|我)?(?:想|需要|要|打算|准备)?'
+                    r'([^，,。？！；;]+?)(?:的时候|时)(?=[，,]|就|请)', condition_source,
+                )
+                if condition:
+                    break
             if condition:
                 topic_canonical_name = condition.group(1).strip()
         return (
