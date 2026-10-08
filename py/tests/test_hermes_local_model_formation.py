@@ -58,6 +58,31 @@ def test_no_change_or_ambiguous_json_never_invents_world_facts(tmp_path: Path, c
         assert db.execute('SELECT COUNT(*) FROM cognition').fetchone()[0] == 0
 
 
+@pytest.mark.parametrize('valid_direction', [True, False])
+def test_user_friend_relationship_preserves_project_context_without_guessing_fields(
+    tmp_path: Path, valid_direction: bool,
+) -> None:
+    path = tmp_path / 'world.sqlite3'
+    raw = '小林是跟我一起做项目的朋友，她负责设计。'
+    item = _form('ignored', (0, len(raw)), kind='relationship')
+    item['supports'] = [{'evidence_id': 'evidence-1', 'quote': raw}]
+    item['relation_type'] = 'friend'
+    item['target_entity' if valid_direction else 'source_entity'] = {
+        'canonical_name': '小林', 'kind': 'person',
+    }
+    envelope = _batch(item)
+    envelope['schema_version'] = 8
+    _run(path, MutableClock(), [_model(envelope), _model(envelope)], ('evidence-1',),
+         lambda db_path: _set_evidence(db_path, 'evidence-1', raw))
+    assert _job(path)['state'] == ('applied' if valid_direction else 'no_change')
+    with sqlite3.connect(path) as db:
+        relationships = db.execute('SELECT content FROM relationship').fetchall()
+        assert len(relationships) == (1 if valid_direction else 0)
+        if valid_direction:
+            assert '做项目' in relationships[0][0]
+            assert '她负责设计' in relationships[0][0]
+
+
 def test_formation_resolves_short_correction_topic_from_existing_transition_sources(tmp_path: Path) -> None:
     path = tmp_path / 'world.sqlite3'
     clock = MutableClock()
