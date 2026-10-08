@@ -149,6 +149,27 @@ def _evidence_segments(raw: str) -> list[EvidenceSegment]:
     return segments
 
 
+def _evidence_sentences(raw: str) -> list[EvidenceSegment]:
+    """Offer intact sentences as explicit alternatives to fine clause selection.
+
+    No compiler expansion: only the source range the model selects is used.
+    Keeping commas inside a sentence makes its topic available with its value.
+    Clause IDs remain unchanged for independent claims and legacy checkpoints.
+    """
+    sentences: list[EvidenceSegment] = []
+    start = 0
+    for match in re.finditer(r"[\n。！？；!?;]|(?<!\d)\.(?!\d)", raw):
+        end = match.end()
+        if raw[start:end].strip():
+            sentences.append({"id": f"t{len(sentences)}", "start": start,
+                              "end": end, "text": raw[start:end]})
+        start = end
+    if raw[start:].strip():
+        sentences.append({"id": f"t{len(sentences)}", "start": start,
+                          "end": len(raw), "text": raw[start:]})
+    return sentences
+
+
 # ── deterministic proposition normalization ───────────────────────────────
 
 #: First-person self references normalized to the canonical owner subject.
@@ -661,6 +682,9 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "先按完整主题选择来源，再分类。Evidence 同时提供 sentences（完整句）和 segments（细分句）。同一句中的主题引导、限制条件和偏好值属于一个命题时，优先用 supports 中的 sentence_id 选择完整句；不要只留下末尾的值。只有该句包含独立的不同命题时才选择各自的 segment_id。每个 support 只给 sentence_id 或 segment_id 其中一个，不能同时选覆盖相同范围的句和片段。proposition 必须给非空占位文本，系统仍从所选原话逐字派生。\n"
+    "稳定的使用方式、固定数值或设置也是当前安排，不需要用户另说‘记住’；只要是用户本人的持续约束就应形成。\n"
+    "人物已被明确说成与用户有某种关系时，优先形成 relationship，而不是 naming 或第三方 attribute。职业/身份与‘和用户的关系’要区分；关系背景与同主题补充也须选择完整来源。naming 用于仅命名、未陈述关系的内容。\n"
     "先判断用户是否明确提出持续适用的偏好或安排：‘以后推荐早餐时避开乳制品’是明确表达偏好，不是愿望闲聊；‘最近通勤都坐地铁’是当前持续安排，不是仅限这周的一次性情绪。两者都应形成，不应 no_chang"
     "e。只有无可形成内容才用 no_change。\n"
     "省略主题的纠正（‘不是精装，改成电子版’）应从 current_cognitions 中相关安排及其 predecessor_context 消解主题，corrects_cognition_id 必须"
@@ -685,7 +709,7 @@ _SYSTEM_PROMPT = (
     "item 形状（statement_kind 决定额外字段）：\n"
     "{\"action\":\"form\",\"target\":\"owner_self\",\"statement_kind\":\"attribute\"|\"preference\"|\"naming\"|\"relations"
     "hip\"|\"alias\"|\"event\",\"formed_by\":\"stated\"|\"confirmed\",\"proposition\":\"…\",\"supports\":[{\"evidence_id\":\""
-    "...\",\"segment_id\":\"s0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
+    "...\",\"sentence_id\":\"t0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"entity_reference\":{\"mention\":\"他\"},\"perspective_holder\":{\"canonical_name\""
     ":\"…\",\"kind\":\"person\"},\"alias_of\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"target_entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"source_entity\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"relation_type\":\"g"
@@ -698,7 +722,7 @@ _SYSTEM_PROMPT = (
     "以产出；愿望/期待与情绪、观点不产出。带明确短期范围的临时状态（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。这里的愿望不包括对助手以后持"
     "续生效的明确要求，答复方式要求是 preference；没有明确截止范围的当前习惯或安排属于持续约束，必须 form。‘最近’本身不能作为 no_change 的理由；形成当前约束，之后有新说法再 c"
     "orrect 或 supersede。\n"
-    "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 segment_id；系统从segment原文确定性计算Unicode start/end与s"
+    "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 sentence_id，独立分句可用 segment_id；系统从segment原文确定性计算Unicode start/end与s"
     "tated proposition。旧quote/start/end仅兼容，不要自行复制、概括或计算。assistant/context永远不是Evidence。\n"
     "3. action=form：形成或复述（复述自动并入同 ID support 链）；只有用户明确说旧记忆错了并给出新值才用 correct（attribute/preference 用 correc"
     "ts_cognition_id；relationship 改口替换用 corrects_relationship_id）。明确撤回（无新值，见第 13 条）用 correct+retract；只是不同"
@@ -710,7 +734,7 @@ _SYSTEM_PROMPT = (
     "5. formed_by=confirmed：仅当 assistant 提出命题、用户短确认（无否定词）时用于 attribute/preference。assistant_claim 必须是 con"
     "text 的逐字子串；proposition 等于 claim 去语气词/问尾、把\"你/您\"换\"用户\"。assistant 猜对本身不是 Evidence。\n"
     "6. naming：命题如\"我的表弟叫阿硕\"（stated）；entity.canonical_name 必须是某条切片的逐字子串；kind 默认 person。同一实体名已存在就别重复 naming"
-    "。**「我的X叫Y」句式：X 是亲密关系词（女朋友/男朋友/老婆/老公/对象）→ 发 relationship（见第 7 条）；X 是描述词（最好的朋友/同学/同事/室友…）→ 发 naming。「取"
+    "。**「我的X叫Y」句式：X 是亲密关系词（女朋友/男朋友/老婆/老公/对象）→ 发 relationship（见第 7 条）；X 是其他明确关系词（朋友/同学/同事/室友…）→ 同样发 relationship。只有未陈述关系的命名才单独发 naming。「取"
     "名叫X」一律 naming**。\n"
     "7. relationship：命题如\"秋禾是我的阿姨\"（stated，按用户原话措辞 + 第 4 条归一化；主语是用户 → 省略 source_entity）；relation_type 开放（gi"
     "rlfriend/friend/colleague…）；target_entity.canonical_name 必须逐字在命题里。主语是用户时**省略** source_entity；主语是第三方时"
@@ -762,6 +786,17 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "Select the complete source topic before classifying. Evidence offers sentences (intact sentences) "
+    "and segments (fine clauses). When the topic introduction, constraints and value in one sentence "
+    "are one claim, prefer supports with sentence_id for the intact sentence, rather than its final "
+    "value alone. Use segment_id for independent claims within a sentence. Each support must give "
+    "exactly one selector; never select overlapping sentences and clauses. Supply a nonempty proposition "
+    "placeholder; the system still derives the claim verbatim from the selected source.\n"
+    "Stable usage, fixed quantities and settings are ongoing arrangements even without an explicit "
+    "request to remember. Form the user's ongoing constraint.\n"
+    "When a named person is explicitly related to the user, prioritize relationship over naming or a "
+    "third-party attribute. Distinguish occupation from a relationship to the user. Select complete "
+    "relationship context and same-topic details. Naming alone is for a name with no stated relationship.\n"
     "First distinguish explicit ongoing instructions from wishes: 'Avoid dairy when suggesting breakfast "
     "in future' is an explicit preference; 'Recently I commute by metro' is an ongoing arrangement, not a"
     " one-week mood. Form these, rather than no_change. Use no_change only when there is no eligible cont"
@@ -799,7 +834,7 @@ _SYSTEM_PROMPT_EN = (
     "Item shape (statement_kind decides the extra fields):\n"
     "{\"action\":\"form\",\"target\":\"owner_self\",\"statement_kind\":\"attribute\"|\"preference\"|\"naming\"|\"relations"
     "hip\"|\"alias\"|\"event\",\"formed_by\":\"stated\"|\"confirmed\",\"proposition\":\"…\",\"supports\":[{\"evidence_id\":\""
-    "...\",\"segment_id\":\"s0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
+    "...\",\"sentence_id\":\"t0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"entity_reference\":{\"mention\":\"they\"},\"perspective_holder\":{\"canonical_na"
     "me\":\"…\",\"kind\":\"person\"},\"alias_of\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"target_entity\":{\"canonic"
     "al_name\":\"…\",\"kind\":\"person\"},\"source_entity\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"relation_type\""
@@ -822,7 +857,7 @@ _SYSTEM_PROMPT_EN = (
     "rrent constraint and use later corrections or supersession for changes. **Do NOT split a single clai"
     "m into fragments — a reason clause (\"because…\", \"so…\") stays inside its item; two INDEPENDENT claims"
     " in one utterance are separate items, each proposition equal to its own verbatim slice.**\n"
-    "2. supports.evidence_id must come from the input and should select that Evidence's supplied segment_"
+    "2. supports.evidence_id must come from the input and should select that Evidence's supplied sentence_id, or independent clauses with segment_"
     "id. The system derives the verbatim text, Unicode start/end and stated proposition. Legacy quote/sta"
     "rt/end is compatibility only; do not copy, paraphrase or count text. Assistant/context is never Evid"
     "ence.\n"
@@ -846,8 +881,8 @@ _SYSTEM_PROMPT_EN = (
     "6. naming: propositions like \"My cousin is called Ashuo\" (stated); entity.canonical_name must be a v"
     "erbatim substring of a slice; kind defaults to person. Do not repeat naming when the same entity nam"
     "e already exists. **\"My X is called Y\" sentences: when X is an intimate relation word (girlfriend/bo"
-    "yfriend/wife/husband/partner) → emit relationship (see rule 7); when X is a descriptor (best friend/"
-    "classmate/colleague/roommate…) → emit naming. \"Named X\" is always naming. A pet naming (kind=animal)"
+    "yfriend/wife/husband/partner) → emit relationship (see rule 7); when X is another explicit relationship (friend/"
+    "classmate/colleague/roommate…) → also emit relationship. Only a name with no stated relationship emits naming. \"Named X\" is always naming. A pet naming (kind=animal)"
     " with acquisition background and a reason for the name is ONE naming whose proposition equals the EN"
     "TIRE sentence — never split it into fragments and never emit a relationship for a pet.**\n"
     "7. relationship: propositions like \"Qiuhe is my aunt\" (stated, the user's own wording; when the subj"
@@ -1412,6 +1447,7 @@ class HermesBatchAdapterProcessor:
                 "id": evidence_id,
                 "text": str(row[0]),
                 "segments": _evidence_segments(str(row[0])),
+                "sentences": _evidence_sentences(str(row[0])),
             }
             if row[1] is not None:
                 block["context"] = str(row[1])
@@ -2258,7 +2294,7 @@ class HermesBatchAdapterProcessor:
         raw_supports = raw_item.get("supports")
         quote_anchored = isinstance(raw_supports, list) and any(
             isinstance(support, dict)
-            and (support.get("quote") is not None or support.get("segment_id") is not None)
+            and (support.get("quote") is not None or support.get("segment_id") is not None or support.get("sentence_id") is not None)
             for support in raw_supports
         )
         if quote_anchored and formed_by == "stated":
@@ -2480,7 +2516,7 @@ class HermesBatchAdapterProcessor:
                 if objects_raw is not None and not isinstance(objects_raw, list):
                     return None, "invalid_event_objects"
                 segment_backed = isinstance(raw_supports, list) and any(
-                    isinstance(support, dict) and support.get("segment_id") is not None
+                    isinstance(support, dict) and (support.get("segment_id") is not None or support.get("sentence_id") is not None)
                     for support in raw_supports
                 )
                 support_ids = {support[0] for support in parsed}
@@ -5193,12 +5229,23 @@ def _parse_supports(
             return None, "invalid_support_span"
         support_evidence_id = support.get("evidence_id")
         segment_id = support.get("segment_id")
+        sentence_id = support.get("sentence_id")
         quote = support.get("quote")
         start = support.get("start")
         end = support.get("end")
         if support_evidence_id not in ids or support_evidence_id not in raw_by_id:
             return None, "evidence_out_of_batch"
         raw = raw_by_id[str(support_evidence_id)]
+        if sentence_id is not None:
+            if (segment_id is not None or quote is not None or start is not None or end is not None
+                    or not isinstance(sentence_id, str)):
+                return None, "invalid_support_sentence"
+            sentence = next((value for value in _evidence_sentences(raw)
+                             if value["id"] == sentence_id), None)
+            if sentence is None:
+                return None, "support_sentence_not_found"
+            parsed.append((str(support_evidence_id), sentence["start"], sentence["end"], sentence["text"]))
+            continue
         if segment_id is not None:
             if not isinstance(segment_id, str):
                 return None, "invalid_support_segment"

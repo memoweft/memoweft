@@ -66,9 +66,21 @@ _INQUIRY_PATTERN: re.Pattern[str] = re.compile(
 )
 
 
+_REQUEST_PATTERN = re.compile(
+    r"(?:推荐|挑选|选择|帮我选|给我选|帮我挑|给我挑)"
+    r"|\b(?:recommend|suggest|choose|pick)\b", re.IGNORECASE,
+)
+_CORRECTION_PATTERN = re.compile(
+    r"(?:说错|记错|不对|改一下|改成|作废|不算数|应当是|应为)"
+    r"|\b(?:correction|instead|discard|actually)\b", re.IGNORECASE,
+)
+_NEGATED_VALUE_CUE = re.compile(r"(?:^|[，,。；;\s])([^，,。；;\s]{1,32}?)(?:作废|不算数|不再使用)")
+_REQUEST_NOUN_SUFFIX = re.compile(r"的([\u3400-\u4dbf\u4e00-\u9fff]{2,12})[。！？!?？\s]*$")
+
+
 def _is_inquiry(query: str) -> bool:
     """Return True if query exhibits interrogative or inquiry characteristics."""
-    return bool(_INQUIRY_PATTERN.search(query))
+    return bool(_INQUIRY_PATTERN.search(query) or _REQUEST_PATTERN.search(query) or _CORRECTION_PATTERN.search(query))
 
 
 _LATIN_WORD = re.compile(r"[a-zA-Z0-9_\-]+")
@@ -311,6 +323,16 @@ def _explicit_query_cues(query: str) -> tuple[str, ...]:
     No inference, model call, stemming, or mutable index is involved.
     """
     cues: list[str] = []
+    # A recommendation request can name its topic only at the end of a long
+    # modifier phrase. Retry that literal noun; never expand to unseen domains.
+    if _REQUEST_PATTERN.search(query):
+        noun = _REQUEST_NOUN_SUFFIX.search(query)
+        if noun:
+            cues.append(noun.group(1))
+    if _CORRECTION_PATTERN.search(query):
+        # The explicitly rejected value is a literal lookup cue for the prior
+        # current claim; it is not a new fact and never bypasses permissions.
+        cues.extend(match.group(1) for match in _NEGATED_VALUE_CUE.finditer(query))
     for pattern in _QUOTED_CUE_PATTERNS:
         cues.extend(match.strip() for match in pattern.findall(query))
     separated = tuple(
