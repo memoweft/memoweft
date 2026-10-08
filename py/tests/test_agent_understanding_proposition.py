@@ -96,7 +96,10 @@ def test_agent_synthesis_cannot_add_unsupported_facts(tmp_path: Path) -> None:
     assert job_row["state"] == "applied"
     cogs = _cognitions(db_path)
     assert len(cogs) == 1
-    assert cogs[0]["content"] == "用户1.打游戏-王者荣耀，"
+    # Both selected adjacent segments are exact source facts; unsupported
+    # synthesis and the unselected later answers must still be excluded.
+    assert cogs[0]["content"] == "用户1.打游戏-王者荣耀，刷抖音、看书听书"
+    assert "习惯了吧" not in cogs[0]["content"]
     assert "独处" not in cogs[0]["content"]
     assert "朋友" not in cogs[0]["content"]
 
