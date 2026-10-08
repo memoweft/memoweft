@@ -1174,5 +1174,5 @@ def test_recall_reads_only_current_after_correction(tmp_path: Path) -> None:
     assert "用户更喜欢喝咖啡" in text
     assert "冰美式" not in text
     assert runtime.last_recall_count == 1
-    assert runtime.prefetch("冰美式", session_id="sess") == ""
-    assert runtime.last_recall_count == 0
+    assert runtime.prefetch("冰美式", session_id="sess") == "记忆：用户更喜欢喝咖啡"
+    assert runtime.last_recall_count == 1

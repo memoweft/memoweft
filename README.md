@@ -35,6 +35,9 @@ MemoWeft keeps these boundaries explicit:
   output is never used as an interpretation or included in rewrite feedback.
 - Entity, Relationship, Event, Cognition, and Evaluation records are formal World objects.
 - Recall is deterministic for the same revision and performs no World writes.
+  Short natural corrections can be retrieved through the topic of their
+  permission-eligible predecessors. Only the current successor is rendered
+  and selected; past preference values appear only for historical questions.
 - Correction, retract, forget, archive, mute, and permission changes produce durable receipts.
 - Shared assistant interactions retain their original history and explicit memory dependencies. Model projection excludes unresolved or no-longer-current dependencies, including transitive reuse; history projection remains subject to source permissions.
 - Portable bundles are versioned, validated, planned before apply, and conflict checked.

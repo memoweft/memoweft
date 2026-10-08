@@ -378,6 +378,26 @@ def _all_evidence_current(
     )
 
 
+def world_item_evidence_visible(
+    db: sqlite3.Connection,
+    subject_id: str,
+    kind: WorldItemKind,
+    item_id: str,
+    *,
+    surface: CurrentnessSurface,
+    model_tier: ModelTier = "cloud",
+) -> bool:
+    """Check provenance permissions independently of a World row's lifecycle.
+
+    Correction predecessors can supply retrieval cues, but their retained
+    Evidence must still be readable on the destination surface.
+    """
+    return _all_evidence_current(
+        db, linked_evidence(db, kind, item_id), subject_id=subject_id,
+        surface=surface, model_tier=model_tier,
+    )
+
+
 def world_item_visible(
     db: sqlite3.Connection,
     subject_id: str,
@@ -415,10 +435,11 @@ def world_item_visible(
         return False
     if kind == "entity" and not linked_evidence(db, "entity", item_id):
         return surface != "formation"
-    return _all_evidence_current(
+    return world_item_evidence_visible(
         db,
-        linked_evidence(db, kind, item_id),
-        subject_id=subject_id,
+        subject_id,
+        kind,
+        item_id,
         surface=surface,
         model_tier=model_tier,
     )
