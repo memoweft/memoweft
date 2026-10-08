@@ -551,8 +551,6 @@ def default_one_shot_route(
         if model_tier == "local" and choice.get("finish_reason") == "length":
             raise RuntimeError("local_model_output_truncated")
         msg_content = choice["message"].get("content")
-        if not msg_content and choice["message"].get("reasoning_content"):
-            msg_content = choice["message"]["reasoning_content"]
         resolved_model = model
         if model == "@current":
             headers = getattr(response, "headers", {})

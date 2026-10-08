@@ -1513,7 +1513,10 @@ class HermesBatchAdapterProcessor:
         if previous is not None:
             messages.extend([
                 {"role": "assistant", "content": str(previous.get("content") or "")},
-                {"role": "user", "content": _canonical({"compiler_error": feedback})},
+                {"role": "user", "content": _canonical({
+                    "compiler_error": feedback,
+                    "source_evidence": evidence,
+                })},
             ])
         # The documented OneShotRoute contract makes ``session_id``
         # keyword-only (see the Hermes ``one_shot_llm`` initialize kwarg).

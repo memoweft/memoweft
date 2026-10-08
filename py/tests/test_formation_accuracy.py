@@ -69,6 +69,7 @@ def test_invalid_result_rewrites_once_with_error(tmp_path: Path, invalid: str) -
     assert feedback["code"] == ("invalid_proposition" if invalid == "missing_proposition" else "invalid_model_result")
     assert "proposition" in feedback["instruction"]
     assert calls[1][0][-2]["content"] == first["content"]
+    assert "我喜欢用买菜的例子解释。" in str(json.loads(calls[1][0][-1]["content"])["source_evidence"])
     stored = json.loads(row["model_result_json"])["formation_rewrite"]
     assert stored["state"] == "completed"
     assert stored["first_result"] == first

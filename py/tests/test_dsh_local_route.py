@@ -453,6 +453,19 @@ def test_cloud_route_keeps_120_second_timeout(monkeypatch: pytest.MonkeyPatch) -
     }
 
 
+def test_reasoning_only_response_is_not_saved_as_interpretation(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = {"choices": [{"message": {"content": None, "reasoning_content": "private reasoning trace"}}]}
+    with _local_route_server([(200, {}, payload)]) as (base_url, received):
+        monkeypatch.setenv("MEMOWEFT_BASE_URL", base_url)
+        monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "host-selected-model")
+        route = default_one_shot_route(model_tier="local", api_key_override="synthetic-key")
+        assert route is not None
+        result = route([], session_id="s")
+    assert result["content"] == ""
+    assert "private reasoning trace" not in json.dumps(result)
+    assert len(received) == 1
+
+
 def test_local_length_finish_reason_rejects_partial_json(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEMOWEFT_BASE_URL", "http://127.0.0.1:18080/v1")
     monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "weftlearn-qwen3.8-27b")
