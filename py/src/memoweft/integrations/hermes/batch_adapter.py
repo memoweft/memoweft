@@ -1250,7 +1250,7 @@ class HermesBatchAdapterProcessor:
         if (
             compiled.batch is None
             and compiled.terminal == "no_change"
-            and compiled.reason != "model_no_change"
+            and compiled.reason not in ("model_no_change", "task_scoped_instruction")
             and "formation_rewrite" not in payload
         ):
             first = dict(payload)
@@ -1896,6 +1896,13 @@ class HermesBatchAdapterProcessor:
             return None, reason
         if any(support[3] == "" for support in parsed):
             return None, "span_out_of_range"
+        if kind in ("attribute", "preference"):
+            scope_units = [str(sentence["text"]) for support in parsed for sentence in _evidence_sentences(support[3])]
+            temporary = [_is_task_scoped_instruction(text) for text in scope_units]
+            if temporary and all(temporary):
+                return None, "task_scoped_instruction"
+            if any(temporary):
+                return None, "mixed_task_and_ongoing_instruction"
         supersedes = cog.get("supersedes_cognition_id")
         supersedes_id: Optional[str] = (
             str(supersedes).strip()

@@ -94,6 +94,20 @@ def test_one_task_override_cannot_correct_an_ongoing_preference(tmp_path: Path) 
         assert db.execute('SELECT invalid_at FROM cognition WHERE id=?', (prior,)).fetchone()[0] is None
 
 
+def test_legacy_envelope_cannot_bypass_task_scope_eligibility(tmp_path: Path) -> None:
+    path = tmp_path / 'world.sqlite3'
+    raw = '这次先列一个提纲。'
+    legacy = {'schema_version': 1, 'result': 'one_cognition', 'cognition': {
+        'target': 'owner_self', 'statement_kind': 'preference', 'proposition': raw,
+        'supports': [{'evidence_id': 'evidence-1', 'start': 0, 'end': len(raw)}],
+    }}
+    row, calls = _run(path, raw, [_model(legacy)])
+    assert row['state'] == 'no_change' and len(calls) == 1
+    assert json.loads(row['world_result_json'])['reason'] == 'task_scoped_instruction'
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT count(*) FROM cognition').fetchone()[0] == 0
+
+
 def test_mixed_selected_sentences_are_rewritten_without_silent_source_trimming(tmp_path: Path) -> None:
     path = tmp_path / 'world.sqlite3'
     raw = '以后都用竖版页面。只回复完成。'
