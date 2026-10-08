@@ -596,7 +596,7 @@ def _score_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
 
 
 def _score_world_anchor_rows(
-    query: str, rows: Iterable[Mapping[str, object]]
+    query: str, rows: Iterable[Mapping[str, object]], *, topic: bool = False,
 ) -> list[dict[str, object]]:
     scored: list[tuple[int, int, str, int, str, str, bool]] = []
     for row in rows:
@@ -612,7 +612,7 @@ def _score_world_anchor_rows(
             (
                 len(anchor)
                 for anchor in anchors
-                if anchor and _anchor_is_explicit(query, anchor)
+                if anchor and (_topic_cue_is_explicit(query, anchor) if topic else _anchor_is_explicit(query, anchor))
             ),
             default=0,
         )
@@ -649,6 +649,17 @@ def _row_anchors(row: Mapping[str, object]) -> tuple[str, ...]:
     if isinstance(raw, str):
         return (raw,)
     return tuple(str(value) for value in raw) if isinstance(raw, Sequence) else ()
+
+
+def _topic_cue_is_explicit(query: str, cue: str) -> bool:
+    # Topic nouns have grammatical continuations that are not person-name
+    # continuations. Keep person prefix protection unchanged.
+    if _anchor_is_explicit(query.casefold(), cue.casefold()):
+        return True
+    if cue.isascii():
+        return False
+    return any(query[index + len(cue):].startswith(("时", "前", "后", "方面", "相关"))
+               for index in range(len(query)) if query.startswith(cue, index))
 
 
 def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
@@ -693,6 +704,13 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
                 result.append(item)
                 seen.add(key)
         return result[:MAX_ITEMS]
+    topic_rows = [
+        {**row, "anchors": row.get("topic_cues", ())}
+        for row in rows_list if row.get("topic_cues")
+    ]
+    topic_hits = _score_world_anchor_rows(query, topic_rows, topic=True)
+    if topic_hits:
+        return topic_hits
     hits = _score_world_rows(query, rows_list)
     if hits:
         return hits
@@ -906,12 +924,24 @@ def _graph_match_anchors(
         if cog_content is not None:
             c_text = str(cog_content[0])
             for entity_row in db.execute(
-                "SELECT id, canonical_name FROM entity WHERE world_id = ? AND invalid_at IS NULL",
+                "SELECT id, canonical_name FROM entity WHERE world_id = ? AND invalid_at IS NULL AND kind != 'topic'",
                 (world_id,),
             ).fetchall():
                 if str(entity_row[1]) in c_text:
                     anchors.extend(_entity_names(db, world_id, str(entity_row[0]), model_tier))
     return tuple(dict.fromkeys(anchor for anchor in anchors if anchor))
+
+
+def _graph_topic_cues(
+    db: sqlite3.Connection, subject_id: str, content: str, model_tier: ModelTier,
+) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(
+        name for (entity_id,) in db.execute(
+            "SELECT id FROM entity WHERE world_id=? AND kind='topic' AND invalid_at IS NULL "
+            "AND instr(?, canonical_name)>0 ORDER BY id", (subject_id, content),
+        ).fetchall()
+        for name in _entity_names(db, subject_id, str(entity_id), model_tier)
+    ))
 
 
 def _current_world_rows(
@@ -978,6 +1008,7 @@ def _current_world_rows(
                         for name in _entity_names(db, subject_id, str(entity[0]), model_tier)
                         if _anchor_is_explicit(content, name)
                     ))
+            predecessor_texts = _predecessor_match_texts(db, subject_id, row_id, model_tier) if kind == "cognition" else ()
             items.append(
                 {
                     "kind": current_kind,
@@ -989,10 +1020,12 @@ def _current_world_rows(
                         db, subject_id, current_kind, row_id, content, model_tier
                     ),
                     "anchors": anchors,
+                    "topic_cues": tuple(dict.fromkeys(
+                        cue for text in (content, *predecessor_texts)
+                        for cue in _graph_topic_cues(db, subject_id, text, model_tier)
+                    )),
                     "is_superseded": row_id in superseded_ids,
-                    "predecessor_match_texts": _predecessor_match_texts(
-                        db, subject_id, row_id, model_tier
-                    ) if kind == "cognition" else (),
+                    "predecessor_match_texts": predecessor_texts,
                 }
             )
     return items
@@ -1036,7 +1069,8 @@ def _predecessor_match_texts(
                 db, subject_id, "cognition", prior_id, surface=surface, model_tier=model_tier
             ):
                 continue
-            texts.append(str(content))
+            texts.append(str(content) if surface == "formation" else
+                         _graph_match_text(db, subject_id, "cognition", prior_id, str(content), model_tier))
             pending.append(prior_id)
     return tuple(texts)
 

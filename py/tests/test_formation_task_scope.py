@@ -18,9 +18,11 @@ from test_hermes_batch_adapter_v5 import _batch, _model
     'Please summarize this file.',
     'Only reply OK.',
 ])
-def test_task_directives_do_not_become_preferences(tmp_path: Path, raw: str) -> None:
+@pytest.mark.parametrize('kind', ['preference', 'attribute'])
+def test_task_directives_do_not_become_preferences(tmp_path: Path, raw: str, kind: str) -> None:
     path = tmp_path / 'world.sqlite3'
     item = _item('ignored')
+    item['statement_kind'] = kind
     item['supports'] = [{'evidence_id': 'evidence-1', 'sentence_id': 't0'}]
     row, calls = _run(path, raw, [_model(_batch(item))])
     assert row['state'] == 'no_change' and len(calls) == 1

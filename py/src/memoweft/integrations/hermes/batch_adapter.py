@@ -29,7 +29,7 @@ import json
 import logging
 import re
 import sqlite3
-from typing import Any, Callable, Literal, Mapping, Optional, TypedDict
+from typing import Any, Callable, Literal, Mapping, Optional, TypedDict, cast
 
 from ...clock import Clock, system_clock, to_iso_z
 from ...store.driver import BUSY_TIMEOUT_MS
@@ -523,6 +523,9 @@ class BatchItem:
     #: third-party attribute items (the proposition's subject entity).
     entity_canonical_name: Optional[str] = None
     entity_kind: Optional[str] = None
+    # Retrieval labels never change owner claim identity or perspective.
+    topic_canonical_name: Optional[str] = None
+    topic_aliases: tuple[str, ...] = ()
     #: relationship items: relation type + target entity canonical name.
     relation_type: Optional[str] = None
     target_canonical_name: Optional[str] = None
@@ -683,6 +686,7 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "对于本人持续 attribute/preference，若原话明确命名了主题，可附 entity={canonical_name:原话中的主题词,kind:topic,aliases:[常见同义说法]} 作为检索线索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义就不填。主题词必须在所选原话中；命题仍逐字来自所选原话。省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
     "形成资格看适用范围：只保留对以后持续有效的偏好/习惯/安排。只针对本次任务的操作、回复、文件或工具指示不形成 preference，例如本次先做某一步、处理当前文件、当前回合回复格式；即使措辞强烈也不变成长久要求。混合原话要分别选择持续内容，排除独立的临时指令，不把两者放进同一个命题。不要把‘最近’的持续安排误判成单次任务。\n"
     "来源标识按所在列表逐字复制：sentences 的 id 是 t0、t1…，填 sentence_id；segments 的 id 是 s0、s1…，填 segment_id。不能把 s0 填到 sentence_id，也不能把 t0 填到 segment_id；不要自行造标识。\n"
     "先按完整主题选择来源，再分类。Evidence 同时提供 sentences（完整句）和 segments（细分句）。同一句中的主题引导、限制条件和偏好值属于一个命题时，优先用 supports 中的 sentence_id 选择完整句；不要只留下末尾的值。只有该句包含独立的不同命题时才选择各自的 segment_id。每个 support 只给 sentence_id 或 segment_id 其中一个，不能同时选覆盖相同范围的句和片段。proposition 必须给非空占位文本，系统仍从所选原话逐字派生。\n"
@@ -789,6 +793,12 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "For an ongoing owner attribute/preference with an explicitly named topic, you may attach "
+    "entity={canonical_name:the exact source topic,kind:topic,aliases:[common equivalent phrasings]} "
+    "as retrieval labels. Aliases only rename the topic, never add facts, constraints, numbers, "
+    "people or broader scope; omit uncertain equivalents. The claim remains verbatim. A topicless "
+    "correction need not supply entity: predecessor topic cues remain available. Never use this field "
+    "on relationship items.\n"
     "Eligibility depends on scope: retain ongoing preferences, habits and arrangements. "
     "Task-scoped operations, reply formatting, current-file requests and tool instructions are not "
     "preferences, however emphatic. In mixed evidence select the ongoing claim separately and omit "
@@ -2346,7 +2356,7 @@ class HermesBatchAdapterProcessor:
             return None, "span_out_of_range"
 
         slices = [support[3] for support in parsed]
-        if kind == "preference" and formed_by == "stated" and action == "form":
+        if kind in ("attribute", "preference") and formed_by == "stated" and action == "form":
             scope_units = [str(sentence["text"]) for text in slices for sentence in _evidence_sentences(text)]
             temporary = [_is_task_scoped_instruction(text) for text in scope_units]
             if temporary and all(temporary):
@@ -2379,6 +2389,8 @@ class HermesBatchAdapterProcessor:
 
         entity_canonical_name: Optional[str] = None
         entity_kind: Optional[str] = None
+        topic_canonical_name: Optional[str] = None
+        topic_aliases: tuple[str, ...] = ()
         relation_type: Optional[str] = None
         target_canonical_name: Optional[str] = None
         target_entity_kind: Optional[str] = None
@@ -2627,6 +2639,27 @@ class HermesBatchAdapterProcessor:
                     event_time_expression = time_expr_raw.strip()
                     if event_time_expression not in proposition:
                         return None, "event_time_not_in_proposition"
+        elif (kind in ("attribute", "preference") and perspective_support
+              and isinstance(raw_item.get("entity"), dict)
+              and cast(dict[str, object], raw_item["entity"]).get("kind") == "topic"):
+            topic_raw = cast(dict[str, object], raw_item["entity"])
+            if set(topic_raw) - {"canonical_name", "kind", "aliases"}:
+                return None, "invalid_topic_entity"
+            topic_name_raw = topic_raw.get("canonical_name")
+            if not isinstance(topic_name_raw, str) or not topic_name_raw.strip():
+                return None, "invalid_entity_name"
+            topic_canonical_name = topic_name_raw.strip()
+            if topic_canonical_name not in proposition or not any(topic_canonical_name in text for text in slices):
+                return None, "topic_name_not_in_span"
+            if formed_by != "stated" or retract or action not in ("form", "correct"):
+                return None, "invalid_topic_claim"
+            if any(raw_item.get(field) is not None for field in
+                   ("perspective_holder", "entity_reference", "source_entity", "target_entity", "relation_type")):
+                return None, "unexpected_topic_field"
+            aliases = topic_raw.get("aliases", [])
+            if not isinstance(aliases, list) or any(not isinstance(alias, str) or not alias.strip() for alias in aliases):
+                return None, "invalid_topic_aliases"
+            topic_aliases = tuple(dict.fromkeys(str(alias).strip() for alias in aliases if str(alias).strip() != topic_canonical_name))
         elif (
             kind == "attribute" or (kind == "preference" and perspective_support)
         ) and third_party and raw_item.get("entity") is not None:
@@ -2758,6 +2791,7 @@ class HermesBatchAdapterProcessor:
         else:
             use_no_prepend = (
                 targeted_attribute
+                or topic_canonical_name is not None
                 or kind == "alias"
                 or kind == "event"
                 or kind == "naming"
@@ -2790,6 +2824,8 @@ class HermesBatchAdapterProcessor:
                 assistant_claim=claim,
                 entity_canonical_name=entity_canonical_name,
                 entity_kind=entity_kind,
+                topic_canonical_name=topic_canonical_name,
+                topic_aliases=topic_aliases,
                 relation_type=relation_type,
                 target_canonical_name=target_canonical_name,
                 target_entity_kind=target_entity_kind,
@@ -2866,6 +2902,7 @@ class HermesBatchAdapterProcessor:
             pending_transitions: list[tuple[str, str]] = []
             wrote_any = False
             for item in batch.items:
+                wrote_any = self._apply_topic_aliases(db, job, item, now_text) or wrote_any
                 if item.action == "form":
                     if item.statement_kind in ("naming", "relationship"):
                         result, wrote = self._apply_v3_object(
@@ -3356,6 +3393,30 @@ class HermesBatchAdapterProcessor:
         if str(existing[0]) != kind:
             raise _ZeroWriteError("entity_kind_mismatch")
         return entity_id, False
+
+    def _apply_topic_aliases(
+        self, db: sqlite3.Connection, job: ClaimedWorldJob, item: BatchItem, now_text: str,
+    ) -> bool:
+        """Use the existing alias ledger with the claim's exact supporting sources."""
+        if item.topic_canonical_name is None:
+            return False
+        entity_id, created = self._resolve_target_entity(db, job, item.topic_canonical_name, "topic", now_text)
+        before = db.total_changes
+        for evidence_id, start, end, _text in item.supports:
+            self._write_entity_ledger(db, entity_id, evidence_id, start, end)
+        aliases = self._entity_aliases(db, entity_id)
+        additions = [alias for alias in item.topic_aliases if alias not in aliases]
+        if additions:
+            db.execute("UPDATE entity SET aliases_json=?, updated_at=? WHERE id=?",
+                       (_canonical([*aliases, *additions]), now_text, entity_id))
+        evidence_ids = sorted({support[0] for support in item.supports})
+        for alias in item.topic_aliases:
+            ledger_id = "alias-topic-" + _hash_text(_canonical([entity_id, alias, evidence_ids]))
+            db.execute("INSERT OR IGNORE INTO evidence_ledger (id, content, payload_json) VALUES (?, ?, ?)",
+                       (ledger_id, _canonical({"relation": "alias", "canonical_entity_id": entity_id, "alias_name": alias}),
+                        _canonical({"schema_version": 1, "boundary_event_id": job.boundary_event_id,
+                                    "evidence_ids": evidence_ids})))
+        return created or db.total_changes != before
 
     def _reconcile_single_status_cognitions(
         self, db: sqlite3.Connection, job: ClaimedWorldJob, item: BatchItem, now_text: str
