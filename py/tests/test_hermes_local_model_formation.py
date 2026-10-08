@@ -83,6 +83,43 @@ def test_user_friend_relationship_preserves_project_context_without_guessing_fie
             assert '她负责设计' in relationships[0][0]
 
 
+@pytest.mark.parametrize('spelling', ['canonical', 'digest', 'partial', 'unknown', 'foreign', 'revoked'])
+def test_correction_id_format_compatibility_requires_exact_owned_record_and_source_permission(
+    tmp_path: Path, spelling: str,
+) -> None:
+    path = tmp_path / 'world.sqlite3'
+    clock = MutableClock()
+    raw = '我最近只能周二晚上游泳。'
+    first = _form('ignored', (0, len(raw)))
+    first['supports'] = [{'evidence_id': 'evidence-1', 'quote': raw}]
+    _run(path, clock, [_model(_batch(first))], ('evidence-1',),
+         lambda db_path: _set_evidence(db_path, 'evidence-1', raw))
+    with sqlite3.connect(path) as db:
+        prior_id = db.execute('SELECT id FROM cognition').fetchone()[0]
+        if spelling == 'foreign':
+            db.execute('UPDATE cognition SET subject_id = ?', ('other-owner',))
+        if spelling == 'revoked':
+            db.execute('UPDATE evidence SET allow_inference = 0 WHERE id = ?', ('evidence-1',))
+    digest = prior_id.removeprefix('cognition-')
+    target = prior_id if spelling == 'canonical' else (
+        digest[:-1] if spelling == 'partial' else 'f' * 64 if spelling == 'unknown' else digest
+    )
+    _insert_job(path, clock, job_id='job-2', evidence_ids=('evidence-2',))
+    correction = '刚才说错了，现在是周六晚上，以后游泳按周六安排。'
+    _set_evidence(path, 'evidence-2', correction)
+    item = _form('ignored', (0, len(correction)), evidence_id='evidence-2')
+    item['supports'] = [{'evidence_id': 'evidence-2', 'quote': correction}]
+    item.update(action='correct', corrects_cognition_id=target)
+    processor = HermesBatchAdapterProcessor(str(path), lambda *a, **kw: _model(_batch(item)), clock=clock)
+    worker = WorldJobWorker(path, processor=processor, policy=_policy(), clock=clock)
+    assert worker.run_until_quiescent() == 1
+    valid = spelling in {'canonical', 'digest'}
+    assert _job(path, 'job-2')['state'] == ('applied' if valid else 'no_change')
+    with sqlite3.connect(path) as db:
+        assert (db.execute('SELECT invalid_at FROM cognition WHERE id = ?', (prior_id,)).fetchone()[0] is not None) == valid
+        assert db.execute('SELECT COUNT(*) FROM cognition').fetchone()[0] == (2 if valid else 1)
+
+
 def test_formation_resolves_short_correction_topic_from_existing_transition_sources(tmp_path: Path) -> None:
     path = tmp_path / 'world.sqlite3'
     clock = MutableClock()

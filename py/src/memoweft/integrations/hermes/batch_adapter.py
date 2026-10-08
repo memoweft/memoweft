@@ -667,6 +667,9 @@ _SYSTEM_PROMPT = (
     "省略主题的纠正（‘刚才说错了，现在固定空出来的是周五晚上，周三已经没空了’）"
     "应从 current_cognitions 中相关安排及其 predecessor_context 消解主题，corrects_cognition_id 必须指向有效的当前项。"
     "主题沿正式取代链保留，不能从不相关的最近条目猜主题；不要把旧日期复制为当前日期。"
+    "同一纠正的改口信号、新值、旧值否定、补充主题是同一件事，只输出一个 item 并选择全部相关相邻 segments。"
+    "按整段原话的主题及被否定旧值选目标，不要把其中省略主题的一句另用于纠正其他安排。"
+    "corrects_cognition_id 完整复制输入 id，包括 cognition- 前缀；不是只复制摘要部分。"
     "选择 supports 时包含完整偏好/安排及主题的所有相邻 segments；不要只选引导句或单独日期。"
     "proposition 仍从所选当前原话派生，绝不把上下文改写或冒充新 Evidence。\n"
     "结构字段示例：‘小林是跟我一起做项目的朋友，她负责设计。’属于用户与小林的关系，"
@@ -866,6 +869,9 @@ _SYSTEM_PROMPT_EN = (
     "Use no_change only when there is no eligible content. For a short correction omitting the topic ('Actually Friday evening, Wednesday is no longer free'), "
     "resolve the topic from the related current_cognitions and their predecessor_context, and correct the current item's id. "
     "Never guess a topic from an unrelated recent item or copy an old date as current. Select all adjacent source segments needed for the complete preference and topic. "
+    "A correction's signal, new value, negation of the old value and topic clause are ONE claim: emit one item selecting all related adjacent segments. "
+    "Choose the target from the whole correction's topic and rejected old value; never use an isolated topic-free clause to correct an unrelated arrangement. "
+    "Copy the entire corrects_cognition_id including its cognition- prefix, not just the digest. "
     "The proposition must still derive from the current verbatim Evidence; context is not new Evidence.\n"
     "Structure example: 'Lin is my friend preparing a project with me; she handles design.' A relationship to the user must give target_entity={canonical_name:Lin,kind:person} and omit source_entity; "
     "do not supply only source_entity=Lin with no target_entity. Select the adjacent source segments needed for the project context. If separately forming her attribute, also select the adjacent segment naming Lin so the name is verifiable. Never invent a name.\n"
@@ -1661,6 +1667,24 @@ class HermesBatchAdapterProcessor:
             payload.append(entry)
         return payload
 
+    def _canonical_cognition_reference(
+        self, value: object, job: ClaimedWorldJob, db: sqlite3.Connection,
+    ) -> object:
+        """Resolve an exact digest spelling, never a shortened or fuzzy id.
+
+        Some local interpreters omit the kind prefix. The authoritative record
+        must already exist for this subject; normal mutation/source validation
+        still decides whether that record can be corrected or superseded.
+        """
+        if not isinstance(value, str) or re.fullmatch(r"[0-9a-fA-F]{64}", value.strip()) is None:
+            return value
+        canonical = "cognition-" + value.strip().lower()
+        row = db.execute(
+            "SELECT 1 FROM cognition WHERE id = ? AND subject_id = ?",
+            (canonical, job.subject_id),
+        ).fetchone()
+        return canonical if row is not None else value
+
     def _conversation_context_entity_names(
         self, job: ClaimedWorldJob, db: sqlite3.Connection
     ) -> set[str]:
@@ -2097,6 +2121,11 @@ class HermesBatchAdapterProcessor:
                 _normalize_spoken_name(name, [support[3] for support in candidate_supports])
             )
         for raw_item in raw_items:
+            if isinstance(raw_item, dict):
+                raw_item = dict(raw_item)
+                for field in ("corrects_cognition_id", "supersedes_cognition_id", "contradicts_cognition_id"):
+                    if field in raw_item:
+                        raw_item[field] = self._canonical_cognition_reference(raw_item[field], job, db)
             item, reason = self._parse_item(
                 raw_item, ids, raw_by_id, context_by_id,
                 extended_kinds=extended_kinds, third_party=third_party,
