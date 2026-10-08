@@ -28,7 +28,10 @@ from typing import Any, Callable, Iterable, Literal, Mapping, Sequence, TypeVar,
 
 from ..trust.currentness import (
     current_entity_aliases,
+    CurrentnessSurface,
     subject_currentness_facts,
+    world_item_evidence_visible,
+    world_item_lifecycle,
     world_item_visible,
 )
 
@@ -294,6 +297,11 @@ def _expanded_queries(query: str) -> list[str]:
     return variants
 
 
+def _row_match_variants(query: str, row: Mapping[str, object]) -> tuple[str, ...]:
+    return (_row_match_text(query, row),
+            *cast(Sequence[str], row.get("predecessor_match_texts", ())))
+
+
 def _explicit_query_cues(query: str) -> tuple[str, ...]:
     """Return stable, user-authored local cues from an otherwise long query.
 
@@ -379,7 +387,8 @@ def _local_inquiry_matches(
                 continue
             eligible = [
                 row for row in rows
-                if len(informative & _bigrams(_row_match_text(window, row))) >= 2
+                if any(len(informative & _bigrams(text)) >= 2
+                       for text in _row_match_variants(window, row))
             ]
             for hit in score_rows(window, eligible):
                 key = str(hit["id"])
@@ -527,14 +536,15 @@ def _score_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     scored: list[tuple[float, int, str, int, str, str, bool]] = []
     for row in rows:
         content = str(row["content"])
-        match_text = _row_match_text(query, row)
-        content_bigrams = _bigrams(match_text)
-        if not content_bigrams:
-            continue
-        common_bigrams = query_bigrams & content_bigrams
-        if not common_bigrams:
-            continue
-        score = _compute_overlap_score(query_bigrams, content_bigrams, common_bigrams)
+        # A short correction may omit its topic ("No, Friday evening").
+        # Score retained, permission-checked predecessor cues independently;
+        # neither their content nor their IDs become selected recall items.
+        variants = _row_match_variants(query, row)
+        score = max((
+            _compute_overlap_score(query_bigrams, bigrams, query_bigrams & bigrams)
+            for text in variants if (bigrams := _bigrams(text))
+            and query_bigrams & bigrams
+        ), default=0.0)
         if score < MIN_SCORE:
             continue
         kind = str(row["kind"])
@@ -625,14 +635,18 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     query = _query_signal(query)
     is_historical = bool(_HISTORICAL_QUERY_PATTERN.search(raw_query))
     if not is_historical:
-        # For current-state queries, suppress superseded low-confidence items unless explicitly asked by name
-        raw_named = {
+        # Naming a person in a current preference question does not make the
+        # superseded value current. Preserve existing "Who is X?" lookups of
+        # retained people, rendered explicitly as past memory.
+        named_identity = {
             str(anchor) for row in rows_list for anchor in _row_anchors(row)
-            if _anchor_is_explicit(query.casefold(), str(anchor).casefold())
+            if _IDENTITY_QUERY_PATTERN.search(raw_query)
+            and _anchor_is_explicit(query.casefold(), str(anchor).casefold())
         }
         rows_list = [
             row for row in rows_list
-            if not (row.get("is_superseded") and int(cast(Any, row.get("confidence", 600))) < 300 and not (raw_named and raw_named.intersection(_row_anchors(row))))
+            if not row.get("is_superseded")
+            or bool(named_identity.intersection(_row_anchors(row)))
         ]
     named = {
         str(anchor) for row in rows_list for anchor in _row_anchors(row)
@@ -669,6 +683,24 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     hits = _local_inquiry_matches(query, rows_list, _score_world_rows)
     if hits:
         return hits
+    # A retained predecessor may itself be very short ("only Wednesday
+    # evenings for exercise"). If the long question shares just its literal
+    # topic, use that non-generic cue only after ordinary retrieval missed.
+    # This is query-side localization, not a synthesized successor fact.
+    if _is_inquiry(query):
+        query_topics = _bigrams(query) - _GENERIC_PREDICATE_BIGRAMS
+        best: dict[str, dict[str, object]] = {}
+        for row in rows_list:
+            for text in cast(Sequence[str], row.get("predecessor_match_texts", ())):
+                for cue in sorted(query_topics & _bigrams(text)):
+                    for hit in _score_world_rows(cue, [row]):
+                        candidate_id = str(hit["id"])
+                        if candidate_id not in best or float(cast(Any, hit["score"])) > float(cast(Any, best[candidate_id]["score"])):
+                            best[candidate_id] = hit
+        if best:
+            return sorted(best.values(), key=lambda hit: (
+                -float(cast(Any, hit["score"])), -int(cast(Any, hit["confidence"])), str(hit["id"])
+            ))[:MAX_ITEMS]
     return _score_world_anchor_rows(query, rows_list)
 
 
@@ -936,9 +968,50 @@ def _current_world_rows(
                     ),
                     "anchors": anchors,
                     "is_superseded": row_id in superseded_ids,
+                    "predecessor_match_texts": _predecessor_match_texts(
+                        db, subject_id, row_id, model_tier
+                    ) if kind == "cognition" else (),
                 }
             )
     return items
+
+
+def _predecessor_match_texts(
+    db: sqlite3.Connection, subject_id: str, current_id: str, model_tier: ModelTier
+) -> tuple[str, ...]:
+    """Follow Core's existing transitions for retrieval cues, never injection."""
+    pending = [current_id]
+    seen = {current_id}
+    texts: list[str] = []
+    surface: CurrentnessSurface = "model_cloud" if model_tier == "cloud" else "recall"
+    while pending:
+        try:
+            rows = db.execute(
+                "SELECT c.id, c.content, c.archived_at, c.muted_at "
+                "FROM cognition_transitions t JOIN cognition c ON c.id = t.prior_cognition_id "
+                "WHERE t.replacement_cognition_id = ? AND c.subject_id = ? "
+                "AND t.reason IN ('corrects', 'superseded') ORDER BY c.id",
+                (pending.pop(), subject_id),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            # Older databases can have no transition table.
+            return ()
+        for prior_id, content, archived, muted in rows:
+            prior_id = str(prior_id)
+            if prior_id in seen:
+                continue
+            seen.add(prior_id)
+            if archived is not None or muted is not None or any(
+                world_item_lifecycle(db, subject_id, "cognition", prior_id)
+            ):
+                continue
+            if not world_item_evidence_visible(
+                db, subject_id, "cognition", prior_id, surface=surface, model_tier=model_tier
+            ):
+                continue
+            texts.append(str(content))
+            pending.append(prior_id)
+    return tuple(texts)
 
 
 def recall_world_snapshot(
