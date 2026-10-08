@@ -2370,11 +2370,13 @@ class HermesBatchAdapterProcessor:
             for support in raw_supports
         )
         if quote_anchored and formed_by == "stated":
+            proposed_entity = raw_item.get("entity")
+            is_topic_entity = isinstance(proposed_entity, dict) and proposed_entity.get("kind") == "topic"
             quote_without_prepend = (
                 kind in {"naming", "alias", "event"}
                 or retract
                 or action == "contradict"
-                or raw_item.get("entity") is not None
+                or (proposed_entity is not None and not is_topic_entity)
                 or (kind == "relationship" and raw_item.get("source_entity") is not None)
             )
             normalizer = (
@@ -2791,7 +2793,6 @@ class HermesBatchAdapterProcessor:
         else:
             use_no_prepend = (
                 targeted_attribute
-                or topic_canonical_name is not None
                 or kind == "alias"
                 or kind == "event"
                 or kind == "naming"

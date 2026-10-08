@@ -42,6 +42,20 @@ def test_topic_synonym_uses_existing_aliases_without_rewriting_the_fact(tmp_path
         assert unrelated is not None and unrelated.count == 0
 
 
+def test_optional_topic_labels_do_not_change_owner_claim_identity(tmp_path: Path) -> None:
+    raw = '乘船时我一直选靠窗的座位。'
+    topic_path, plain_path = tmp_path / 'topic.sqlite3', tmp_path / 'plain.sqlite3'
+    labeled_id = form(topic_path, raw)
+    item = _item('ignored')
+    item['supports'] = [{'evidence_id': 'evidence-1', 'sentence_id': 't0'}]
+    row, _ = _run(plain_path, raw, [_model(_batch(item))])
+    assert row['state'] == 'applied'
+    with sqlite3.connect(topic_path) as labeled, sqlite3.connect(plain_path) as plain:
+        original = plain.execute('SELECT id, content FROM cognition').fetchone()
+        assert original[0] == labeled_id
+        assert labeled.execute('SELECT content FROM cognition').fetchone()[0] == original[1]
+
+
 @pytest.mark.parametrize('mutation,tier', [
     ("UPDATE evidence SET allow_local_read=0", 'local'),
     ("UPDATE evidence SET allow_cloud_read=0", 'cloud'),
