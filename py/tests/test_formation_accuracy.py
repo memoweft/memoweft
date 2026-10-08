@@ -128,6 +128,62 @@ def test_exact_style_source_is_recalled_with_explicit_communication_cues(tmp_pat
     assert "先用一个买菜的小例子讲明白" in current.rendered_recall
 
 
+@pytest.mark.parametrize("segments", [["s0", "s1", "s2", "s3"], ["s3", "s1", "s0", "s2"]])
+def test_adjacent_selected_segments_preserve_complete_preference_and_recall(
+    tmp_path: Path, segments: list[str]
+) -> None:
+    path = tmp_path / "world.sqlite3"
+    raw = "以后给我讲技术问题，尽量用中文，先用一个买菜的小例子讲明白，再讲原理。我看到一大段术语就头疼。"
+    item = _item("用户希望用买菜的小例子讲技术问题")
+    item["supports"] = [{"evidence_id": "evidence-1", "segment_id": segment} for segment in segments]
+    row, calls = _run(path, raw, [_model(_batch(item))])
+    assert row["state"] == "applied"
+    assert len(calls) == 1
+    with sqlite3.connect(path) as db:
+        content = db.execute("SELECT content FROM cognition").fetchone()[0]
+        snapshot = recall_world_snapshot(db, "owner", "“语言”“例子”“术语”的表达偏好？")
+    assert content == "用户" + raw[:raw.index("。") + 1]
+    assert snapshot is not None and snapshot.count == 1
+    assert "买菜的小例子" in snapshot.rendered_recall
+    assert "头疼" not in content, "unselected source clauses must not enter the proposition"
+
+
+def test_nonadjacent_selected_segments_do_not_include_unselected_gap(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    raw = "我喜欢中文，我的密码是12345，我喜欢例子。"
+    item = _item("ignored")
+    item["supports"] = [{"evidence_id": "evidence-1", "segment_id": segment} for segment in ["s0", "s2"]]
+    row, _ = _run(path, raw, [_model(_batch(item))])
+    assert row["state"] == "applied"
+    with sqlite3.connect(path) as db:
+        content = db.execute("SELECT content FROM cognition").fetchone()[0]
+    assert "密码" not in content and "12345" not in content
+
+
+def test_model_prompt_and_rewrite_show_source_spelling_without_unicode_escapes(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    raw = "以后请叫我小禾。"
+    _, calls = _run(path, raw, [{"content": "not JSON"}, _model(_batch(_item("ignored")))])
+    first_source = calls[0][0][1]["content"]
+    rewrite_source = calls[1][0][-1]["content"]
+    for source in [first_source, rewrite_source]:
+        assert raw in source
+        assert r"\u5c0f" not in source
+    assert json.loads(first_source)["evidence"][0]["text"] == raw
+    assert json.loads(rewrite_source)["source_evidence"][0]["text"] == raw
+
+
+def test_adjacent_invalid_spans_cannot_become_a_valid_source_range(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    item = _item("unlocatable placeholder")
+    item["supports"] = [{"evidence_id": "evidence-1", "start": start, "end": end}
+                        for start, end in [(0, 20), (20, 30)]]
+    row, _ = _run(path, "我喜欢中文。", [_model(_batch(item)), _model(_batch(item))])
+    assert row["state"] == "no_change"
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT count(*) FROM cognition").fetchone()[0] == 0
+
+
 @pytest.mark.parametrize(("raw", "model_date", "expected"), [
     ("2026年10月8日我去了南京。", "2026-10-08", "2026-10-08"),
     ("2026年10月8日我去了南京。", "2049-10-08", "2026-10-08"),

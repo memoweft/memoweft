@@ -7,7 +7,8 @@ from pathlib import Path
 import sqlite3
 from threading import Thread
 from contextlib import contextmanager
-from typing import Iterator, Mapping, Sequence
+import time
+from typing import Any, Iterator, Mapping, Sequence
 
 import httpx
 import pytest
@@ -129,6 +130,74 @@ def test_local_route_never_falls_back_to_deepseek(monkeypatch: pytest.MonkeyPatc
     assert default_one_shot_route(model_tier="local") is None
 
 
+@pytest.mark.parametrize("finish", ["stop", "length", None])
+def test_local_stream_progress_survives_read_deadline_and_keeps_usage(
+    monkeypatch: pytest.MonkeyPatch, finish: str | None
+) -> None:
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            assert body["stream"] is True
+            assert body["stream_options"] == {"include_usage": True}
+            assert body["chat_template_kwargs"] == {"enable_thinking": False}
+            # Simulate the host's queue, then a completion whose total duration
+            # exceeds the inactivity timeout, with continuous progress.
+            for _ in range(4):
+                self.wfile.write(b"HTTP/1.1 102 Processing\r\n\r\n")
+                self.wfile.flush()
+                time.sleep(0.04)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("X-ModelSwitcher-Model", "actual-model")
+            self.end_headers()
+            frames = [
+                {"choices": [{"index": 0, "delta": {"reasoning_content": "private reasoning"}}]},
+                {"choices": [{"index": 0, "delta": {"content": '{"result":'}}]},
+                {"choices": [{"index": 0, "delta": {"content": '"no_change"}'}}]},
+                {"choices": [{"index": 0, "delta": {}, "finish_reason": finish}]},
+                {"choices": [], "usage": {"prompt_tokens": 20, "completion_tokens": 10}},
+            ]
+            for frame in frames:
+                self.wfile.write(("data: " + json.dumps(frame) + "\n\n").encode())
+                self.wfile.flush()
+                time.sleep(0.04)
+            if finish is not None:
+                self.wfile.write(b"data: [DONE]\n\n")
+
+        def log_message(self, _format: str, *_args: object) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    real_post = httpx.post
+
+    def short_deadline_post(url: str, **kwargs: Any) -> httpx.Response:
+        kwargs["timeout"] = 0.12
+        return real_post(url, **kwargs)
+
+    monkeypatch.setattr(httpx, "post", short_deadline_post)
+    monkeypatch.setenv("MEMOWEFT_BASE_URL", f"http://127.0.0.1:{server.server_port}/v1")
+    monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "@current")
+    try:
+        route = default_one_shot_route(model_tier="local", api_key_override="synthetic")
+        assert route is not None
+        if finish is None:
+            with pytest.raises(httpx.RemoteProtocolError, match="incomplete_formation_stream"):
+                route([])
+        else:
+            result = route([])
+            assert result["content"] == '{"result":"no_change"}'
+            assert result["finish_reason"] == finish
+            assert result["model"] == "actual-model"
+            assert result["usage"] == {"prompt_tokens": 20, "completion_tokens": 10}
+            assert "private reasoning" not in json.dumps(result)
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
+
+
 def test_local_route_accepts_in_memory_key_without_exposing_it(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("MEMOWEFT_BASE_URL", "http://127.0.0.1:18080/v1")
     monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "weftlearn-qwen3.8-27b")
@@ -163,12 +232,12 @@ def test_local_route_accepts_in_memory_key_without_exposing_it(monkeypatch: pyte
     assert captured["json"] == {
         "model": "weftlearn-qwen3.8-27b",
         "messages": [],
-        "stream": False,
+        "stream": True,
+        "stream_options": {"include_usage": True},
         "temperature": 0,
         "response_format": {"type": "json_object"},
-        "response_format": {"type": "json_object"},
         "max_tokens": 4096,
-        "enable_thinking": False,
+        "chat_template_kwargs": {"enable_thinking": False},
     }
 
     server = DshRpcV2Server()
@@ -195,6 +264,26 @@ def test_local_route_accepts_in_memory_key_without_exposing_it(monkeypatch: pyte
     assert "rpc-secret" not in json.dumps(response)
     assert "rpc-secret" not in json.dumps(health)
     server.runtime.shutdown()
+
+
+def test_template_argument_compatibility_retry_preserves_streaming(monkeypatch: pytest.MonkeyPatch) -> None:
+    received: list[dict[str, object]] = []
+
+    def fake_post(url: str, **kwargs: Any) -> httpx.Response:
+        received.append(dict(kwargs["json"]))
+        return httpx.Response(400 if len(received) == 1 else 200,
+            request=httpx.Request("POST", url), json={"error": "chat_template unsupported"}
+            if len(received) == 1 else {"choices": [{"message": {"content": "{}"}}]})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setenv("MEMOWEFT_BASE_URL", "http://127.0.0.1:1/v1")
+    monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "configured-model")
+    route = default_one_shot_route(model_tier="local", api_key_override="synthetic")
+    assert route is not None
+    assert route([])["content"] == "{}"
+    assert "chat_template_kwargs" in received[0]
+    assert "chat_template_kwargs" not in received[1]
+    assert all(body["stream"] is True for body in received)
 
 
 @pytest.mark.parametrize("model_tier", ["cloud", "local"])
