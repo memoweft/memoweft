@@ -13,8 +13,8 @@ relationship statements with compiler-owned mention→identity resolution
 (deterministic ids from the canonical name; ambiguity or same-name conflict is
 zero-write).
 
-Legacy ``schema_version=1``/``2`` envelopes still compile and apply exactly as
-their own semantics did, so in-flight checkpoints replay identically.
+Legacy ``schema_version=1``/``2`` envelope shapes remain accepted. Stated
+propositions also use their original Evidence rather than model rewrites.
 """
 
 from __future__ import annotations
@@ -1925,7 +1925,7 @@ class HermesBatchAdapterProcessor:
         job: ClaimedWorldJob,
         db: sqlite3.Connection,
     ) -> tuple[Optional[_CompiledBatch], str]:
-        """Exact V1 envelope semantics (single form, stated, loose anchor)."""
+        """V1 single stated form, grounded in its original supporting slice."""
         result = data.get("result")
         if result == "no_change":
             return None, "model_no_change"
@@ -1964,7 +1964,7 @@ class HermesBatchAdapterProcessor:
         )
         item = BatchItem(
             action="form",
-            proposition=proposition.strip(),
+            proposition=_stated_normalize(parsed[0][3]),
             statement_kind=str(kind),
             formed_by="stated",
             supports=parsed,

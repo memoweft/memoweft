@@ -86,6 +86,22 @@ def test_second_invalid_result_is_zero_write_and_durable(tmp_path: Path) -> None
         assert db.execute("SELECT count(*) FROM cognition").fetchone()[0] == 0
 
 
+def test_legacy_envelope_cannot_bypass_fact_grounding(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    raw = "我希望你叫我小禾。"
+    legacy = {"schema_version": 1, "result": "one_cognition", "cognition": {
+        "target": "owner_self", "statement_kind": "preference", "proposition": "用户希望被叫作小莓",
+        "supports": [{"evidence_id": "evidence-1", "start": 0, "end": len(raw)}],
+    }}
+    row, calls = _run(path, raw, [_model(legacy)])
+    assert row["state"] == "applied"
+    assert len(calls) == 1
+    with sqlite3.connect(path) as db:
+        content = db.execute("SELECT content FROM cognition").fetchone()[0]
+    assert "小禾" in content
+    assert "小莓" not in content
+
+
 def test_unverifiable_entity_name_is_rejected_then_rewritten(tmp_path: Path) -> None:
     path = tmp_path / "world.sqlite3"
     bad = _item("阿朵做展览海报")

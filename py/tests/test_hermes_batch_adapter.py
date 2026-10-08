@@ -63,9 +63,17 @@ def _raw(job_id: str = "job-1", evidence_id: str = "evidence-1") -> str:
     return "用户长期习惯是每天早睡。"
 
 
+def _set_raw(db_path: Path, evidence_id: str, raw: str) -> None:
+    with sqlite3.connect(db_path) as db:
+        db.execute("UPDATE evidence SET raw_content = ? WHERE id = ?", (raw, evidence_id))
+        db.execute("UPDATE boundary_evidence_content SET raw_content_hash = ? WHERE evidence_id = ?",
+                   (__import__("hashlib").sha256(raw.encode("utf-8")).hexdigest(), evidence_id))
+
+
 def _run(db_path: Path, clock: MutableClock, script: list[Any], evidence_ids: tuple[str, ...] = ("evidence-1",)) -> int:
     _initialize_database(db_path)
     _insert_job(db_path, clock, evidence_ids=evidence_ids)
+    _set_raw(db_path, "evidence-1", _raw())
     if evidence_ids != ("evidence-1",):
         db = sqlite3.connect(db_path, isolation_level=None)
         db.execute(
@@ -404,6 +412,7 @@ def test_restatement_attaches_support_and_exact_replay_does_not_bump(tmp_path: P
     raw = "用户平时更喜欢冰美式。"
     _initialize_database(db_path)
     _insert_job(db_path, clock)
+    _set_raw(db_path, "evidence-1", raw)
     processor = HermesBatchAdapterProcessor(
         str(db_path),
         _route([{"content": json.dumps(_one_cognition("用户平时更喜欢冰美式。", (0, len(raw)))), "model": "m"}]),
