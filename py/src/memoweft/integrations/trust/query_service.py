@@ -812,7 +812,7 @@ class QueryService:
                 {
                     "evidence_id": evidence_id,
                     "relation": relation,
-                    "currentness_state": ("not_current" if denial == "target_not_current"
+                    "currentness_state": ("not_current" if denial == "target_not_current" and evidence["currentness_state"] == "current"
                                           else evidence["currentness_state"]),
                     "permissions": evidence["permissions"],
                     "evidence": evidence,

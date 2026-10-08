@@ -658,7 +658,7 @@ def _topic_cue_is_explicit(query: str, cue: str) -> bool:
         return True
     if cue.isascii():
         return False
-    return any(query[index + len(cue):].startswith(("时", "前", "后", "方面", "相关"))
+    return any(query[index + len(cue):].startswith(("时", "前", "后", "方面", "相关", "可以", "应该", "该", "能", "要", "怎么", "如何"))
                for index in range(len(query)) if query.startswith(cue, index))
 
 

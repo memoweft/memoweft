@@ -106,6 +106,20 @@ def test_confirmation_is_an_independent_decision_with_its_own_exact_source(tmp_p
     assert proof['provenance'][0]['evidence']['raw_content'] == raw
 
 
+@pytest.mark.parametrize('query', ['修乐器可以找谁？', '修乐器应该找谁？', '修乐器怎么安排？'])
+def test_confirmed_decision_topic_with_a_modal_question_is_retrievable(tmp_path: Path, query: str) -> None:
+    path = tmp_path / 'world.sqlite3'
+    raw = '以后需要修乐器时，就提醒我找林遥。'
+    item = _item('ignored')
+    item.update(entity={'canonical_name': '修乐器', 'kind': 'topic'},
+                supports=[{'evidence_id': 'evidence-1', 'sentence_id': 't0'}])
+    row, _ = _run(path, raw, [_model(_batch(item))])
+    assert row['state'] == 'applied'
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', query)
+        assert snapshot and snapshot.count == 1 and '林遥' in snapshot.rendered_recall
+
+
 def test_replacement_explanation_cannot_read_revoked_predecessor(tmp_path: Path) -> None:
     path = tmp_path / 'world.sqlite3'
     ids = seed(path)
