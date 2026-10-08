@@ -683,6 +683,24 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     hits = _local_inquiry_matches(query, rows_list, _score_world_rows)
     if hits:
         return hits
+    # A retained predecessor may itself be very short ("only Wednesday
+    # evenings for exercise"). If the long question shares just its literal
+    # topic, use that non-generic cue only after ordinary retrieval missed.
+    # This is query-side localization, not a synthesized successor fact.
+    if _is_inquiry(query):
+        query_topics = _bigrams(query) - _GENERIC_PREDICATE_BIGRAMS
+        best: dict[str, dict[str, object]] = {}
+        for row in rows_list:
+            for text in cast(Sequence[str], row.get("predecessor_match_texts", ())):
+                for cue in sorted(query_topics & _bigrams(text)):
+                    for hit in _score_world_rows(cue, [row]):
+                        candidate_id = str(hit["id"])
+                        if candidate_id not in best or float(cast(Any, hit["score"])) > float(cast(Any, best[candidate_id]["score"])):
+                            best[candidate_id] = hit
+        if best:
+            return sorted(best.values(), key=lambda hit: (
+                -float(cast(Any, hit["score"])), -int(cast(Any, hit["confidence"])), str(hit["id"])
+            ))[:MAX_ITEMS]
     return _score_world_anchor_rows(query, rows_list)
 
 

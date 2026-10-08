@@ -9,9 +9,8 @@ from test_hermes_batch_adapter_v2 import _batch, _correct, _form, _model, _run, 
 from test_hermes_world_worker import MutableClock
 
 
-def _corrected_world(path: Path) -> str:
+def _corrected_world(path: Path, old: str = "我最近只能周三晚上锻炼，安排运动时帮我记着。") -> str:
     clock = MutableClock()
-    old = "我最近只能周三晚上锻炼，安排运动时帮我记着。"
     _run(path, clock, [_model(_batch(_form("用户" + old[1:-1], (0, len(old)))))],
          ("evidence-1",), lambda p: _set_evidence(p, "evidence-1", old))
     with sqlite3.connect(path) as db:
@@ -38,6 +37,17 @@ def test_short_correction_recalls_successor_by_old_topic_without_old_injection(t
         assert db.execute("SELECT invalid_at FROM cognition WHERE id=?", (prior,)).fetchone()[0]
         assert db.execute("SELECT raw_content FROM evidence WHERE id='evidence-1'").fetchone()[0].startswith("我最近只能周三")
         assert recall_world_snapshot(db, "owner", "下周给我安排一次锻炼，放在哪天比较合适？") == snapshot
+
+
+def test_long_question_recovers_short_predecessor_topic_without_unrelated_hits(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    _corrected_world(path, "我最近只能周三晚上锻炼。")
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, "owner", "下周给我安排一次锻炼，放在哪天比较合适？")
+        assert snapshot is not None and snapshot.count == 1
+        assert "周五" in snapshot.rendered_recall and "周三" not in snapshot.rendered_recall
+        unrelated = recall_world_snapshot(db, "owner", "怎样解释缓存原理？")
+        assert unrelated is not None and unrelated.count == 0
 
 
 @pytest.mark.parametrize("change,tier", [
