@@ -977,13 +977,14 @@ def _current_world_rows(
 
 
 def _predecessor_match_texts(
-    db: sqlite3.Connection, subject_id: str, current_id: str, model_tier: ModelTier
+    db: sqlite3.Connection, subject_id: str, current_id: str, model_tier: ModelTier,
+    *, surface: CurrentnessSurface | None = None,
 ) -> tuple[str, ...]:
     """Follow Core's existing transitions for retrieval cues, never injection."""
     pending = [current_id]
     seen = {current_id}
     texts: list[str] = []
-    surface: CurrentnessSurface = "model_cloud" if model_tier == "cloud" else "recall"
+    surface = surface or ("model_cloud" if model_tier == "cloud" else "recall")
     while pending:
         try:
             rows = db.execute(

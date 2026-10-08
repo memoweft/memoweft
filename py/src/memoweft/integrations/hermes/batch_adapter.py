@@ -47,6 +47,7 @@ from .world_worker import (
     WorldJobResult,
 )
 from .terminal_outcome import persist_terminal_outcome_in_transaction
+from .recall import _predecessor_match_texts
 
 logger = logging.getLogger(__name__)
 
@@ -660,6 +661,14 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "先判断用户是否明确提出持续适用的偏好或安排：‘希望你以后用生活例子讲技术、少用术语’是明确表达偏好，"
+    "不是愿望闲聊；‘我最近只能周三晚上锻炼，安排运动时帮我记着’是当前持续安排，"
+    "不是仅限这周的一次性情绪。两者都应形成，不应 no_change。只有无可形成内容才用 no_change。\n"
+    "省略主题的纠正（‘刚才说错了，现在固定空出来的是周五晚上，周三已经没空了’）"
+    "应从 current_cognitions 中相关安排及其 predecessor_context 消解主题，corrects_cognition_id 必须指向有效的当前项。"
+    "主题沿正式取代链保留，不能从不相关的最近条目猜主题；不要把旧日期复制为当前日期。"
+    "选择 supports 时包含完整偏好/安排及主题的所有相邻 segments；不要只选引导句或单独日期。"
+    "proposition 仍从所选当前原话派生，绝不把上下文改写或冒充新 Evidence。\n"
     "你是 MemoWeft 2.0 的批量解释器。思考过程务必保持极简（不超过100字），禁止长篇大论，直接输出单个合法的 JSON 对象。输入包含：当前正式 World 的 cognition 列表"
     "（id/content/statement_kind）、current_entities 列表（id/canonical_name/kind/"
     "aliases）、current_relationships 列表（id/content/relation_type/"
@@ -845,6 +854,12 @@ _SYSTEM_PROMPT = (
 #: Semantically equivalent to _SYSTEM_PROMPT; the worked examples are the same
 #: cases in English with correctly recomputed codepoint spans.
 _SYSTEM_PROMPT_EN = (
+    "First distinguish explicit ongoing instructions from wishes: 'In future explain technical issues with everyday examples and fewer terms' is a communication preference; "
+    "'Recently I can only exercise on Wednesday evenings; remember this when planning exercise' is an ongoing arrangement, not a one-week mood. Form these, rather than no_change. "
+    "Use no_change only when there is no eligible content. For a short correction omitting the topic ('Actually Friday evening, Wednesday is no longer free'), "
+    "resolve the topic from the related current_cognitions and their predecessor_context, and correct the current item's id. "
+    "Never guess a topic from an unrelated recent item or copy an old date as current. Select all adjacent source segments needed for the complete preference and topic. "
+    "The proposition must still derive from the current verbatim Evidence; context is not new Evidence.\n"
     "You are MemoWeft 2.0's batch interpreter. The input contains: the current "
     "formal World's cognition list (id/content/statement_kind), a "
     "current_entities list (id/canonical_name/kind/aliases), a "
@@ -1621,6 +1636,13 @@ class HermesBatchAdapterProcessor:
                 "content": str(r[1]),
                 "statement_kind": str(r[2]),
             }
+            # Same formal transition/source checks as recall, on the formation
+            # surface. Old wording resolves omitted topics, never new facts.
+            predecessors = _predecessor_match_texts(
+                db, job.subject_id, cognition_id, self.model_tier, surface="formation"
+            )
+            if predecessors:
+                entry["predecessor_context"] = list(predecessors)
             if r[3] is not None:
                 entry["target_entity_id"] = str(r[3])
             if r[4] is not None:
@@ -1877,7 +1899,11 @@ class HermesBatchAdapterProcessor:
         self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection
     ) -> _CompiledOutcome:
         try:
-            data = json.loads(content)
+            # Accept a single JSON code fence; never extract a guessed object
+            # from commentary or repair facts/fields supplied by the model.
+            normalized = content.strip()
+            fenced = re.fullmatch(r"```(?:json)?\s*\n([\s\S]*?)\n\s*```", normalized, re.IGNORECASE)
+            data = json.loads(fenced.group(1) if fenced else normalized)
         except (TypeError, ValueError):
             return _CompiledOutcome(None, "invalid_model_result")
         if not isinstance(data, dict):
