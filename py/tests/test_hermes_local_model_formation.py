@@ -17,11 +17,19 @@ from test_hermes_world_worker import MutableClock, _job, _insert_job, _policy
 
 def test_explicit_ongoing_preferences_are_distinct_from_wishes_and_moods() -> None:
     assert '两者都应形成，不应 no_change' in _SYSTEM_PROMPT
-    assert '希望你以后用生活例子' in _SYSTEM_PROMPT
-    assert '我最近只能周三晚上锻炼' in _SYSTEM_PROMPT
+    assert '没有明确截止范围的当前习惯或安排属于持续约束' in _SYSTEM_PROMPT
+    assert '‘最近’本身不能作为 no_change 的理由' in _SYSTEM_PROMPT
     assert 'Form these, rather than no_change' in _SYSTEM_PROMPT_EN
     assert '带明确短期范围的临时状态' in _SYSTEM_PROMPT
     assert '只有无可形成内容才用 no_change' in _SYSTEM_PROMPT
+
+
+@pytest.mark.parametrize('prompt', [_SYSTEM_PROMPT, _SYSTEM_PROMPT_EN])
+def test_formation_prompt_does_not_contain_evaluation_answers(prompt: str) -> None:
+    for answer in ('锻炼', '周三', '周五', '技术', '买菜', '小林', '设计', '项目朋友',
+                   'exercise', 'Wednesday', 'Friday', 'technical', 'Lin', 'design',
+                   '纯器乐', '人声', '浇水', '300毫升', '150毫升', '陶艺', '闻舟'):
+        assert answer not in prompt
 
 
 @pytest.mark.parametrize('raw', [
