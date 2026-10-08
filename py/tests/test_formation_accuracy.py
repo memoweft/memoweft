@@ -117,15 +117,15 @@ def test_legacy_envelope_cannot_bypass_fact_grounding(tmp_path: Path) -> None:
 
 def test_exact_style_source_is_recalled_with_explicit_communication_cues(tmp_path: Path) -> None:
     path = tmp_path / "world.sqlite3"
-    row, _ = _run(path, "先用一个买菜的小例子讲明白。", [_model(_batch(_item("ignored")))])
+    row, _ = _run(path, "以后解释问题先给简短定义。", [_model(_batch(_item("ignored")))])
     assert row["state"] == "applied"
     with sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True) as db:
         old = recall_world_snapshot(db, "owner", "用户希望我如何称呼和讲解？")
-        current = recall_world_snapshot(db, "owner", "“语言”“例子”“术语”的表达偏好？")
+        current = recall_world_snapshot(db, "owner", "“定义”“解释”的表达偏好？")
     assert old is not None and current is not None
     assert old.count == 0
     assert current.count == 1
-    assert "先用一个买菜的小例子讲明白" in current.rendered_recall
+    assert "以后解释问题先给简短定义" in current.rendered_recall
 
 
 @pytest.mark.parametrize("segments", [["s0", "s1", "s2", "s3"], ["s3", "s1", "s0", "s2"]])

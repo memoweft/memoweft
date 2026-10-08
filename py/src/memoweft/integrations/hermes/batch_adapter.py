@@ -29,7 +29,7 @@ import json
 import logging
 import re
 import sqlite3
-from typing import Any, Callable, Literal, Mapping, Optional, TypedDict
+from typing import Any, Callable, Literal, Mapping, Optional, TypedDict, cast
 
 from ...clock import Clock, system_clock, to_iso_z
 from ...store.driver import BUSY_TIMEOUT_MS
@@ -147,6 +147,27 @@ def _evidence_segments(raw: str) -> list[EvidenceSegment]:
     if raw[start:].strip():
         segments.append({"id": f"s{len(segments)}", "start": start, "end": len(raw), "text": raw[start:]})
     return segments
+
+
+def _evidence_sentences(raw: str) -> list[EvidenceSegment]:
+    """Offer intact sentences as explicit alternatives to fine clause selection.
+
+    No compiler expansion: only the source range the model selects is used.
+    Keeping commas inside a sentence makes its topic available with its value.
+    Clause IDs remain unchanged for independent claims and legacy checkpoints.
+    """
+    sentences: list[EvidenceSegment] = []
+    start = 0
+    for match in re.finditer(r"[\n。！？；!?;]|(?<!\d)\.(?!\d)", raw):
+        end = match.end()
+        if raw[start:end].strip():
+            sentences.append({"id": f"t{len(sentences)}", "start": start,
+                              "end": end, "text": raw[start:end]})
+        start = end
+    if raw[start:].strip():
+        sentences.append({"id": f"t{len(sentences)}", "start": start,
+                          "end": len(raw), "text": raw[start:]})
+    return sentences
 
 
 # ── deterministic proposition normalization ───────────────────────────────
@@ -502,6 +523,9 @@ class BatchItem:
     #: third-party attribute items (the proposition's subject entity).
     entity_canonical_name: Optional[str] = None
     entity_kind: Optional[str] = None
+    # Retrieval labels never change owner claim identity or perspective.
+    topic_canonical_name: Optional[str] = None
+    topic_aliases: tuple[str, ...] = ()
     #: relationship items: relation type + target entity canonical name.
     relation_type: Optional[str] = None
     target_canonical_name: Optional[str] = None
@@ -624,6 +648,7 @@ class BatchItem:
 @dataclass(frozen=True, slots=True)
 class _CompiledBatch:
     items: tuple[BatchItem, ...]
+    normalizations: tuple[dict[str, object], ...] = ()
     #: True when the envelope was the legacy V1 shape: single form, stated,
     #: and the legacy world-outcome shape (kept for V1 replay compatibility).
     legacy: bool = False
@@ -661,6 +686,12 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "本人持续 attribute/preference 的所选原话明确命名了适用主题时，必须附主题检索线索：\"entity\":{\"canonical_name\":\"<原话主题词>\",\"kind\":\"topic\",\"aliases\":[\"<常见同义主题词>\"]}。这是第10条第三方 entity 之外的本人主题用法；不是改成第三方属性。给主题的常见等价叫法，便于以后换说法仍能检索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义时 aliases 留空。主题词必须在所选原话中；命题仍逐字来自所选原话。原话未命名主题或省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
+    "形成资格看适用范围：只保留对以后持续有效的偏好/习惯/安排。只针对本次任务的操作、回复、文件或工具指示不形成 preference，例如本次先做某一步、处理当前文件、当前回合回复格式；即使措辞强烈也不变成长久要求。混合原话要分别选择持续内容，排除独立的临时指令，不把两者放进同一个命题。不要把‘最近’的持续安排误判成单次任务。\n"
+    "来源标识按所在列表逐字复制：sentences 的 id 是 t0、t1…，填 sentence_id；segments 的 id 是 s0、s1…，填 segment_id。不能把 s0 填到 sentence_id，也不能把 t0 填到 segment_id；不要自行造标识。\n"
+    "先按完整主题选择来源，再分类。Evidence 同时提供 sentences（完整句）和 segments（细分句）。同一句中的主题引导、限制条件和偏好值属于一个命题时，优先用 supports 中的 sentence_id 选择完整句；不要只留下末尾的值。只有该句包含独立的不同命题时才选择各自的 segment_id。每个 support 只给 sentence_id 或 segment_id 其中一个，不能同时选覆盖相同范围的句和片段。proposition 必须给非空占位文本，系统仍从所选原话逐字派生。\n"
+    "稳定的使用方式、固定数值或设置也是当前安排，不需要用户另说‘记住’；只要是用户本人的持续约束就应形成。\n"
+    "人物已被明确说成与用户有某种关系时，优先形成 relationship，而不是 naming 或第三方 attribute。职业/身份与‘和用户的关系’要区分；关系背景与同主题补充也须选择完整来源。naming 用于仅命名、未陈述关系的内容。\n"
     "先判断用户是否明确提出持续适用的偏好或安排：‘以后推荐早餐时避开乳制品’是明确表达偏好，不是愿望闲聊；‘最近通勤都坐地铁’是当前持续安排，不是仅限这周的一次性情绪。两者都应形成，不应 no_chang"
     "e。只有无可形成内容才用 no_change。\n"
     "省略主题的纠正（‘不是精装，改成电子版’）应从 current_cognitions 中相关安排及其 predecessor_context 消解主题，corrects_cognition_id 必须"
@@ -685,7 +716,7 @@ _SYSTEM_PROMPT = (
     "item 形状（statement_kind 决定额外字段）：\n"
     "{\"action\":\"form\",\"target\":\"owner_self\",\"statement_kind\":\"attribute\"|\"preference\"|\"naming\"|\"relations"
     "hip\"|\"alias\"|\"event\",\"formed_by\":\"stated\"|\"confirmed\",\"proposition\":\"…\",\"supports\":[{\"evidence_id\":\""
-    "...\",\"segment_id\":\"s0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
+    "...\",\"sentence_id\":\"t0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"entity_reference\":{\"mention\":\"他\"},\"perspective_holder\":{\"canonical_name\""
     ":\"…\",\"kind\":\"person\"},\"alias_of\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"target_entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"source_entity\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"relation_type\":\"g"
@@ -698,7 +729,7 @@ _SYSTEM_PROMPT = (
     "以产出；愿望/期待与情绪、观点不产出。带明确短期范围的临时状态（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。这里的愿望不包括对助手以后持"
     "续生效的明确要求，答复方式要求是 preference；没有明确截止范围的当前习惯或安排属于持续约束，必须 form。‘最近’本身不能作为 no_change 的理由；形成当前约束，之后有新说法再 c"
     "orrect 或 supersede。\n"
-    "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 segment_id；系统从segment原文确定性计算Unicode start/end与s"
+    "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 sentence_id，独立分句可用 segment_id；系统从segment原文确定性计算Unicode start/end与s"
     "tated proposition。旧quote/start/end仅兼容，不要自行复制、概括或计算。assistant/context永远不是Evidence。\n"
     "3. action=form：形成或复述（复述自动并入同 ID support 链）；只有用户明确说旧记忆错了并给出新值才用 correct（attribute/preference 用 correc"
     "ts_cognition_id；relationship 改口替换用 corrects_relationship_id）。明确撤回（无新值，见第 13 条）用 correct+retract；只是不同"
@@ -710,7 +741,7 @@ _SYSTEM_PROMPT = (
     "5. formed_by=confirmed：仅当 assistant 提出命题、用户短确认（无否定词）时用于 attribute/preference。assistant_claim 必须是 con"
     "text 的逐字子串；proposition 等于 claim 去语气词/问尾、把\"你/您\"换\"用户\"。assistant 猜对本身不是 Evidence。\n"
     "6. naming：命题如\"我的表弟叫阿硕\"（stated）；entity.canonical_name 必须是某条切片的逐字子串；kind 默认 person。同一实体名已存在就别重复 naming"
-    "。**「我的X叫Y」句式：X 是亲密关系词（女朋友/男朋友/老婆/老公/对象）→ 发 relationship（见第 7 条）；X 是描述词（最好的朋友/同学/同事/室友…）→ 发 naming。「取"
+    "。**「我的X叫Y」句式：X 是亲密关系词（女朋友/男朋友/老婆/老公/对象）→ 发 relationship（见第 7 条）；X 是其他明确关系词（朋友/同学/同事/室友…）→ 同样发 relationship。只有未陈述关系的命名才单独发 naming。「取"
     "名叫X」一律 naming**。\n"
     "7. relationship：命题如\"秋禾是我的阿姨\"（stated，按用户原话措辞 + 第 4 条归一化；主语是用户 → 省略 source_entity）；relation_type 开放（gi"
     "rlfriend/friend/colleague…）；target_entity.canonical_name 必须逐字在命题里。主语是用户时**省略** source_entity；主语是第三方时"
@@ -762,6 +793,33 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "For an ongoing owner attribute/preference whose selected source explicitly names its topic, "
+    "include retrieval labels: \"entity\":{\"canonical_name\":\"<verbatim topic>\",\"kind\":\"topic\","
+    "\"aliases\":[\"<common equivalent topic phrase>\"]}. This is an owner-topic use of entity, separate "
+    "from rule 10's third-party attributes; never change attribution. Supply common equivalent labels "
+    "so later queries can use different wording. Aliases only rename the topic, never add facts, "
+    "constraints, numbers, people or broader scope; use an empty list for uncertain equivalents. "
+    "The claim remains verbatim. An unnamed topic is never invented. A topicless "
+    "correction need not supply entity: predecessor topic cues remain available. Never use this field "
+    "on relationship items.\n"
+    "Eligibility depends on scope: retain ongoing preferences, habits and arrangements. "
+    "Task-scoped operations, reply formatting, current-file requests and tool instructions are not "
+    "preferences, however emphatic. In mixed evidence select the ongoing claim separately and omit "
+    "independent one-task instructions. 'Recently' alone does not make an ongoing arrangement temporary.\n"
+    "Copy source IDs exactly from their own list: sentences use t0, t1, ... with sentence_id; "
+    "segments use s0, s1, ... with segment_id. Never put s0 in sentence_id or t0 in segment_id, "
+    "and never invent a selector ID.\n"
+    "Select the complete source topic before classifying. Evidence offers sentences (intact sentences) "
+    "and segments (fine clauses). When the topic introduction, constraints and value in one sentence "
+    "are one claim, prefer supports with sentence_id for the intact sentence, rather than its final "
+    "value alone. Use segment_id for independent claims within a sentence. Each support must give "
+    "exactly one selector; never select overlapping sentences and clauses. Supply a nonempty proposition "
+    "placeholder; the system still derives the claim verbatim from the selected source.\n"
+    "Stable usage, fixed quantities and settings are ongoing arrangements even without an explicit "
+    "request to remember. Form the user's ongoing constraint.\n"
+    "When a named person is explicitly related to the user, prioritize relationship over naming or a "
+    "third-party attribute. Distinguish occupation from a relationship to the user. Select complete "
+    "relationship context and same-topic details. Naming alone is for a name with no stated relationship.\n"
     "First distinguish explicit ongoing instructions from wishes: 'Avoid dairy when suggesting breakfast "
     "in future' is an explicit preference; 'Recently I commute by metro' is an ongoing arrangement, not a"
     " one-week mood. Form these, rather than no_change. Use no_change only when there is no eligible cont"
@@ -799,7 +857,7 @@ _SYSTEM_PROMPT_EN = (
     "Item shape (statement_kind decides the extra fields):\n"
     "{\"action\":\"form\",\"target\":\"owner_self\",\"statement_kind\":\"attribute\"|\"preference\"|\"naming\"|\"relations"
     "hip\"|\"alias\"|\"event\",\"formed_by\":\"stated\"|\"confirmed\",\"proposition\":\"…\",\"supports\":[{\"evidence_id\":\""
-    "...\",\"segment_id\":\"s0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
+    "...\",\"sentence_id\":\"t0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"entity_reference\":{\"mention\":\"they\"},\"perspective_holder\":{\"canonical_na"
     "me\":\"…\",\"kind\":\"person\"},\"alias_of\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"target_entity\":{\"canonic"
     "al_name\":\"…\",\"kind\":\"person\"},\"source_entity\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"relation_type\""
@@ -822,7 +880,7 @@ _SYSTEM_PROMPT_EN = (
     "rrent constraint and use later corrections or supersession for changes. **Do NOT split a single clai"
     "m into fragments — a reason clause (\"because…\", \"so…\") stays inside its item; two INDEPENDENT claims"
     " in one utterance are separate items, each proposition equal to its own verbatim slice.**\n"
-    "2. supports.evidence_id must come from the input and should select that Evidence's supplied segment_"
+    "2. supports.evidence_id must come from the input and should select that Evidence's supplied sentence_id, or independent clauses with segment_"
     "id. The system derives the verbatim text, Unicode start/end and stated proposition. Legacy quote/sta"
     "rt/end is compatibility only; do not copy, paraphrase or count text. Assistant/context is never Evid"
     "ence.\n"
@@ -846,8 +904,8 @@ _SYSTEM_PROMPT_EN = (
     "6. naming: propositions like \"My cousin is called Ashuo\" (stated); entity.canonical_name must be a v"
     "erbatim substring of a slice; kind defaults to person. Do not repeat naming when the same entity nam"
     "e already exists. **\"My X is called Y\" sentences: when X is an intimate relation word (girlfriend/bo"
-    "yfriend/wife/husband/partner) → emit relationship (see rule 7); when X is a descriptor (best friend/"
-    "classmate/colleague/roommate…) → emit naming. \"Named X\" is always naming. A pet naming (kind=animal)"
+    "yfriend/wife/husband/partner) → emit relationship (see rule 7); when X is another explicit relationship (friend/"
+    "classmate/colleague/roommate…) → also emit relationship. Only a name with no stated relationship emits naming. \"Named X\" is always naming. A pet naming (kind=animal)"
     " with acquisition background and a reason for the name is ONE naming whose proposition equals the EN"
     "TIRE sentence — never split it into fragments and never emit a relationship for a pet.**\n"
     "7. relationship: propositions like \"Qiuhe is my aunt\" (stated, the user's own wording; when the subj"
@@ -1192,7 +1250,7 @@ class HermesBatchAdapterProcessor:
         if (
             compiled.batch is None
             and compiled.terminal == "no_change"
-            and compiled.reason != "model_no_change"
+            and compiled.reason not in ("model_no_change", "task_scoped_instruction")
             and "formation_rewrite" not in payload
         ):
             first = dict(payload)
@@ -1412,6 +1470,7 @@ class HermesBatchAdapterProcessor:
                 "id": evidence_id,
                 "text": str(row[0]),
                 "segments": _evidence_segments(str(row[0])),
+                "sentences": _evidence_sentences(str(row[0])),
             }
             if row[1] is not None:
                 block["context"] = str(row[1])
@@ -1837,6 +1896,13 @@ class HermesBatchAdapterProcessor:
             return None, reason
         if any(support[3] == "" for support in parsed):
             return None, "span_out_of_range"
+        if kind in ("attribute", "preference"):
+            scope_units = [str(sentence["text"]) for support in parsed for sentence in _evidence_sentences(support[3])]
+            temporary = [_is_task_scoped_instruction(text) for text in scope_units]
+            if temporary and all(temporary):
+                return None, "task_scoped_instruction"
+            if any(temporary):
+                return None, "mixed_task_and_ongoing_instruction"
         supersedes = cog.get("supersedes_cognition_id")
         supersedes_id: Optional[str] = (
             str(supersedes).strip()
@@ -1914,12 +1980,16 @@ class HermesBatchAdapterProcessor:
             batch_entity_names.add(
                 _normalize_spoken_name(name, [support[3] for support in candidate_supports])
             )
-        for raw_item in raw_items:
+        normalizations: list[dict[str, object]] = []
+        current = {str(entry["id"]): entry for entry in self._current_cognitions_payload(job, db)}
+        for item_index, raw_item in enumerate(raw_items):
             if isinstance(raw_item, dict):
                 raw_item = dict(raw_item)
                 for field in ("corrects_cognition_id", "supersedes_cognition_id", "contradicts_cognition_id"):
                     if field in raw_item:
                         raw_item[field] = self._canonical_cognition_reference(raw_item[field], job, db)
+                raw_item, changes = self._normalize_item_structure(raw_item, current)
+                normalizations.extend({"item_index": item_index, "rule": rule} for rule in changes)
             item, reason = self._parse_item(
                 raw_item, ids, raw_by_id, context_by_id,
                 extended_kinds=extended_kinds, third_party=third_party,
@@ -1933,6 +2003,9 @@ class HermesBatchAdapterProcessor:
                 current_entity_mentions=current_entity_mentions,
             )
             if item is None:
+                if reason == "task_scoped_instruction":
+                    normalizations.append({"item_index": item_index, "rule": "excluded_task_scoped_instruction"})
+                    continue
                 return None, reason
             items.append(item)
 
@@ -2020,9 +2093,47 @@ class HermesBatchAdapterProcessor:
             _CompiledBatch(
                 items=tuple(items),
                 envelope_version=envelope_version,
+                normalizations=tuple(normalizations),
             ),
             "",
         )
+
+    @staticmethod
+    def _normalize_item_structure(
+        raw: dict[str, object], current: Mapping[str, dict[str, object]],
+    ) -> tuple[dict[str, object], tuple[str, ...]]:
+        """Repair only unambiguous field combinations; facts/supports stay intact.
+
+        Current is the permission-eligible formation projection, not a loose ID
+        lookup. The ordinary compiler and transactional Apply still validate
+        the replacement, identity, evidence and target currentness.
+        """
+        item = dict(raw)
+        changes: list[str] = []
+        target = item.get("corrects_cognition_id")
+        prior = current.get(target.strip()) if isinstance(target, str) else None
+        conflicts = ("corrects_relationship_id", "corrects_event_id", "contradicts_cognition_id",
+                     "supersedes_cognition_id", "supersedes_relationship_id", "retract", "alias_of")
+        if (item.get("action") == "form" and prior is not None
+                and item.get("statement_kind") in ("attribute", "preference")
+                and item.get("statement_kind") == prior.get("statement_kind")
+                and not any(item.get(field) not in (None, "", False) for field in conflicts)):
+            item["action"] = "correct"
+            changes.append("form_with_current_correction_target")
+        if item.get("statement_kind") == "relationship" and item.get("entity") is not None:
+            entity, endpoint = item.get("entity"), item.get("target_entity")
+            # Do not discard extra fields or equate different entity kinds.
+            if (isinstance(entity, dict) and isinstance(endpoint, dict)
+                    and set(entity) <= {"canonical_name", "kind"}
+                    and set(endpoint) <= {"canonical_name", "kind"}
+                    and isinstance(entity.get("canonical_name"), str)
+                    and isinstance(endpoint.get("canonical_name"), str)
+                    and str(entity["canonical_name"]).strip()
+                    and str(entity["canonical_name"]).strip() == str(endpoint["canonical_name"]).strip()
+                    and (entity.get("kind") or "person") == (endpoint.get("kind") or "person")):
+                del item["entity"]
+                changes.append("redundant_relationship_entity")
+        return item, tuple(changes)
 
     @staticmethod
     def _parse_event_entities(
@@ -2255,18 +2366,27 @@ class HermesBatchAdapterProcessor:
             return None, "span_out_of_range"
 
         slices = [support[3] for support in parsed]
+        if kind in ("attribute", "preference") and formed_by == "stated" and action in ("form", "correct") and not retract:
+            scope_units = [str(sentence["text"]) for text in slices for sentence in _evidence_sentences(text)]
+            temporary = [_is_task_scoped_instruction(text) for text in scope_units]
+            if temporary and all(temporary):
+                return None, "task_scoped_instruction"
+            if any(temporary):
+                return None, "mixed_task_and_ongoing_instruction"
         raw_supports = raw_item.get("supports")
         quote_anchored = isinstance(raw_supports, list) and any(
             isinstance(support, dict)
-            and (support.get("quote") is not None or support.get("segment_id") is not None)
+            and (support.get("quote") is not None or support.get("segment_id") is not None or support.get("sentence_id") is not None)
             for support in raw_supports
         )
         if quote_anchored and formed_by == "stated":
+            proposed_entity = raw_item.get("entity")
+            is_topic_entity = isinstance(proposed_entity, dict) and proposed_entity.get("kind") == "topic"
             quote_without_prepend = (
                 kind in {"naming", "alias", "event"}
                 or retract
                 or action == "contradict"
-                or raw_item.get("entity") is not None
+                or (proposed_entity is not None and not is_topic_entity)
                 or (kind == "relationship" and raw_item.get("source_entity") is not None)
             )
             normalizer = (
@@ -2281,6 +2401,8 @@ class HermesBatchAdapterProcessor:
 
         entity_canonical_name: Optional[str] = None
         entity_kind: Optional[str] = None
+        topic_canonical_name: Optional[str] = None
+        topic_aliases: tuple[str, ...] = ()
         relation_type: Optional[str] = None
         target_canonical_name: Optional[str] = None
         target_entity_kind: Optional[str] = None
@@ -2480,7 +2602,7 @@ class HermesBatchAdapterProcessor:
                 if objects_raw is not None and not isinstance(objects_raw, list):
                     return None, "invalid_event_objects"
                 segment_backed = isinstance(raw_supports, list) and any(
-                    isinstance(support, dict) and support.get("segment_id") is not None
+                    isinstance(support, dict) and (support.get("segment_id") is not None or support.get("sentence_id") is not None)
                     for support in raw_supports
                 )
                 support_ids = {support[0] for support in parsed}
@@ -2529,6 +2651,27 @@ class HermesBatchAdapterProcessor:
                     event_time_expression = time_expr_raw.strip()
                     if event_time_expression not in proposition:
                         return None, "event_time_not_in_proposition"
+        elif (kind in ("attribute", "preference") and perspective_support
+              and isinstance(raw_item.get("entity"), dict)
+              and cast(dict[str, object], raw_item["entity"]).get("kind") == "topic"):
+            topic_raw = cast(dict[str, object], raw_item["entity"])
+            if set(topic_raw) - {"canonical_name", "kind", "aliases"}:
+                return None, "invalid_topic_entity"
+            topic_name_raw = topic_raw.get("canonical_name")
+            if not isinstance(topic_name_raw, str) or not topic_name_raw.strip():
+                return None, "invalid_entity_name"
+            topic_canonical_name = topic_name_raw.strip()
+            if topic_canonical_name not in proposition or not any(topic_canonical_name in text for text in slices):
+                return None, "topic_name_not_in_span"
+            if formed_by != "stated" or retract or action not in ("form", "correct"):
+                return None, "invalid_topic_claim"
+            if any(raw_item.get(field) is not None for field in
+                   ("perspective_holder", "entity_reference", "source_entity", "target_entity", "relation_type")):
+                return None, "unexpected_topic_field"
+            aliases = topic_raw.get("aliases", [])
+            if not isinstance(aliases, list) or any(not isinstance(alias, str) or not alias.strip() for alias in aliases):
+                return None, "invalid_topic_aliases"
+            topic_aliases = tuple(dict.fromkeys(str(alias).strip() for alias in aliases if str(alias).strip() != topic_canonical_name))
         elif (
             kind == "attribute" or (kind == "preference" and perspective_support)
         ) and third_party and raw_item.get("entity") is not None:
@@ -2692,6 +2835,8 @@ class HermesBatchAdapterProcessor:
                 assistant_claim=claim,
                 entity_canonical_name=entity_canonical_name,
                 entity_kind=entity_kind,
+                topic_canonical_name=topic_canonical_name,
+                topic_aliases=topic_aliases,
                 relation_type=relation_type,
                 target_canonical_name=target_canonical_name,
                 target_entity_kind=target_entity_kind,
@@ -2768,6 +2913,7 @@ class HermesBatchAdapterProcessor:
             pending_transitions: list[tuple[str, str]] = []
             wrote_any = False
             for item in batch.items:
+                wrote_any = self._apply_topic_aliases(db, job, item, now_text) or wrote_any
                 if item.action == "form":
                     if item.statement_kind in ("naming", "relationship"):
                         result, wrote = self._apply_v3_object(
@@ -3258,6 +3404,30 @@ class HermesBatchAdapterProcessor:
         if str(existing[0]) != kind:
             raise _ZeroWriteError("entity_kind_mismatch")
         return entity_id, False
+
+    def _apply_topic_aliases(
+        self, db: sqlite3.Connection, job: ClaimedWorldJob, item: BatchItem, now_text: str,
+    ) -> bool:
+        """Use the existing alias ledger with the claim's exact supporting sources."""
+        if item.topic_canonical_name is None:
+            return False
+        entity_id, created = self._resolve_target_entity(db, job, item.topic_canonical_name, "topic", now_text)
+        before = db.total_changes
+        for evidence_id, start, end, _text in item.supports:
+            self._write_entity_ledger(db, entity_id, evidence_id, start, end)
+        aliases = self._entity_aliases(db, entity_id)
+        additions = [alias for alias in item.topic_aliases if alias not in aliases]
+        if additions:
+            db.execute("UPDATE entity SET aliases_json=?, updated_at=? WHERE id=?",
+                       (_canonical([*aliases, *additions]), now_text, entity_id))
+        evidence_ids = sorted({support[0] for support in item.supports})
+        for alias in item.topic_aliases:
+            ledger_id = "alias-topic-" + _hash_text(_canonical([entity_id, alias, evidence_ids]))
+            db.execute("INSERT OR IGNORE INTO evidence_ledger (id, content, payload_json) VALUES (?, ?, ?)",
+                       (ledger_id, _canonical({"relation": "alias", "canonical_entity_id": entity_id, "alias_name": alias}),
+                        _canonical({"schema_version": 1, "boundary_event_id": job.boundary_event_id,
+                                    "evidence_ids": evidence_ids})))
+        return created or db.total_changes != before
 
     def _reconcile_single_status_cognitions(
         self, db: sqlite3.Connection, job: ClaimedWorldJob, item: BatchItem, now_text: str
@@ -5118,7 +5288,37 @@ class HermesBatchAdapterProcessor:
         }
         if reason is not None:
             outcome["reason"] = reason
+        if batch.normalizations:
+            outcome["normalizations"] = list(batch.normalizations)
         return outcome
+
+
+_ONGOING_INSTRUCTION = re.compile(
+    r"(?:以后|今后|往后|从今|长期|一直|每次|每天|每周|每月|通常|习惯|固定|总是|一贯|持续)"
+    r"|\b(?:always|usually|habit|ongoing|every|each time|from now on|in future|going forward)\b", re.IGNORECASE,
+)
+_TASK_SCOPE = re.compile(
+    r"(?:这次|本次|这一次|这一回|本回合|这条回复|本任务|当前任务|这个文件|这份文件|当前文件)"
+    r"|\b(?:this time|this task|this turn|this reply|this file|for now|just now)\b", re.IGNORECASE,
+)
+_TASK_IMPERATIVE = re.compile(
+    r"^(?:请|麻烦)?(?:先|只(?:回复|回答|写|给)|直接(?:回复|回答)|不要调用|不调用|别调用|帮我|替我|给我(?:写|列|做|查|整理))"
+    r"|^(?:please\s+)?(?:just\s+|only\s+|first\s+|reply\b|respond\b|write\b|edit\b|open\b|save\b|summarize\b|translate\b|help me\b)",
+    re.IGNORECASE,
+)
+
+
+def _is_task_scoped_instruction(text: str) -> bool:
+    """Reject observed one-task directives, without classifying ordinary facts.
+
+    An explicit ongoing scope makes an instruction eligible; a declarative
+    habit/arrangement needs no extra 'remember' request. Scope is checked on
+    selected source sentences, never on unrelated unselected text.
+    """
+    text = text.strip()
+    if _ONGOING_INSTRUCTION.search(text):
+        return False
+    return bool(_TASK_SCOPE.search(text) or _TASK_IMPERATIVE.search(text))
 
 
 _SPAN_REPAIR_PREFIXES = ("我", "我们", "咱们", "俺", "本人")
@@ -5193,12 +5393,23 @@ def _parse_supports(
             return None, "invalid_support_span"
         support_evidence_id = support.get("evidence_id")
         segment_id = support.get("segment_id")
+        sentence_id = support.get("sentence_id")
         quote = support.get("quote")
         start = support.get("start")
         end = support.get("end")
         if support_evidence_id not in ids or support_evidence_id not in raw_by_id:
             return None, "evidence_out_of_batch"
         raw = raw_by_id[str(support_evidence_id)]
+        if sentence_id is not None:
+            if (segment_id is not None or quote is not None or start is not None or end is not None
+                    or not isinstance(sentence_id, str)):
+                return None, "invalid_support_sentence"
+            sentence = next((value for value in _evidence_sentences(raw)
+                             if value["id"] == sentence_id), None)
+            if sentence is None:
+                return None, "support_sentence_not_found"
+            parsed.append((str(support_evidence_id), sentence["start"], sentence["end"], sentence["text"]))
+            continue
         if segment_id is not None:
             if not isinstance(segment_id, str):
                 return None, "invalid_support_segment"
