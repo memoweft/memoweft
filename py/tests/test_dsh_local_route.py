@@ -26,8 +26,27 @@ from memoweft.integrations.dsh_bridge.protocol_v2 import (
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
 
 
+@pytest.fixture(autouse=True)
+def _isolate_route_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in (
+        "MEMOWEFT_TESTING",
+        "MEMOWEFT_TEST_MODEL_RESPONSE",
+        "MEMOWEFT_BASE_URL",
+        "MEMOWEFT_WORLD_MODEL",
+        "MEMOWEFT_API_KEY",
+        "MEMOWEFT_API_KEY_ENV",
+        "DEEPSEEK_BASE_URL",
+        "DEEPSEEK_API_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+
 @contextmanager
-def _local_route_server(responses: Sequence[tuple[int, Mapping[str, str], Mapping[str, object]]]) -> Iterator[tuple[str, list[tuple[str, dict[str, object]]]]]:
+def _local_route_server(
+    responses: Sequence[tuple[int, Mapping[str, str], Mapping[str, object]]],
+    *,
+    request_headers: list[dict[str, str]] | None = None,
+) -> Iterator[tuple[str, list[tuple[str, dict[str, object]]]]]:
     """Small real HTTP peer: route tests must exercise httpx and response headers."""
 
     pending_responses = list(responses)
@@ -37,6 +56,8 @@ def _local_route_server(responses: Sequence[tuple[int, Mapping[str, str], Mappin
         def do_POST(self) -> None:  # noqa: N802 - stdlib handler contract
             length = int(self.headers.get("Content-Length", "0"))
             received.append((self.path, json.loads(self.rfile.read(length))))
+            if request_headers is not None:
+                request_headers.append(dict(self.headers.items()))
             status, headers, payload = pending_responses.pop(0)
             body = json.dumps(payload).encode("utf-8")
             self.send_response(status)
@@ -174,6 +195,143 @@ def test_local_route_accepts_in_memory_key_without_exposing_it(monkeypatch: pyte
     server.runtime.shutdown()
 
 
+@pytest.mark.parametrize("model_tier", ["cloud", "local"])
+@pytest.mark.parametrize("key_source", ["override", "direct_env", "named_env"])
+def test_host_route_uses_openai_compatible_endpoint_model_and_key(
+    monkeypatch: pytest.MonkeyPatch, model_tier: str, key_source: str
+) -> None:
+    headers: list[dict[str, str]] = []
+    payload = {"choices": [{"message": {"content": "{}"}}], "usage": {}}
+    # A stale legacy route must never take precedence over the selected host route.
+    monkeypatch.setenv("DEEPSEEK_BASE_URL", "http://127.0.0.1:1/stale")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "synthetic-legacy-key")
+    monkeypatch.setenv("MEMOWEFT_API_KEY_ENV", "TEST_HOST_MODEL_KEY")
+    monkeypatch.setenv("TEST_HOST_MODEL_KEY", "synthetic-named-key")
+    if key_source != "named_env":
+        monkeypatch.setenv("MEMOWEFT_API_KEY", "synthetic-direct-key")
+    override = "synthetic-rpc-key" if key_source == "override" else None
+    expected_key = {
+        "override": "synthetic-rpc-key",
+        "direct_env": "synthetic-direct-key",
+        "named_env": "synthetic-named-key",
+    }[key_source]
+
+    with _local_route_server([(200, {}, payload)], request_headers=headers) as (base_url, received):
+        monkeypatch.setenv("MEMOWEFT_BASE_URL", base_url + "/")
+        monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "host-selected-model")
+        route = default_one_shot_route(model_tier=model_tier, api_key_override=override)
+        assert route is not None
+        result = route([{"role": "user", "content": "test"}], session_id="s")
+
+    assert len(received) == 1
+    assert received[0][0] == "/v1/chat/completions"
+    assert received[0][1]["model"] == "host-selected-model"
+    assert received[0][1]["messages"] == [{"role": "user", "content": "test"}]
+    assert headers[0]["Authorization"] == f"Bearer {expected_key}"
+    assert result["model"] == "host-selected-model"
+    assert result["content"] == "{}"
+
+
+@pytest.mark.parametrize("model", [None, "legacy-configured-model"])
+def test_cloud_route_without_host_config_keeps_legacy_environment(
+    monkeypatch: pytest.MonkeyPatch, model: str | None
+) -> None:
+    headers: list[dict[str, str]] = []
+    payload = {"choices": [{"message": {"content": "{}"}}], "usage": {}}
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "synthetic-legacy-key")
+    if model is not None:
+        monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", model)
+    with _local_route_server([(200, {}, payload)], request_headers=headers) as (base_url, received):
+        monkeypatch.setenv("DEEPSEEK_BASE_URL", base_url + "/")
+        route = default_one_shot_route()
+        assert route is not None
+        result = route([], session_id="s")
+
+    assert received == [("/v1/chat/completions", {
+        "model": model or "deepseek-chat",
+        "messages": [],
+        "stream": False,
+        "temperature": 0,
+    })]
+    assert headers[0]["Authorization"] == "Bearer synthetic-legacy-key"
+    assert result["model"] == (model or "deepseek-chat")
+
+
+def test_cloud_route_without_any_key_stays_unavailable() -> None:
+    assert default_one_shot_route(model_tier="cloud") is None
+
+
+@pytest.mark.parametrize("model_tier", ["cloud", "local"])
+def test_rpc_host_route_forms_memory_over_real_http(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, model_tier: str
+) -> None:
+    # Exercise the existing model_api_key -> api_key_override RPC path, worker,
+    # and formal Apply, without a canned route or a real cloud model.
+    monkeypatch.setattr(WorldJobWorker, "start", lambda self: None)
+    monkeypatch.setattr(WorldJobWorker, "kick", lambda self: False)
+    headers: list[dict[str, str]] = []
+    server = DshRpcV2Server()
+    # The first ingest allocates Evidence before the worker dispatches its request.
+    envelope: dict[str, object] = {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [],
+    }
+    payload: dict[str, object] = {
+        "choices": [{"message": {"content": ""}}],
+        "usage": {"total_tokens": 10},
+    }
+    with _local_route_server([(200, {}, payload)], request_headers=headers) as (base_url, received):
+        monkeypatch.setenv("MEMOWEFT_BASE_URL", base_url)
+        monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "host-selected-model")
+        try:
+            response = server.handle({
+                "protocol": DSH_RPC_PROTOCOL,
+                "protocol_version": DSH_RPC_PROTOCOL_VERSION,
+                "schema_version": DSH_RPC_SCHEMA_VERSION,
+                "request_id": "init-host-route",
+                "method": "initialize",
+                "params": {
+                    "session_id": "s",
+                    "dsh_home": str(tmp_path),
+                    "model_tier": model_tier,
+                    "lang": "zh",
+                    "model_api_key": "synthetic-rpc-key",
+                },
+            })
+            assert response["ok"] is True
+            health = server.runtime.health()
+            assert health["route_ready"] is True
+            assert health["route_error"] is None
+            assert "synthetic-rpc-key" not in json.dumps([response, health])
+            server.runtime.ingest_durable_boundary(_boundary())
+            worker = server.runtime._world_worker
+            db_path = server.runtime.db_path
+            assert worker is not None and db_path is not None
+            with sqlite3.connect(db_path) as db:
+                evidence_id = db.execute("SELECT id FROM evidence").fetchone()[0]
+            envelope["cognitions"] = [{
+                "action": "form",
+                "target": "owner_self",
+                "statement_kind": "preference",
+                "formed_by": "stated",
+                "proposition": "用户喜欢淡香味",
+                "supports": [{"evidence_id": evidence_id, "start": 0, "end": 6}],
+            }]
+            payload["choices"] = [{"message": {"content": json.dumps(envelope, ensure_ascii=False)}}]
+            assert worker.run_until_quiescent(max_jobs=1) == 1
+            assert _job_state(db_path) == "applied"
+            with sqlite3.connect(db_path) as db:
+                assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 1
+        finally:
+            server.runtime.shutdown()
+
+    assert len(received) == 1
+    assert received[0][0] == "/v1/chat/completions"
+    assert received[0][1]["model"] == "host-selected-model"
+    assert headers[0]["Authorization"] == "Bearer synthetic-rpc-key"
+
+
 def test_follow_current_returns_each_actual_model_from_real_http_response(monkeypatch: pytest.MonkeyPatch) -> None:
     responses = [
         (
@@ -277,6 +435,11 @@ def test_cloud_route_keeps_120_second_timeout(monkeypatch: pytest.MonkeyPatch) -
     route = default_one_shot_route(model_tier="cloud")
     assert route is not None
     route([], session_id="s")
+    assert captured["url"] == "https://api.deepseek.com/chat/completions"
+    assert captured["headers"] == {
+        "Authorization": "Bearer cloud-test-key",
+        "Content-Type": "application/json",
+    }
     assert captured["timeout"] == 120.0
     assert captured["json"] == {
         "model": "deepseek-chat",
