@@ -233,7 +233,6 @@ def delete_evidence(
     # Identity is a derived cache; its JSON may contain names or statements
     # from any of the removed World objects. It can be rebuilt from survivors.
     db.execute("DELETE FROM identity_state WHERE world_id = ?", (subject_id,))
-    db.execute("UPDATE evidence SET preceding_ai_context = NULL WHERE subject_id = ?", (subject_id,))
     return CommandMutation("applied", tuple(sorted(affected_ids)))
 
 
@@ -351,6 +350,13 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affec
         if not added:
             break
         tainted.update(added)
+    for evidence_id, raw in list(db.execute(
+        "SELECT id, preceding_ai_context FROM evidence WHERE subject_id = ? AND preceding_ai_context IS NOT NULL",
+        (subject_id,),
+    )):
+        if _mentions_id(str(raw), tainted) or source_text and source_text in str(raw):
+            db.execute("UPDATE evidence SET preceding_ai_context = NULL WHERE id = ? AND subject_id = ?",
+                       (evidence_id, subject_id))
     for item_id, raw in contexts:
         try:
             turns = json.loads(str(raw))
@@ -365,6 +371,27 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affec
             next_json = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
             db.execute("UPDATE interaction_context SET context_json=?,context_hash=? WHERE id=?",
                        (next_json,hash_context(_context_from_json(next_json)),item_id))
+
+
+def conversation_evidence_ids(db: sqlite3.Connection, subject_id: str, conversation_id: str) -> set[str]:
+    """Recover exact origins even after an earlier deletion removed the batch job."""
+    from ..dsh_bridge import _origin_id
+    remaining: set[str] = set()
+    for raw, in db.execute("SELECT evidence_ids_json FROM memory_world_job WHERE subject_id = ? AND (parent_session_id = ? OR result_session_id = ?)",
+                          (subject_id, conversation_id, conversation_id)):
+        remaining.update(str(value) for value in json.loads(str(raw)))
+    hosts = {str(row[0]) for row in db.execute("SELECT DISTINCT host_id FROM evidence WHERE subject_id = ?", (subject_id,))}
+    for episode_id, raw in db.execute("SELECT episode_id, context_json FROM interaction_context WHERE subject_id = ? AND conversation_id = ?", (subject_id, conversation_id)):
+        for index, turn in enumerate(json.loads(str(raw))):
+            if not isinstance(turn, dict) or turn.get("role") != "user":
+                continue
+            for host_id in hosts:
+                origin = _origin_id(message=turn, content=str(turn.get("content", "")), session_id=conversation_id,
+                                    message_index=index, subject_id=subject_id, host_id=host_id, boundary_id=str(episode_id))
+                remaining.update(str(row[0]) for row in db.execute(
+                    "SELECT id FROM evidence WHERE subject_id = ? AND (origin_id = ? OR id IN (SELECT evidence_id FROM evidence_origin_history WHERE origin_id = ?))",
+                    (subject_id, origin, origin)))
+    return remaining
 
 
 def erase_conversation_context(db_path: str, subject_id: str, conversation_id: str) -> dict[str, object]:
@@ -385,19 +412,7 @@ def erase_conversation_context(db_path: str, subject_id: str, conversation_id: s
         # Erasing one source removes its batch job. Other sources in that
         # batch can still be owned by this conversation; recover their exact
         # native origin identities from the retained interaction metadata.
-        from ..dsh_bridge import _origin_id
-        hosts = {str(row[0]) for row in db.execute("SELECT DISTINCT host_id FROM evidence WHERE subject_id = ?", (subject_id,))}
-        remaining: set[str] = set()
-        for _, episode_id, raw in contexts:
-            for index, turn in enumerate(json.loads(str(raw))):
-                if not isinstance(turn, dict) or turn.get("role") != "user":
-                    continue
-                for host_id in hosts:
-                    origin = _origin_id(message=turn, content=str(turn.get("content", "")), session_id=conversation_id,
-                                        message_index=index, subject_id=subject_id, host_id=host_id, boundary_id=str(episode_id))
-                    remaining.update(str(row[0]) for row in db.execute(
-                        "SELECT id FROM evidence WHERE subject_id = ? AND (origin_id = ? OR id IN (SELECT evidence_id FROM evidence_origin_history WHERE origin_id = ?))",
-                        (subject_id, origin, origin)))
+        remaining = conversation_evidence_ids(db, subject_id, conversation_id)
         affected: set[str] = set()
         erased_evidence_count = 0
         for evidence_id in sorted(remaining):

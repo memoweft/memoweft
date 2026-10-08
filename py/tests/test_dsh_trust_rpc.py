@@ -137,6 +137,12 @@ def test_rpc_hard_deleted_source_has_dedicated_code_only_for_origin_tombstone(
             expected_revision = 0 if revision is None else int(revision[0])
         finally:
             db.close()
+        preview = server.handle(_request("preview-source", "preview_forget", {"target_kind": "evidence", "target_id": evidence_id}))
+        assert preview["ok"] is True, preview
+        assert preview["result"]["world_revision"] == expected_revision  # type: ignore[index]
+        assert preview["result"]["evidence_ids"] == [evidence_id]  # type: ignore[index]
+        invalid = server.handle(_request("invalid-preview", "preview_forget", {"target_kind": "evidence", "target_id": evidence_id, "conversation_id": "dsh-session"}))
+        assert invalid["ok"] is False
         deleted = server.handle(_request("delete-source-command", "submit_command", {
             "command": {
                 "schema_version": 1,
@@ -398,6 +404,7 @@ def test_rpc_v2_protocol_identity_is_frozen() -> None:
         "query_provenance",
         "query_jobs",
         "preview_recall",
+        "preview_forget",
         "query_interactions",
         "query_interaction",
         "link_interaction_dependencies",

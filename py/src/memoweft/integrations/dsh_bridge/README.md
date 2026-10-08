@@ -59,3 +59,16 @@ replay, advances World revision when changed, and reports `storage_cleanup`.
 It is idempotent; `pending` requires retry before claiming physical erasure.
 True delete commands also accept optional `delete_conversation_snippets: true`
 (default false). Their source cascade uses secure_delete, VACUUM, and WAL truncation.
+
+FG-1 rework adds optional read-only `preview_forget`: either
+`{target_kind, target_id}` (Evidence or one World item) or `{conversation_id}`.
+It returns `world_revision`, `items` (`object_kind`, `item_id`, `name`,
+`item_type`), `item_count`, `evidence_ids` and `evidence_count`. It opens the
+live database read-only and runs the actual erasure cascade on an in-memory
+snapshot. No source writes, receipt, revision advance, model call or cleanup
+occurs. Hosts display the affected names/count before confirmation and use the
+preview revision for deletion. Conversation preview recovers exact origins from
+interaction metadata when earlier erasure has already removed the batch job.
+Preceding AI context is cleared only when it contains the source wording or
+removed IDs (including transitive interaction dependencies); unrelated context
+is preserved verbatim.

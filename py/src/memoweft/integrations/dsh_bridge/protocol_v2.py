@@ -51,6 +51,7 @@ DSH_RPC_METHODS: tuple[str, ...] = (
     "query_provenance",
     "query_jobs",
     "preview_recall",
+    "preview_forget",
     "query_interactions",
     "query_interaction",
     "link_interaction_dependencies",
@@ -526,6 +527,20 @@ class DshRpcV2Server:
                 model_context_dependencies=dependencies,
             )
             return result, f"interaction_dependencies_{result['result_state']}"
+        if method == "preview_forget":
+            raw = _require_params(params, allowed=frozenset({"target_kind", "target_id", "conversation_id"}), required=frozenset())
+            if set(raw) not in ({"target_kind", "target_id"}, {"conversation_id"}):
+                raise DshRpcProtocolError("invalid_forget_preview")
+            kind = raw.get("target_kind")
+            if kind is not None and kind not in {"evidence", "entity", "relationship", "event", "cognition"}:
+                raise DshRpcProtocolError("invalid_world_target")
+            assert self._runtime.db_path is not None and self._runtime.subject_id is not None
+            from ..trust.forget_preview import preview_forget
+            result = preview_forget(str(self._runtime.db_path), self._runtime.subject_id,
+                target_kind=str(kind) if kind is not None else None,
+                target_id=_identifier(raw["target_id"], "invalid_target_id") if "target_id" in raw else None,
+                conversation_id=_identifier(raw["conversation_id"], "invalid_conversation_id") if "conversation_id" in raw else None)
+            return result, "query_ok"
         if method == "erase_conversation_context":
             raw = _require_params(params, allowed=frozenset({"conversation_id"}), required=frozenset({"conversation_id"}))
             assert self._runtime.db_path is not None and self._runtime.subject_id is not None
