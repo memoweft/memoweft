@@ -57,6 +57,7 @@ DSH_RPC_METHODS: tuple[str, ...] = (
     "submit_command",
     "query_command_receipt",
     "retry_delete_storage_cleanup",
+    "erase_conversation_context",
     "list_clarifications",
     "answer_clarification",
     "portable_plan",
@@ -525,6 +526,13 @@ class DshRpcV2Server:
                 model_context_dependencies=dependencies,
             )
             return result, f"interaction_dependencies_{result['result_state']}"
+        if method == "erase_conversation_context":
+            raw = _require_params(params, allowed=frozenset({"conversation_id"}), required=frozenset({"conversation_id"}))
+            assert self._runtime.db_path is not None and self._runtime.subject_id is not None
+            from ..trust.true_delete import erase_conversation_context
+            result = erase_conversation_context(str(self._runtime.db_path), self._runtime.subject_id,
+                                                _identifier(raw["conversation_id"], "invalid_conversation_id"))
+            return result, "conversation_context_erased"
         if method == "submit_command":
             raw = _require_params(
                 params,

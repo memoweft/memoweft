@@ -404,6 +404,7 @@ def test_rpc_v2_protocol_identity_is_frozen() -> None:
         "submit_command",
         "query_command_receipt",
         "retry_delete_storage_cleanup",
+        "erase_conversation_context",
         "list_clarifications",
         "answer_clarification",
         "portable_plan",

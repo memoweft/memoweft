@@ -365,3 +365,41 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affec
             next_json = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
             db.execute("UPDATE interaction_context SET context_json=?,context_hash=? WHERE id=?",
                        (next_json,hash_context(_context_from_json(next_json)),item_id))
+
+
+def erase_conversation_context(db_path: str, subject_id: str, conversation_id: str) -> dict[str, object]:
+    """Deleting a conversation erases its original Core context, without touching other sources."""
+    from ...store import open_db
+    from ...store.interaction_context import hash_context
+    from .revision import advance_world_revision, current_world_revision
+    db = open_db(db_path)
+    try:
+        db.execute("PRAGMA secure_delete = ON")
+        db.execute("BEGIN IMMEDIATE")
+        ids = {str(row[0]) for row in db.execute(
+            "SELECT id FROM interaction_context WHERE subject_id = ? AND conversation_id = ? AND context_json <> '[]'",
+            (subject_id, conversation_id))}
+        _redact_observed_dependencies(db, subject_id, ids)
+        db.execute("UPDATE interaction_context SET context_json = '[]', context_hash = ? WHERE subject_id = ? AND conversation_id = ?",
+                   (hash_context([]), subject_id, conversation_id))
+        revision = advance_world_revision(db) if ids else current_world_revision(db)
+        db.execute("COMMIT")
+        state = "complete"
+        try:
+            db.execute("PRAGMA busy_timeout = 0")
+            checkpoint = db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+            if checkpoint and int(checkpoint[0]) != 0:
+                state = "pending"
+            else:
+                db.execute("VACUUM")
+                checkpoint = db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                if checkpoint and int(checkpoint[0]) != 0:
+                    state = "pending"
+        except sqlite3.Error:
+            state = "pending"
+        return {"result_state": "applied" if ids else "no_change", "world_revision": revision,
+                "erased_context_count": len(ids), "storage_cleanup": {"state": state}}
+    finally:
+        if db.in_transaction:
+            db.execute("ROLLBACK")
+        db.close()

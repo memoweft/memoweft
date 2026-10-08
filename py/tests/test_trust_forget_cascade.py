@@ -62,3 +62,23 @@ def test_opt_in_removes_original_context_and_keeps_unrelated_ledger(tmp_path: Pa
         context = db.execute("SELECT context_json FROM interaction_context WHERE id='interaction'").fetchone()[0]
         assert "FGPrivateSource" not in context
         assert "保留这句话" in context
+
+
+def test_deleted_conversation_erases_retained_original_context_from_sqlite_and_portable(tmp_path: Path) -> None:
+    from memoweft.integrations.trust.true_delete import erase_conversation_context
+    path = tmp_path / "conversation.sqlite3"
+    with _open(path) as db:
+        db.execute("INSERT INTO interaction_context (id,subject_id,conversation_id,episode_id,context_json,context_hash,created_at) VALUES ('deleted', ?, 'session-delete', 'episode', ?, 'old-hash', ?)",
+                   (_SUBJECT, json.dumps([{"role":"user","content":"FGSecretTranscript"}]), _T0))
+        db.execute("INSERT INTO interaction_context (id,subject_id,conversation_id,episode_id,context_json,context_hash,created_at) VALUES ('kept', ?, 'session-other', 'episode', ?, 'other-hash', ?)",
+                   (_SUBJECT, json.dumps([{"role":"user","content":"保留其他对话"}]), _T0))
+        _seed_revision(db)
+    result = erase_conversation_context(str(path), _SUBJECT, "session-delete")
+    assert result["result_state"] == "applied"
+    assert result["storage_cleanup"] == {"state":"complete"}
+    with _open(path) as db:
+        assert db.execute("SELECT context_json FROM interaction_context WHERE id='deleted'").fetchone()[0] == "[]"
+        assert json.loads(db.execute("SELECT context_json FROM interaction_context WHERE id='kept'").fetchone()[0])[0]["content"] == "保留其他对话"
+        assert "FGSecretTranscript" not in json.dumps(build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0))
+    assert b"FGSecretTranscript" not in path.read_bytes()
+    assert erase_conversation_context(str(path), _SUBJECT, "session-delete")["result_state"] == "no_change"
