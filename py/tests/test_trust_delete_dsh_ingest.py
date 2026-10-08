@@ -74,14 +74,10 @@ def test_dsh_ingested_cognition_delete_respects_ledger_owner(
             raw, deleted_at = db.execute(
                 "SELECT raw_content, deleted_at FROM evidence WHERE id = ?", (evidence_id,)
             ).fetchone()
-        if foreign_ledger is None:
-            assert receipt["result_state"] == "applied"
-            assert cognition_count == 0
-            assert raw == "" and deleted_at is not None
-        else:
-            assert receipt["result_state"] == "rejected"
-            assert receipt["rejection_code"] == "source_evidence_shared"
-            assert cognition_count == 1
-            assert raw and deleted_at is None
+        assert receipt["result_state"] == "applied"
+        assert cognition_count == 0
+        assert raw == "" and deleted_at is not None
+        with sqlite3.connect(db_path) as db:
+            assert not db.execute("SELECT 1 FROM evidence_ledger WHERE id = 'foreign-ledger'").fetchone()
     finally:
         runtime.shutdown()

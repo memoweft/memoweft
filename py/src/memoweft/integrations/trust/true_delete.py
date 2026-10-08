@@ -47,7 +47,8 @@ def delete_evidence(
     completed_at: str,
     subject_id: str,
 ) -> CommandMutation:
-    if command["payload"]:
+    payload = command["payload"]
+    if set(payload) - {"delete_conversation_snippets"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
         raise TrustCommandError("invalid_trust_command_payload")
     if command["target_kind"] != "evidence":
         return CommandMutation("rejected")
@@ -115,6 +116,17 @@ def delete_evidence(
             cognition_ids.update(_ids(db, "SELECT cognition_id FROM cognition_target WHERE target_entity_id = ?", entity_id))
             cognition_ids.update(_ids(db, "SELECT cognition_id FROM cognition_target WHERE perspective_entity_id = ?", entity_id))
 
+    # Entities produced by DSH may have no direct ledger provenance. Remove
+    # orphaned third-party identities (including aliases) after their last
+    # relationship/target source disappears; preserve the owner's self entity.
+    candidates: set[str] = set()
+    for relation_id in relationship_ids:
+        for source, target in db.execute("SELECT source_entity_id, target_entity_id FROM relationship WHERE id = ?", (relation_id,)):
+            candidates.update((str(source), str(target)))
+    for cognition_id in cognition_ids:
+        for target, perspective in db.execute("SELECT target_entity_id, perspective_entity_id FROM cognition_target WHERE cognition_id = ?", (cognition_id,)):
+            candidates.update(str(value) for value in (target, perspective) if value is not None)
+
     # A queued or claimed worker may already hold the old batch in memory.
     # Removing its row under the same write lock fences every later apply and
     # settlement. Its terminal delivery row can also contain derived text.
@@ -148,6 +160,10 @@ def delete_evidence(
     _delete_ids(db, "retraction", "prior_event_id", world_event_ids)
     _delete_ids(db, "world_event", "id", world_event_ids)
     _delete_ids(db, "evidence_ledger", "id", ledger_ids)
+    from ..hermes.batch_adapter import owner_entity_id_for
+    for candidate in candidates - {owner_entity_id_for(subject_id)}:
+        if not db.execute("SELECT 1 FROM relationship WHERE source_entity_id = ? OR target_entity_id = ?", (candidate, candidate)).fetchone() and not db.execute("SELECT 1 FROM cognition_target WHERE target_entity_id = ? OR perspective_entity_id = ?", (candidate, candidate)).fetchone():
+            entity_ids.add(candidate)
     _delete_ids(db, "entity", "id", entity_ids)
     for kind, ids in (
         ("entity", entity_ids),
@@ -172,8 +188,8 @@ def delete_evidence(
     for ledger_id, content, payload in list(db.execute("SELECT id, content, payload_json FROM evidence_ledger")):
         if _mentions_id(content, affected_ids) or _mentions_id(payload, affected_ids):
             db.execute("DELETE FROM evidence_ledger WHERE id=?", (ledger_id,))
-    if row[5] == "observed":
-        _redact_observed_dependencies(db, subject_id, affected_ids)
+    _redact_observed_dependencies(db, subject_id, affected_ids,
+                                  str(row[1]) if command["payload"].get("delete_conversation_snippets") else None)
     for proposal_id, payload, review in list(db.execute(
         "SELECT id, payload_json, review_payload_json FROM proposals"
     )):
@@ -217,7 +233,8 @@ def delete_evidence(
     # Identity is a derived cache; its JSON may contain names or statements
     # from any of the removed World objects. It can be rebuilt from survivors.
     db.execute("DELETE FROM identity_state WHERE world_id = ?", (subject_id,))
-    return CommandMutation("applied", (evidence_id,))
+    db.execute("UPDATE evidence SET preceding_ai_context = NULL WHERE subject_id = ?", (subject_id,))
+    return CommandMutation("applied", tuple(sorted(affected_ids)))
 
 
 def delete_world_item(
@@ -226,7 +243,8 @@ def delete_world_item(
     completed_at: str,
     subject_id: str,
 ) -> CommandMutation:
-    if command["payload"]:
+    payload = command["payload"]
+    if set(payload) - {"delete_conversation_snippets"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
         raise TrustCommandError("invalid_trust_command_payload")
     kind = command["target_kind"]
     item_id = command["target_id"]
@@ -265,66 +283,23 @@ def delete_world_item(
         sources = _ids(
             db, f"SELECT evidence_id FROM {link_table} WHERE {column} = ?", item_id
         )
+    if kind == "entity":
+        for link, target, parent, where in (
+            ("relationship_evidence", "relationship", "relationship_id", "source_entity_id = ? OR target_entity_id = ?"),
+            ("cognition_evidence", "cognition_target", "cognition_id", "target_entity_id = ? OR perspective_entity_id = ?"),
+        ):
+            key = "id" if target == "relationship" else "cognition_id"
+            sources.update(str(row[0]) for row in db.execute(
+                f"SELECT l.evidence_id FROM {link} l JOIN {target} t ON l.{parent} = t.{key} WHERE {where}",
+                (item_id, item_id)))
     if not sources:
         return CommandMutation("rejected", rejection_code="source_provenance_missing")
-    if kind == "entity" and (
-        db.execute(
-            "SELECT 1 FROM relationship WHERE source_entity_id = ? OR target_entity_id = ?",
-            (item_id, item_id),
-        ).fetchone()
-        or db.execute(
-            "SELECT 1 FROM cognition_target WHERE target_entity_id = ? "
-            "OR perspective_entity_id = ?",
-            (item_id, item_id),
-        ).fetchone()
-    ):
-        return CommandMutation("rejected", rejection_code="world_item_has_dependents")
-
+    # Forgetting an item erases its sources and all source-derived objects.
+    # A shared source is part of this cascade, not a reason to silently keep it.
     for evidence_id in sources:
-        row = db.execute(
-            "SELECT 1 FROM evidence WHERE id = ? AND subject_id = ?",
-            (evidence_id, subject_id),
-        ).fetchone()
-        if row is None:
+        if db.execute("SELECT 1 FROM evidence WHERE id = ? AND subject_id = ?",
+                      (evidence_id, subject_id)).fetchone() is None:
             return CommandMutation("rejected", rejection_code="source_provenance_missing")
-        for other_kind, link_table, parent in (
-            ("relationship", "relationship_evidence", "relationship_id"),
-            ("event", "world_event_evidence", "world_event_id"),
-            ("cognition", "cognition_evidence", "cognition_id"),
-        ):
-            for linked_id, in db.execute(
-                f"SELECT {parent} FROM {link_table} WHERE evidence_id = ?",
-                (evidence_id,),
-            ):
-                if other_kind != kind or str(linked_id) != item_id:
-                    return CommandMutation("rejected", rejection_code="source_evidence_shared")
-        ledger_owner = {
-            "entity": "entity_id",
-            "relationship": "relationship_id",
-            "event": "world_event_id",
-            "cognition": "cognition_id",
-        }[kind]
-        ledger_item_fields = (
-            "entity_id", "relationship_id", "world_event_id", "cognition_id"
-        )
-        for content, in db.execute("SELECT content FROM evidence_ledger"):
-            try:
-                value = json.loads(str(content))
-            except (TypeError, ValueError):
-                continue
-            if isinstance(value, dict) and value.get("evidence_id") == evidence_id:
-                # The source's own formation ledger is provenance, not a
-                # second consumer. Another target (including another kind)
-                # still makes deletion of this source unsafe.
-                if value.get(ledger_owner) != item_id or any(
-                    field != ledger_owner and field in value
-                    for field in ledger_item_fields
-                ):
-                    return CommandMutation("rejected", rejection_code="source_evidence_shared")
-        if db.execute(
-            "SELECT 1 FROM event_evidence WHERE evidence_id = ?", (evidence_id,)
-        ).fetchone():
-            return CommandMutation("rejected", rejection_code="source_evidence_shared")
 
     # A source can still reject its own deletion (for example, a historical
     # soft tombstone with no recoverable origin). Keep the marker and every
@@ -337,6 +312,7 @@ def delete_world_item(
             "(subject_id, object_kind, item_id, deleted_at) VALUES (?, ?, ?, ?)",
             (subject_id, kind, item_id, completed_at),
         )
+        affected = {item_id}
         for evidence_id in sorted(sources):
             source_command = dict(command)
             source_command["target_kind"] = "evidence"
@@ -351,15 +327,16 @@ def delete_world_item(
                     "rejected",
                     rejection_code=(result.rejection_code or "source_already_deleted"),
                 )
+            affected.update(result.affected_ids)
         db.execute("RELEASE SAVEPOINT delete_world_item_sources")
-        return CommandMutation("applied", (item_id, *sorted(sources)))
+        return CommandMutation("applied", tuple(sorted(affected)))
     except BaseException:
         db.execute("ROLLBACK TO SAVEPOINT delete_world_item_sources")
         db.execute("RELEASE SAVEPOINT delete_world_item_sources")
         raise
 
 
-def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affected: set[str]) -> None:
+def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affected: set[str], source_text: str | None = None) -> None:
     """Erase source-derived assistant text, including transitive interaction reuse.
 
     User turns remain exact. Keeping the interaction identity with a changed hash
@@ -382,7 +359,8 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affec
         if not isinstance(turns, list):
             continue
         clean = [turn for turn in turns if not (isinstance(turn, dict) and turn.get("role") == "assistant"
-                 and _mentions_id(json.dumps(turn.get("model_context_dependencies")), tainted))]
+                 and _mentions_id(json.dumps(turn.get("model_context_dependencies")), tainted)
+                 or source_text and source_text in json.dumps(turn, ensure_ascii=False))]
         if clean != turns:
             next_json = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
             db.execute("UPDATE interaction_context SET context_json=?,context_hash=? WHERE id=?",

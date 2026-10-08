@@ -560,7 +560,7 @@ def test_delete_world_item_exclusive_source_and_rejection_reasons(tmp_path: Path
     assert _service(path).get_command_receipt("delete-world") == receipt
 
 
-def test_delete_world_item_shared_or_untracked_source_is_atomic_rejection(tmp_path: Path) -> None:
+def test_delete_world_item_shared_source_cascades_and_untracked_source_rejects(tmp_path: Path) -> None:
     path = tmp_path / "shared.sqlite3"
     with _open(path) as db:
         _seed_cognition(db)
@@ -577,17 +577,17 @@ def test_delete_world_item_shared_or_untracked_source_is_atomic_rejection(tmp_pa
     shared = _service(path).submit_command(
         _command("delete-shared", 1, "delete_world_item", "cognition", "cog-coffee")
     )
-    assert shared["result_state"] == "rejected"
-    assert shared["rejection_code"] == "source_evidence_shared"
+    assert shared["result_state"] == "applied"
+    assert {"cog-coffee", "cog-shared", "e-coffee"} <= set(shared["affected_ids"])
     unknown = _service(path).submit_command(
-        _command("delete-untracked", 1, "delete_world_item", "cognition", "cog-untracked")
+        _command("delete-untracked", 2, "delete_world_item", "cognition", "cog-untracked")
     )
     assert unknown["result_state"] == "rejected"
     assert unknown["rejection_code"] == "source_provenance_missing"
     assert _service(path).get_command_receipt("delete-shared") == shared
     with _open(path) as db:
-        assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 3
-        assert db.execute("SELECT raw_content FROM evidence WHERE id='e-coffee'").fetchone()[0] == "用户喜欢喝咖啡"
+        assert db.execute("SELECT COUNT(*) FROM cognition").fetchone()[0] == 1
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='e-coffee'").fetchone()[0] == ""
 
 
 def test_delete_storage_status_tracks_busy_wal_and_retry(tmp_path: Path) -> None:
