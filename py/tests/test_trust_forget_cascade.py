@@ -82,3 +82,46 @@ def test_deleted_conversation_erases_retained_original_context_from_sqlite_and_p
         assert "FGSecretTranscript" not in json.dumps(build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0))
     assert b"FGSecretTranscript" not in path.read_bytes()
     assert erase_conversation_context(str(path), _SUBJECT, "session-delete")["result_state"] == "no_change"
+
+
+def test_forgetting_erases_core_original_copy_without_deleting_host_chat(tmp_path: Path) -> None:
+    path = tmp_path / "copy.sqlite3"
+    with _open(path) as db:
+        _seed_evidence(db, "e-copy", "FGSourceCopy")
+        db.execute("INSERT INTO interaction_context (id,subject_id,conversation_id,episode_id,context_json,context_hash,created_at) VALUES ('copy', ?, 'session', 'episode', ?, 'old', ?)",
+                   (_SUBJECT, json.dumps([{"role":"user","content":"FGSourceCopy"},{"role":"user","content":"unrelated"}]), _T0))
+        _seed_revision(db)
+    receipt = _service(path).submit_command(_command("erase-copy", 1, "delete_evidence", "evidence", "e-copy"))
+    assert receipt["result_state"] == "applied"
+    with _open(path) as db:
+        context = db.execute("SELECT context_json FROM interaction_context WHERE id='copy'").fetchone()[0]
+        assert "FGSourceCopy" not in context and "unrelated" in context
+    assert b"FGSourceCopy" not in path.read_bytes()
+
+
+def test_conversation_erasure_recovers_sources_after_batch_job_has_disappeared(tmp_path: Path) -> None:
+    from memoweft.integrations.dsh_bridge import _origin_id
+    from memoweft.integrations.trust.true_delete import erase_conversation_context
+    from test_trust_command_service import _seed_cognition
+    path = tmp_path / "batch.sqlite3"
+    turns = [{"role":"user","content":"FGSourceOne","message_id":"msg-one","source_ref":"source:0"},
+             {"role":"user","content":"FGSourceTwo","message_id":"msg-two","source_ref":"source:1"}]
+    with _open(path) as db:
+        for index, turn in enumerate(turns):
+            _seed_cognition(db, f"c-{index}", f"e-{index}", turn["content"])
+            origin = _origin_id(message=turn, content=turn["content"], session_id="session-delete", message_index=index,
+                                subject_id=_SUBJECT, host_id=_HOST, boundary_id="episode")
+            db.execute("UPDATE evidence SET origin_id=? WHERE id=?", (origin, f"e-{index}"))
+        _seed_cognition(db, "c-other", "e-other", "FGSourceTwo")
+        db.execute("INSERT INTO interaction_context (id,subject_id,conversation_id,episode_id,context_json,context_hash,created_at) VALUES ('batch', ?, 'session-delete', 'episode', ?, 'old', ?)",
+                   (_SUBJECT, json.dumps(turns), _T0))
+        _seed_revision(db)
+    _service(path).submit_command(_command("erase-first", 1, "delete_evidence", "evidence", "e-0"))
+    result = erase_conversation_context(str(path), _SUBJECT, "session-delete")
+    assert result["erased_evidence_count"] == 1
+    affected = result["affected_ids"]
+    assert isinstance(affected, list) and "c-1" in affected
+    with _open(path) as db:
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='e-1'").fetchone()[0] == ""
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='e-other'").fetchone()[0] == "FGSourceTwo"
+        assert db.execute("SELECT content FROM cognition WHERE id='c-other'").fetchone()[0] == "FGSourceTwo"

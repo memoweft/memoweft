@@ -189,7 +189,7 @@ def delete_evidence(
         if _mentions_id(content, affected_ids) or _mentions_id(payload, affected_ids):
             db.execute("DELETE FROM evidence_ledger WHERE id=?", (ledger_id,))
     _redact_observed_dependencies(db, subject_id, affected_ids,
-                                  str(row[1]) if command["payload"].get("delete_conversation_snippets") else None)
+                                  str(row[1]) if row[1] else None)
     for proposal_id, payload, review in list(db.execute(
         "SELECT id, payload_json, review_payload_json FROM proposals"
     )):
@@ -339,8 +339,8 @@ def delete_world_item(
 def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affected: set[str], source_text: str | None = None) -> None:
     """Erase source-derived assistant text, including transitive interaction reuse.
 
-    User turns remain exact. Keeping the interaction identity with a changed hash
-    also makes an old Portable interaction collide instead of restoring its prose.
+    Source-derived Core copies are erased; the host owns original chat retention.
+    Keeping interaction identity with a changed hash prevents stale Portable replay.
     """
     from ...store.interaction_context import _context_from_json, hash_context
     contexts = list(db.execute("SELECT id,context_json FROM interaction_context WHERE subject_id=?", (subject_id,)))
@@ -372,17 +372,47 @@ def erase_conversation_context(db_path: str, subject_id: str, conversation_id: s
     from ...store import open_db
     from ...store.interaction_context import hash_context
     from .revision import advance_world_revision, current_world_revision
+    from ...clock import system_clock, to_iso_z
+    completed_at = to_iso_z(system_clock())
     db = open_db(db_path)
     try:
         db.execute("PRAGMA secure_delete = ON")
         db.execute("BEGIN IMMEDIATE")
-        ids = {str(row[0]) for row in db.execute(
-            "SELECT id FROM interaction_context WHERE subject_id = ? AND conversation_id = ? AND context_json <> '[]'",
-            (subject_id, conversation_id))}
-        _redact_observed_dependencies(db, subject_id, ids)
+        contexts = list(db.execute(
+            "SELECT id, episode_id, context_json FROM interaction_context WHERE subject_id = ? AND conversation_id = ? AND context_json <> '[]'",
+            (subject_id, conversation_id)))
+        ids = {str(row[0]) for row in contexts}
+        # Erasing one source removes its batch job. Other sources in that
+        # batch can still be owned by this conversation; recover their exact
+        # native origin identities from the retained interaction metadata.
+        from ..dsh_bridge import _origin_id
+        hosts = {str(row[0]) for row in db.execute("SELECT DISTINCT host_id FROM evidence WHERE subject_id = ?", (subject_id,))}
+        remaining: set[str] = set()
+        for _, episode_id, raw in contexts:
+            for index, turn in enumerate(json.loads(str(raw))):
+                if not isinstance(turn, dict) or turn.get("role") != "user":
+                    continue
+                for host_id in hosts:
+                    origin = _origin_id(message=turn, content=str(turn.get("content", "")), session_id=conversation_id,
+                                        message_index=index, subject_id=subject_id, host_id=host_id, boundary_id=str(episode_id))
+                    remaining.update(str(row[0]) for row in db.execute(
+                        "SELECT id FROM evidence WHERE subject_id = ? AND (origin_id = ? OR id IN (SELECT evidence_id FROM evidence_origin_history WHERE origin_id = ?))",
+                        (subject_id, origin, origin)))
+        affected: set[str] = set()
+        erased_evidence_count = 0
+        for evidence_id in sorted(remaining):
+            mutation = delete_evidence(db, {"schema_version": 1, "command_id": "conversation-erase", "subject_id": subject_id,
+                "actor": "owner", "expected_world_revision": current_world_revision(db), "submitted_at": completed_at, "operation": "delete_evidence",
+                "target_kind": "evidence", "target_id": evidence_id, "payload": {}}, completed_at, subject_id)
+            if mutation.result_state == "rejected":
+                raise TrustCommandError(mutation.rejection_code or "conversation_source_erase_failed")
+            if mutation.result_state == "applied":
+                erased_evidence_count += 1
+            affected.update(mutation.affected_ids)
+        _redact_observed_dependencies(db, subject_id, ids | affected)
         db.execute("UPDATE interaction_context SET context_json = '[]', context_hash = ? WHERE subject_id = ? AND conversation_id = ?",
                    (hash_context([]), subject_id, conversation_id))
-        revision = advance_world_revision(db) if ids else current_world_revision(db)
+        revision = advance_world_revision(db) if ids or erased_evidence_count else current_world_revision(db)
         db.execute("COMMIT")
         state = "complete"
         try:
@@ -398,7 +428,8 @@ def erase_conversation_context(db_path: str, subject_id: str, conversation_id: s
         except sqlite3.Error:
             state = "pending"
         return {"result_state": "applied" if ids else "no_change", "world_revision": revision,
-                "erased_context_count": len(ids), "storage_cleanup": {"state": state}}
+                "erased_context_count": len(ids), "erased_evidence_count": erased_evidence_count,
+                "affected_ids": sorted(affected), "storage_cleanup": {"state": state}}
     finally:
         if db.in_transaction:
             db.execute("ROLLBACK")
