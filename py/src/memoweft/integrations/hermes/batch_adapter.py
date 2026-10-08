@@ -1352,7 +1352,8 @@ class HermesBatchAdapterProcessor:
             payload = self._dispatch_once(job, db)
             self._persist_checkpoint(db, job, payload)
 
-        compiled = self._compile_checked(str(payload.get("content") or ""), job, db)
+        compiled = self._compile_checked(str(payload.get("content") or ""), job, db,
+                                         truncated=payload.get("finish_reason") == "length")
         if (
             compiled.batch is None
             and compiled.terminal == "no_change"
@@ -1375,7 +1376,8 @@ class HermesBatchAdapterProcessor:
             self._persist_checkpoint(db, job, payload)
             try:
                 payload = self._dispatch_once(job, db, previous=first, feedback=feedback)
-                compiled = self._compile_checked(str(payload.get("content") or ""), job, db)
+                compiled = self._compile_checked(str(payload.get("content") or ""), job, db,
+                                                 truncated=payload.get("finish_reason") == "length")
                 payload["formation_rewrite"] = {
                     "state": "completed", "error": feedback, "first_result": first,
                     "final_error": compiled.reason if compiled.batch is None else None,
@@ -1853,8 +1855,10 @@ class HermesBatchAdapterProcessor:
     # ── deterministic compile ──────────────────────────────────────────────
 
     def _compile_checked(
-        self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection
+        self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection, *, truncated: bool = False
     ) -> _CompiledOutcome:
+        if truncated:
+            return _CompiledOutcome(None, "model_output_truncated")
         try:
             return self._compile(content, job, db)
         except _ZeroWriteError as exc:

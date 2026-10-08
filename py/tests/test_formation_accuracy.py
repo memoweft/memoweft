@@ -88,6 +88,17 @@ def test_second_invalid_result_is_zero_write_and_durable(tmp_path: Path) -> None
         assert db.execute("SELECT count(*) FROM cognition").fetchone()[0] == 0
 
 
+def test_truncated_result_gets_one_feedback_rewrite(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    first = {**_model(_batch(_item("ignored"))), "finish_reason": "length"}
+    row, calls = _run(path, "我喜欢用买菜的例子解释。", [first, _model(_batch(_item("ignored")))])
+    assert row["state"] == "applied"
+    assert len(calls) == 2
+    stored = json.loads(row["model_result_json"])["formation_rewrite"]
+    assert stored["error"]["code"] == "model_output_truncated"
+    assert stored["first_result"]["finish_reason"] == "length"
+
+
 def test_legacy_envelope_cannot_bypass_fact_grounding(tmp_path: Path) -> None:
     path = tmp_path / "world.sqlite3"
     raw = "我希望你叫我小禾。"

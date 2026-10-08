@@ -466,7 +466,7 @@ def test_reasoning_only_response_is_not_saved_as_interpretation(monkeypatch: pyt
     assert len(received) == 1
 
 
-def test_local_length_finish_reason_rejects_partial_json(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_local_length_finish_reason_reaches_compiler_for_feedback(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEMOWEFT_BASE_URL", "http://127.0.0.1:18080/v1")
     monkeypatch.setenv("MEMOWEFT_WORLD_MODEL", "weftlearn-qwen3.8-27b")
 
@@ -488,8 +488,9 @@ def test_local_length_finish_reason_rejects_partial_json(monkeypatch: pytest.Mon
     monkeypatch.setattr(httpx, "post", lambda *_args, **_kwargs: _Response())
     route = default_one_shot_route(model_tier="local", api_key_override="test-key")
     assert route is not None
-    with pytest.raises(RuntimeError, match="^local_model_output_truncated$"):
-        route([], session_id="s")
+    result = route([], session_id="s")
+    assert result["finish_reason"] == "length"
+    assert result["content"] == '{"schema_version":8,"result":'
 
 
 def test_missing_local_route_leaves_worker_stopped_and_recoverable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

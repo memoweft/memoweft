@@ -548,8 +548,6 @@ def default_one_shot_route(
         response.raise_for_status()
         payload = response.json()
         choice = payload["choices"][0]
-        if model_tier == "local" and choice.get("finish_reason") == "length":
-            raise RuntimeError("local_model_output_truncated")
         msg_content = choice["message"].get("content")
         resolved_model = model
         if model == "@current":
@@ -561,6 +559,7 @@ def default_one_shot_route(
                 )
         return {
             "content": msg_content or "",
+            "finish_reason": choice.get("finish_reason"),
             "model": resolved_model,
             "usage": payload.get("usage") or {},
         }
