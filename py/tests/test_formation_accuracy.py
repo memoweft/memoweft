@@ -117,6 +117,24 @@ def test_exact_style_source_is_recalled_with_explicit_communication_cues(tmp_pat
     assert "先用一个买菜的小例子讲明白" in current.rendered_recall
 
 
+@pytest.mark.parametrize(("raw", "model_date", "expected"), [
+    ("2026年10月8日我去了南京。", "2026-10-08", "2026-10-08"),
+    ("2026年10月8日我去了南京。", "2049-10-08", "2026-10-08"),
+    ("昨天我去了南京。", "2026-10-08", None),
+    ("2026年10月8日到2026年10月9日我在南京。", "2026-10-08", None),
+])
+def test_event_calendar_date_requires_exact_source(tmp_path: Path, raw: str, model_date: str, expected: str | None) -> None:
+    path = tmp_path / "world.sqlite3"
+    item = _item("ignored")
+    item.update(statement_kind="event", occurred_at=model_date)
+    row, _ = _run(path, raw, [_model(_batch(item))])
+    assert row["state"] == "applied"
+    with sqlite3.connect(path) as db:
+        content, occurred_at = db.execute("SELECT content,occurred_at FROM world_event").fetchone()
+    assert raw.rstrip("。") in content
+    assert occurred_at == expected
+
+
 def test_unverifiable_entity_name_is_rejected_then_rewritten(tmp_path: Path) -> None:
     path = tmp_path / "world.sqlite3"
     bad = _item("阿朵做展览海报")

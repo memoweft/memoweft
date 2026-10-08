@@ -153,7 +153,7 @@ def test_event_forms_with_participants_objects_and_time(tmp_path: Path) -> None:
     assert outcome["world_revision"] == 1
     item = outcome["cognitions"][0]
     assert item["statement_kind"] == "event"
-    assert item["occurred_at"] == "2026-08-15"
+    assert item.get("occurred_at") is None  # "昨天" cannot establish this guessed date.
     assert item["time_expression"] == "昨天"
     assert item["participants"] == [entity_id_for("owner", "小王")]
     assert item["objects"] == [entity_id_for("owner", "南京")]
@@ -165,7 +165,7 @@ def test_event_forms_with_participants_objects_and_time(tmp_path: Path) -> None:
             "objects_json, confidence, cred_status, invalid_at FROM world_event"
         ).fetchone()
         assert ev[0] == "昨天我和小王去了南京"
-        assert ev[1] == "2026-08-15"
+        assert ev[1] is None
         assert ev[2] == "昨天"
         assert json.loads(str(ev[3])) == [entity_id_for("owner", "小王")]
         assert json.loads(str(ev[4])) == [entity_id_for("owner", "南京")]

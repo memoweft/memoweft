@@ -275,6 +275,17 @@ def _has_declarative_facts(text: str) -> bool:
     return True
 
 
+def _explicit_source_dates(slices: list[str]) -> set[str]:
+    """Calendar dates copied/normalized from user text, without relative guesses."""
+    dates: set[str] = set()
+    for text in slices:
+        for match in re.finditer(r"(?<![0-9])([0-9]{4})(?:年|[-/.])([0-9]{1,2})(?:月|[-/.])([0-9]{1,2})(?:日|号)?(?![0-9])", text):
+            value = f"{int(match[1]):04d}-{int(match[2]):02d}-{int(match[3]):02d}"
+            if _is_iso_date(value):
+                dates.add(value)
+    return dates
+
+
 def relationship_id_for(
     world_id: str, source_entity_id: str, relation_type: str, target_entity_id: str
 ) -> str:
@@ -762,9 +773,9 @@ _SYSTEM_PROMPT = (
     "参与者/对象）用 statement_kind=event（stated）。participants 列参与事件的"
     "第三方实体（名字逐字在命题里，kind 默认 person；\"用户\"可指本人），objects "
     "列参与的对象/地点实体（kind 如 place/thing）。名字要在命题里；没有明确实体"
-    "就省略对应列表。时间：能确定到具体日期时 occurred_at 用 YYYY-MM-DD（如"
-    "\"昨天\"按当前时间解析成日期），并把命题里的时间短语逐字放进 time_expression；"
-    "解析不了日期就**两个字段都省略**（事件仍形成）。未发生/不确定是否发生/含糊"
+    "就省略对应列表。时间：仅原话明确包含唯一完整日期时，occurred_at 用 YYYY-MM-DD；"
+    "把命题里的时间短语逐字放进 time_expression，不把昨天/上周等相对时间猜成日期。"
+    "没有明确日期就省略 occurred_at（事件仍形成）。未发生/不确定是否发生/含糊"
     "内容不产出。**proposition 必须逐字等于支持切片原句——含\"上周末/昨天\"等时间"
     "词在内，一个字都不许增删改写（如切片是\"上周末我和小王去了南京\"，proposition"
     "就必须原样是它）**。event 撤回（说\"没这事/别记了\"）用 correct+retract+"
@@ -1004,10 +1015,9 @@ _SYSTEM_PROMPT_EN = (
     "person; \"The user\" may stand for the user themselves), objects lists "
     "the objects/places involved (kind e.g. place/thing). Names must be in "
     "the proposition; omit a list when there are no definite entities. Time: "
-    "when a concrete date can be determined, occurred_at uses YYYY-MM-DD "
-    "(e.g. \"yesterday\" resolves to a date) and the time phrase goes "
-    "verbatim into time_expression; when the date cannot be resolved, omit "
-    "**both** fields (the event still forms). Not-yet-happened/uncertain/"
+    "occurred_at uses YYYY-MM-DD only when user evidence contains one explicit full date. "
+    "Keep the time phrase verbatim in time_expression; never guess a date from yesterday "
+    "or last week. Omit occurred_at if no full date is explicit (the event still forms). Not-yet-happened/uncertain/"
     "vague content is not produced. **The proposition must equal the "
     "supporting slice verbatim — including \"last weekend/yesterday\" time "
     "words, not a single character added, deleted or rewritten** (if the "
@@ -2632,7 +2642,13 @@ class HermesBatchAdapterProcessor:
                         occurred_raw.strip()
                     ):
                         return None, "invalid_event_time"
-                    event_occurred_at = occurred_raw.strip()
+                    # Keep the original time expression below, but do not store
+                    # a calendar date guessed from "yesterday" or a wrong date.
+                    # This field is optional; only an unambiguous source date
+                    # can establish its normalized ISO value.
+                    source_dates = _explicit_source_dates(slices)
+                    if len(source_dates) == 1:
+                        event_occurred_at = next(iter(source_dates))
                 time_expr_raw = raw_item.get("time_expression")
                 if time_expr_raw is not None:
                     if not isinstance(time_expr_raw, str) or not time_expr_raw.strip():
