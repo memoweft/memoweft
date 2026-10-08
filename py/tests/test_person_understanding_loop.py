@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -44,7 +44,7 @@ def test_independent_relationship_evaluation_and_entity_sources(tmp_path: Path) 
         assert db.execute('SELECT content FROM cognition').fetchone()[0] == '林遥修乐器很熟练，'
         assert db.execute('SELECT content FROM relationship').fetchone()[0] == '林遥是我的朋友。'
     for kind, item_id in ids.items():
-        sources = query.get_world_item_provenance(kind, item_id)['provenance']  # type: ignore[arg-type]
+        sources = cast(list[dict[str, Any]], query.get_world_item_provenance(kind, item_id)['provenance'])  # type: ignore[arg-type]
         assert sources and all(s['evidence']['raw_content'] == '林遥修乐器很熟练，是我的朋友。' for s in sources)
 
 
@@ -68,7 +68,7 @@ def test_three_corrections_keep_sources_and_formal_reason_chains(
     row = correct(path, raw, item)
     assert row['state'] == 'applied', row
     query = QueryService(path, subject_id='owner')
-    source = query.get_world_item_provenance(kind, ids[kind])  # type: ignore[arg-type]
+    source = cast(dict[str, Any], query.get_world_item_provenance(kind, ids[kind]))  # type: ignore[arg-type]
     assert source['transition_history']
     assert all(s['currentness_state'] == 'not_current' for s in source['provenance'])
     assert source['provenance'][0]['evidence']['raw_content'] == '林遥修乐器很熟练，是我的朋友。'
@@ -102,7 +102,7 @@ def test_confirmation_is_an_independent_decision_with_its_own_exact_source(tmp_p
             lambda p: _set_evidence(p, 'evidence-2', raw), job_id='job-2')
     with sqlite3.connect(path) as db:
         decision = db.execute("SELECT id FROM cognition WHERE content_type='preference'").fetchone()[0]
-    proof = QueryService(path, subject_id='owner').get_world_item_provenance('cognition', decision)
+    proof = cast(dict[str, Any], QueryService(path, subject_id='owner').get_world_item_provenance('cognition', decision))
     assert proof['provenance'][0]['evidence']['raw_content'] == raw
 
 
