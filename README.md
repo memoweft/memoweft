@@ -23,6 +23,12 @@ MemoWeft keeps these boundaries explicit:
 - Raw user content remains exact Evidence with provenance and permissions.
 - Stated formation propositions selected by segment or quote are derived from
   verbatim Evidence, preserving names, forms of address, numbers and dates.
+  Formation payloads offer intact `sentences` alongside existing fine `segments`.
+  A support can explicitly select `sentence_id` for a complete same-topic claim,
+  or `segment_id` for independent clauses. These are alternative source ranges;
+  Core never expands an unselected range and rejects overlapping selections.
+  Named people with an explicit relationship to the user are classified as
+  Relationship records, rather than naming-only or third-party attributes.
   Invalid interpretation JSON or compiler fields receive one model rewrite
   with the concrete compiler error before the job settles without a write.
   The durable model checkpoint retains the first response, error and rewrite
