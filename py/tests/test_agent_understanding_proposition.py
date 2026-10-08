@@ -1,6 +1,4 @@
-"""Test that stated propositions preserve the Agent's high-level understanding
-rather than being mechanically overwritten by verbatim slice fragments.
-"""
+"""Stated interpretations retain source facts, rather than unsupported synthesis."""
 from __future__ import annotations
 
 import hashlib
@@ -64,8 +62,8 @@ def _cognitions(db_path: Path) -> list[dict[str, Any]]:
         db.close()
 
 
-def test_agent_understanding_is_preserved(tmp_path: Path) -> None:
-    """Agent's synthesis of multiple habits into a coherent understanding is accepted."""
+def test_agent_synthesis_cannot_add_unsupported_facts(tmp_path: Path) -> None:
+    """The selected game Evidence cannot establish invented solitude or friendships."""
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     raw_utterance = "1.打游戏-王者荣耀，刷抖音、看书听书\n2.习惯了吧\n3.有但是不多"
@@ -98,8 +96,9 @@ def test_agent_understanding_is_preserved(tmp_path: Path) -> None:
     assert job_row["state"] == "applied"
     cogs = _cognitions(db_path)
     assert len(cogs) == 1
-    # Crucial assertion: the proposition is the Agent's understanding, NOT "用户1.打游戏-王者荣耀，"
-    assert cogs[0]["content"] == agent_understanding
+    assert cogs[0]["content"] == "用户1.打游戏-王者荣耀，"
+    assert "独处" not in cogs[0]["content"]
+    assert "朋友" not in cogs[0]["content"]
 
 
 def test_empty_proposition_falls_back_to_normalized_slice(tmp_path: Path) -> None:

@@ -500,6 +500,7 @@ def default_one_shot_route(
             "messages": messages,
             "stream": False,
             "temperature": 0,
+            "response_format": {"type": "json_object"},
         }
         if model_tier == "local":
             request_json["max_tokens"] = 4096
@@ -547,11 +548,7 @@ def default_one_shot_route(
         response.raise_for_status()
         payload = response.json()
         choice = payload["choices"][0]
-        if model_tier == "local" and choice.get("finish_reason") == "length":
-            raise RuntimeError("local_model_output_truncated")
         msg_content = choice["message"].get("content")
-        if not msg_content and choice["message"].get("reasoning_content"):
-            msg_content = choice["message"]["reasoning_content"]
         resolved_model = model
         if model == "@current":
             headers = getattr(response, "headers", {})
@@ -562,6 +559,7 @@ def default_one_shot_route(
                 )
         return {
             "content": msg_content or "",
+            "finish_reason": choice.get("finish_reason"),
             "model": resolved_model,
             "usage": payload.get("usage") or {},
         }

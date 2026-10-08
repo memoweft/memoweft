@@ -407,7 +407,7 @@ def test_dsh_route_tier_controls_dispatch_after_local_read_revocation(
     def route(messages: object, session_id: str = "") -> dict[str, object]:
         del messages, session_id
         calls.append(object())
-        return {"content": '{"schema_version":8,"result":"cognitions","cognitions":[]}', "model": "test"}
+        return {"content": '{"schema_version":8,"result":"no_change"}', "model": "test"}
 
     runtime = DshMemoWeftRuntime()
     init_kwargs: dict[str, object] = {

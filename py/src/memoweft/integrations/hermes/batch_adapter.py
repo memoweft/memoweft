@@ -1,10 +1,13 @@
 """V3 formal batch adapter: one committed boundary -> typed World changes.
 
-One committed Hermes boundary is interpreted with AT MOST ONE physical model
-request (the host-owned strict ``memory_world`` route).  The result is
+One committed Hermes boundary is compiled from a checkpointed interpretation,
+plus one feedback rewrite if deterministic compilation rejects it. Each result is
 checkpointed durably before any World mutation, then compiled deterministically
 (compiler-owned spans, target, identity, and fields) and applied in one fenced
 atomic transaction.
+
+The existing World worker transport retry policy is separate from this single
+interpretation rewrite; an HTTP failure may have no interpretation to validate.
 
 V3 semantics (Owner decision 2026-08-16, §4.12): on top of V2 (up to 3 items
 per boundary, typed corrects, confirmed 280 contract) the closed contract adds
@@ -13,8 +16,8 @@ relationship statements with compiler-owned mention→identity resolution
 (deterministic ids from the canonical name; ambiguity or same-name conflict is
 zero-write).
 
-Legacy ``schema_version=1``/``2`` envelopes still compile and apply exactly as
-their own semantics did, so in-flight checkpoints replay identically.
+Legacy ``schema_version=1``/``2`` envelope shapes remain accepted. Stated
+propositions also use their original Evidence rather than model rewrites.
 """
 
 from __future__ import annotations
@@ -59,8 +62,8 @@ LEGACY_V6_INTERPRETATION_SCHEMA_VERSION = 6
 LEGACY_V7_INTERPRETATION_SCHEMA_VERSION = 7
 
 #: Owner decision (§4.12, 2026-08-15 → 2026-08-16 更新为 5): at most this many
-#: supported cognitions per committed boundary, still a single physical
-#: memory_world request.
+#: supported cognitions per committed boundary. Invalid interpretation may
+#: receive one feedback rewrite before the fenced atomic Apply.
 MAX_COGNITIONS_PER_BATCH = 5
 
 #: V3 supports Owner self-targeted stable statement kinds plus first-class
@@ -273,6 +276,17 @@ def _has_declarative_facts(text: str) -> bool:
         if any(w in text for w in ("谁", "啥", "什么", "怎么", "如何", "哪", "几点", "什么时候", "多少", "是否", "能否", "为什么", "知道", "记得")):
             return False
     return True
+
+
+def _explicit_source_dates(slices: list[str]) -> set[str]:
+    """Calendar dates copied/normalized from user text, without relative guesses."""
+    dates: set[str] = set()
+    for text in slices:
+        for match in re.finditer(r"(?<![0-9])([0-9]{4})(?:年|[-/.])([0-9]{1,2})(?:月|[-/.])([0-9]{1,2})(?:日|号)?(?![0-9])", text):
+            value = f"{int(match[1]):04d}-{int(match[2]):02d}-{int(match[3]):02d}"
+            if _is_iso_date(value):
+                dates.add(value)
+    return dates
 
 
 def relationship_id_for(
@@ -695,7 +709,7 @@ _SYSTEM_PROMPT = (
     "4. formed_by=stated：使用segment_id时，proposition只是必填占位，系统会从所选"
     "segment逐字派生正式命题并完成第一人称归一；模型不要复制、概括或计算命题。"
     "结构字段中的姓名必须能在所选segment或规则10允许的唯一指代上下文中核对。"
-    "仅旧quote/start/end兼容输入仍按逐字锚定校验。\n"
+    "姓名、称呼、数字、日期必须保留用户原话写法，不得改写或猜测；无法核对就不产出。quote同样逐字派生命题，start/end输入按逐字锚定校验。\n"
     "5. formed_by=confirmed：仅当 assistant 提出命题、用户短确认（无否定词）时用于 "
     "attribute/preference。assistant_claim 必须是 context 的逐字子串；proposition "
     "等于 claim 去语气词/问尾、把\"你/您\"换\"用户\"。assistant 猜对本身不是 Evidence。\n"
@@ -762,9 +776,9 @@ _SYSTEM_PROMPT = (
     "参与者/对象）用 statement_kind=event（stated）。participants 列参与事件的"
     "第三方实体（名字逐字在命题里，kind 默认 person；\"用户\"可指本人），objects "
     "列参与的对象/地点实体（kind 如 place/thing）。名字要在命题里；没有明确实体"
-    "就省略对应列表。时间：能确定到具体日期时 occurred_at 用 YYYY-MM-DD（如"
-    "\"昨天\"按当前时间解析成日期），并把命题里的时间短语逐字放进 time_expression；"
-    "解析不了日期就**两个字段都省略**（事件仍形成）。未发生/不确定是否发生/含糊"
+    "就省略对应列表。时间：仅原话明确包含唯一完整日期时，occurred_at 用 YYYY-MM-DD；"
+    "把命题里的时间短语逐字放进 time_expression，不把昨天/上周等相对时间猜成日期。"
+    "没有明确日期就省略 occurred_at（事件仍形成）。未发生/不确定是否发生/含糊"
     "内容不产出。**proposition 必须逐字等于支持切片原句——含\"上周末/昨天\"等时间"
     "词在内，一个字都不许增删改写（如切片是\"上周末我和小王去了南京\"，proposition"
     "就必须原样是它）**。event 撤回（说\"没这事/别记了\"）用 correct+retract+"
@@ -901,7 +915,7 @@ _SYSTEM_PROMPT_EN = (
     "the system derives the formal proposition verbatim from the selected segment "
     "and performs owner-pronoun normalization. Do not copy, summarize or calculate it. "
     "Names in structural fields must be verifiable in that segment or through rule "
-    "10's unique reference context. Legacy quote/start/end inputs retain verbatim checks.\n"
+    "10's unique reference context. Preserve names, forms of address, numbers and dates exactly as written in user evidence; omit unverifiable facts. Quotes also derive verbatim propositions; legacy start/end inputs retain verbatim checks.\n"
     "5. formed_by=confirmed: only for attribute/preference when the assistant "
     "proposed a proposition and the user confirmed it briefly (no negation). "
     "assistant_claim must be a verbatim substring of the context; the "
@@ -1004,10 +1018,9 @@ _SYSTEM_PROMPT_EN = (
     "person; \"The user\" may stand for the user themselves), objects lists "
     "the objects/places involved (kind e.g. place/thing). Names must be in "
     "the proposition; omit a list when there are no definite entities. Time: "
-    "when a concrete date can be determined, occurred_at uses YYYY-MM-DD "
-    "(e.g. \"yesterday\" resolves to a date) and the time phrase goes "
-    "verbatim into time_expression; when the date cannot be resolved, omit "
-    "**both** fields (the event still forms). Not-yet-happened/uncertain/"
+    "occurred_at uses YYYY-MM-DD only when user evidence contains one explicit full date. "
+    "Keep the time phrase verbatim in time_expression; never guess a date from yesterday "
+    "or last week. Omit occurred_at if no full date is explicit (the event still forms). Not-yet-happened/uncertain/"
     "vague content is not produced. **The proposition must equal the "
     "supporting slice verbatim — including \"last weekend/yesterday\" time "
     "words, not a single character added, deleted or rewritten** (if the "
@@ -1342,6 +1355,45 @@ class HermesBatchAdapterProcessor:
             payload = self._dispatch_once(job, db)
             self._persist_checkpoint(db, job, payload)
 
+        compiled = self._compile_checked(str(payload.get("content") or ""), job, db,
+                                         truncated=payload.get("finish_reason") == "length")
+        if (
+            compiled.batch is None
+            and compiled.terminal == "no_change"
+            and compiled.reason != "model_no_change"
+            and "formation_rewrite" not in payload
+        ):
+            first = dict(payload)
+            feedback = {
+                "code": compiled.reason,
+                "instruction": (
+                    "Rewrite the complete interpretation JSON once. Fix the reported "
+                    "compiler error; every cognition must include a nonempty proposition "
+                    "and valid supports. Copy names, forms of address, numbers and dates "
+                    "exactly from user evidence. Never invent facts."
+                ),
+            }
+            # Persist the attempt reservation before dispatch: recovery never
+            # repeats a rewrite whose response was lost in a crash.
+            payload["formation_rewrite"] = {"state": "reserved", "error": feedback}
+            self._persist_checkpoint(db, job, payload)
+            try:
+                payload = self._dispatch_once(job, db, previous=first, feedback=feedback)
+                compiled = self._compile_checked(str(payload.get("content") or ""), job, db,
+                                                 truncated=payload.get("finish_reason") == "length")
+                payload["formation_rewrite"] = {
+                    "state": "completed", "error": feedback, "first_result": first,
+                    "final_error": compiled.reason if compiled.batch is None else None,
+                }
+            except Exception as exc:
+                # Do not persist provider exception text (it may contain secrets).
+                payload = first
+                payload["formation_rewrite"] = {
+                    "state": "failed", "error": feedback,
+                    "failure_type": type(exc).__name__,
+                }
+            self._persist_checkpoint(db, job, payload)
+
         model_kwargs: dict[str, Any] = {
             "model_provider": payload.get("provider"),
             "model_name": payload.get("model"),
@@ -1351,10 +1403,6 @@ class HermesBatchAdapterProcessor:
             "model_result": payload,
         }
 
-        try:
-            compiled = self._compile(str(payload.get("content") or ""), job, db)
-        except _ZeroWriteError as exc:
-            return WorldJobResult.no_change(str(exc), **model_kwargs)
         batch = compiled.batch
         if batch is None:
             if compiled.terminal == "clarification_required":
@@ -1415,8 +1463,6 @@ class HermesBatchAdapterProcessor:
         payload: Mapping[str, object],
     ) -> None:
         content = str(payload.get("content") or "")
-        if not content.strip():
-            raise PermanentWorldJobError("one_shot_route_empty_result")
         usage = payload.get("usage")
         provider = payload.get("provider")
         model = payload.get("model")
@@ -1455,7 +1501,9 @@ class HermesBatchAdapterProcessor:
     # ── one-shot dispatch ──────────────────────────────────────────────────
 
     def _dispatch_once(
-        self, job: ClaimedWorldJob, db: sqlite3.Connection
+        self, job: ClaimedWorldJob, db: sqlite3.Connection, *,
+        previous: Optional[Mapping[str, object]] = None,
+        feedback: Optional[Mapping[str, object]] = None,
     ) -> dict[str, object]:
         evidence = self._evidence_payload(job, db)
         current = self._current_cognitions_payload(job, db)
@@ -1477,6 +1525,14 @@ class HermesBatchAdapterProcessor:
                 ),
             },
         ]
+        if previous is not None:
+            messages.extend([
+                {"role": "assistant", "content": str(previous.get("content") or "")},
+                {"role": "user", "content": _canonical({
+                    "compiler_error": feedback,
+                    "source_evidence": evidence,
+                })},
+            ])
         # The documented OneShotRoute contract makes ``session_id``
         # keyword-only (see the Hermes ``one_shot_llm`` initialize kwarg).
         try:
@@ -1801,6 +1857,16 @@ class HermesBatchAdapterProcessor:
 
     # ── deterministic compile ──────────────────────────────────────────────
 
+    def _compile_checked(
+        self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection, *, truncated: bool = False
+    ) -> _CompiledOutcome:
+        if truncated:
+            return _CompiledOutcome(None, "model_output_truncated")
+        try:
+            return self._compile(content, job, db)
+        except _ZeroWriteError as exc:
+            return _CompiledOutcome(None, str(exc))
+
     def _compile(
         self, content: str, job: ClaimedWorldJob, db: sqlite3.Connection
     ) -> _CompiledOutcome:
@@ -1879,7 +1945,7 @@ class HermesBatchAdapterProcessor:
         job: ClaimedWorldJob,
         db: sqlite3.Connection,
     ) -> tuple[Optional[_CompiledBatch], str]:
-        """Exact V1 envelope semantics (single form, stated, loose anchor)."""
+        """V1 single stated form, grounded in its original supporting slice."""
         result = data.get("result")
         if result == "no_change":
             return None, "model_no_change"
@@ -1918,7 +1984,7 @@ class HermesBatchAdapterProcessor:
         )
         item = BatchItem(
             action="form",
-            proposition=proposition.strip(),
+            proposition=_stated_normalize(parsed[0][3]),
             statement_kind=str(kind),
             formed_by="stated",
             supports=parsed,
@@ -2342,18 +2408,10 @@ class HermesBatchAdapterProcessor:
                 if quote_without_prepend
                 else _stated_normalize
             )
-            is_placeholder = (
-                not proposition
-                or proposition.strip().lower() in ("ignored", "placeholder", "…", "...", "none", "null")
-            )
-            # For third-party entities, naming, alias, event, or when proposition is a test placeholder:
-            # derive proposition from slice.
-            if kind in {"naming", "alias", "event"} or raw_item.get("entity") is not None or is_placeholder:
-                proposition = normalizer(slices[0])
-            else:
-                # For owner attributes and preferences, keep the Agent's synthesized understanding of the user!
-                # Strip accidental leading numbering like "1. " or "1、" or "- "
-                proposition = re.sub(r"^[0-9]+[\.\、\s\-]+", "", proposition).strip()
+            # The model selects evidence, but cannot rewrite facts. Derive all
+            # stated propositions from the selected verbatim slice, including
+            # owner preferences (e.g. a requested form of address).
+            proposition = normalizer(slices[0])
 
         entity_canonical_name: Optional[str] = None
         entity_kind: Optional[str] = None
@@ -2591,7 +2649,13 @@ class HermesBatchAdapterProcessor:
                         occurred_raw.strip()
                     ):
                         return None, "invalid_event_time"
-                    event_occurred_at = occurred_raw.strip()
+                    # Keep the original time expression below, but do not store
+                    # a calendar date guessed from "yesterday" or a wrong date.
+                    # This field is optional; only an unambiguous source date
+                    # can establish its normalized ISO value.
+                    source_dates = _explicit_source_dates(slices)
+                    if len(source_dates) == 1:
+                        event_occurred_at = next(iter(source_dates))
                 time_expr_raw = raw_item.get("time_expression")
                 if time_expr_raw is not None:
                     if not isinstance(time_expr_raw, str) or not time_expr_raw.strip():
@@ -2744,11 +2808,7 @@ class HermesBatchAdapterProcessor:
                 ]
             else:
                 anchors = [_stated_normalize(slice_text) for slice_text in slices]
-            allow_quote_synthesis = quote_anchored and (
-                (kind in ("attribute", "preference") and not raw_item.get("entity"))
-                or (kind == "relationship" and source_canonical_name is None)
-            )
-            if not allow_quote_synthesis and not any(
+            if not any(
                 _strip_end_punctuation(proposition)
                 == _strip_end_punctuation(anchor)
                 for anchor in anchors
