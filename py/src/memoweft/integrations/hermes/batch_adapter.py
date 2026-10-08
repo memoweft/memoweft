@@ -683,6 +683,7 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "形成资格看适用范围：只保留对以后持续有效的偏好/习惯/安排。只针对本次任务的操作、回复、文件或工具指示不形成 preference，例如本次先做某一步、处理当前文件、当前回合回复格式；即使措辞强烈也不变成长久要求。混合原话要分别选择持续内容，排除独立的临时指令，不把两者放进同一个命题。不要把‘最近’的持续安排误判成单次任务。\n"
     "来源标识按所在列表逐字复制：sentences 的 id 是 t0、t1…，填 sentence_id；segments 的 id 是 s0、s1…，填 segment_id。不能把 s0 填到 sentence_id，也不能把 t0 填到 segment_id；不要自行造标识。\n"
     "先按完整主题选择来源，再分类。Evidence 同时提供 sentences（完整句）和 segments（细分句）。同一句中的主题引导、限制条件和偏好值属于一个命题时，优先用 supports 中的 sentence_id 选择完整句；不要只留下末尾的值。只有该句包含独立的不同命题时才选择各自的 segment_id。每个 support 只给 sentence_id 或 segment_id 其中一个，不能同时选覆盖相同范围的句和片段。proposition 必须给非空占位文本，系统仍从所选原话逐字派生。\n"
     "稳定的使用方式、固定数值或设置也是当前安排，不需要用户另说‘记住’；只要是用户本人的持续约束就应形成。\n"
@@ -788,6 +789,10 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "Eligibility depends on scope: retain ongoing preferences, habits and arrangements. "
+    "Task-scoped operations, reply formatting, current-file requests and tool instructions are not "
+    "preferences, however emphatic. In mixed evidence select the ongoing claim separately and omit "
+    "independent one-task instructions. 'Recently' alone does not make an ongoing arrangement temporary.\n"
     "Copy source IDs exactly from their own list: sentences use t0, t1, ... with sentence_id; "
     "segments use s0, s1, ... with segment_id. Never put s0 in sentence_id or t0 in segment_id, "
     "and never invent a selector ID.\n"
@@ -1978,6 +1983,9 @@ class HermesBatchAdapterProcessor:
                 current_entity_mentions=current_entity_mentions,
             )
             if item is None:
+                if reason == "task_scoped_instruction":
+                    normalizations.append({"item_index": item_index, "rule": "excluded_task_scoped_instruction"})
+                    continue
                 return None, reason
             items.append(item)
 
@@ -2338,6 +2346,13 @@ class HermesBatchAdapterProcessor:
             return None, "span_out_of_range"
 
         slices = [support[3] for support in parsed]
+        if kind == "preference" and formed_by == "stated" and action == "form":
+            scope_units = [str(sentence["text"]) for text in slices for sentence in _evidence_sentences(text)]
+            temporary = [_is_task_scoped_instruction(text) for text in scope_units]
+            if temporary and all(temporary):
+                return None, "task_scoped_instruction"
+            if any(temporary):
+                return None, "mixed_task_and_ongoing_instruction"
         raw_supports = raw_item.get("supports")
         quote_anchored = isinstance(raw_supports, list) and any(
             isinstance(support, dict)
@@ -5204,6 +5219,34 @@ class HermesBatchAdapterProcessor:
         if batch.normalizations:
             outcome["normalizations"] = list(batch.normalizations)
         return outcome
+
+
+_ONGOING_INSTRUCTION = re.compile(
+    r"(?:以后|今后|往后|从今|长期|一直|每次|每天|每周|每月|通常|习惯|固定|总是|一贯|持续)"
+    r"|\b(?:always|usually|habit|ongoing|every|each time|from now on|in future|going forward)\b", re.IGNORECASE,
+)
+_TASK_SCOPE = re.compile(
+    r"(?:这次|本次|这一次|这一回|本回合|这条回复|本任务|当前任务|这个文件|这份文件|当前文件)"
+    r"|\b(?:this time|this task|this turn|this reply|this file|for now|just now)\b", re.IGNORECASE,
+)
+_TASK_IMPERATIVE = re.compile(
+    r"^(?:请|麻烦)?(?:先|只(?:回复|回答|写|给)|直接(?:回复|回答)|不要调用|不调用|别调用|帮我|替我|给我(?:写|列|做|查|整理))"
+    r"|^(?:please\s+)?(?:just\s+|only\s+|first\s+|reply\b|respond\b|write\b|edit\b|open\b|save\b|summarize\b|translate\b|help me\b)",
+    re.IGNORECASE,
+)
+
+
+def _is_task_scoped_instruction(text: str) -> bool:
+    """Reject observed one-task directives, without classifying ordinary facts.
+
+    An explicit ongoing scope makes an instruction eligible; a declarative
+    habit/arrangement needs no extra 'remember' request. Scope is checked on
+    selected source sentences, never on unrelated unselected text.
+    """
+    text = text.strip()
+    if _ONGOING_INSTRUCTION.search(text):
+        return False
+    return bool(_TASK_SCOPE.search(text) or _TASK_IMPERATIVE.search(text))
 
 
 _SPAN_REPAIR_PREFIXES = ("我", "我们", "咱们", "俺", "本人")
