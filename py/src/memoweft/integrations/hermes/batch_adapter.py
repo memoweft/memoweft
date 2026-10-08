@@ -686,7 +686,7 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
-    "对于本人持续 attribute/preference，若原话明确命名了主题，可附 entity={canonical_name:原话中的主题词,kind:topic,aliases:[常见同义说法]} 作为检索线索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义就不填。主题词必须在所选原话中；命题仍逐字来自所选原话。省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
+    "本人持续 attribute/preference 的所选原话明确命名了适用主题时，必须附主题检索线索：\"entity\":{\"canonical_name\":\"<原话主题词>\",\"kind\":\"topic\",\"aliases\":[\"<常见同义主题词>\"]}。这是第10条第三方 entity 之外的本人主题用法；不是改成第三方属性。给主题的常见等价叫法，便于以后换说法仍能检索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义时 aliases 留空。主题词必须在所选原话中；命题仍逐字来自所选原话。原话未命名主题或省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
     "形成资格看适用范围：只保留对以后持续有效的偏好/习惯/安排。只针对本次任务的操作、回复、文件或工具指示不形成 preference，例如本次先做某一步、处理当前文件、当前回合回复格式；即使措辞强烈也不变成长久要求。混合原话要分别选择持续内容，排除独立的临时指令，不把两者放进同一个命题。不要把‘最近’的持续安排误判成单次任务。\n"
     "来源标识按所在列表逐字复制：sentences 的 id 是 t0、t1…，填 sentence_id；segments 的 id 是 s0、s1…，填 segment_id。不能把 s0 填到 sentence_id，也不能把 t0 填到 segment_id；不要自行造标识。\n"
     "先按完整主题选择来源，再分类。Evidence 同时提供 sentences（完整句）和 segments（细分句）。同一句中的主题引导、限制条件和偏好值属于一个命题时，优先用 supports 中的 sentence_id 选择完整句；不要只留下末尾的值。只有该句包含独立的不同命题时才选择各自的 segment_id。每个 support 只给 sentence_id 或 segment_id 其中一个，不能同时选覆盖相同范围的句和片段。proposition 必须给非空占位文本，系统仍从所选原话逐字派生。\n"
@@ -793,10 +793,13 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
-    "For an ongoing owner attribute/preference with an explicitly named topic, you may attach "
-    "entity={canonical_name:the exact source topic,kind:topic,aliases:[common equivalent phrasings]} "
-    "as retrieval labels. Aliases only rename the topic, never add facts, constraints, numbers, "
-    "people or broader scope; omit uncertain equivalents. The claim remains verbatim. A topicless "
+    "For an ongoing owner attribute/preference whose selected source explicitly names its topic, "
+    "include retrieval labels: \"entity\":{\"canonical_name\":\"<verbatim topic>\",\"kind\":\"topic\","
+    "\"aliases\":[\"<common equivalent topic phrase>\"]}. This is an owner-topic use of entity, separate "
+    "from rule 10's third-party attributes; never change attribution. Supply common equivalent labels "
+    "so later queries can use different wording. Aliases only rename the topic, never add facts, "
+    "constraints, numbers, people or broader scope; use an empty list for uncertain equivalents. "
+    "The claim remains verbatim. An unnamed topic is never invented. A topicless "
     "correction need not supply entity: predecessor topic cues remain available. Never use this field "
     "on relationship items.\n"
     "Eligibility depends on scope: retain ongoing preferences, habits and arrangements. "
