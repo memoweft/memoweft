@@ -125,6 +125,88 @@ def test_numeric_correction_inherits_topic_across_sessions_without_inventing_one
         runtime.shutdown()
 
 
+@pytest.mark.parametrize("prior,correction,query", [
+    ("我养的阳台盆栽每次浇水用300毫升，这是我现在固定的用量。",
+     "前面那个数报大了，应当是150毫升，300毫升作废，后面都以小的这个数为准。", "今天给阳台盆栽浇水，该量多少？"),
+    ("每周线上读书会周四19点30分开始。", "刚才说的时间不对，改到20点15分，19点30分取消。", "线上读书会几点开始？"),
+    ("陶艺兴趣组的联系人叫林舟。", "那个人名写错了，应该是林洲，不是林舟。", "陶艺兴趣组找谁？"),
+    ("我做的手工香皂固定每块48元。", "上一句的价格多报了，应当是36元，48元作废。", "两块手工香皂多少钱？"),
+    ("星桥书社寄书到青禾路18号。", "前面那个地址作废，青禾路18号写错了，改成白榆路26号。", "星桥书社收件地址？"),
+])
+def test_elliptical_correction_is_an_atomic_pair(tmp_path: Path, prior: str, correction: str, query: str) -> None:
+    runtime = _runtime(tmp_path)
+    try:
+        _ingest(runtime, prior)
+        _ingest(runtime, correction, "b", "another-conversation")
+        rows = _recent(runtime, query)
+        assert len(rows) == 1
+        assert rows[0]["text"] == correction
+        assert rows[0]["preceding_text"] == prior
+        assert rows[0]["correction_status"] == "certain"
+    finally:
+        runtime.shutdown()
+
+
+def test_competing_quantity_topics_are_presented_as_uncertain_not_chosen_by_query(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    try:
+        _ingest(runtime, "阳台盆栽每次浇水300毫升。")
+        _ingest(runtime, "我做蛋糕每次用牛奶300毫升。", "b", "cake")
+        _ingest(runtime, "前面那个数报大了，150毫升才对，300毫升作废。", "c", "correction")
+        rows = _recent(runtime, "阳台盆栽浇水多少？")
+        assert len(rows) == 1
+        assert rows[0]["correction_status"] == "ambiguous"
+        assert "preceding_text" not in rows[0]
+        assert {r["text"] for r in rows[0]["preceding_candidates"]} == {"阳台盆栽每次浇水300毫升。", "我做蛋糕每次用牛奶300毫升。"}
+    finally:
+        runtime.shutdown()
+
+
+@pytest.mark.parametrize("gap", ["time", "turns", "dimension", "unrelated"])
+def test_elliptical_correction_does_not_inherit_outside_adjacent_dimension(tmp_path: Path, gap: str) -> None:
+    from datetime import datetime, timedelta, timezone
+    runtime = _runtime(tmp_path)
+    try:
+        _ingest(runtime, "阳台盆栽每次浇水300毫升。")
+        if gap == "time":
+            with sqlite3.connect(_db_path(runtime)) as db:
+                db.execute("UPDATE memory_world_job SET created_at=?", ((datetime.now(timezone.utc) - timedelta(minutes=6)).isoformat().replace("+00:00", "Z"),))
+        elif gap == "turns":
+            for i in range(4):
+                _ingest(runtime, "今天过得怎么样？", str(i), f"filler-{i}")
+        correction = "前面那个数报大了，改成150元。" if gap == "dimension" else "前面那个数报大了，150毫升才对，300毫升作废。"
+        if gap == "unrelated":
+            correction = "我买的墨水改成150毫升装。"
+        _ingest(runtime, correction, "f", "correction")
+        rows = _recent(runtime, "阳台盆栽浇水多少？")
+        assert all("preceding_text" not in r and "preceding_candidates" not in r for r in rows)
+        assert all(r["text"] != correction for r in rows)
+    finally:
+        runtime.shutdown()
+
+
+def test_forgetting_correction_pair_removes_both_sources_from_recall_and_disk(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    try:
+        _ingest(runtime, "MF2Secret盆栽每次浇水397毫升。")
+        _ingest(runtime, "前面那个数报大了，改成163毫升，397毫升作废。", "b", "correction")
+        pair = _recent(runtime, "MF2Secret盆栽浇水多少？")[0]
+        assert pair["correction_status"] == "certain"
+        service = CommandService(_db_path(runtime), subject_id=_subject(runtime), host_id=_host(runtime))
+        for i, evidence_id in enumerate([pair["id"], pair["preceding_evidence_id"]]):
+            revision = QueryService(_db_path(runtime), subject_id=_subject(runtime)).preview_recall("盆栽")["world_revision"]
+            receipt = service.submit_command({"schema_version": 1, "command_id": f"mf2-forget-{i}",
+                "subject_id": _subject(runtime), "actor": "owner", "expected_world_revision": revision,
+                "operation": "delete_evidence", "target_kind": "evidence", "target_id": evidence_id,
+                "payload": {}, "submitted_at": "2026-10-09T00:00:00.000Z"})
+            assert receipt["result_state"] == "applied"
+        assert _recent(runtime, "盆栽毫升") == []
+        for secret in ["MF2Secret", "397毫升", "163毫升"]:
+            assert secret.encode() not in _db_path(runtime).read_bytes()
+    finally:
+        runtime.shutdown()
+
+
 def test_no_change_is_reconsidered_once_and_original_failure_is_preserved(tmp_path: Path) -> None:
     row, calls = _run(tmp_path / "world.sqlite3", "我喜欢喝肉桂咖啡。", [
         {"content": '{"schema_version":8,"result":"no_change"}'}, _model(_batch(_item("ignored")))])

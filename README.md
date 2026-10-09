@@ -54,7 +54,14 @@ MemoWeft keeps these boundaries explicit:
   and 32 accepted turns, and disappears after successful formation. It never
   copies assistant claims or recreates deleted conversation context. Hosts must
   label these quotes provisional and retain their distinction from formal
-  memory. Completed turns wake formation immediately; host queues own capacity
+  memory. A short explicit correction may carry its preceding user quote across
+  conversations within four accepted turns and five minutes. Repeated quantities
+  or an explicit numeric/time reference must agree in dimension; competing
+  candidates are returned together with `correction_status: "ambiguous"`, never
+  assigned to the topic selected by the query. A unique pair uses
+  `preceding_text` / `preceding_evidence_id`; ambiguous groups use
+  `preceding_candidates`. Both fit atomically in the existing quote budget.
+  Completed turns wake formation immediately; host queues own capacity
   and foreground priority.
 - Correction, retract, forget, archive, mute, and permission changes produce durable receipts.
 - Shared assistant interactions retain their original history and explicit memory dependencies. Model projection excludes unresolved or no-longer-current dependencies, including transitive reuse; history projection remains subject to source permissions.
