@@ -25,6 +25,13 @@ def legacy_store(home: Path, version: int) -> Path:
         "('old-evidence', 'synthetic-owner', 'spoken', 'synthetic-host', "
         "'2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z', '合成旧记忆', '合成旧记忆', 1, 0, 1)"
     )
+    db.execute(
+        "INSERT INTO cognition (id, subject_id, content, content_type, formed_by, "
+        "confidence, cred_status, created_at, updated_at) VALUES "
+        "('old-memory', 'synthetic-owner', '合成旧偏好：回答简短', 'preference', "
+        "'stated', 800, 'trusted', '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z')"
+    )
+    db.execute("INSERT INTO cognition_evidence VALUES ('old-memory', 'old-evidence', 'support')")
     db.execute(f"PRAGMA user_version = {version}")
     db.commit()
     db.close()
@@ -44,6 +51,8 @@ def test_bridge_migrates_supported_legacy_store_and_preserves_evidence(
         with sqlite3.connect(path) as db:
             assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
             assert db.execute("SELECT raw_content FROM evidence WHERE id = 'old-evidence'").fetchone() == ("合成旧记忆",)
+            assert db.execute("SELECT content FROM cognition WHERE id = 'old-memory'").fetchone() == ("合成旧偏好：回答简短",)
+            assert db.execute("SELECT evidence_id FROM cognition_evidence WHERE cognition_id = 'old-memory'").fetchone() == ("old-evidence",)
         # A second startup exercises the post-migration physical validation too.
         runtime.shutdown()
         runtime.initialize("synthetic-session", dsh_home=str(tmp_path),
