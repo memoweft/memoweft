@@ -59,6 +59,9 @@ def test_independent_relationship_evaluation_and_entity_sources(tmp_path: Path) 
     ('entity', '更正：林遥的名字我说错了，其实叫林澜。',
      {'statement_kind': 'alias', 'entity': {'canonical_name': '林澜', 'kind': 'person'},
       'alias_of': {'canonical_name': '林遥', 'kind': 'person'}}),
+    ('entity', '那个人名写错了，应该是林澜，不是林遥，以后按林澜这个名字来。',
+     {'statement_kind': 'alias', 'entity': {'canonical_name': '林澜', 'kind': 'person'},
+      'alias_of': {'canonical_name': '林遥', 'kind': 'person'}}),
 ])
 def test_three_corrections_keep_sources_and_formal_reason_chains(
     tmp_path: Path, kind: str, raw: str, extra: dict[str, Any],

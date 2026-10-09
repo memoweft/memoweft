@@ -162,6 +162,17 @@ def test_competing_quantity_topics_are_presented_as_uncertain_not_chosen_by_quer
         runtime.shutdown()
 
 
+def test_oversized_ambiguous_pair_never_falls_back_to_the_old_value_alone(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    try:
+        _ingest(runtime, "阳台盆栽每次浇水300毫升。" + "这是长期固定安排。" * 50)
+        _ingest(runtime, "我做蛋糕每次用牛奶300毫升。" + "这是长期固定安排。" * 50, "b", "cake")
+        _ingest(runtime, "前面那个数报大了，150毫升才对，300毫升作废。", "c", "correction")
+        assert _recent(runtime, "阳台盆栽浇水多少？") == []
+    finally:
+        runtime.shutdown()
+
+
 @pytest.mark.parametrize("gap", ["time", "turns", "dimension", "unrelated"])
 def test_elliptical_correction_does_not_inherit_outside_adjacent_dimension(tmp_path: Path, gap: str) -> None:
     from datetime import datetime, timedelta, timezone

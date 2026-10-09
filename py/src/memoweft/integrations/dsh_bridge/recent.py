@@ -116,10 +116,12 @@ def recent_evidence(
             item["correction_status"] = "ambiguous"
             item["preceding_candidates"] = [{"id": r["id"], "text": r["text"]} for r in candidates]
         size = len(row["text"]) + sum(len(r["text"]) for r in candidates)
+        # If the whole correction group cannot fit, do not later emit its old
+        # source alone and thereby affirm a value whose correction was dropped.
+        grouped.update(r["id"] for r in candidates)
         if chars + size > 800:
             continue  # Never truncate a quote into a different assertion.
         selected.append(item)
-        grouped.update(r["id"] for r in candidates)
         chars += size
         if len(selected) == 4:
             break
