@@ -152,7 +152,9 @@ def test_formation_resolves_short_correction_topic_from_existing_transition_sour
     captured: list[dict[str, object]] = []
 
     def route(messages: list[dict[str, str]], **kwargs: object) -> dict[str, object]:
-        captured.append(json.loads(messages[-1]['content']))
+        # The second user message on a rewrite is compiler feedback; inspect
+        # the source/history payload in both calls without weakening its gate.
+        captured.append(json.loads(messages[1]['content']))
         return _model({'schema_version': 8, 'result': 'no_change'})
 
     processor = HermesBatchAdapterProcessor(str(path), route, clock=clock)

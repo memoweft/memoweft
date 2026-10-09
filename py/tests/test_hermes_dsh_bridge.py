@@ -397,7 +397,7 @@ def test_list_world_keeps_row_with_all_current_supports(
 
 @pytest.mark.parametrize(
     ("model_tier", "expected_route_calls"),
-    ((None, 1), ("cloud", 1), ("local", 0)),
+    ((None, 2), ("cloud", 2), ("local", 0)),
 )
 def test_dsh_route_tier_controls_dispatch_after_local_read_revocation(
     tmp_path: Path, model_tier: str | None, expected_route_calls: int
