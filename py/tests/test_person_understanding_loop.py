@@ -15,7 +15,7 @@ from test_hermes_batch_adapter_v5 import _batch, _model, _run as run_job, _set_e
 from test_hermes_world_worker import MutableClock, _job
 
 
-def seed(path: Path) -> dict[str, str]:
+def seed(path: Path, *, broad_relationship: bool = False) -> dict[str, str]:
     raw = '林遥修乐器很熟练，是我的朋友。'
     evaluation = _item('ignored')
     evaluation.update(statement_kind='attribute', entity={'canonical_name': '林遥', 'kind': 'person'})
@@ -23,6 +23,8 @@ def seed(path: Path) -> dict[str, str]:
     relationship.update(statement_kind='relationship', relation_type='friend',
                         target_entity={'canonical_name': '林遥', 'kind': 'person'},
                         supports=[{'evidence_id': 'evidence-1', 'segment_id': 's1'}])
+    if broad_relationship:
+        relationship['supports'] = [{'evidence_id': 'evidence-1', 'sentence_id': 't0'}]
     row, _ = _run(path, raw, [_model(_batch(evaluation, relationship))])
     assert row['state'] == 'applied', row
     with sqlite3.connect(path) as db:
@@ -201,3 +203,16 @@ def test_name_corrected_relationship_is_retrievable_by_its_former_identity(tmp_p
         for tier in ('local', 'cloud'):
             snapshot = recall_world_snapshot(db, 'owner', '林遥是谁？', model_tier=tier)
             assert snapshot and snapshot.count == 1 and '林澜' in snapshot.rendered_recall
+
+
+def test_broad_relationship_cannot_keep_an_obsolete_evaluation_current(tmp_path: Path) -> None:
+    path = tmp_path / 'world.sqlite3'
+    ids = seed(path, broad_relationship=True)
+    item = dict(_item('ignored'), action='correct', statement_kind='attribute',
+                entity={'canonical_name': '林遥', 'kind': 'person'}, corrects_cognition_id=ids['cognition'])
+    assert correct(path, '更正：林遥修乐器其实是初学水平。', item)['state'] == 'applied'
+    with sqlite3.connect(path) as db:
+        relationship = db.execute('SELECT content FROM relationship WHERE invalid_at IS NULL').fetchone()[0]
+        assert relationship == '林遥是我的朋友。'
+        snapshot = recall_world_snapshot(db, 'owner', '林遥修乐器现在怎么样？')
+        assert snapshot and '初学水平' in snapshot.rendered_recall and '很熟练' not in snapshot.rendered_recall

@@ -507,6 +507,71 @@ def _is_confirmation_span(span_text: str, assistant_claim: str) -> bool:
 
 # ── compiled batch model ───────────────────────────────────────────────────
 
+def _separate_person_claim_source(
+    item: dict[str, Any], items: list[Any], ids: set[str], raw_by_id: Mapping[str, str],
+) -> tuple[Optional[dict[str, Any]], str]:
+    """Remove an independently selected attribute clause from a broad relationship.
+
+    This uses interpreter-selected ranges, never a relationship/ability vocabulary.
+    Raw Evidence stays intact. Ambiguous whole-source overlap gets the existing
+    compiler feedback rewrite instead of preserving contradictory mixed claims.
+    """
+    if (item.get('statement_kind') != 'relationship' or item.get('source_entity') is not None
+            or (item.get('formed_by') or 'stated') != 'stated' or item.get('retract')):
+        return item, ''
+    target = item.get('target_entity')
+    if not isinstance(target, dict) or not isinstance(target.get('canonical_name'), str):
+        return item, ''
+    name = target['canonical_name'].strip()
+    supports, _ = _parse_supports(item.get('supports'), ids, raw_by_id)
+    if supports is None or any(not text for _, _, _, text in supports):
+        return item, ''
+    cuts: list[tuple[str, int, int]] = []
+    for candidate in items:
+        if not isinstance(candidate, dict) or candidate.get('statement_kind') not in {'attribute', 'preference'}:
+            continue
+        entity = candidate.get('entity')
+        if (not isinstance(entity, dict) or entity.get('kind') == 'topic'
+                or not isinstance(entity.get('canonical_name'), str) or entity['canonical_name'].strip() != name
+                or (candidate.get('formed_by') or 'stated') != 'stated' or candidate.get('retract')):
+            continue
+        other, _ = _parse_supports(candidate.get('supports'), ids, raw_by_id)
+        if other is None or any(not text for _, _, _, text in other):
+            continue
+        for eid, start, end, _ in other:
+            if any(eid == rid and start == rstart and end == rend for rid, rstart, rend, _ in supports):
+                return None, 'independent_person_claims_share_whole_source'
+            if any(eid == rid and rstart <= start < end <= rend for rid, rstart, rend, _ in supports):
+                cuts.append((eid, start, end))
+    if not cuts:
+        return item, ''
+    remaining = [(eid, start, end) for eid, start, end, _ in supports]
+    for cut_id, cut_start, cut_end in cuts:
+        narrowed: list[tuple[str, int, int]] = []
+        for eid, start, end in remaining:
+            if eid != cut_id or end <= cut_start or cut_end <= start:
+                narrowed.append((eid, start, end)); continue
+            if start < cut_start:
+                narrowed.append((eid, start, cut_start))
+            if cut_end < end:
+                narrowed.append((eid, cut_end, end))
+        remaining = narrowed
+    selected: list[tuple[str, int, int, str]] = []
+    for eid, start, end in remaining:
+        raw = raw_by_id[eid]
+        while start < end and raw[start] in '，,；; \t\r\n':
+            start += 1
+        while start < end and raw[end - 1] in ' \t\r\n':
+            end -= 1
+        if start < end:
+            selected.append((eid, start, end, raw[start:end]))
+    if len(selected) != 1:
+        return None, 'independent_person_claims_need_separate_clauses'
+    result = dict(item)
+    result['supports'] = [dict(evidence_id=eid, start=start, end=end) for eid, start, end, _ in selected]
+    result['proposition'] = _stated_normalize(selected[0][3])
+    return result, 'separated_independent_person_claim_source'
+
 @dataclass(frozen=True, slots=True)
 class BatchItem:
     """One compiler-verified item: a form or a typed corrects."""
@@ -1987,6 +2052,11 @@ class HermesBatchAdapterProcessor:
         for item_index, raw_item in enumerate(raw_items):
             if isinstance(raw_item, dict):
                 raw_item = dict(raw_item)
+                raw_item, separation = _separate_person_claim_source(raw_item, raw_items, ids, raw_by_id)
+                if raw_item is None:
+                    return None, separation
+                if separation:
+                    normalizations.append({'item_index': item_index, 'rule': separation})
                 for field in ("corrects_cognition_id", "supersedes_cognition_id", "contradicts_cognition_id"):
                     if field in raw_item:
                         raw_item[field] = self._canonical_cognition_reference(raw_item[field], job, db)
