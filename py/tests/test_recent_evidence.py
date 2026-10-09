@@ -9,12 +9,13 @@ import pytest
 from support.json_assertions import as_object, as_objects
 
 from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
+from memoweft.integrations.dsh_bridge.protocol_v2 import DshRpcV2Server
 from memoweft.integrations.trust.query_service import QueryService
 from memoweft.integrations.trust.command_service import CommandService
 from memoweft.integrations.trust.true_delete import erase_conversation_context
 from memoweft.integrations.hermes.batch_adapter import HermesBatchAdapterProcessor
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
-from test_dsh_interactions import _boundary
+from test_dsh_interactions import _boundary, _request
 from test_formation_accuracy import _run, _item
 from test_hermes_batch_adapter_v5 import _batch, _model
 
@@ -194,5 +195,33 @@ def test_batch_keeps_one_snapshot_when_source_permissions_change_between_queries
         assert all(snapshot["preview"]["recent_evidence"] for snapshot in snapshots)
         assert len({snapshot["world_revision"] for snapshot in snapshots}) == 1
         assert _recent(runtime, "怎么称呼我？", "cloud") == []
+    finally:
+        runtime.shutdown()
+
+
+@pytest.mark.parametrize("operation", ["delete_evidence", "update_evidence_permissions", "erase_conversation_context"])
+def test_rpc_replay_cannot_recover_a_forgotten_or_denied_quote(tmp_path: Path, operation: str) -> None:
+    runtime = _runtime(tmp_path)
+    server = DshRpcV2Server(runtime)
+    try:
+        _ingest(runtime, "我喜欢MF1ReplaySecret咖啡。")
+        request = _request("same-query-id", "preview_recall_batch", {"queries": ["MF1ReplaySecret"], "model_tier": "cloud"})
+        before = server.handle(request)
+        assert before["ok"] is True
+        assert "MF1ReplaySecret" in json.dumps(before, ensure_ascii=False)
+        evidence_id = _recent(runtime, "MF1ReplaySecret")[0]["id"]
+        if operation == "erase_conversation_context":
+            mutation = server.handle(_request("mutation", operation, {"conversation_id": "source"}))
+        else:
+            mutation = server.handle(_request("mutation", "submit_command", {"command": {
+                "schema_version": 1, "command_id": "mf1-replay-mutation", "subject_id": _subject(runtime),
+                "actor": "owner", "expected_world_revision": 0, "operation": operation,
+                "target_kind": "evidence", "target_id": evidence_id,
+                "payload": {"allow_cloud_read": False} if operation == "update_evidence_permissions" else {},
+                "submitted_at": "2026-10-09T00:00:00.000Z"}}))
+        assert mutation["ok"] is True
+        after = server.handle(request)
+        assert after["ok"] is True
+        assert "MF1ReplaySecret" not in json.dumps(after, ensure_ascii=False)
     finally:
         runtime.shutdown()

@@ -551,6 +551,7 @@ class DshRpcV2Server:
             from ..trust.true_delete import erase_conversation_context
             result = erase_conversation_context(str(self._runtime.db_path), self._runtime.subject_id,
                                                 _identifier(raw["conversation_id"], "invalid_conversation_id"))
+            self._replay.clear()
             return result, "conversation_context_erased"
         if method == "submit_command":
             raw = _require_params(
@@ -562,6 +563,11 @@ class DshRpcV2Server:
             if not isinstance(value, Mapping):
                 raise DshRpcProtocolError("invalid_command_parameter")
             command_receipt = command.submit_command(value)
+            if command_receipt["result_state"] == "applied":
+                # Read replies can now carry provisional source quotes as well
+                # as formal text. A repeated request id must not recover either
+                # after a permission change, source deletion or World mutation.
+                self._replay.clear()
             return {
                 "schema_version": TRUST_SCHEMA_VERSION,
                 "subject_id": self._runtime.subject_id,
