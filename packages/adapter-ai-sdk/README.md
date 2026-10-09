@@ -8,7 +8,7 @@ This is an **external integration package**. It wraps MemoWeft's public Core fac
 
 ## Install
 
-`@memoweft/adapter-ai-sdk@0.2.3` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`. To use the current stable Core release:
+`@memoweft/adapter-ai-sdk@0.2.3` supports Core `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1 || ^2.0.0`. To use the current stable Core release:
 
 ```bash
 npm i ai memoweft @memoweft/adapter-ai-sdk@0.2.3
@@ -24,7 +24,7 @@ npm run build
 npm run build --workspace @memoweft/adapter-ai-sdk
 ```
 
-Its peer range is `ai` `^7` and `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`; `0.2.3` resolves cleanly against Core `0.7.0`, the 1.0 RC series, and final 1.x releases with no `--legacy-peer-deps`. You also need an `ai` provider (e.g. `@ai-sdk/openai`) for a real model.
+Its peer range is `ai` `^7` and `memoweft` `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1 || ^2.0.0`; `0.2.3` resolves cleanly against Core `0.7.0`, the 1.0 RC series, final 1.x releases, and 2.x releases with no `--legacy-peer-deps`. You also need an `ai` provider (e.g. `@ai-sdk/openai`) for a real model.
 
 ## Two paths: read and write
 
