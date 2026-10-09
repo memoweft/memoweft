@@ -47,7 +47,7 @@ def apply_name_correction(processor: HermesBatchAdapterProcessor, db: sqlite3.Co
         raise _ZeroWriteError('name_correction_target_not_current')
     if not any(old_name in text and new_name in text for _, _, _, text in item.supports):
         raise _ZeroWriteError('name_correction_not_grounded')
-    if not any(re.search(r'更正|纠正|说错|记错|名字.*(?:不是|改|错)|改名|correction|wrong name|renamed', text, re.I)
+    if not any(re.search(r'更正|纠正|说错|记错|(?:名字|人名|姓名).*(?:不是|改|错)|改名|correction|wrong name|renamed', text, re.I)
                for _, _, _, text in item.supports):
         raise _ZeroWriteError('name_correction_not_explicit')
     new_id, _ = processor._resolve_target_entity(db, job, new_name, item.entity_kind, now)

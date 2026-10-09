@@ -751,6 +751,7 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "明确纠正人名（含省略主题的‘那个人名写错了’）用 action=correct、statement_kind=alias、entity=新姓名、alias_of=旧姓名；不是 correct+naming，也不附 corrects_cognition_id、corrects_relationship_id 或 corrects_event_id。两姓名必须都在当前纠正原话中。\n"
     "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed + assistant_claim。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
     "本人持续 attribute/preference 的所选原话明确命名了适用主题时，必须附主题检索线索：\"entity\":{\"canonical_name\":\"<原话主题词>\",\"kind\":\"topic\",\"aliases\":[\"<常见同义主题词>\"]}。这是第10条第三方 entity 之外的本人主题用法；不是改成第三方属性。给主题的常见等价叫法，便于以后换说法仍能检索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义时 aliases 留空。主题词必须在所选原话中；命题仍逐字来自所选原话。原话未命名主题或省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
     "形成资格看适用范围：只保留对以后持续有效的偏好/习惯/安排。只针对本次任务的操作、回复、文件或工具指示不形成 preference，例如本次先做某一步、处理当前文件、当前回合回复格式；即使措辞强烈也不变成长久要求。混合原话要分别选择持续内容，排除独立的临时指令，不把两者放进同一个命题。不要把‘最近’的持续安排误判成单次任务。\n"
@@ -859,6 +860,7 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "For an explicit name correction, including an omitted-topic 'that name was wrong', use action=correct, statement_kind=alias, entity=new name and alias_of=old name. Do not use correct+naming or attach any corrects_cognition_id, corrects_relationship_id or corrects_event_id; both names must occur in the current correction evidence.\n"
     "Split independent person relationships, abilities/evaluations and enduring decisions into separate items, even within one sentence. A relationship never substitutes for an evaluation, or vice versa. Select the relationship clause alone; represent a user's evaluation as attribute + entity targeting the person, as the user's view rather than certified objective ability. Resolve a unique adjacent pronoun without folding the relationship into the evaluation. The compiler creates entities with source links; redundant naming is unnecessary. Explicitly confirmed future situational actions/reminders form a separate preference decision: stated for an explicit restatement, confirmed + assistant_claim for short assent. Never form a decision from unconfirmed assistant advice, refusal or casual emotion. Correct evaluations with corrects_cognition_id and relationships with corrects_relationship_id. For an explicit name correction use action=correct, statement_kind=alias, entity=new name, alias_of=old name; both names must occur in the same correction evidence. Ordinary aliases still use form.\n"
     "For an ongoing owner attribute/preference whose selected source explicitly names its topic, "
     "include retrieval labels: \"entity\":{\"canonical_name\":\"<verbatim topic>\",\"kind\":\"topic\","
@@ -1333,6 +1335,12 @@ class HermesBatchAdapterProcessor:
                        "represented unless the current World already expresses it. A question "
                        "or task-only instruction can still return no_change."
                        if compiled.reason == "model_no_change" else "")
+                    + (" For explicit name corrections, use action=correct and statement_kind=alias, "
+                       "entity=new name and alias_of=old name, both grounded in the correction evidence. "
+                       "Do not use correct+naming. An alias correction must omit ALL corrects_* ID fields; "
+                       "the old entity is identified by alias_of, not a cognition ID. Other correction "
+                       "kinds retain their own required typed target."
+                       if compiled.reason in ("invalid_cognition_action", "unexpected_correction_target") else "")
                     + (" For a relationship between the account owner and a named person, "
                        "target_entity must be that named person (canonical_name copied from "
                        "the selected evidence, kind=person); omit source_entity. The account "
