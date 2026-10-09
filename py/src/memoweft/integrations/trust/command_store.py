@@ -196,10 +196,14 @@ class CommandStore:
                         db.execute("PRAGMA busy_timeout = 0")
                         checkpoint = db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
                         if checkpoint is not None and int(checkpoint[0]) == 0:
-                            cleanup_state, detail = "complete", "current_wal_truncated"
+                            db.execute("VACUUM")
+                            checkpoint = db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                            if checkpoint is not None and int(checkpoint[0]) == 0:
+                                cleanup_state, detail = "complete", "current_wal_truncated"
                         else:
                             detail = "wal_reader_busy"
                     else:
+                        db.execute("VACUUM")
                         cleanup_state, detail = "complete", "current_journal_committed"
                     db.execute(
                         "UPDATE trust_delete_storage_status SET state = ?, detail_code = ? "
@@ -281,8 +285,12 @@ class CommandStore:
                         db.execute("PRAGMA busy_timeout = 0")
                         checkpoint = db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
                         if checkpoint is not None and int(checkpoint[0]) == 0:
-                            state, detail = "complete", "current_wal_truncated"
+                            db.execute("VACUUM")
+                            checkpoint = db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                            if checkpoint is not None and int(checkpoint[0]) == 0:
+                                state, detail = "complete", "current_wal_truncated"
                     else:
+                        db.execute("VACUUM")
                         state, detail = "complete", "current_journal_committed"
                     db.execute(
                         "UPDATE trust_delete_storage_status SET state = ?, detail_code = ? "
