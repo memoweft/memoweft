@@ -1333,10 +1333,14 @@ class HermesBatchAdapterProcessor:
                        "represented unless the current World already expresses it. A question "
                        "or task-only instruction can still return no_change."
                        if compiled.reason == "model_no_change" else "")
-                    + (" For a relationship with the user, include target_entity with "
-                       "canonical_name copied from the evidence and kind=person; omit "
-                       "source_entity. For third-party relationships include both endpoints."
-                       if compiled.reason in ("missing_target_entity", "invalid_model_result", "model_output_truncated") else "")
+                    + (" For a relationship between the account owner and a named person, "
+                       "target_entity must be that named person (canonical_name copied from "
+                       "the selected evidence, kind=person); omit source_entity. The account "
+                       "owner is implicit: NEVER set target_entity to 我, 用户 or owner_self. "
+                       "Do not reverse the endpoints. For two third parties include both "
+                       "named endpoints. If a clause omits the person's name, explicitly "
+                       "select the complete sentence_id containing both the name and relation."
+                       if compiled.reason in ("missing_target_entity", "entity_name_not_in_proposition", "invalid_model_result", "model_output_truncated") else "")
                 ),
             }
             # Persist the attempt reservation before dispatch: recovery never

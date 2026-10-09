@@ -136,6 +136,23 @@ def test_no_change_is_reconsidered_once_and_original_failure_is_preserved(tmp_pa
     assert stored["final_error"] is None
 
 
+def test_reversed_owner_relationship_gets_grounded_endpoint_feedback_once(tmp_path: Path) -> None:
+    raw = "林舟是我的同学。"
+    wrong = {"action": "form", "target": "owner_self", "statement_kind": "relationship", "formed_by": "stated",
+        "proposition": raw, "supports": [{"evidence_id": "evidence-1", "sentence_id": "t0"}],
+        "source_entity": {"canonical_name": "林舟", "kind": "person"},
+        "target_entity": {"canonical_name": "用户", "kind": "person"}, "relation_type": "classmate"}
+    correct = {**wrong, "target_entity": {"canonical_name": "林舟", "kind": "person"}}
+    del correct["source_entity"]
+    row, calls = _run(tmp_path / "world.sqlite3", raw, [_model(_batch(wrong)), _model(_batch(correct))])
+    assert row["state"] == "applied"
+    assert len(calls) == 2
+    feedback = json.loads(calls[1][0][-1]["content"])["compiler_error"]
+    assert feedback["code"] == "entity_name_not_in_proposition"
+    assert "NEVER set target_entity to 我, 用户 or owner_self" in feedback["instruction"]
+    assert json.loads(row["model_result_json"])["formation_rewrite"]["first_result"]["content"] == _model(_batch(wrong))["content"]
+
+
 def test_true_forget_unfinished_source_cleans_bridge_and_disk_without_erasing_unrelated(tmp_path: Path) -> None:
     runtime = _runtime(tmp_path)
     try:
