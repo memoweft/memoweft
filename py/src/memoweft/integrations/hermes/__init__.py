@@ -342,7 +342,7 @@ def _candidates(
 
 
 def _assert_existing_database_is_current(db_path: Path) -> None:
-    """Recognize only migratable Python v6-v16 or a complete current schema.
+    """Recognize migratable Python versions or a complete current schema.
 
     The probe is deliberately read-only and runs before :func:`open_db`.  A
     Python v6-v15 database is identified by its physical marker and may then
@@ -364,9 +364,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
         db.execute("PRAGMA query_only = ON")
         version = int(db.execute("PRAGMA user_version").fetchone()[0])
         app_id = int(db.execute("PRAGMA application_id").fetchone()[0])
-        if version not in {
-            6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, SCHEMA_VERSION
-        }:
+        if version not in range(6, SCHEMA_VERSION + 1):
             raise IncompatibleDatabaseError(
                 "Existing MemoWeft database is not a supported Python schema version"
             )
@@ -374,9 +372,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
             raise IncompatibleDatabaseError(
                 "Existing Python v6 database has an incompatible application id"
             )
-        if version in {
-            7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, SCHEMA_VERSION
-        } and app_id != PYTHON_APPLICATION_ID:
+        if version >= 7 and app_id != PYTHON_APPLICATION_ID:
             raise IncompatibleDatabaseError(
                 "Existing Python database has an incompatible application id"
             )
@@ -397,7 +393,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible World Job schema"
                 )
-        if version in {15, 16, 17, SCHEMA_VERSION}:
+        if version >= 15:
             job_columns = tuple(
                 str(row[1])
                 for row in db.execute('PRAGMA table_info("memory_world_job")')
@@ -406,7 +402,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible World Job schema"
                 )
-        if version in {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, SCHEMA_VERSION}:
+        if version >= 8:
             content_columns = tuple(
                 str(row[1])
                 for row in db.execute('PRAGMA table_info("boundary_evidence_content")')
@@ -415,7 +411,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible content-binding schema"
                 )
-        if version in {9, 10, 11, 12, 13, 14, 15, 16, 17, SCHEMA_VERSION}:
+        if version >= 9:
             relationship_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("relationship")')
             )
@@ -423,7 +419,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible relationship schema"
                 )
-        if version in {15, 16, 17, SCHEMA_VERSION}:
+        if version >= 15:
             entity_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("entity")')
             )
@@ -431,7 +427,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible entity schema"
                 )
-        if version in {15, 16, 17, SCHEMA_VERSION}:
+        if version >= 15:
             target_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("cognition_target")')
             )
@@ -439,7 +435,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible cognition_target schema"
                 )
-        if version in {15, 16, 17, SCHEMA_VERSION}:
+        if version >= 15:
             retraction_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("retraction")')
             )
@@ -447,7 +443,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible retraction schema"
                 )
-        if version in {15, 16, 17, SCHEMA_VERSION}:
+        if version >= 15:
             world_event_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("world_event")')
             )
@@ -455,7 +451,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible world_event schema"
                 )
-        if version in {16, 17, SCHEMA_VERSION}:
+        if version >= 16:
             outcome_columns = tuple(
                 str(row[1])
                 for row in db.execute('PRAGMA table_info("terminal_outcome")')
@@ -475,7 +471,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has incomplete terminal outcome schema"
                 )
-        if version in {17, SCHEMA_VERSION}:
+        if version >= 17:
             command_columns = tuple(
                 str(row[1]) for row in db.execute('PRAGMA table_info("trust_command")')
             )
@@ -495,7 +491,7 @@ def _assert_existing_database_is_current(db_path: Path) -> None:
                 raise IncompatibleDatabaseError(
                     "Existing Python database has an incompatible Trust Command schema"
                 )
-        if version == SCHEMA_VERSION:
+        if version >= 18:
             clarification_columns = tuple(
                 str(row[1])
                 for row in db.execute('PRAGMA table_info("clarification")')
