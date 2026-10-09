@@ -51,6 +51,7 @@ DSH_RPC_METHODS: tuple[str, ...] = (
     "query_provenance",
     "query_jobs",
     "preview_recall",
+    "preview_recall_batch",
     "preview_forget",
     "query_interactions",
     "query_interaction",
@@ -420,6 +421,9 @@ class DshRpcV2Server:
             return query.execute_provider_tool(
                 "memoweft_preview_recall", params
             ), "recall_preview"
+        if method == "preview_recall_batch":
+            raw = _require_params(params, allowed=frozenset({"queries", "model_tier"}), required=frozenset({"queries"}))
+            return query.preview_recall_batch(cast(Any, raw["queries"]), model_tier=cast(Any, raw.get("model_tier", "cloud"))), "recall_preview"
         if method == "query_interactions":
             raw = _require_params(
                 params,

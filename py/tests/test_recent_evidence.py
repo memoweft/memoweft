@@ -152,3 +152,31 @@ def test_recent_window_and_whole_quote_limits(tmp_path: Path) -> None:
         assert _recent(runtime, "咖啡") == []
     finally:
         runtime.shutdown()
+
+
+def test_batch_keeps_one_snapshot_when_source_permissions_change_between_queries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from memoweft.integrations.hermes import recall
+    runtime = _runtime(tmp_path)
+    try:
+        _ingest(runtime, "以后请叫我小禾。")
+        with sqlite3.connect(runtime.db_path) as db:
+            db.execute("PRAGMA journal_mode=WAL")
+        original = recall.recall_world_snapshot
+        changed = False
+        def concurrent_change(*args: Any, **kwargs: Any) -> Any:
+            nonlocal changed
+            result = original(*args, **kwargs)
+            if not changed:
+                changed = True
+                with sqlite3.connect(runtime.db_path) as db:
+                    db.execute("UPDATE evidence SET allow_cloud_read=0")
+            return result
+        monkeypatch.setattr(recall, "recall_world_snapshot", concurrent_change)
+        service = QueryService(runtime.db_path, subject_id=runtime.subject_id)
+        batch = service.preview_recall_batch(["怎么称呼我？", "我叫什么？"], model_tier="cloud")
+        snapshots: Any = batch["snapshots"]
+        assert all(snapshot["preview"]["recent_evidence"] for snapshot in snapshots)
+        assert len({snapshot["world_revision"] for snapshot in snapshots}) == 1
+        assert _recent(runtime, "怎么称呼我？", "cloud") == []
+    finally:
+        runtime.shutdown()

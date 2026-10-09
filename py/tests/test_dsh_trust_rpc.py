@@ -404,6 +404,7 @@ def test_rpc_v2_protocol_identity_is_frozen() -> None:
         "query_provenance",
         "query_jobs",
         "preview_recall",
+        "preview_recall_batch",
         "preview_forget",
         "query_interactions",
         "query_interaction",
