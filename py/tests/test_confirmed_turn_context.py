@@ -1,6 +1,8 @@
 """A confirmation in a new durable turn must retain the earlier proposal."""
 import json
 import sqlite3
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -12,11 +14,11 @@ CLAIM = '以后用户想组队时，我提醒用户找王小明。'
 
 
 @pytest.mark.parametrize('confirmation', ['好', '行，就这么办', '好，以后我想组队时，就提醒我找王小明。'])
-def test_prior_turn_proposal_forms_with_both_sources(tmp_path, confirmation):
+def test_prior_turn_proposal_forms_with_both_sources(tmp_path: Path, confirmation: str) -> None:
     path = tmp_path / 'memory.sqlite3'
     clock = MutableClock()
 
-    def setup(path):
+    def setup(path: Path) -> None:
         _set_evidence(path, 'evidence-1', confirmation)
         _insert_job(path, clock, job_id='prior', evidence_ids=('proposal-evidence',))
         with sqlite3.connect(path) as db:
@@ -33,27 +35,27 @@ def test_prior_turn_proposal_forms_with_both_sources(tmp_path, confirmation):
         assert db.execute("SELECT count(*) FROM evidence WHERE raw_content=?", (CLAIM,)).fetchone()[0] == 0
         cognition_id = db.execute('SELECT id FROM cognition').fetchone()[0]
     query = QueryService(path, subject_id='owner')
-    sources = query.get_world_item_provenance('cognition', cognition_id)['provenance']
+    sources = cast(list[dict[str, Any]], query.get_world_item_provenance('cognition', cognition_id)['provenance'])
     proposals = [proposal for source in sources for proposal in source.get('assistant_sources', [])]
     assert proposals == [{'message_id': 'assistant-proposal', 'content': CLAIM,
                           'conversation_id': 'session-parent', 'recorded_at': '2000-01-01T00:00:00.000Z'}]
-    recalled = query.preview_recall('我们之前说组队可以找谁？')['preview']
+    recalled = cast(dict[str, Any], query.preview_recall('我们之前说组队可以找谁？')['preview'])
     assert cognition_id in str(recalled['selected_item_ids'])
     assert CLAIM in recalled['rendered_recall']
     with sqlite3.connect(path) as db:
         db.execute("UPDATE evidence SET allow_local_read=0 WHERE id='proposal-evidence'")
-    assert query.preview_recall('我们之前说组队可以找谁？')['preview']['count'] == 0
-    sources = query.get_world_item_provenance('cognition', cognition_id)['provenance']
+    assert cast(dict[str, Any], query.preview_recall('我们之前说组队可以找谁？')['preview'])['count'] == 0
+    sources = cast(list[dict[str, Any]], query.get_world_item_provenance('cognition', cognition_id)['provenance'])
     assert not [proposal for source in sources for proposal in source.get('assistant_sources', [])]
 
 
 @pytest.mark.parametrize('changed', ['other_subject', 'other_conversation', 'future', 'denied', 'deleted', 'refusal', 'invented'])
-def test_unavailable_or_unconfirmed_proposal_cannot_form(tmp_path, changed):
+def test_unavailable_or_unconfirmed_proposal_cannot_form(tmp_path: Path, changed: str) -> None:
     path = tmp_path / 'memory.sqlite3'
     clock = MutableClock()
     confirmation = '不行，就别这么办' if changed == 'refusal' else '行，就这么办'
 
-    def setup(path):
+    def setup(path: Path) -> None:
         _set_evidence(path, 'evidence-1', confirmation)
         _insert_job(path, clock, job_id='prior', evidence_ids=('proposal-evidence',))
         with sqlite3.connect(path) as db:
