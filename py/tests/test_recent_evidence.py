@@ -147,12 +147,13 @@ def test_elliptical_correction_is_an_atomic_pair(tmp_path: Path, prior: str, cor
         runtime.shutdown()
 
 
-def test_competing_quantity_topics_are_presented_as_uncertain_not_chosen_by_query(tmp_path: Path) -> None:
+@pytest.mark.parametrize("same_session", [False, True])
+def test_competing_quantity_topics_are_presented_as_uncertain_not_chosen_by_query(tmp_path: Path, same_session: bool) -> None:
     runtime = _runtime(tmp_path)
     try:
         _ingest(runtime, "阳台盆栽每次浇水300毫升。")
-        _ingest(runtime, "我做蛋糕每次用牛奶300毫升。", "b", "cake")
-        _ingest(runtime, "前面那个数报大了，150毫升才对，300毫升作废。", "c", "correction")
+        _ingest(runtime, "我做蛋糕每次用牛奶300毫升。", "b", "source" if same_session else "cake")
+        _ingest(runtime, "前面那个数报大了，150毫升才对，300毫升作废。", "c", "source" if same_session else "correction")
         rows = _recent(runtime, "阳台盆栽浇水多少？")
         assert len(rows) == 1
         assert rows[0]["correction_status"] == "ambiguous"

@@ -39,12 +39,12 @@ def correction_candidates(rows: list[dict[str, Any]], index: int) -> list[dict[s
         str(r["created_at"]).replace("Z", "+00:00"))).total_seconds() <= 300
         and row["turn_index"] - r["turn_index"] <= 4]
     same_session = [r for r in prior if r["session_id"] == row["session_id"]]
-    if same_session:
-        return same_session[-1:]
     dimensions = _dimensions(row["text"])
+    if same_session and not dimensions:
+        return same_session[-1:]
     quantities = {re.sub(r"\s+", "", m.group()).lower() for m in _QUANTITY.finditer(row["text"])}
     candidates = [r for r in prior if not _CORRECTION.search(r["text"]) and (
-        bool(dimensions & _dimensions(r["text"])) and (bool(_ANAPHOR.search(row["text"])) or
+        bool(dimensions & _dimensions(r["text"])) and (r["session_id"] == row["session_id"] or bool(_ANAPHOR.search(row["text"])) or
             bool(quantities & {re.sub(r"\s+", "", m.group()).lower() for m in _QUANTITY.finditer(r["text"])})) if dimensions else
         bool(_reference_tokens(r["text"]) & _reference_tokens(row["text"])))]
     return list({r["text"]: r for r in candidates}.values())
