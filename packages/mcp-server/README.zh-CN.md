@@ -6,13 +6,13 @@
 
 ## 安装
 
-`@memoweft/mcp-server@0.2.3` 的 `memoweft` peer 范围是 `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1`。使用当前稳定版 Core：
+`@memoweft/mcp-server@0.2.3` 的 `memoweft` peer 范围是 `^0.5.1 || ^0.6.0 || ^0.7.0 || ^1.0.0-rc.1 || ^2.0.0`。使用当前稳定版 Core：
 
 ```sh
 npm install memoweft @memoweft/mcp-server@0.2.3
 ```
 
-它对 Core `0.5.1`、`0.6`、`0.7` 和稳定版 `1.x` 都能被 npm 干净解析，无需 `--legacy-peer-deps`。需要 Node 20+。
+它对 Core `0.5.1`、`0.6`、`0.7`、1.0 RC 系列、稳定版 `1.x` 和 `2.x` 都能被 npm 干净解析，无需 `--legacy-peer-deps`。需要 Node 20+。
 
 ## 工具与数据访问
 
