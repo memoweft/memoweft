@@ -98,6 +98,26 @@ def test_ordinary_alias_cannot_be_used_as_a_name_correction(tmp_path: Path) -> N
         assert db.execute('SELECT invalid_at FROM entity WHERE id=?', (ids['entity'],)).fetchone()[0] is None
 
 
+def test_name_correction_rewrite_explains_alias_target_without_guessing_fields(tmp_path: Path) -> None:
+    path = tmp_path / 'world.sqlite3'
+    ids = seed(path)
+    raw = '那个人名写错了，应该是林澜，不是林遥。'
+    wrong = dict(_item('ignored'), action='correct', statement_kind='naming',
+                 entity={'canonical_name': '林澜', 'kind': 'person'}, corrects_cognition_id=ids['cognition'],
+                 supports=[{'evidence_id': 'evidence-2', 'sentence_id': 't0'}])
+    corrected = {**wrong, 'statement_kind': 'alias', 'alias_of': {'canonical_name': '林遥', 'kind': 'person'}}
+    del corrected['corrects_cognition_id']
+    run_job(path, MutableClock(), [_model(_batch(wrong)), _model(_batch(corrected))], ('evidence-2',),
+            lambda p: _set_evidence(p, 'evidence-2', raw), job_id='job-2')
+    row = dict(_job(path, 'job-2'))
+    assert row['state'] == 'applied'
+    rewrite = json.loads(str(row['model_result_json']))['formation_rewrite']
+    assert rewrite['error']['code'] == 'invalid_cognition_action'
+    assert 'omit ALL corrects_* ID fields' in rewrite['error']['instruction']
+    assert rewrite['first_result']['content'] == _model(_batch(wrong))['content']
+    assert rewrite['final_error'] is None
+
+
 def test_confirmation_is_an_independent_decision_with_its_own_exact_source(tmp_path: Path) -> None:
     path = tmp_path / 'world.sqlite3'
     seed(path)
