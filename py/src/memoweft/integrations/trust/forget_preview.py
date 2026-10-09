@@ -6,7 +6,7 @@ import sqlite3
 from .command_store import TrustCommandError
 from .model import CommandEnvelopeV1
 from .revision import coherent_revision_read
-from .true_delete import conversation_evidence_ids, delete_evidence, delete_world_item
+from .true_delete import conversation_evidence_ids, delete_evidence, delete_world_item, erase_conversation_commitments, _redact_observed_dependencies
 
 
 def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = None,
@@ -23,8 +23,10 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
                   "relationship": ("relationship", "world_id", "content"),
                   "event": ("world_event", "world_id", "content"),
                   "cognition": ("cognition", "subject_id", "content")}
+        if copy.execute("SELECT 1 FROM sqlite_master WHERE name='interaction_commitment'").fetchone():
+            tables["interaction_commitment"] = ("interaction_commitment", "subject_id", "content")
         before = {(kind, str(row[0])): (str(row[1]), str(row[2])) for kind, (table, owner, name) in tables.items()
-                  for row in copy.execute(f"SELECT id, {name}, " + ("kind" if kind == "entity" else "content_type" if kind == "cognition" else f"'{kind}'") + f" FROM {table} WHERE {owner} = ?", (subject_id,))}
+                  for row in copy.execute(f"SELECT id, {name}, " + ("kind" if kind in {"entity", "interaction_commitment"} else "content_type" if kind == "cognition" else f"'{kind}'") + f" FROM {table} WHERE {owner} = ?", (subject_id,))}
         if conversation_id is not None:
             targets = [("evidence", value) for value in sorted(conversation_evidence_ids(copy, subject_id, conversation_id))]
         elif target_kind is not None and target_id is not None:
@@ -42,6 +44,11 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
             if result.result_state == "rejected":
                 raise TrustCommandError(result.rejection_code or "world_item_not_found")
             affected.update(result.affected_ids)
+        if conversation_id is not None:
+            affected.update(erase_conversation_commitments(copy, subject_id, conversation_id))
+            context_ids = {str(row[0]) for row in copy.execute(
+                "SELECT id FROM interaction_context WHERE subject_id=? AND conversation_id=?", (subject_id, conversation_id))}
+            affected.update(_redact_observed_dependencies(copy, subject_id, affected | context_ids))
         items = [{"object_kind": kind, "item_id": item_id, "name": name, "item_type": item_type}
                  for (kind, item_id), (name, item_type) in sorted(before.items())
                  if copy.execute(f"SELECT 1 FROM {tables[kind][0]} WHERE id = ?", (item_id,)).fetchone() is None]

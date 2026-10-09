@@ -41,6 +41,16 @@ def _mentions_id(raw: str | None, identifiers: set[str]) -> bool:
     return visit(value)
 
 
+def _contains_text(raw: str, text: str | None) -> bool:
+    if not text:
+        return False
+    try:
+        raw = json.dumps(json.loads(raw), ensure_ascii=False)
+    except (TypeError, ValueError):
+        pass
+    return text in raw
+
+
 def delete_evidence(
     db: sqlite3.Connection,
     command: CommandEnvelopeV1,
@@ -131,8 +141,10 @@ def delete_evidence(
     # Removing its row under the same write lock fences every later apply and
     # settlement. Its terminal delivery row can also contain derived text.
     job_ids: set[str] = set()
-    for job_id, evidence_ids_json in db.execute(
-        "SELECT job_id, evidence_ids_json FROM memory_world_job WHERE subject_id = ?",
+    commitment_ids: set[str] = set()
+    has_commitments = db.execute("SELECT 1 FROM sqlite_master WHERE name='interaction_commitment'").fetchone()
+    for job_id, evidence_ids_json, episode_id in db.execute(
+        "SELECT job_id, evidence_ids_json, boundary_event_id FROM memory_world_job WHERE subject_id = ?",
         (subject_id,),
     ):
         try:
@@ -141,6 +153,11 @@ def delete_evidence(
             ids = []
         if isinstance(ids, list) and evidence_id in ids:
             job_ids.add(str(job_id))
+            if has_commitments:
+                commitment_ids.update(str(value[0]) for value in db.execute(
+                    "SELECT id FROM interaction_commitment WHERE subject_id=? AND episode_id=?",
+                    (subject_id, episode_id)))
+    _delete_ids(db, "interaction_commitment", "id", commitment_ids)
     _delete_ids(db, "terminal_outcome", "job_id", job_ids)
     _delete_ids(db, "memory_world_job", "job_id", job_ids)
 
@@ -183,13 +200,13 @@ def delete_evidence(
                 (subject_id, kind, item_id),
             )
     affected_ids = ({evidence_id} | event_ids | cognition_ids | relationship_ids
-                    | world_event_ids | entity_ids)
+                    | world_event_ids | entity_ids | commitment_ids)
     # Formation/review ledgers can retain derived cognition/event wording too.
     for ledger_id, content, payload in list(db.execute("SELECT id, content, payload_json FROM evidence_ledger")):
         if _mentions_id(content, affected_ids) or _mentions_id(payload, affected_ids):
             db.execute("DELETE FROM evidence_ledger WHERE id=?", (ledger_id,))
-    _redact_observed_dependencies(db, subject_id, affected_ids,
-                                  str(row[1]) if row[1] else None)
+    affected_ids.update(_redact_observed_dependencies(db, subject_id, affected_ids,
+                                  str(row[1]) if row[1] else None))
     for proposal_id, payload, review in list(db.execute(
         "SELECT id, payload_json, review_payload_json FROM proposals"
     )):
@@ -230,6 +247,11 @@ def delete_evidence(
     # An optional local FTS index is outside the versioned schema.
     if db.execute("SELECT 1 FROM sqlite_master WHERE name = 'cognition_fts'").fetchone():
         _delete_ids(db, "cognition_fts", "cognition_id", cognition_ids)
+        if cognition_ids:
+            # FTS5 DELETE retains old tokens in shadow segment blobs. SQLite
+            # secure_delete/VACUUM cannot remove live segment rows; merge the
+            # index first so its deleted postings are physically discarded.
+            db.execute("INSERT INTO cognition_fts(cognition_fts) VALUES ('optimize')")
     # Identity is a derived cache; its JSON may contain names or statements
     # from any of the removed World objects. It can be rebuilt from survivors.
     db.execute("DELETE FROM identity_state WHERE world_id = ?", (subject_id,))
@@ -335,7 +357,7 @@ def delete_world_item(
         raise
 
 
-def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affected: set[str], source_text: str | None = None) -> None:
+def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affected: set[str], source_text: str | None = None) -> set[str]:
     """Erase source-derived assistant text, including transitive interaction reuse.
 
     Source-derived Core copies are erased; the host owns original chat retention.
@@ -344,9 +366,21 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affec
     from ...store.interaction_context import _context_from_json, hash_context
     contexts = list(db.execute("SELECT id,context_json FROM interaction_context WHERE subject_id=?", (subject_id,)))
     tainted = set(affected)
+    # Older commitments have only episode provenance. Erase the whole derived
+    # row when that episode contains the forgotten source; do not keep mixed
+    # source wording. This also handles commitments without dependency metadata.
+    tainted.update(str(item_id) for item_id, raw in contexts
+                   if _contains_text(str(raw), source_text))
+    commitments = list(db.execute(
+        "SELECT c.id, i.id FROM interaction_commitment c LEFT JOIN interaction_context i "
+        "ON i.subject_id=c.subject_id AND i.conversation_id=c.conversation_id "
+        "AND i.episode_id=c.episode_id WHERE c.subject_id=?", (subject_id,))) if db.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='interaction_commitment'").fetchone() else []
     while True:
         added = {str(item_id) for item_id, raw in contexts if str(item_id) not in tainted
                  and _mentions_id(str(raw), tainted)}
+        added.update(str(commitment_id) for commitment_id, context_id in commitments
+                     if str(context_id) in tainted and str(commitment_id) not in tainted)
         if not added:
             break
         tainted.update(added)
@@ -354,7 +388,7 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affec
         "SELECT id, preceding_ai_context FROM evidence WHERE subject_id = ? AND preceding_ai_context IS NOT NULL",
         (subject_id,),
     )):
-        if _mentions_id(str(raw), tainted) or source_text and source_text in str(raw):
+        if _mentions_id(str(raw), tainted) or _contains_text(str(raw), source_text):
             db.execute("UPDATE evidence SET preceding_ai_context = NULL WHERE id = ? AND subject_id = ?",
                        (evidence_id, subject_id))
     for item_id, raw in contexts:
@@ -365,12 +399,26 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affec
         if not isinstance(turns, list):
             continue
         clean = [turn for turn in turns if not (isinstance(turn, dict) and turn.get("role") == "assistant"
-                 and _mentions_id(json.dumps(turn.get("model_context_dependencies")), tainted)
+                 and (str(item_id) in tainted or _mentions_id(json.dumps(turn.get("model_context_dependencies")), tainted))
                  or source_text and source_text in json.dumps(turn, ensure_ascii=False))]
         if clean != turns:
             next_json = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
             db.execute("UPDATE interaction_context SET context_json=?,context_hash=? WHERE id=?",
                        (next_json,hash_context(_context_from_json(next_json)),item_id))
+    erased = {str(item_id) for item_id, _ in commitments if str(item_id) in tainted}
+    _delete_ids(db, "interaction_commitment", "id", erased)
+    return erased
+
+
+def erase_conversation_commitments(db: sqlite3.Connection, subject_id: str, conversation_id: str) -> set[str]:
+    """Include orphaned/legacy commitments even when context/jobs are gone."""
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE name='interaction_commitment'").fetchone():
+        return set()
+    ids = {str(row[0]) for row in db.execute(
+        "SELECT id FROM interaction_commitment WHERE subject_id=? AND conversation_id=?",
+        (subject_id, conversation_id))}
+    _delete_ids(db, "interaction_commitment", "id", ids)
+    return ids
 
 
 def conversation_evidence_ids(db: sqlite3.Connection, subject_id: str, conversation_id: str) -> set[str]:
@@ -424,10 +472,13 @@ def erase_conversation_context(db_path: str, subject_id: str, conversation_id: s
             if mutation.result_state == "applied":
                 erased_evidence_count += 1
             affected.update(mutation.affected_ids)
-        _redact_observed_dependencies(db, subject_id, ids | affected)
+        commitment_ids = erase_conversation_commitments(db, subject_id, conversation_id)
+        affected.update(commitment_ids)
+        affected.update(_redact_observed_dependencies(db, subject_id, ids | affected))
         db.execute("UPDATE interaction_context SET context_json = '[]', context_hash = ? WHERE subject_id = ? AND conversation_id = ?",
                    (hash_context([]), subject_id, conversation_id))
-        revision = advance_world_revision(db) if ids or erased_evidence_count else current_world_revision(db)
+        changed = bool(ids or erased_evidence_count or affected)
+        revision = advance_world_revision(db) if changed else current_world_revision(db)
         db.execute("COMMIT")
         state = "complete"
         try:
@@ -442,8 +493,9 @@ def erase_conversation_context(db_path: str, subject_id: str, conversation_id: s
                     state = "pending"
         except sqlite3.Error:
             state = "pending"
-        return {"result_state": "applied" if ids else "no_change", "world_revision": revision,
+        return {"result_state": "applied" if changed else "no_change", "world_revision": revision,
                 "erased_context_count": len(ids), "erased_evidence_count": erased_evidence_count,
+                "erased_commitment_count": len(commitment_ids),
                 "affected_ids": sorted(affected), "storage_cleanup": {"state": state}}
     finally:
         if db.in_transaction:
