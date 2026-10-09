@@ -1,6 +1,8 @@
 """Read-only Trust Query service over the production MemoWeft SQLite world."""
 from __future__ import annotations
 
+from .confirmed_sources import assistant_sources
+
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -829,6 +831,8 @@ class QueryService:
                     "linked_world_items": linked_items,
                     "model_content_available": denial is None,
                     "model_denial_reason": denial,
+                    "assistant_sources": assistant_sources(db, self._subject_id, item_id, evidence_id)
+                        if evidence["content_available"] and (projection == "history" or denial is None) else [],
                 }
             )
         return sorted(result, key=lambda value: (value["evidence_id"], value["relation"]))

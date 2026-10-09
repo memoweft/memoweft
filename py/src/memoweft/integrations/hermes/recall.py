@@ -18,6 +18,8 @@ model-free, and byte-stable.
 
 from __future__ import annotations
 
+from ..trust.confirmed_sources import assistant_sources
+
 from dataclasses import dataclass
 from ...types import ModelTier
 from hashlib import sha256
@@ -214,6 +216,7 @@ _CATEGORY_MEMBERS: dict[str, tuple[str, ...]] = {
     "朋友": ("朋友", "同学", "同事"),
     "车": ("小鹏", "比亚迪", "特斯拉", "SUV"),
     "谁": ("女生", "男生", "人", "朋友"),
+    "组队": ("组队", "开黑", "找队友", "一起玩游戏"),
     "游戏": ("王者荣耀", "原神", "英雄联盟", "Steam", "主机游戏"),
     "编程语言": ("Rust", "Python", "Go", "TypeScript", "JavaScript", "C++", "Java"),
     "编程": ("Rust", "Python", "Go", "TypeScript", "JavaScript", "C++", "Java", "Axum", "React"),
@@ -1008,6 +1011,10 @@ def _current_world_rows(
                         for name in _entity_names(db, subject_id, str(entity[0]), model_tier)
                         if _anchor_is_explicit(content, name)
                     ))
+            if kind == "cognition":
+                proposal_sources = assistant_sources(db, subject_id, row_id)
+                if proposal_sources:
+                    content += "\n确认依据中的助手原话：" + "\n".join(source["content"] for source in proposal_sources)
             predecessor_texts = _predecessor_match_texts(db, subject_id, row_id, model_tier, kind=kind) if kind in {'cognition', 'relationship'} else ()
             items.append(
                 {

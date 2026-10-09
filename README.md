@@ -42,6 +42,12 @@ MemoWeft keeps these boundaries explicit:
   time expression without a guessed `occurred_at` value. Reasoning-only model
   output is never used as an interpretation or included in rewrite feedback.
 - Entity, Relationship, Event, Cognition, and Evaluation records are formal World objects.
+- Confirmations can reference the preceding four permission-eligible conversation
+  turns. The compiler validates the exact assistant proposal against its persisted
+  message ID and keeps the user's confirmation as Evidence. Proposal references
+  join the existing support/deletion graph; source queries expose both originals.
+  An explicit user restatement stays verbatim and may retain a unique same-person
+  preceding proposal as context. Assistant prose never becomes user Evidence.
 - Recall is deterministic for the same revision and performs no World writes.
   Short natural corrections can be retrieved through the topic of their
   permission-eligible predecessors. Only the current successor is rendered

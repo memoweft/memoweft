@@ -98,6 +98,7 @@ class ProvenanceV1(TypedDict):
     linked_world_items: NotRequired[list[dict[str, object]]]
     model_content_available: NotRequired[bool]
     model_denial_reason: NotRequired[str | None]
+    assistant_sources: NotRequired[list[dict[str, str]]]
 
 
 class TransitionV1(TypedDict):
