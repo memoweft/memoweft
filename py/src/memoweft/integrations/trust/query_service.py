@@ -812,7 +812,8 @@ class QueryService:
                 {
                     "evidence_id": evidence_id,
                     "relation": relation,
-                    "currentness_state": evidence["currentness_state"],
+                    "currentness_state": ("not_current" if denial == "target_not_current" and evidence["currentness_state"] == "current"
+                                          else evidence["currentness_state"]),
                     "permissions": evidence["permissions"],
                     "evidence": evidence,
                     "linked_world_items": linked_items,
@@ -925,6 +926,18 @@ class QueryService:
         self, db: sqlite3.Connection, kind: TrustWorldItemKind, item_id: str
     ) -> list[TransitionV1]:
         transitions: list[TransitionV1] = []
+        if kind == "relationship" and db.execute("SELECT 1 FROM sqlite_master WHERE name='relationship_transitions'").fetchone():
+            for row in db.execute(
+                "SELECT id, prior_relationship_id, replacement_relationship_id, reason, revision "
+                "FROM relationship_transitions WHERE prior_relationship_id=? OR replacement_relationship_id=?",
+                (item_id, item_id),
+            ).fetchall():
+                transitions.append({
+                    "transition_id": str(row[0]), "transition_kind": str(row[3]),
+                    "object_kind": kind, "prior_item_id": str(row[1]),
+                    "replacement_item_id": str(row[2]), "revision": int(row[4]),
+                    "occurred_at": None, "evidence_ids": list(linked_evidence(db, kind, str(row[2]))),
+                })
         if kind == "cognition":
             for row in db.execute(
                 "SELECT id, prior_cognition_id, replacement_cognition_id, reason, revision "
@@ -975,8 +988,8 @@ class QueryService:
             data = _json_mapping(content)
             payload_data = _json_mapping(payload)
             relation = data.get("relation")
-            if kind in {"relationship", "event"} and relation == "corrects":
-                prefix = "relationship" if kind == "relationship" else "event"
+            if kind in {"relationship", "event", "entity"} and relation == "corrects":
+                prefix = kind
                 ledger_prior = data.get(f"prior_{prefix}_id")
                 ledger_replacement = data.get(f"replacement_{prefix}_id")
                 if item_id not in {ledger_prior, ledger_replacement}:

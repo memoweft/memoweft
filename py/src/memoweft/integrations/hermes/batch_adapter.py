@@ -507,6 +507,71 @@ def _is_confirmation_span(span_text: str, assistant_claim: str) -> bool:
 
 # ── compiled batch model ───────────────────────────────────────────────────
 
+def _separate_person_claim_source(
+    item: dict[str, Any], items: list[Any], ids: set[str], raw_by_id: Mapping[str, str],
+) -> tuple[Optional[dict[str, Any]], str]:
+    """Remove an independently selected attribute clause from a broad relationship.
+
+    This uses interpreter-selected ranges, never a relationship/ability vocabulary.
+    Raw Evidence stays intact. Ambiguous whole-source overlap gets the existing
+    compiler feedback rewrite instead of preserving contradictory mixed claims.
+    """
+    if (item.get('statement_kind') != 'relationship' or item.get('source_entity') is not None
+            or (item.get('formed_by') or 'stated') != 'stated' or item.get('retract')):
+        return item, ''
+    target = item.get('target_entity')
+    if not isinstance(target, dict) or not isinstance(target.get('canonical_name'), str):
+        return item, ''
+    name = target['canonical_name'].strip()
+    supports, _ = _parse_supports(item.get('supports'), ids, raw_by_id)
+    if supports is None or any(not text for _, _, _, text in supports):
+        return item, ''
+    cuts: list[tuple[str, int, int]] = []
+    for candidate in items:
+        if not isinstance(candidate, dict) or candidate.get('statement_kind') not in {'attribute', 'preference'}:
+            continue
+        entity = candidate.get('entity')
+        if (not isinstance(entity, dict) or entity.get('kind') == 'topic'
+                or not isinstance(entity.get('canonical_name'), str) or entity['canonical_name'].strip() != name
+                or (candidate.get('formed_by') or 'stated') != 'stated' or candidate.get('retract')):
+            continue
+        other, _ = _parse_supports(candidate.get('supports'), ids, raw_by_id)
+        if other is None or any(not text for _, _, _, text in other):
+            continue
+        for eid, start, end, _ in other:
+            if any(eid == rid and start == rstart and end == rend for rid, rstart, rend, _ in supports):
+                return None, 'independent_person_claims_share_whole_source'
+            if any(eid == rid and rstart <= start < end <= rend for rid, rstart, rend, _ in supports):
+                cuts.append((eid, start, end))
+    if not cuts:
+        return item, ''
+    remaining = [(eid, start, end) for eid, start, end, _ in supports]
+    for cut_id, cut_start, cut_end in cuts:
+        narrowed: list[tuple[str, int, int]] = []
+        for eid, start, end in remaining:
+            if eid != cut_id or end <= cut_start or cut_end <= start:
+                narrowed.append((eid, start, end)); continue
+            if start < cut_start:
+                narrowed.append((eid, start, cut_start))
+            if cut_end < end:
+                narrowed.append((eid, cut_end, end))
+        remaining = narrowed
+    selected: list[tuple[str, int, int, str]] = []
+    for eid, start, end in remaining:
+        raw = raw_by_id[eid]
+        while start < end and raw[start] in '，,；; \t\r\n':
+            start += 1
+        while start < end and raw[end - 1] in ' \t\r\n':
+            end -= 1
+        if start < end:
+            selected.append((eid, start, end, raw[start:end]))
+    if len(selected) != 1:
+        return None, 'independent_person_claims_need_separate_clauses'
+    result = dict(item)
+    result['supports'] = [dict(evidence_id=eid, start=start, end=end) for eid, start, end, _ in selected]
+    result['proposition'] = _stated_normalize(selected[0][3])
+    return result, 'separated_independent_person_claim_source'
+
 @dataclass(frozen=True, slots=True)
 class BatchItem:
     """One compiler-verified item: a form or a typed corrects."""
@@ -686,6 +751,7 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed + assistant_claim。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
     "本人持续 attribute/preference 的所选原话明确命名了适用主题时，必须附主题检索线索：\"entity\":{\"canonical_name\":\"<原话主题词>\",\"kind\":\"topic\",\"aliases\":[\"<常见同义主题词>\"]}。这是第10条第三方 entity 之外的本人主题用法；不是改成第三方属性。给主题的常见等价叫法，便于以后换说法仍能检索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义时 aliases 留空。主题词必须在所选原话中；命题仍逐字来自所选原话。原话未命名主题或省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
     "形成资格看适用范围：只保留对以后持续有效的偏好/习惯/安排。只针对本次任务的操作、回复、文件或工具指示不形成 preference，例如本次先做某一步、处理当前文件、当前回合回复格式；即使措辞强烈也不变成长久要求。混合原话要分别选择持续内容，排除独立的临时指令，不把两者放进同一个命题。不要把‘最近’的持续安排误判成单次任务。\n"
     "来源标识按所在列表逐字复制：sentences 的 id 是 t0、t1…，填 sentence_id；segments 的 id 是 s0、s1…，填 segment_id。不能把 s0 填到 sentence_id，也不能把 t0 填到 segment_id；不要自行造标识。\n"
@@ -725,7 +791,7 @@ _SYSTEM_PROMPT = (
     "ccurred_at\":\"2026-08-15\",\"time_expression\":\"昨天\",\"corrects_event_id\":\"...\"}\n"
     "规则：\n"
     "1. 只处理：用户本人稳定属性/偏好；第三方稳定属性或偏好（一次性/情景内容不算）；用户对第三方的命名；用户↔第三方或第三方↔第三方的稳定关系；用户明确说两个名字**同指一人**的显式等价。**对任何"
-    "人的评价一律不产出**；除已发生/已确定事件外的一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界最多 5 条；作息/通勤/日程等稳定习惯也算用户稳定属性或偏好，可"
+    "人的评价按独立 attribute 记录用户观点**；除已发生/已确定事件外的一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界最多 5 条；作息/通勤/日程等稳定习惯也算用户稳定属性或偏好，可"
     "以产出；愿望/期待与情绪、观点不产出。带明确短期范围的临时状态（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。这里的愿望不包括对助手以后持"
     "续生效的明确要求，答复方式要求是 preference；没有明确截止范围的当前习惯或安排属于持续约束，必须 form。‘最近’本身不能作为 no_change 的理由；形成当前约束，之后有新说法再 c"
     "orrect 或 supersede。\n"
@@ -784,15 +850,16 @@ _SYSTEM_PROMPT = (
     "ict。**用 form 另存新事件会让旧事件仍然存在、两条并存——错误状态，必须用 correct**。\n"
     "16. perspective holder（第三方视角，V8）：仅当用户转述**第三方对第三方/对用户**的身份类稳定属性/偏好（如\"阿姨说表弟是00后\"）时，用 attribute/prefere"
     "nce + entity=被陈述对象（名字逐字在命题）+ perspective_holder=说话人（第三方名，逐字在命题；**不得**是\"用户\"；说话人=被陈述对象也不行）。用户自己说的稳定属性/"
-    "偏好**不要**带 perspective_holder（那才是 owner_self）。第三方视角的**评价**仍一律不产出。\n"
+    "偏好**不要**带 perspective_holder（那才是 owner_self）。第三方视角的评价须明确 attribution（观点归属），不能当作用户评价。\n"
     "17. clarification_required：用户明显在陈述需要记住的内容，但身份或含义无法唯一解析（锁不定）且不产出任何 item 时，整批输出 clarification_required"
     "，question 是一句话中文澄清问题（≤100 字，只问最关键的歧义）。out_of_scope：理解了内容但超出当前正式合同（不属于可归属的稳定属性/偏好/命名/关系/事件）且用户明显要求记忆时"
-    "，整批输出 out_of_scope，note 是一句话中文说明（≤100 字）。两者都零 World 写入；无关的闲聊/情绪/观点/评价仍用 no_change，不要滥用这两个结果。\n"
+    "，整批输出 out_of_scope，note 是一句话中文说明（≤100 字）。两者都零 World 写入；无关的闲聊/情绪仍用 no_change，不要滥用这两个结果。\n"
 )
 
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "Split independent person relationships, abilities/evaluations and enduring decisions into separate items, even within one sentence. A relationship never substitutes for an evaluation, or vice versa. Select the relationship clause alone; represent a user's evaluation as attribute + entity targeting the person, as the user's view rather than certified objective ability. Resolve a unique adjacent pronoun without folding the relationship into the evaluation. The compiler creates entities with source links; redundant naming is unnecessary. Explicitly confirmed future situational actions/reminders form a separate preference decision: stated for an explicit restatement, confirmed + assistant_claim for short assent. Never form a decision from unconfirmed assistant advice, refusal or casual emotion. Correct evaluations with corrects_cognition_id and relationships with corrects_relationship_id. For an explicit name correction use action=correct, statement_kind=alias, entity=new name, alias_of=old name; both names must occur in the same correction evidence. Ordinary aliases still use form.\n"
     "For an ongoing owner attribute/preference whose selected source explicitly names its topic, "
     "include retrieval labels: \"entity\":{\"canonical_name\":\"<verbatim topic>\",\"kind\":\"topic\","
     "\"aliases\":[\"<common equivalent topic phrase>\"]}. This is an owner-topic use of entity, separate "
@@ -868,7 +935,7 @@ _SYSTEM_PROMPT_EN = (
     "1. Only process: the user's own stable attributes/preferences; stable third-party attributes or pref"
     "erences (one-off or situational content does not count); the user's naming of third parties; stable "
     "relationships between the user and a third party or between third parties; explicit equivalence of t"
-    "wo names for one person stated by the user . **Never produce evaluations of anyone **; one-off facts"
+    "wo names for one person stated by the user . **Keep attributable evaluations as separate owner-view attribute items **; one-off facts"
     " other than happened/confirmed events and vague content are never produced. Review the Evidence one "
     "by one; produce everything that is definite (at most 5 per boundary; routines/commutes/schedules and"
     " other stable habits count as stable attributes or preferences and may be produced; wishes/expectati"
@@ -984,7 +1051,7 @@ _SYSTEM_PROMPT_EN = (
     "rbatim in the proposition) + perspective_holder = the speaker (third-party name, verbatim in the pro"
     "position; **not** \"The user\"; the speaker must not equal the described person). The user's own state"
     "d attributes/preferences must **not** carry perspective_holder (those are owner_self). Third-party p"
-    "erspective **evaluations** are still never produced.\n"
+    "erspective evaluations must retain their explicit speaker attribution.\n"
     "17. clarification_required: when the user is clearly stating something to remember but the identity "
     "or meaning cannot be uniquely resolved (unlockable) and you produce no item, emit a whole-batch clar"
     "ification_required; question is a one-sentence clarification in the conversation language (<=100 cha"
@@ -992,7 +1059,7 @@ _SYSTEM_PROMPT_EN = (
     "utside the current formal contract (not an attributable stable attribute/preference/naming/relations"
     "hip/event) and the user clearly asked to remember it, emit a whole-batch out_of_scope; note is a one"
     "-sentence explanation (<=100 chars). Both are zero World writes; unrelated chitchat/emotions/opinion"
-    "s/evaluations still use no_change — do not overuse these two results.\n"
+    "s without an attributable enduring claim still use no_change — do not overuse these two results.\n"
 )
 
 
@@ -1190,7 +1257,7 @@ class HermesBatchAdapterProcessor:
             if not raw_content:
                 return None
             preceding_ai = str(ev.get("context") or "").strip()
-            if preceding_ai and re.match(r"^(?:对|是的|没错|正确|对的|嗯嗯|确实|yes|yeah|yep|correct|right|sure)[!！。.\s]*$", raw_content, re.I):
+            if preceding_ai and _AFFIRM_RE.fullmatch(raw_content.strip('!！。.，, \t\r\n')):
                 return None
             if _has_declarative_facts(raw_content):
                 return None
@@ -1968,9 +2035,9 @@ class HermesBatchAdapterProcessor:
         current_entity_mentions = self._current_entity_mentions(job, db)
         batch_entity_names: set[str] = set()
         for candidate_item in raw_items:
-            if not isinstance(candidate_item, dict) or candidate_item.get("statement_kind") != "naming":
+            if not isinstance(candidate_item, dict):
                 continue
-            entity = candidate_item.get("entity")
+            entity = candidate_item.get("target_entity") if candidate_item.get("statement_kind") == "relationship" else candidate_item.get("entity")
             if not isinstance(entity, dict) or not isinstance(entity.get("canonical_name"), str):
                 continue
             candidate_supports, _reason = _parse_supports(candidate_item.get("supports"), ids, raw_by_id)
@@ -1985,6 +2052,11 @@ class HermesBatchAdapterProcessor:
         for item_index, raw_item in enumerate(raw_items):
             if isinstance(raw_item, dict):
                 raw_item = dict(raw_item)
+                raw_item, separation = _separate_person_claim_source(raw_item, raw_items, ids, raw_by_id)
+                if raw_item is None:
+                    return None, separation
+                if separation:
+                    normalizations.append({'item_index': item_index, 'rule': separation})
                 for field in ("corrects_cognition_id", "supersedes_cognition_id", "contradicts_cognition_id"):
                     if field in raw_item:
                         raw_item[field] = self._canonical_cognition_reference(raw_item[field], job, db)
@@ -2334,6 +2406,9 @@ class HermesBatchAdapterProcessor:
             ):
                 return None, "invalid_correction_target"
             corrects_relationship_id = raw_rel_target.strip()
+        elif kind == "alias" and action == "correct":
+            if corrects is not None or formed_by != "stated" or retract:
+                return None, "unexpected_correction_target"
         elif action == "correct":
             if formed_by == "confirmed":
                 return None, "invalid_formed_by"
@@ -2417,6 +2492,7 @@ class HermesBatchAdapterProcessor:
         perspective_holder_name: Optional[str] = None
         perspective_holder_kind: Optional[str] = None
         targeted_attribute = False
+        relationship_reference = False
         if kind in ("naming", "relationship"):
             # First-class Entity/Relationship entries (V3/V4 windows): the
             # closed contract is stated-only, and entity names must be
@@ -2484,7 +2560,14 @@ class HermesBatchAdapterProcessor:
                         return None, "invalid_entity_kind"
                     target_entity_kind = str(target_entity_kind).strip()
                     if target_canonical_name not in proposition:
-                        return None, "entity_name_not_in_proposition"
+                        prefix_names = {
+                            name for name in (batch_entity_names or set()) | set((current_entity_mentions or {}).values())
+                            if any(name in raw_by_id[eid][:start] for eid, start, _, _ in parsed)
+                        }
+                        if prefix_names != {target_canonical_name} or raw_item.get('source_entity') is not None:
+                            return None, "entity_name_not_in_proposition"
+                        relationship_reference = True
+                        proposition = target_canonical_name + _stated_normalize_no_subject_prepend(slices[0])
                     source_raw = raw_item.get("source_entity")
                     if source_raw is not None:
                         # V4: third-party↔third-party relationships (Owner decision
@@ -2514,7 +2597,7 @@ class HermesBatchAdapterProcessor:
             # Both names must be verbatim in the proposition AND each name must
             # appear in at least one support slice; the apply side resolves the
             # canonical by earlier formation, so field order carries no meaning.
-            if action != "form" or formed_by != "stated":
+            if action not in ("form", "correct") or formed_by != "stated":
                 return None, "invalid_formed_by"
             if (
                 raw_item.get("target_entity") is not None
@@ -2817,6 +2900,8 @@ class HermesBatchAdapterProcessor:
                 ]
             else:
                 anchors = [_stated_normalize(slice_text) for slice_text in slices]
+            if relationship_reference:
+                anchors = [str(target_canonical_name) + _stated_normalize_no_subject_prepend(text) for text in slices]
             if not any(
                 _strip_end_punctuation(proposition)
                 == _strip_end_punctuation(anchor)
@@ -2824,6 +2909,20 @@ class HermesBatchAdapterProcessor:
             ):
                 return None, "proposition_not_anchored"
 
+        if kind == 'preference' and formed_by in {'stated', 'confirmed'} and not retract and topic_canonical_name is None and entity_canonical_name is None:
+            # A confirmed situational decision has an explicit condition in its
+            # selected source. Preserve that verbatim retrieval cue even when
+            # the interpreter omits the optional topic field; infer no aliases.
+            condition = None
+            for condition_source in ([proposition] if formed_by == 'confirmed' else slices):
+                condition = re.search(
+                    r'(?:以后|今后|下次|将来)(?:我们|用户|我)?(?:想|需要|要|打算|准备)?'
+                    r'([^，,。？！；;]+?)(?:的时候|时)(?=[，,]|就|请)', condition_source,
+                )
+                if condition:
+                    break
+            if condition:
+                topic_canonical_name = condition.group(1).strip()
         return (
             BatchItem(
                 action=str(action),
@@ -2997,6 +3096,8 @@ class HermesBatchAdapterProcessor:
                     # V6: correct with NO replacement (Owner decision: retract
                     # = correct special case).
                     result, wrote = self._apply_retract(db, job, item, now_text)
+                elif item.statement_kind == "alias":
+                    result, wrote = self._apply_alias(db, job, item, now_text)
                 elif item.statement_kind == "relationship":
                     # V5: relationship 改口替换 (corrects a prior relationship).
                     result, wrote = self._apply_relationship_correct(
@@ -3588,6 +3689,16 @@ class HermesBatchAdapterProcessor:
         target_id, target_created = self._resolve_target_entity(
             db, job, item.target_canonical_name, item.target_entity_kind, now_text
         )
+        for evidence_id, start, end, text in item.supports:
+            for entity_id, name in ((target_id, item.target_canonical_name),
+                                    (source_id, item.source_canonical_name)):
+                if name and name in text:
+                    self._write_entity_ledger(db, entity_id, evidence_id, start, end)
+                elif name:
+                    raw = str(db.execute('SELECT raw_content FROM evidence WHERE id=?', (evidence_id,)).fetchone()[0])
+                    position = raw.rfind(name, 0, start)
+                    if position >= 0:
+                        self._write_entity_ledger(db, entity_id, evidence_id, position, position + len(name))
         relationship_id = relationship_id_for(
             job.subject_id, source_id, item.relation_type, target_id
         )
@@ -3742,6 +3853,9 @@ class HermesBatchAdapterProcessor:
         re-pointing re-anchors the row under a new deterministic id instead of
         mutating the endpoints under the old id.
         """
+        if item.action == 'correct':
+            from .name_correction import apply_name_correction
+            return apply_name_correction(self, db, job, item, now_text)
         assert item.entity_canonical_name is not None
         assert item.entity_kind is not None
         assert item.alias_of_canonical_name is not None
@@ -4866,6 +4980,18 @@ class HermesBatchAdapterProcessor:
         prior_id: str,
         replacement_id: str,
     ) -> None:
+        db.execute('CREATE TABLE IF NOT EXISTS relationship_transitions ('
+                   'id TEXT PRIMARY KEY, prior_relationship_id TEXT NOT NULL UNIQUE, '
+                   'replacement_relationship_id TEXT NOT NULL, reason TEXT NOT NULL, revision INTEGER NOT NULL)')
+        transition_id = 'relationship-transition-' + _hash_text(
+            _canonical(['corrects', prior_id, replacement_id])
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO relationship_transitions "
+            "(id, prior_relationship_id, replacement_relationship_id, reason, revision) "
+            "VALUES (?, ?, ?, 'corrects', ?)",
+            (transition_id, prior_id, replacement_id, self._current_revision(db) + 1),
+        )
         ledger_id = "evidence-ledger-" + _hash_text(
             _canonical(["relationship_correction", prior_id, replacement_id])
         )
@@ -5169,6 +5295,8 @@ class HermesBatchAdapterProcessor:
                 (cognition_id, target_entity_id, perspective_entity_id),
             )
         for evidence_id, start, end, _slice in item.supports:
+            if target_entity_id is not None and item.entity_canonical_name and item.entity_canonical_name in _slice:
+                self._write_entity_ledger(db, target_entity_id, evidence_id, start, end)
             _ensure_support_link(db, cognition_id, evidence_id)
             ledger_id = "evidence-ledger-" + _hash_text(
                 _canonical(["formation", cognition_id, evidence_id, start, end])
