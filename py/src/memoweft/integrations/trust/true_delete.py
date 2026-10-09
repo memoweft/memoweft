@@ -247,6 +247,11 @@ def delete_evidence(
     # An optional local FTS index is outside the versioned schema.
     if db.execute("SELECT 1 FROM sqlite_master WHERE name = 'cognition_fts'").fetchone():
         _delete_ids(db, "cognition_fts", "cognition_id", cognition_ids)
+        if cognition_ids:
+            # FTS5 DELETE retains old tokens in shadow segment blobs. SQLite
+            # secure_delete/VACUUM cannot remove live segment rows; merge the
+            # index first so its deleted postings are physically discarded.
+            db.execute("INSERT INTO cognition_fts(cognition_fts) VALUES ('optimize')")
     # Identity is a derived cache; its JSON may contain names or statements
     # from any of the removed World objects. It can be rebuilt from survivors.
     db.execute("DELETE FROM identity_state WHERE world_id = ?", (subject_id,))

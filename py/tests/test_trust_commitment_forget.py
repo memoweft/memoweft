@@ -129,3 +129,22 @@ def test_source_job_recovers_commitment_when_interaction_context_is_missing(
             assert not db.execute('SELECT 1 FROM memory_world_job').fetchone()
     finally:
         runtime.shutdown()
+
+
+def test_optional_fts_erases_shadow_tokens_and_keeps_unrelated_index(tmp_path: Path) -> None:
+    from memoweft.store.keyword import KeywordRetriever
+    from test_trust_command_service import _seed_cognition
+    path = tmp_path / 'fts.sqlite3'
+    with _open(path) as db:
+        _seed_cognition(db, 'c-person', 'e-person', '王小明是朋友')
+        _seed_cognition(db, 'c-keep', 'e-keep', '记得喝水')
+        KeywordRetriever(db).index_all([('c-person', '王小明是朋友'), ('c-keep', '记得喝水')])
+        _seed_revision(db)
+    receipt = _service(path).submit_command(_command('fts-delete', 1, 'delete_evidence', 'evidence', 'e-person'))
+    assert receipt['storage_cleanup']['state'] == 'complete'
+    _assert_no_text(path, '王小明')
+    with _open(path) as db:
+        for (table,) in db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall():
+            for row in db.execute(f'SELECT * FROM "{table}"'):
+                assert all('王小明'.encode() not in value for value in row if isinstance(value, bytes))
+        assert [hit.id for hit in KeywordRetriever(db).search('记得喝水')] == ['c-keep']

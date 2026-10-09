@@ -26,7 +26,7 @@
 | clarification            | question, target_hint                                                                                                                                                       | 被删 answer_evidence_id / source_job_id / follow_up_job_id 对应行删除；澄清生命周期                                                                       |
 | trust_command            | payload_json                                                                                                                                                                | 指向被删项或负载引用被删标识的命令负载改为 `{}`；保留无内容回执身份                                                                                       |
 | portable_import_receipt  | result_json                                                                                                                                                                 | 写入内容为导入回执（计数、重复项标识、修订、哈希、结果），不含来源／对象正文；portable_service.py 的 apply 回执构造已核对                                 |
-| cognition_fts（可选）    | 索引正文                                                                                                                                                                    | 按被删 cognition_id 删除；非版本化索引也清理                                                                                                              |
+| cognition_fts（可选）    | text；影子表 cognition_fts_content.c1、cognition_fts_data.block、cognition_fts_idx.term（后两者保存编码词片段）                                                             | 按被删 cognition_id 删除，再执行 FTS optimize（索引合并）物理清除旧词片段；沿用储存清理；keyword.py 写入                                                  |
 
 其余表逐表核对，只有标识／固定枚举／时间／哈希：`boundary_evidence_content`、`cognition_evidence`、`cognition_target`、`event_evidence`、`evidence_origin_history`、`evidence_retraction`、`hard_deleted_origin`、`observed_source`、`proposal_decision_receipts`、`relationship_evidence`、`trust_command_receipt`、`trust_command_rejection`、`trust_delete_storage_status`、`world_delete_marker`、`world_event_evidence`、`world_item_lifecycle`。其中来源 origin_id 原值随真正删除清除，仅留内容无关的防重放哈希与标识；Observed 生命周期行保留版本与哈希，不保存原文。
 
@@ -35,3 +35,5 @@
 预览在只读一致快照的内存副本上调用同一删除算法，包含 `object_kind=interaction_commitment`、kind 对应的 item_type、名称与总数；不改变原库、回执或修订。会话仅剩旧承诺时删除仍推进修订并返回 applied（已应用），重复删除返回 no_change（未变化）。沿用 FG-1 的 secure_delete（安全删除）、VACUUM（数据库整理）与 WAL（预写日志）截断，不降低失败／待清理状态。
 
 验证对每张实际表每一列全文检查，并检查 JSON（结构化文本）解码后的文本及库／WAL 实际字节；不以无法召回代替不可恢复。WeftMate 第 7 步新备份扫描也逐表逐列，无固定表名清单。旧备份的保留策略属于既有 FG-1 范围，本包检查遗忘后新生成的备份。
+
+可选 FTS 的实际复现：只删除虚拟表行再 VACUUM，cognition_fts_data 两个存活 BLOB（字节块）仍命中姓名，库文件也命中。执行索引合并后，全表文本／BLOB、库文件及 WAL 检查零命中，无关索引条目仍能检索。本包完整 M2 模型备份为 38 张表，没有启用可选 FTS；此补充在独立定向测试验收，没有把它说成模型批覆盖。
