@@ -857,8 +857,9 @@ class DshMemoWeftRuntime:
         worker = self._world_worker
         if worker is not None:
             try:
-                delay = 20.0 if getattr(self, "_model_tier", "") == "local" else 0.0
-                if not worker.kick(delay=delay):
+                # The host owns idle/single-slot scheduling. An additional local
+                # delay makes a completed turn unavailable to the next session.
+                if not worker.kick():
                     logger.warning("MemoWeft World worker was unavailable after receipt")
             except Exception as exc:
                 logger.warning("MemoWeft World worker wake failed: error_type=%s", type(exc).__name__)

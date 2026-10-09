@@ -1317,7 +1317,7 @@ class HermesBatchAdapterProcessor:
         if (
             compiled.batch is None
             and compiled.terminal == "no_change"
-            and compiled.reason not in ("model_no_change", "task_scoped_instruction")
+            and compiled.reason != "task_scoped_instruction"
             and "formation_rewrite" not in payload
         ):
             first = dict(payload)
@@ -1328,6 +1328,15 @@ class HermesBatchAdapterProcessor:
                     "compiler error; every cognition must include a nonempty proposition "
                     "and valid supports. Copy names, forms of address, numbers and dates "
                     "exactly from user evidence. Never invent facts."
+                    + (" The source passed the declarative-fact check. Reconsider no_change: "
+                       "a new personal preference, name, relationship or correction must be "
+                       "represented unless the current World already expresses it. A question "
+                       "or task-only instruction can still return no_change."
+                       if compiled.reason == "model_no_change" else "")
+                    + (" For a relationship with the user, include target_entity with "
+                       "canonical_name copied from the evidence and kind=person; omit "
+                       "source_entity. For third-party relationships include both endpoints."
+                       if compiled.reason in ("missing_target_entity", "invalid_model_result", "model_output_truncated") else "")
                 ),
             }
             # Persist the attempt reservation before dispatch: recovery never

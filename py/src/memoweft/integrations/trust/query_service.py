@@ -456,6 +456,7 @@ class QueryService:
         # currentness module from this package.  The runtime dependency is one-
         # way at operation time and avoids a package-initialization cycle.
         from ..hermes.recall import recall_world_snapshot
+        from ..dsh_bridge.recent import recent_evidence
 
         with self._read() as read:
             snapshot = recall_world_snapshot(read.db, self._subject_id, query, model_tier=cast(Any, model_tier))
@@ -473,6 +474,7 @@ class QueryService:
                     "count": snapshot.count,
                     "model_call_count": 0,
                     "world_write_count": 0,
+                    "recent_evidence": recent_evidence(read.db, self._subject_id, query, model_tier=cast(Any, model_tier)),
                 },
             }
 

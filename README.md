@@ -35,6 +35,8 @@ MemoWeft keeps these boundaries explicit:
   outcome; recovery never repeats a reserved or completed rewrite. The default
   DSH HTTP route requests `response_format: {"type": "json_object"}`; Core
   validation still checks required fields and evidence grounding.
+  A model `no_change` result after a declarative source also receives the same
+  single, checkpointed reconsideration, with its first result retained.
   Event calendar dates are normalized from an unambiguous explicit numeric
   date in the selected source; relative or ambiguous dates retain their original
   time expression without a guessed `occurred_at` value. Reasoning-only model
@@ -45,6 +47,15 @@ MemoWeft keeps these boundaries explicit:
   permission-eligible predecessors. Only the current successor is rendered
   and selected; past preference values appear for historical questions or
   explicit retained-person identity lookups, labeled as past memory.
+- DSH recall previews additionally expose `recent_evidence`: permission-filtered
+  exact user quotes from unfinished formation, kept separate from formal World
+  items. This read-only bridge uses the existing Evidence and conversation
+  lifecycle, takes at most four quotes / 800 characters from the last 24 hours
+  and 32 accepted turns, and disappears after successful formation. It never
+  copies assistant claims or recreates deleted conversation context. Hosts must
+  label these quotes provisional and retain their distinction from formal
+  memory. Completed turns wake formation immediately; host queues own capacity
+  and foreground priority.
 - Correction, retract, forget, archive, mute, and permission changes produce durable receipts.
 - Shared assistant interactions retain their original history and explicit memory dependencies. Model projection excludes unresolved or no-longer-current dependencies, including transitive reuse; history projection remains subject to source permissions.
 - Portable bundles are versioned, validated, planned before apply, and conflict checked.

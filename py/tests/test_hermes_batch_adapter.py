@@ -400,7 +400,7 @@ def test_keyword_only_route_contract(tmp_path: Path) -> None:
     processor = HermesBatchAdapterProcessor(str(db_path), kw_only_route, clock=clock)
     worker = WorldJobWorker(db_path, processor=processor, policy=_policy(), clock=clock)
     assert worker.run_until_quiescent() == 1
-    assert calls == ["session-parent"]
+    assert calls == ["session-parent", "session-parent"]  # One no_change reconsideration uses the same keyword-only route.
     row = _job(db_path)
     assert row["state"] == "no_change"
     assert json.loads(str(row["world_result_json"]))["reason"] == "model_no_change"
