@@ -51,6 +51,14 @@ TypeScript exposes the same wire-shaped DTOs through `core.observed.upsert`, `co
 
 The shared `shared/parity/observed.json` suite covers permission replay, equal-time tightening, replacements, deletion fences and reopens in both languages. Dedicated tests additionally verify mixed-source derivations, typed RPC validation, assistant dependency filtering, valid time, index cleanup and old Portable restore suppression. WeftMate's integration suite exercises the real Python Core through RPC, rather than substituting a transport fixture.
 
+MF-1 adds optional RPC v2 `preview_recall_batch({queries, model_tier})`.
+It returns `snapshots` with the same shape as `preview_recall`, all from one
+read transaction (1–8 queries). Each preview also has `recent_evidence`, bounded,
+permission-filtered exact quotes from unfinished formation, separate from its
+formal `selected_item_ids`. Hosts must label quotes provisional; they must not
+claim these are formal World items. Atomic topic/style/identity reads avoid a
+quote and its newly committed successor appearing together.
+
 FG-1 adds the optional RPC v2 method `erase_conversation_context` with
 `{conversation_id}`. A host calls it after explicitly deleting a conversation
 and its source memories; it blanks that subject's original interaction contexts,

@@ -665,7 +665,8 @@ def test_formation_payload_excludes_restricted_history_and_closes_entities(
     processor = HermesBatchAdapterProcessor(str(db_path), route, clock=clock)
     worker = WorldJobWorker(db_path, processor=processor, policy=_policy(), clock=clock)
     assert worker.run_until_quiescent() == 1
-    assert len(payloads) == 1
+    assert len(payloads) == 2  # A declarative no_change gets one reconsideration.
+    assert payloads[1] == payloads[0], "rewrite must retain the same permission-filtered history"
     payload = payloads[0]
     if foreign_history_subject:
         assert as_objects(payload["current_cognitions"]) == []

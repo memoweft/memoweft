@@ -448,7 +448,12 @@ class QueryService:
             }
 
     def preview_recall(self, query: str, *, model_tier: str = "local") -> dict[str, object]:
-        if not isinstance(query, str) or not query.strip() or len(query) > 4000:
+        snapshots = self.preview_recall_batch([query], model_tier=model_tier)["snapshots"]
+        return cast(list[dict[str, object]], snapshots)[0]
+
+    def preview_recall_batch(self, queries: list[str], *, model_tier: str = "local") -> dict[str, object]:
+        if (not isinstance(queries, list) or not 1 <= len(queries) <= 8 or
+                any(not isinstance(query, str) or not query.strip() or len(query) > 4000 for query in queries)):
             raise TrustQueryError("invalid_recall_query")
         if model_tier not in {"local", "cloud"}:
             raise TrustQueryError("invalid_model_tier")
@@ -456,25 +461,30 @@ class QueryService:
         # currentness module from this package.  The runtime dependency is one-
         # way at operation time and avoids a package-initialization cycle.
         from ..hermes.recall import recall_world_snapshot
+        from ..dsh_bridge.recent import recent_evidence
 
         with self._read() as read:
-            snapshot = recall_world_snapshot(read.db, self._subject_id, query, model_tier=cast(Any, model_tier))
-            if snapshot is None or snapshot.world_revision != read.world_revision:
-                raise TrustQueryError("recall_snapshot_unavailable")
-            return {
-                **self._base(read.world_revision),
-                "preview": {
-                    "query_hash": sha256(query.encode("utf-8")).hexdigest(),
-                    "model_tier": model_tier,
-                    "selected_item_ids": [list(pair) for pair in snapshot.selected_item_ids],
-                    "currentness_digest": snapshot.currentness_digest,
-                    "rendered_recall": snapshot.rendered_recall,
-                    "recall_snapshot_token": snapshot.recall_snapshot_token,
-                    "count": snapshot.count,
-                    "model_call_count": 0,
-                    "world_write_count": 0,
-                },
-            }
+            result: list[dict[str, object]] = []
+            for query in queries:
+                snapshot = recall_world_snapshot(read.db, self._subject_id, query, model_tier=cast(Any, model_tier))
+                if snapshot is None or snapshot.world_revision != read.world_revision:
+                    raise TrustQueryError("recall_snapshot_unavailable")
+                result.append({
+                    **self._base(read.world_revision),
+                    "preview": {
+                        "query_hash": sha256(query.encode("utf-8")).hexdigest(),
+                        "model_tier": model_tier,
+                        "selected_item_ids": [list(pair) for pair in snapshot.selected_item_ids],
+                        "currentness_digest": snapshot.currentness_digest,
+                        "rendered_recall": snapshot.rendered_recall,
+                        "recall_snapshot_token": snapshot.recall_snapshot_token,
+                        "count": snapshot.count,
+                        "model_call_count": 0,
+                        "world_write_count": 0,
+                        "recent_evidence": recent_evidence(read.db, self._subject_id, query, model_tier=cast(Any, model_tier)),
+                    },
+                })
+            return {**self._base(read.world_revision), "snapshots": result}
 
     @staticmethod
     def _identifier(value: object, code: str) -> str:
