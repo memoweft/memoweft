@@ -23,7 +23,7 @@ propositions also use their original Evidence rather than model rewrites.
 from __future__ import annotations
 
 import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import json
 import logging
@@ -465,6 +465,7 @@ def _confirm_claim_is_proposition(claim: str) -> bool:
 _AFFIRM_RE = re.compile(
     r"^(?:对|对的|对呀|对哦|对啊|是|是的|是呀|嗯|嗯嗯|好|好的|好呀|好啊|好嘞|"
     r"行|行呀|行啊|可以|可以呀|没问题|没错|不错|就是|必须|必须的|"
+    r"(?:好|好的|行|可以)?就这么办|(?:好|好的|行|可以)?就这样定了|"
     r"right|yes|yeah|yep|yup|correct|exactly|indeed|true|sure|ok|okay|"
     r"confirm|confirmed)$",
     re.IGNORECASE,
@@ -584,6 +585,8 @@ class BatchItem:
     supports: tuple[tuple[str, int, int, str], ...]
     corrects_cognition_id: Optional[str] = None
     assistant_claim: Optional[str] = None
+    # References only: the assistant remains an InteractionContext, never user Evidence.
+    assistant_source: Optional[dict[str, str]] = None
     #: naming items: the entity this item names/affirms.  Also set on V4
     #: third-party attribute items (the proposition's subject entity).
     entity_canonical_name: Optional[str] = None
@@ -752,7 +755,7 @@ class TrustCommandApplyError(RuntimeError):
 
 _SYSTEM_PROMPT = (
     "明确纠正人名（含省略主题的‘那个人名写错了’）用 action=correct、statement_kind=alias、entity=新姓名、alias_of=旧姓名；不是 correct+naming，也不附 corrects_cognition_id、corrects_relationship_id 或 corrects_event_id。两姓名必须都在当前纠正原话中。\n"
-    "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed + assistant_claim。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
+    "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed；两种确认决定都必须用 assistant_claim 逐字引用 context 中被确认的助手提议（保留人物姓名和适用情境），保存双方来源；stated 命题仍从用户原话派生。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
     "本人持续 attribute/preference 的所选原话明确命名了适用主题时，必须附主题检索线索：\"entity\":{\"canonical_name\":\"<原话主题词>\",\"kind\":\"topic\",\"aliases\":[\"<常见同义主题词>\"]}。这是第10条第三方 entity 之外的本人主题用法；不是改成第三方属性。给主题的常见等价叫法，便于以后换说法仍能检索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义时 aliases 留空。主题词必须在所选原话中；命题仍逐字来自所选原话。原话未命名主题或省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
     "形成资格看适用范围：只保留对以后持续有效的偏好/习惯/安排。只针对本次任务的操作、回复、文件或工具指示不形成 preference，例如本次先做某一步、处理当前文件、当前回合回复格式；即使措辞强烈也不变成长久要求。混合原话要分别选择持续内容，排除独立的临时指令，不把两者放进同一个命题。不要把‘最近’的持续安排误判成单次任务。\n"
     "来源标识按所在列表逐字复制：sentences 的 id 是 t0、t1…，填 sentence_id；segments 的 id 是 s0、s1…，填 segment_id。不能把 s0 填到 sentence_id，也不能把 t0 填到 segment_id；不要自行造标识。\n"
@@ -861,7 +864,7 @@ _SYSTEM_PROMPT = (
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
     "For an explicit name correction, including an omitted-topic 'that name was wrong', use action=correct, statement_kind=alias, entity=new name and alias_of=old name. Do not use correct+naming or attach any corrects_cognition_id, corrects_relationship_id or corrects_event_id; both names must occur in the current correction evidence.\n"
-    "Split independent person relationships, abilities/evaluations and enduring decisions into separate items, even within one sentence. A relationship never substitutes for an evaluation, or vice versa. Select the relationship clause alone; represent a user's evaluation as attribute + entity targeting the person, as the user's view rather than certified objective ability. Resolve a unique adjacent pronoun without folding the relationship into the evaluation. The compiler creates entities with source links; redundant naming is unnecessary. Explicitly confirmed future situational actions/reminders form a separate preference decision: stated for an explicit restatement, confirmed + assistant_claim for short assent. Never form a decision from unconfirmed assistant advice, refusal or casual emotion. Correct evaluations with corrects_cognition_id and relationships with corrects_relationship_id. For an explicit name correction use action=correct, statement_kind=alias, entity=new name, alias_of=old name; both names must occur in the same correction evidence. Ordinary aliases still use form.\n"
+    "Split independent person relationships, abilities/evaluations and enduring decisions into separate items, even within one sentence. A relationship never substitutes for an evaluation, or vice versa. Select the relationship clause alone; represent a user's evaluation as attribute + entity targeting the person, as the user's view rather than certified objective ability. Resolve a unique adjacent pronoun without folding the relationship into the evaluation. The compiler creates entities with source links; redundant naming is unnecessary. Explicitly confirmed future situational actions/reminders form a separate preference decision: stated for an explicit restatement, confirmed for short assent. In BOTH cases include assistant_claim quoting the confirmed proposal verbatim from context (retain the person name and situation), so both sources are preserved; stated propositions still derive from user text. Never form a decision from unconfirmed assistant advice, refusal or casual emotion. Correct evaluations with corrects_cognition_id and relationships with corrects_relationship_id. For an explicit name correction use action=correct, statement_kind=alias, entity=new name, alias_of=old name; both names must occur in the same correction evidence. Ordinary aliases still use form.\n"
     "For an ongoing owner attribute/preference whose selected source explicitly names its topic, "
     "include retrieval labels: \"entity\":{\"canonical_name\":\"<verbatim topic>\",\"kind\":\"topic\","
     "\"aliases\":[\"<common equivalent topic phrase>\"]}. This is an owner-topic use of entity, separate "
@@ -1330,6 +1333,11 @@ class HermesBatchAdapterProcessor:
                     "compiler error; every cognition must include a nonempty proposition "
                     "and valid supports. Copy names, forms of address, numbers and dates "
                     "exactly from user evidence. Never invent facts."
+                    + (" For a confirmed decision, omit entity/topic/perspective_holder fields; "
+                       "keep assistant_claim verbatim from context and the user's confirmation support. "
+                       "The compiler derives the situational topic. If the user explicitly restated "
+                       "the decision, use stated with the user's full sentence_id and include assistant_claim."
+                       if compiled.reason in ("topic_name_not_in_span", "invalid_topic_claim") else "")
                     + (" The source passed the declarative-fact check. Reconsider no_change: "
                        "a new personal preference, name, relationship or correction must be "
                        "represented unless the current World already expresses it. A question "
@@ -1528,6 +1536,8 @@ class HermesBatchAdapterProcessor:
         self, job: ClaimedWorldJob, db: sqlite3.Connection
     ) -> list[dict[str, object]]:
         ids = job.evidence_ids()
+        prior_assistants = self._conversation_context_payload(job, db)
+        prior_context = "\n".join(turn["content"] for turn in prior_assistants if turn["role"] == "assistant")
         blocks: list[dict[str, object]] = []
         for evidence_id in ids:
             row = db.execute(
@@ -1562,6 +1572,8 @@ class HermesBatchAdapterProcessor:
             }
             if row[1] is not None:
                 block["context"] = str(row[1])
+            elif prior_context:
+                block["context"] = prior_context
             blocks.append(block)
         return blocks
 
@@ -1669,7 +1681,7 @@ class HermesBatchAdapterProcessor:
         if cutoff is None or cutoff[0] is None:
             return []
         rows = db.execute(
-            "SELECT episode_id, context_json FROM interaction_context WHERE subject_id = ? "
+            "SELECT episode_id, context_json, id FROM interaction_context WHERE subject_id = ? "
             "AND conversation_id = ? AND created_at < ? "
             "ORDER BY created_at DESC, rowid DESC LIMIT 4",
             (job.subject_id, job.parent_session_id, str(cutoff[0])),
@@ -1721,7 +1733,9 @@ class HermesBatchAdapterProcessor:
                     and isinstance(turn.get("content"), str)
                 ):
                     turns.append(
-                        {"role": str(turn["role"]), "content": str(turn["content"])}
+                        {"role": str(turn["role"]), "content": str(turn["content"]),
+                         "interaction_id": str(row[2]), "message_id": str(turn.get("message_id") or ""),
+                         "evidence_ids_json": json.dumps(evidence_ids)}
                     )
         return turns[-8:]
 
@@ -2052,6 +2066,12 @@ class HermesBatchAdapterProcessor:
                     None if row[1] is None else str(row[1])
                 )
         items: list[BatchItem] = []
+        inline_context_by_id = dict(context_by_id)
+        prior_turns = self._conversation_context_payload(job, db)
+        prior_context = "\n".join(turn["content"] for turn in prior_turns if turn["role"] == "assistant")
+        for evidence_id in ids:
+            if not context_by_id.get(evidence_id) and prior_context:
+                context_by_id[evidence_id] = prior_context
         context_entity_names = self._conversation_context_entity_names(job, db)
         current_entity_mentions = self._current_entity_mentions(job, db)
         batch_entity_names: set[str] = set()
@@ -2100,6 +2120,28 @@ class HermesBatchAdapterProcessor:
                     normalizations.append({"item_index": item_index, "rule": "excluded_task_scoped_instruction"})
                     continue
                 return None, reason
+            if item.assistant_claim:
+                proposals = [turn for turn in prior_turns if turn["role"] == "assistant"
+                             and item.assistant_claim in turn["content"] and turn["message_id"]]
+                if len(proposals) == 1:
+                    item = replace(item, assistant_source=proposals[0])
+                elif len(proposals) > 1:
+                    return None, "assistant_claim_context_ambiguous"
+                elif any(not inline_context_by_id.get(support[0]) for support in item.supports):
+                    return None, "assistant_claim_context_missing"
+            elif item.action == 'form' and item.statement_kind == 'preference' and prior_context:
+                for evidence_id, _start, _end, _slice in item.supports:
+                    raw = raw_by_id[evidence_id].strip()
+                    first_clause = re.split(r'[，,。.!！?？\s]', raw, maxsplit=1)[0]
+                    # An explicit restatement is already grounded in user Evidence.
+                    # Preserve its unique same-person proposal as context without
+                    # rewriting the user proposition or inventing an assistant claim.
+                    if _AFFIRM_RE.fullmatch(first_clause) and not _AFFIRM_RE.fullmatch(_SPAN_PUNCTUATION.sub('', raw)):
+                        proposals = [turn for turn in prior_turns if turn['role'] == 'assistant' and turn['message_id']
+                            and any(name in raw and name in turn['content'] for name in context_entity_names)
+                            and _is_confirmation_span(raw, turn['content'])]
+                        if len(proposals) == 1:
+                            item = replace(item, assistant_source=proposals[0])
             items.append(item)
 
         identities = [item.apply_identity(job.subject_id) for item in items]
@@ -2438,6 +2480,7 @@ class HermesBatchAdapterProcessor:
         elif corrects is not None:
             return None, "unexpected_correction_target"
         assistant_claim = raw_item.get("assistant_claim")
+        claim: str | None
         if isinstance(assistant_claim, str) and not assistant_claim.strip():
             assistant_claim = None
         if formed_by == "confirmed":
@@ -2447,9 +2490,9 @@ class HermesBatchAdapterProcessor:
                 return None, "missing_assistant_claim"
             claim = assistant_claim
         else:
-            if assistant_claim is not None:
+            if assistant_claim is not None and not (action == "form" and kind == "preference" and isinstance(assistant_claim, str)):
                 return None, "unexpected_assistant_claim"
-            claim = None
+            claim = assistant_claim if isinstance(assistant_claim, str) else None
 
         parsed, reason = _parse_supports(
             raw_item.get("supports"), ids, raw_by_id
@@ -2889,7 +2932,7 @@ class HermesBatchAdapterProcessor:
             if raw_item.get("relation_type") is not None:
                 return None, "unexpected_relation_type"
 
-        if formed_by == "confirmed":
+        if claim is not None:
             assert claim is not None
             if not _confirm_claim_is_proposition(claim):
                 return None, "invalid_assistant_claim"
@@ -2902,9 +2945,9 @@ class HermesBatchAdapterProcessor:
                 if not _is_confirmation_span(slice_text, claim):
                     return None, "confirmed_span_not_confirmation"
             expected = _confirm_normalize(claim)
-            if _strip_end_punctuation(proposition) != _strip_end_punctuation(expected):
+            if formed_by == "confirmed" and _strip_end_punctuation(proposition) != _strip_end_punctuation(expected):
                 return None, "proposition_mismatch"
-        else:
+        if formed_by != "confirmed":
             use_no_prepend = (
                 targeted_attribute
                 or kind == "alias"
@@ -3027,6 +3070,15 @@ class HermesBatchAdapterProcessor:
                 self._validate_evidence_in_transaction(db, job, evidence_id)
             for item in batch.items:
                 self._validate_supports_in_transaction(db, job, item)
+                if item.assistant_source:
+                    for source_id in json.loads(item.assistant_source['evidence_ids_json']):
+                        self._validate_evidence_in_transaction(db, job, source_id)
+                    context = db.execute('SELECT context_json FROM interaction_context WHERE id=? AND subject_id=?',
+                        (item.assistant_source['interaction_id'], job.subject_id)).fetchone()
+                    if context is None or not any(turn.get('role') == 'assistant'
+                        and turn.get('message_id') == item.assistant_source['message_id']
+                        and turn.get('content') == item.assistant_source['content'] for turn in json.loads(context[0])):
+                        raise _ZeroWriteError('assistant_claim_context_changed')
             self._validate_historical_targets_in_transaction(db, job, batch)
 
             results: list[dict[str, object]] = []
@@ -5315,6 +5367,15 @@ class HermesBatchAdapterProcessor:
                 "target_entity_id, perspective_entity_id) VALUES (?, ?, ?)",
                 (cognition_id, target_entity_id, perspective_entity_id),
             )
+        if item.assistant_source is not None:
+            source = item.assistant_source
+            for source_evidence_id in json.loads(source["evidence_ids_json"]):
+                _ensure_support_link(db, cognition_id, source_evidence_id)
+                db.execute("INSERT OR IGNORE INTO evidence_ledger (id, content, payload_json) VALUES (?, ?, ?)",
+                    ("confirmed-source-" + _hash_text(_canonical([cognition_id, source_evidence_id, source["message_id"]])),
+                     _canonical({"cognition_id": cognition_id, "evidence_id": source_evidence_id, "relation": "support"}),
+                     _canonical({"schema_version": 1, "assistant_source": {
+                         "interaction_id": source["interaction_id"], "message_id": source["message_id"]}})))
         for evidence_id, start, end, _slice in item.supports:
             if target_entity_id is not None and item.entity_canonical_name and item.entity_canonical_name in _slice:
                 self._write_entity_ledger(db, target_entity_id, evidence_id, start, end)
