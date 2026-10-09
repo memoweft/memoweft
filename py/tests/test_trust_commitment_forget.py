@@ -92,3 +92,40 @@ def test_conversation_without_context_erases_legacy_commitment_and_previews_it(t
     assert result['storage_cleanup'] == {'state': 'complete'}
     _assert_no_text(path, secret)
     assert erase_conversation_context(str(path), _SUBJECT, 'deleted')['result_state'] == 'no_change'
+
+
+def test_source_job_recovers_commitment_when_interaction_context_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
+    from memoweft.integrations.hermes.world_worker import WorldJobWorker
+    from memoweft.integrations.trust.command_service import CommandService
+    from memoweft.integrations.trust.revision import current_world_revision
+    from test_dsh_local_route import _boundary
+    monkeypatch.setattr(WorldJobWorker, 'start', lambda self: None)
+    monkeypatch.setattr(WorldJobWorker, 'kick', lambda self: False)
+    runtime = DshMemoWeftRuntime()
+    try:
+        runtime.initialize('s', dsh_home=str(tmp_path), model_tier='local', lang='zh')
+        boundary = _boundary()
+        runtime.ingest_durable_boundary(boundary)
+        path, subject, host = runtime.db_path, runtime.subject_id, runtime.host_id
+        assert path is not None and subject is not None and host is not None
+        with _open(Path(path)) as db:
+            source = str(db.execute('SELECT id FROM evidence').fetchone()[0])
+            revision = current_world_revision(db)
+            item = SqliteInteractionCommitmentStore(db).record(subject_id=subject, conversation_id='s',
+                episode_id=str(boundary['event_id']), kind='commitment', content='FG2JobOnlyQuote', raw_quote='FG2JobOnlyQuote')
+            db.execute('DELETE FROM interaction_context')
+        preview = preview_forget(str(path), subject, target_kind='evidence', target_id=source)
+        assert preview['item_count'] == 1
+        receipt = CommandService(path, subject_id=subject, host_id=host).submit_command({
+            'schema_version': 1, 'command_id': 'job-only-delete', 'subject_id': subject, 'actor': 'owner',
+            'expected_world_revision': revision, 'operation': 'delete_evidence', 'target_kind': 'evidence',
+            'target_id': source, 'payload': {}, 'submitted_at': _T0})
+        assert receipt['result_state'] == 'applied' and item.id in receipt['affected_ids']
+        _assert_no_text(Path(path), 'FG2JobOnlyQuote')
+        with _open(Path(path)) as db:
+            assert not db.execute('SELECT 1 FROM memory_world_job').fetchone()
+    finally:
+        runtime.shutdown()
