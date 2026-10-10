@@ -336,3 +336,23 @@ def test_rpc_replay_cannot_recover_a_forgotten_or_denied_quote(tmp_path: Path, o
         assert "MF1ReplaySecret" not in json.dumps(after, ensure_ascii=False)
     finally:
         runtime.shutdown()
+
+
+def test_successful_retry_removes_original_rejected_quote(tmp_path: Path) -> None:
+    from memoweft.integrations.dsh_bridge.reprocess import reprocess_job
+    runtime = _runtime(tmp_path)
+    try:
+        receipt = _ingest(runtime, "请记住我喜欢喝肉桂咖啡。")
+        path = _db_path(runtime)
+        WorldJobWorker(path).run_until_quiescent()
+        assert _recent(runtime, "喝咖啡加什么？")
+        reprocess_job(path, subject_id=_subject(runtime), job_id=str(receipt['job_id']), request_id='retry')
+        def route(messages: Any, *, session_id: str) -> dict[str, object]:
+            e = json.loads(messages[-1]['content'])['evidence'][0]
+            item = {**_item(e['text']), 'supports': [{'evidence_id': e['id'], 'sentence_id': 't0'}]}
+            return _model(_batch(item))
+        worker = WorldJobWorker(path, processor=HermesBatchAdapterProcessor(str(path), route, model_tier='local'))
+        assert worker.run_until_quiescent() == 1
+        assert _recent(runtime, "喝咖啡加什么？") == []
+    finally:
+        runtime.shutdown()

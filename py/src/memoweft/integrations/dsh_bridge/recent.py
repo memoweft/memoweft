@@ -86,9 +86,18 @@ def recent_evidence(
             text = str(evidence["raw_content"])
             if not _has_declarative_facts(text):
                 continue
-            outcome = json.loads(str(job["world_result_json"] or "{}"))
+            # Reprocessing keeps the original source/context but has a new job.
+            # Use its newest terminal so a successful retry cannot leave the old
+            # rejected quote marked provisional alongside the formal successor.
+            latest = db.execute(
+                "SELECT state,world_result_json FROM memory_world_job WHERE subject_id=? "
+                "AND EXISTS (SELECT 1 FROM json_each(evidence_ids_json) WHERE value=?) "
+                "ORDER BY created_at DESC,rowid DESC LIMIT 1", (subject_id, evidence_id),
+            ).fetchone()
+            state = str(latest[0]) if latest is not None else str(job["state"])
+            outcome = json.loads(str((latest[1] if latest is not None else job["world_result_json"]) or "{}"))
             rows.append({"id": str(evidence_id), "text": text, "session_id": str(job["parent_session_id"]),
-                         "created_at": str(job["created_at"]), "state": str(job["state"]), "reason": outcome.get("reason"),
+                         "created_at": str(job["created_at"]), "state": state, "reason": outcome.get("reason"),
                          "turn_index": turn_index})
     selected: list[dict[str, Any]] = []
     grouped: set[str] = set()
