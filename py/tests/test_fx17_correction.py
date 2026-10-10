@@ -15,7 +15,7 @@ def test_qa4_one_correction_replaces_preference_and_decision(tmp_path: Path, var
     clock = MutableClock()
     originals = ['我喝第903种花茶时偏好加一小撮肉桂粉。',
                  '好，以后我喝第903种花茶时，就提醒我加一小撮肉桂粉。']
-    ids = []
+    ids: list[str] = []
     for i, raw in enumerate(originals):
         eid = f'evidence-{i+1}'
         item = dict(action='form', target='owner_self', statement_kind='preference',
@@ -41,7 +41,7 @@ def test_qa4_one_correction_replaces_preference_and_decision(tmp_path: Path, var
     outcome = _job(db_path, job_id='correction')
     if variant in ('unrelated_topic', 'duplicate_target'):
         assert outcome['state'] == 'no_change'
-        assert json.loads(outcome['world_result_json'])['reason'] == ('topic_name_not_in_span' if variant == 'unrelated_topic' else 'duplicate_cognition_in_batch')
+        assert json.loads(str(outcome['world_result_json']))['reason'] == ('topic_name_not_in_span' if variant == 'unrelated_topic' else 'duplicate_cognition_in_batch')
         with sqlite3.connect(db_path) as db:
             assert db.execute('SELECT count(*) FROM cognition WHERE invalid_at IS NOT NULL').fetchone()[0] == 0
         return
