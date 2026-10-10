@@ -982,4 +982,12 @@ def test_shutdown_is_bounded_while_processor_finishes_outside_chat_thread(
     assert time.monotonic() - started < 0.5
     processor.release.set()
     assert worker.shutdown(timeout=2.0) is True
-    assert _job(db_path)["state"] == "no_change"
+    assert _job(db_path)["state"] == "retry"
+    assert _job(db_path)["attempts"] == 0
+    replacement = WorldJobWorker(db_path, processor=SequenceProcessor(
+        WorldJobResult.no_change("resumed")), policy=_policy(), clock=clock)
+    try:
+        assert replacement.run_until_quiescent() == 1
+        assert _job(db_path)["state"] == "no_change"
+    finally:
+        replacement.shutdown()

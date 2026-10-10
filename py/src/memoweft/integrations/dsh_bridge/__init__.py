@@ -808,7 +808,8 @@ class DshMemoWeftRuntime:
         self._world_worker = (
             None
             if processor is None and model_tier == "local"
-            else WorldJobWorker(db_path, processor=processor)
+            else WorldJobWorker(db_path, processor=processor,
+                                retry_interrupted_inference=True)
         )
         if self._world_worker is not None:
             self._world_worker.start()
@@ -1114,7 +1115,7 @@ class DshMemoWeftRuntime:
         self._world_worker = None
         self._enabled = False
         if worker is not None:
-            worker.shutdown()
+            worker.shutdown(timeout=0.25)
 
 
 __all__ = ["DshBoundaryError", "DshMemoWeftRuntime", "default_one_shot_route"]

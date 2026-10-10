@@ -88,6 +88,30 @@ MemoWeft keeps these boundaries explicit:
 - Portable bundles are versioned, validated, planned before apply, and conflict checked.
 - Hermes host events and user presentation remain distinct from Core business terminals.
 
+## Formation restart recovery
+
+Default Python World workers hold a unique, local OS lifetime lock before claiming
+jobs. Startup immediately revokes claims whose lifetime is gone; a live holder
+(including another worker in the same process) retains its renewable five-minute
+lease. Legacy PID owners are reclaimed only when the process is demonstrably
+absent; unknown/custom owners retain lease-based recovery. PID reuse is handled
+conservatively for legacy owners only. New owners do not depend on PIDs.
+
+A restart or orderly shutdown returns the original job, refunds its interrupted
+claim, and invalidates its token/generation in one SQLite transaction. Saved model
+checkpoints are reused. World Apply, provenance, revision and the terminal record
+commit atomically, so an interrupted transaction rolls back and an already applied
+job is never reclaimed. Shutdown returns claims before waiting for a slow model;
+DSH waits at most 250 ms for its thread and 200 ms for the recovery write lock.
+If the database is busy the host can terminate Core and startup recovers the claim.
+
+Only the DSH pure interpretation route opts into redoing an inference whose response
+was lost (possibly another provider charge, never another external tool effect).
+Generic processors keep the existing unknown-dispatch terminal rule. Recovery
+preserves `restart_recovered` / `shutdown_recovered` in a pending/processing job's
+`worker.last_error_type` until settlement, allowing hosts to show ongoing recovery
+without treating it as a failed attempt. No schema migration or lease shortening.
+
 ## Observed source lifecycle
 
 DSH RPC v2 accepts typed observed evidence revisions, source permission changes and true withdrawal, independently of chat ingest. Recall can filter each source and its derivatives for a local or cloud destination. The TypeScript Core exposes equivalent observed DTOs and lifecycle methods. See the [observed RPC contract](py/src/memoweft/integrations/dsh_bridge/README.md) for version, consent, validity and deletion semantics.
