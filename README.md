@@ -69,6 +69,20 @@ MemoWeft keeps these boundaries explicit:
   `preceding_candidates`. Both fit atomically in the existing quote budget.
   Completed turns wake formation immediately; host queues own capacity
   and foreground priority.
+- A single explicit correction can replace several named Cognition targets with
+  one deterministic successor. Only identical, compiler-grounded correction items
+  with the same support spans may share that successor; ordinary duplicate forms,
+  repeated targets and unrelated topic labels remain rejected. Every predecessor
+  retains its own correction ledger and transition to the shared successor.
+  A correction topic may reuse the permission-eligible predecessor's wording.
+- `query_jobs` also returns unresolved explicit `formation_requests`; rejected
+  corrections do not become healthy merely because their worker is `no_change`.
+  `retry_formation` reuses the existing source reprocessing operation with a
+  request ID, preserves the rejected terminal, and wakes the configured worker.
+  Recall previews expose permission-filtered `pending_corrections` independently
+  of the recent-quote cutoff, so hosts can label old facts pending correction.
+  History provenance includes `successor_provenance` to explain the correcting
+  source from either predecessor; model provenance is unchanged.
 - Correction, retract, forget, archive, mute, and permission changes produce durable receipts.
 - Shared assistant interactions retain their original history and explicit memory dependencies. Model projection excludes unresolved or no-longer-current dependencies, including transitive reuse; history projection remains subject to source permissions.
 - Portable bundles are versioned, validated, planned before apply, and conflict checked.

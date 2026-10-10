@@ -764,6 +764,7 @@ _SYSTEM_PROMPT = (
     "人物已被明确说成与用户有某种关系时，优先形成 relationship，而不是 naming 或第三方 attribute。职业/身份与‘和用户的关系’要区分；关系背景与同主题补充也须选择完整来源。naming 用于仅命名、未陈述关系的内容。\n"
     "先判断用户是否明确提出持续适用的偏好或安排：‘以后推荐早餐时避开乳制品’是明确表达偏好，不是愿望闲聊；‘最近通勤都坐地铁’是当前持续安排，不是仅限这周的一次性情绪。两者都应形成，不应 no_chang"
     "e。只有无可形成内容才用 no_change。\n"
+    "同一句纠正影响同一偏好及已确认的决定/提醒时，逐项引用所有相关旧对象的 corrects_cognition_id；可以使用同一完整纠正命题和相同 supports，Core 会建立一个共同后继。不得漏掉仍要求旧值的决定。请提议/请询问之类本轮操作要求不形成长期偏好。\n"
     "省略主题的纠正（‘不是精装，改成电子版’）应从 current_cognitions 中相关安排及其 predecessor_context 消解主题，corrects_cognition_id 必须"
     "指向有效的当前项，同时 action 必须为 correct。主题沿正式取代链保留，不能从不相关的最近条目猜主题；不要把旧日期复制为当前日期。同一纠正的改口信号、新值、旧值否定、补充主题是同一件事，只"
     "输出一个 item 并选择全部相关相邻 segments。按整段原话的主题及被否定旧值选目标，不要把其中省略主题的一句另用于纠正其他安排。纠正旧项时先决定 action=correct，再复制纠正目标"
@@ -1337,7 +1338,7 @@ class HermesBatchAdapterProcessor:
                        "keep assistant_claim verbatim from context and the user's confirmation support. "
                        "The compiler derives the situational topic. If the user explicitly restated "
                        "the decision, use stated with the user's full sentence_id and include assistant_claim."
-                       if compiled.reason in ("topic_name_not_in_span", "invalid_topic_claim") else "")
+                       if compiled.reason in ("topic_name_not_in_span", "invalid_topic_claim", "proposition_mismatch") else "")
                     + (" The source passed the declarative-fact check. Reconsider no_change: "
                        "a new personal preference, name, relationship or correction must be "
                        "represented unless the current World already expresses it. A question "
@@ -2114,6 +2115,7 @@ class HermesBatchAdapterProcessor:
                 context_entity_names=context_entity_names,
                 batch_entity_names=batch_entity_names,
                 current_entity_mentions=current_entity_mentions,
+                correction_topic_text=str(current.get(str(raw_item.get("corrects_cognition_id")), {}).get("content", "")) if isinstance(raw_item, dict) and raw_item.get("action") == "correct" else "",
             )
             if item is None:
                 if reason == "task_scoped_instruction":
@@ -2153,6 +2155,16 @@ class HermesBatchAdapterProcessor:
                         and items[j].statement_kind == "naming"
                     ):
                         return None, "duplicate_entity_in_batch"
+                    # Multiple explicit targets of the same evidence-grounded
+                    # correction share one successor, retaining one lineage per
+                    # predecessor. Unrelated forms/duplicates remain invalid.
+                    left, right = items[i], items[j]
+                    if (left.action == right.action == "correct"
+                            and left.corrects_cognition_id and right.corrects_cognition_id
+                            and left.corrects_cognition_id != right.corrects_cognition_id
+                            and left.supports == right.supports
+                            and replace(left, corrects_cognition_id=None) == replace(right, corrects_cognition_id=None)):
+                        continue
                     return None, "duplicate_cognition_in_batch"
         correction_targets = [
             str(item.corrects_cognition_id)
@@ -2334,6 +2346,7 @@ class HermesBatchAdapterProcessor:
         context_entity_names: set[str] | None = None,
         batch_entity_names: set[str] | None = None,
         current_entity_mentions: Mapping[str, str] | None = None,
+        correction_topic_text: str = "",
     ) -> tuple[Optional[BatchItem], str]:
         if not isinstance(raw_item, dict):
             return None, "invalid_cognition_item"
@@ -2505,6 +2518,15 @@ class HermesBatchAdapterProcessor:
             return None, "span_out_of_range"
 
         slices = [support[3] for support in parsed]
+        if (kind == "preference" and action == "form" and formed_by == "confirmed"
+                and len(slices) == 1 and claim is not None):
+            first_clause = re.split(r"[，,。.!！?？\s]", slices[0].strip(), maxsplit=1)[0]
+            # An explicit restatement grounds the decision in the user's exact
+            # sentence. Keep validating the cited proposal below; short assent
+            # still uses the strict confirmed-proposition contract.
+            if _AFFIRM_RE.fullmatch(first_clause) and _ONGOING_INSTRUCTION.search(slices[0]):
+                formed_by = "stated"
+                proposition = _stated_normalize(slices[0])
         if kind in ("attribute", "preference") and formed_by == "stated" and action in ("form", "correct") and not retract:
             scope_units = [str(sentence["text"]) for text in slices for sentence in _evidence_sentences(text)]
             temporary = [_is_task_scoped_instruction(text) for text in scope_units]
@@ -2808,7 +2830,7 @@ class HermesBatchAdapterProcessor:
             if not isinstance(topic_name_raw, str) or not topic_name_raw.strip():
                 return None, "invalid_entity_name"
             topic_canonical_name = topic_name_raw.strip()
-            if topic_canonical_name not in proposition or not any(topic_canonical_name in text for text in slices):
+            if (topic_canonical_name not in proposition or not any(topic_canonical_name in text for text in slices)) and topic_canonical_name not in correction_topic_text:
                 return None, "topic_name_not_in_span"
             if formed_by != "stated" or retract or action not in ("form", "correct"):
                 return None, "invalid_topic_claim"
@@ -3183,7 +3205,8 @@ class HermesBatchAdapterProcessor:
                     )
                 else:
                     result, wrote, transition = self._apply_correct(
-                        db, job, item, now_text
+                        db, job, item, now_text,
+                        shared_successor=item.cognition_id(job.subject_id) in {new for _, new in pending_transitions},
                     )
                     if transition is not None:
                         pending_transitions.append(transition)
@@ -5159,7 +5182,7 @@ class HermesBatchAdapterProcessor:
 
     def _apply_correct(
         self, db: sqlite3.Connection, job: ClaimedWorldJob, item: BatchItem,
-        now_text: str,
+        now_text: str, *, shared_successor: bool = False,
     ) -> tuple[dict[str, object], bool, Optional[tuple[str, str]]]:
         prior_id = str(item.corrects_cognition_id)
         new_id = item.cognition_id(job.subject_id)
@@ -5239,7 +5262,7 @@ class HermesBatchAdapterProcessor:
             "AND invalid_at IS NULL AND archived_at IS NULL",
             (new_id, prior_id),
         ).fetchone()
-        if colliding is not None:
+        if colliding is not None and not shared_successor:
             raise _ClarificationError(
                 "correction_merge_ambiguous",
                 "有两个当前认知都可能是这次纠正的目标，需要你澄清指的是哪一个",
@@ -5268,11 +5291,12 @@ class HermesBatchAdapterProcessor:
                 )
         if item.entity_canonical_name is None:
             self._sync_owner_alias(db, job, item.proposition, now_text)
-        self._write_cognition(
-            db, job, item, new_id, confidence, now_text,
-            target_entity_id=target_entity_id,
-            perspective_entity_id=perspective_entity_id,
-        )
+        if not shared_successor:
+            self._write_cognition(
+                db, job, item, new_id, confidence, now_text,
+                target_entity_id=target_entity_id,
+                perspective_entity_id=perspective_entity_id,
+            )
         self._write_correction_ledger(db, job, prior_id, new_id)
         return (
             self._item_outcome(
@@ -5526,6 +5550,8 @@ def _is_task_scoped_instruction(text: str) -> bool:
     selected source sentences, never on unrelated unselected text.
     """
     text = text.strip()
+    if re.match(r"^(?:请|麻烦)(?:提议|询问)", text):
+        return True
     if _ONGOING_INSTRUCTION.search(text):
         return False
     return bool(_TASK_SCOPE.search(text) or _TASK_IMPERATIVE.search(text))

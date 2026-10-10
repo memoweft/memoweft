@@ -1,0 +1,84 @@
+{
+  "first": {
+    "schema_version": 8,
+    "result": "cognitions",
+    "cognitions": [
+      {
+        "action": "correct",
+        "target": "owner_self",
+        "statement_kind": "preference",
+        "formed_by": "stated",
+        "proposition": "纠正一下，第903种花茶不加肉桂粉，改为加一片柠檬。",
+        "supports": [
+          {
+            "evidence_id": "6a8ed466-14d8-476f-b84d-bd14d989fcdd",
+            "sentence_id": "t0"
+          }
+        ],
+        "corrects_cognition_id": "cognition-4b9c7cca4f548223ec445d8dc8231f2bf48947a381e35dc5b47c7edebf4c10c8",
+        "entity": {
+          "canonical_name": "喝第903种花茶",
+          "kind": "topic",
+          "aliases": [
+            "第903种花茶"
+          ]
+        }
+      },
+      {
+        "action": "correct",
+        "target": "owner_self",
+        "statement_kind": "preference",
+        "formed_by": "stated",
+        "proposition": "纠正一下，第903种花茶不加肉桂粉，改为加一片柠檬。",
+        "supports": [
+          {
+            "evidence_id": "6a8ed466-14d8-476f-b84d-bd14d989fcdd",
+            "sentence_id": "t0"
+          }
+        ],
+        "corrects_cognition_id": "cognition-e67b5eb9d1e8106c1d9f18c55156a49294189361eb4d2d3c1f5848d85515c673",
+        "entity": {
+          "canonical_name": "喝第903种花茶",
+          "kind": "topic",
+          "aliases": [
+            "第903种花茶"
+          ]
+        }
+      }
+    ]
+  },
+  "rewrite": {
+    "schema_version": 8,
+    "result": "cognitions",
+    "cognitions": [
+      {
+        "action": "correct",
+        "target": "owner_self",
+        "statement_kind": "preference",
+        "formed_by": "stated",
+        "proposition": "纠正一下，第903种花茶不加肉桂粉，改为加一片柠檬。",
+        "supports": [
+          {
+            "evidence_id": "6a8ed466-14d8-476f-b84d-bd14d989fcdd",
+            "sentence_id": "t0"
+          }
+        ],
+        "corrects_cognition_id": "cognition-4b9c7cca4f548223ec445d8dc8231f2bf48947a381e35dc5b47c7edebf4c10c8"
+      },
+      {
+        "action": "correct",
+        "target": "owner_self",
+        "statement_kind": "preference",
+        "formed_by": "stated",
+        "proposition": "纠正一下，第903种花茶不加肉桂粉，改为加一片柠檬。",
+        "supports": [
+          {
+            "evidence_id": "6a8ed466-14d8-476f-b84d-bd14d989fcdd",
+            "sentence_id": "t0"
+          }
+        ],
+        "corrects_cognition_id": "cognition-e67b5eb9d1e8106c1d9f18c55156a49294189361eb4d2d3c1f5848d85515c673"
+      }
+    ]
+  }
+}

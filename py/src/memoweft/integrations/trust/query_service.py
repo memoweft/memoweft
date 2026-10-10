@@ -396,13 +396,21 @@ class QueryService:
         with self._read() as read:
             self._require_item_exists(read.db, kind, item_id)
             provenance = self._provenance(read.db, read.world_revision, kind, item_id, projection=projection)
+            transitions = self._transitions(read.db, kind, item_id)
+            successor_provenance = []
+            if projection == "history":
+                for transition in transitions:
+                    successor = transition.get("replacement_item_id")
+                    if transition["prior_item_id"] == item_id and successor:
+                        successor_provenance.extend(self._provenance(read.db, read.world_revision, kind, successor, projection="history"))
             return {
                 **self._base(read.world_revision),
                 "object_kind": kind,
                 "item_id": item_id,
                 "projection": projection,
                 "provenance": provenance,
-                "transition_history": self._transitions(read.db, kind, item_id),
+                "successor_provenance": successor_provenance,
+                "transition_history": transitions,
             }
 
     def list_evidence(self) -> dict[str, object]:
@@ -439,7 +447,9 @@ class QueryService:
                 (self._subject_id,),
             ).fetchall()
             jobs = [self._job(read, str(row[0])) for row in rows]
-            return {**self._base(read.world_revision), "jobs": jobs}
+            from ..dsh_bridge.formation_status import formation_requests
+            return {**self._base(read.world_revision), "jobs": jobs,
+                    "formation_requests": formation_requests(read.db, self._subject_id)}
 
     def get_job(self, job_id: str) -> dict[str, object]:
         job_id = self._identifier(job_id, "invalid_job_id")
@@ -464,6 +474,7 @@ class QueryService:
         # way at operation time and avoids a package-initialization cycle.
         from ..hermes.recall import recall_world_snapshot
         from ..dsh_bridge.recent import recent_evidence
+        from ..dsh_bridge.formation_status import correction_notices
 
         with self._read() as read:
             result: list[dict[str, object]] = []
@@ -484,6 +495,7 @@ class QueryService:
                         "model_call_count": 0,
                         "world_write_count": 0,
                         "recent_evidence": recent_evidence(read.db, self._subject_id, query, model_tier=cast(Any, model_tier)),
+                        "pending_corrections": correction_notices(read.db, self._subject_id, query, model_tier=cast(Any, model_tier), selected_item_ids=snapshot.selected_item_ids),
                     },
                 })
             return {**self._base(read.world_revision), "snapshots": result}
