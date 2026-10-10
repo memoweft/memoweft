@@ -18,7 +18,6 @@ from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 import json
 import logging
-import os
 from pathlib import Path
 import re
 import sqlite3
@@ -30,6 +29,7 @@ from ...clock import to_iso_z
 from ...store.driver import BUSY_TIMEOUT_MS
 from ...types import ModelTier
 from ..trust.currentness import evidence_state
+from .worker_lifetime import PREFIX, acquire_lifetime, owner_is_gone
 from .terminal_outcome import persist_terminal_outcome_in_transaction
 
 logger = logging.getLogger(__name__)
@@ -473,6 +473,63 @@ class WorldJobStore:
         except sqlite3.Error:
             pass
 
+    def recover_interrupted(self, *, owner: str | None = None,
+                            retry_inference: bool = False,
+                            busy_timeout_ms: int | None = None) -> tuple[str, ...]:
+        """Revoke dead lifetimes (or this stopped worker), retaining checkpoints.
+
+        Only DSH's pure interpretation route opts into repeating an interrupted
+        inference. Generic processors keep their at-most-once dispatch contract.
+        Revocation and Apply serialize on the same SQLite write transaction.
+        """
+        db = self._connect()
+        recovered: list[str] = []
+        if busy_timeout_ms is not None:
+            db.execute(f"PRAGMA busy_timeout = {max(0, busy_timeout_ms)}")
+        try:
+            db.execute("BEGIN IMMEDIATE")
+            now = _timestamp(self._now())
+            rows = db.execute(
+                f"SELECT * FROM {WORLD_JOB_TABLE} WHERE state = 'processing'"
+            ).fetchall()
+            for row in rows:
+                if owner is not None:
+                    if row["claim_owner"] != owner:
+                        continue
+                elif not owner_is_gone(self.db_path, row["claim_owner"]):
+                    continue
+                if (row["model_dispatch_started_at"] is not None
+                        and row["model_result_json"] is None and not retry_inference):
+                    self._dead_claim_in_transaction(
+                        db, job_id=row["job_id"], claim_token=row["claim_token"],
+                        fencing_generation=row["fencing_generation"],
+                        reason="dispatch_outcome_unknown", completed_at=now)
+                    continue
+                reason = "shutdown_recovered" if owner is not None else "restart_recovered"
+                db.execute(
+                    f"""UPDATE {WORLD_JOB_TABLE}
+                           SET state = 'retry', next_attempt_at = ?,
+                               attempts = MAX(0, attempts - 1),
+                               claim_owner = NULL, claim_token = NULL,
+                               lease_expires_at = NULL, heartbeat_at = NULL,
+                               fencing_generation = fencing_generation + 1,
+                               model_dispatch_started_at = CASE
+                                 WHEN model_result_json IS NULL THEN NULL
+                                 ELSE model_dispatch_started_at END,
+                               last_error_type = ?
+                         WHERE job_id = ? AND state = 'processing'
+                           AND claim_token = ? AND fencing_generation = ?""",
+                    (now, reason, row["job_id"], row["claim_token"], row["fencing_generation"]))
+                recovered.append(row["job_id"])
+                logger.info("MemoWeft World job recovered: reason=%s job_id=%s", reason, row["job_id"])
+            db.execute("COMMIT")
+            return tuple(recovered)
+        except BaseException:
+            self._rollback(db)
+            raise
+        finally:
+            db.close()
+
     def recover_expired(self) -> RecoverySummary:
         """Recover expired claims without dispatching or processing a job."""
 
@@ -735,7 +792,9 @@ class WorldJobStore:
                            heartbeat_at = ?,
                            fencing_generation = fencing_generation + 1,
                            completed_at = NULL,
-                           last_error_type = NULL
+                           last_error_type = CASE WHEN last_error_type IN
+                             ('restart_recovered', 'shutdown_recovered')
+                             THEN last_error_type ELSE NULL END
                      WHERE job_id = ?
                        AND state IN ('pending', 'retry')
                        AND (
@@ -1237,11 +1296,15 @@ class WorldJobWorker:
         policy: WorldJobPolicy | None = None,
         clock: Clock = _utc_now,
         worker_id: str | None = None,
+        retry_interrupted_inference: bool = False,
     ) -> None:
         self.policy = policy or WorldJobPolicy()
         self.store = WorldJobStore(db_path, policy=self.policy, clock=clock)
         self.processor = processor or FormalBatchAdapterUnavailableProcessor()
-        self.worker_id = worker_id or f"memoweft-world:{os.getpid()}:{uuid4().hex}"
+        self.worker_id = worker_id or f"{PREFIX}{uuid4().hex}"
+        self._lifetime = acquire_lifetime(Path(db_path), self.worker_id) if worker_id is None else None
+        self._retry_interrupted_inference = retry_interrupted_inference
+        self._recovered = False
         self._lifecycle_lock = threading.RLock()
         self._stop = threading.Event()
         self._wake = threading.Event()
@@ -1300,6 +1363,8 @@ class WorldJobWorker:
             with self._lifecycle_lock:
                 if self._thread is threading.current_thread():
                     self._thread = None
+                if self._stop.is_set():
+                    self._release_lifetime()
                 if not self._stop.is_set() and self._wake.is_set():
                     self._schedule_locked(0.0)
                 elif not self._stop.is_set():
@@ -1339,7 +1404,13 @@ class WorldJobWorker:
             raise ValueError("max_jobs must be positive when supplied")
         processed = 0
         while not self._stop.is_set() and (max_jobs is None or processed < max_jobs):
-            claim = self.store.claim_one(self.worker_id)
+            with self._lifecycle_lock:
+                if self._stop.is_set():
+                    break
+                if not self._recovered:
+                    self.store.recover_interrupted(retry_inference=self._retry_interrupted_inference)
+                    self._recovered = True
+                claim = self.store.claim_one(self.worker_id)
             if claim is None:
                 break
             self._process_claim(claim)
@@ -1511,9 +1582,31 @@ class WorldJobWorker:
                 self._timer.cancel()
                 self._timer = None
             thread = self._thread
+            # Revoke before waiting for a slow network call. A late checkpoint,
+            # Apply or heartbeat from that thread cannot pass the old fence.
+            try:
+                self.store.recover_interrupted(owner=self.worker_id,
+                                              retry_inference=self._retry_interrupted_inference,
+                                              busy_timeout_ms=200)
+            except sqlite3.OperationalError:
+                # A contended writer must not stretch host shutdown. Keep the
+                # lifetime held until this thread (or the process) really exits.
+                logger.warning("MemoWeft World shutdown recovery deferred: database busy")
+            else:
+                self._release_lifetime()
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=timeout)
         return thread is None or not thread.is_alive()
+
+    def _release_lifetime(self) -> None:
+        if self._lifetime is not None:
+            name = self._lifetime.name
+            self._lifetime.close()
+            self._lifetime = None
+            try:
+                Path(name).unlink(missing_ok=True)
+            except OSError:
+                pass  # An unlocked leftover still unambiguously means gone.
 
     @property
     def is_running(self) -> bool:
