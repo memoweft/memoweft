@@ -77,7 +77,7 @@ def owner_is_gone(db_path: Path, owner: str) -> bool:
         if not handle:
             return ctypes.get_last_error() == 87  # ERROR_INVALID_PARAMETER: no PID
         try:
-            return kernel.WaitForSingleObject(handle, 0) == 0
+            return bool(kernel.WaitForSingleObject(handle, 0) == 0)
         finally:
             kernel.CloseHandle(handle)
     try:

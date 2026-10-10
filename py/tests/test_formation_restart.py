@@ -7,6 +7,7 @@ from pathlib import Path
 import sqlite3
 import subprocess
 import sys
+from typing import Mapping
 
 import pytest
 
@@ -18,7 +19,7 @@ from test_hermes_world_worker import (
 )
 
 
-def fixture(path: Path, attempts: int = 0):
+def fixture(path: Path, attempts: int = 0) -> tuple[MutableClock, WorldJobStore]:
     clock = MutableClock()
     _initialize_database(path)
     _insert_job(path, clock, attempts=attempts)
@@ -37,10 +38,11 @@ lock = acquire_lifetime(Path(sys.argv[1]), owner)
 print(owner, flush=True)
 time.sleep(60)
 """
-    child = subprocess.Popen([sys._base_executable, "-c", code, str(path)], stdout=subprocess.PIPE,
+    child = subprocess.Popen([str(getattr(sys, "_base_executable", sys.executable)), "-c", code, str(path)], stdout=subprocess.PIPE,
                              text=True, env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)})
+    assert child.stdout is not None
     try:
-        owner = child.stdout.readline().strip()
+        owner = str(child.stdout.readline()).strip()
         assert not owner_is_gone(path, owner)
     finally:
         child.kill()
@@ -51,7 +53,7 @@ time.sleep(60)
 
 
 @pytest.mark.parametrize("attempts", [0, 3])
-def test_dead_lifetime_reclaimed_without_expiry_or_failed_attempt(tmp_path: Path, attempts: int):
+def test_dead_lifetime_reclaimed_without_expiry_or_failed_attempt(tmp_path: Path, attempts: int) -> None:
     path = tmp_path / "memory.sqlite3"
     clock, store = fixture(path, attempts)
     claim = store.claim_one(dead_owner(path))
@@ -69,7 +71,7 @@ def test_dead_lifetime_reclaimed_without_expiry_or_failed_attempt(tmp_path: Path
         worker.shutdown()
 
 
-def test_current_and_other_live_lifetimes_untouched(tmp_path: Path):
+def test_current_and_other_live_lifetimes_untouched(tmp_path: Path) -> None:
     path = tmp_path / "memory.sqlite3"
     clock, store = fixture(path)
     first = WorldJobWorker(path, clock=clock)
@@ -91,7 +93,7 @@ def test_current_and_other_live_lifetimes_untouched(tmp_path: Path):
 
 
 @pytest.mark.parametrize("checkpoint", ["none", "saved", "partial-apply"])
-def test_restart_model_and_atomic_apply_once(tmp_path: Path, checkpoint: str, monkeypatch: pytest.MonkeyPatch):
+def test_restart_model_and_atomic_apply_once(tmp_path: Path, checkpoint: str, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "memory.sqlite3"
     clock, store = fixture(path)
     claim = store.claim_one(dead_owner(path))
@@ -101,8 +103,8 @@ def test_restart_model_and_atomic_apply_once(tmp_path: Path, checkpoint: str, mo
     payload = {"content": json.dumps({"schema_version": 1, "result": "one_cognition", "cognition": {
         "target": "owner_self", "statement_kind": "preference", "proposition": raw,
         "supports": [{"evidence_id": "evidence-1", "start": 0, "end": len(raw)}]}})}
-    calls = []
-    def route(*args, **kwargs):
+    calls: list[bool] = []
+    def route(*args: object, **kwargs: object) -> Mapping[str, object]:
         calls.append(True)
         return payload
     processor = HermesBatchAdapterProcessor(str(path), route, clock=clock)
@@ -111,7 +113,7 @@ def test_restart_model_and_atomic_apply_once(tmp_path: Path, checkpoint: str, mo
             processor._persist_checkpoint(db, claim, payload)
     if checkpoint == "partial-apply":
         import memoweft.integrations.hermes.batch_adapter as adapter
-        def fail_after_world_rows(*args):
+        def fail_after_world_rows(*args: object) -> dict[str, object]:
             raise RuntimeError("exit during atomic apply")
         with monkeypatch.context() as patch:
             patch.setattr(adapter, "persist_terminal_outcome_in_transaction", fail_after_world_rows)
@@ -139,24 +141,26 @@ def test_restart_model_and_atomic_apply_once(tmp_path: Path, checkpoint: str, mo
         worker.shutdown()
 
 
-def test_generic_unknown_dispatch_keeps_at_most_once_and_unknown_owner_keeps_lease(tmp_path: Path):
+def test_generic_unknown_dispatch_keeps_at_most_once_and_unknown_owner_keeps_lease(tmp_path: Path) -> None:
     path = tmp_path / "memory.sqlite3"
     _, store = fixture(path)
     claim = store.claim_one("external-holder")
+    assert claim is not None
     assert store.recover_interrupted(retry_inference=True) == ()
     assert store.heartbeat(claim)
     store.recover_interrupted(owner="external-holder")
     claim = store.claim_one(dead_owner(path))
+    assert claim is not None
     store.mark_dispatch_started(claim)
     assert store.recover_interrupted() == ()
     assert _job(path)["state"] == "dead"
     assert _job(path)["last_error_type"] == "dispatch_outcome_unknown"
 
 
-def test_upgrade_legacy_pid_owner_is_conservative(tmp_path: Path):
+def test_upgrade_legacy_pid_owner_is_conservative(tmp_path: Path) -> None:
     path = tmp_path / "memory.sqlite3"
     fixture(path)
-    child = subprocess.Popen([sys._base_executable, "-c", "import time; time.sleep(60)", str(path)])
+    child = subprocess.Popen([str(getattr(sys, "_base_executable", sys.executable)), "-c", "import time; time.sleep(60)", str(path)])
     owner = f"memoweft-world:{child.pid}:" + "a" * 32
     try:
         assert not owner_is_gone(path, owner)
@@ -167,12 +171,13 @@ def test_upgrade_legacy_pid_owner_is_conservative(tmp_path: Path):
     assert not owner_is_gone(path, f"memoweft-world:{os.getpid()}:" + "b" * 32)
 
 
-def test_shutdown_database_contention_remains_bounded(tmp_path: Path):
+def test_shutdown_database_contention_remains_bounded(tmp_path: Path) -> None:
     import time
     path = tmp_path / "memory.sqlite3"
     clock, store = fixture(path)
     worker = WorldJobWorker(path, clock=clock)
     claim = store.claim_one(worker.worker_id)
+    assert claim is not None
     db = sqlite3.connect(path, isolation_level=None)
     try:
         db.execute("BEGIN IMMEDIATE")
