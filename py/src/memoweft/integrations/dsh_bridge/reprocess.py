@@ -22,6 +22,17 @@ from ..trust.currentness import evidence_state
 from .interactions import _eligible
 
 
+def source_boundary_event(db: sqlite3.Connection, subject_id: str, boundary: str) -> str:
+    """A retry keeps the original conversation's eligibility and permissions."""
+    while boundary.startswith("weftmate-reprocess-v1:"):
+        original = db.execute("SELECT boundary_event_id FROM memory_world_job WHERE job_id=? AND subject_id=?",
+                              (boundary.split(":", 2)[1], subject_id)).fetchone()
+        if original is None:
+            break
+        boundary = str(original[0])
+    return boundary
+
+
 def reprocess_job(db_path: Path, *, subject_id: str, job_id: str, request_id: str) -> dict[str, object]:
     if not db_path.is_file():
         raise ValueError("database_not_found")
@@ -36,7 +47,7 @@ def reprocess_job(db_path: Path, *, subject_id: str, job_id: str, request_id: st
         ).fetchone()
         if source is None or source["state"] not in ("no_change", "dead"):
             raise ValueError("source_job_not_reprocessable")
-        if not _eligible(db, subject_id, source["boundary_event_id"]):
+        if not _eligible(db, subject_id, source_boundary_event(db, subject_id, source["boundary_event_id"])):
             raise ValueError("source_evidence_not_eligible")
         target = HermesBoundaryFormalTarget(**json.loads(source["formal_target_json"]))
         candidates = []

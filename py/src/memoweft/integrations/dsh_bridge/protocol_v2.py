@@ -7,6 +7,8 @@ boundary, Trust Command, Clarification, and Portable services.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from copy import deepcopy
 from hashlib import sha256
 import json
@@ -50,6 +52,7 @@ DSH_RPC_METHODS: tuple[str, ...] = (
     "query_evidence",
     "query_provenance",
     "query_jobs",
+    "retry_formation",
     "preview_recall",
     "preview_recall_batch",
     "preview_forget",
@@ -412,6 +415,16 @@ class DshRpcV2Server:
                 projection=projection,
             )
             return result, "query_ok"
+        if method == "retry_formation":
+            from .reprocess import reprocess_job
+            raw = _require_params(params, allowed=frozenset({"job_id", "request_id"}), required=frozenset({"job_id", "request_id"}))
+            if not all(isinstance(raw[key], str) and cast(str, raw[key]).strip() for key in ("job_id", "request_id")):
+                raise DshRpcProtocolError("invalid_reprocess_request_id")
+            assert self._runtime.db_path is not None and self._runtime.subject_id is not None
+            result = reprocess_job(Path(self._runtime.db_path), subject_id=self._runtime.subject_id,
+                                   job_id=cast(str, raw["job_id"]), request_id=cast(str, raw["request_id"]))
+            self._runtime.kick_world_worker()
+            return result, "formation_queued"
         if method == "query_jobs":
             return query.execute_provider_tool(
                 "memoweft_query_jobs", params
