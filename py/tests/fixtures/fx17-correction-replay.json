@@ -19,9 +19,7 @@
         "entity": {
           "canonical_name": "喝第903种花茶",
           "kind": "topic",
-          "aliases": [
-            "第903种花茶"
-          ]
+          "aliases": ["第903种花茶"]
         }
       },
       {
@@ -40,9 +38,7 @@
         "entity": {
           "canonical_name": "喝第903种花茶",
           "kind": "topic",
-          "aliases": [
-            "第903种花茶"
-          ]
+          "aliases": ["第903种花茶"]
         }
       }
     ]

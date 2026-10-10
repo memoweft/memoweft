@@ -67,3 +67,18 @@ def test_explicit_confirmed_restatement_keeps_user_sentence(tmp_path: Path) -> N
     with sqlite3.connect(db_path) as db:
         row = db.execute('SELECT content,formed_by FROM cognition').fetchone()
         assert row == ('用户' + raw, 'stated')
+
+
+def test_short_confirmation_paraphrase_compiles_from_verified_proposal(tmp_path: Path) -> None:
+    db_path = tmp_path / 'memory.sqlite3'
+    raw = '行，就这么办'
+    claim = '以后你想找人组队开黑时，我可以提醒你找王小明。'
+    item = dict(action='form', target='owner_self', statement_kind='preference', formed_by='confirmed',
+                proposition='以后用户想找人组队开黑时，助手可以提醒用户找王小明。', assistant_claim=claim,
+                supports=[dict(evidence_id='evidence-1', sentence_id='t0')])
+    _run(db_path, MutableClock(), [_model(dict(schema_version=8,result='cognitions',cognitions=[item]))],
+         ('evidence-1',), lambda p: _set_evidence(p,'evidence-1',raw,claim))
+    assert _job(db_path)['state'] == 'applied'
+    with sqlite3.connect(db_path) as db:
+        content, basis = db.execute('SELECT content,formed_by FROM cognition').fetchone()
+        assert '王小明' in content and '组队' in content and basis == 'confirmed'

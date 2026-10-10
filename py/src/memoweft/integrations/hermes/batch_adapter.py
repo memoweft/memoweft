@@ -2967,8 +2967,16 @@ class HermesBatchAdapterProcessor:
                 if not _is_confirmation_span(slice_text, claim):
                     return None, "confirmed_span_not_confirmation"
             expected = _confirm_normalize(claim)
-            if formed_by == "confirmed" and _strip_end_punctuation(proposition) != _strip_end_punctuation(expected):
-                return None, "proposition_mismatch"
+            if formed_by == "confirmed":
+                if quote_anchored:
+                    # Like stated sentence/quote supports, compile from the
+                    # verified source rather than requiring the interpreter to
+                    # reproduce our pronoun normalization byte for byte. The
+                    # proposal's presence and the user's assent were checked
+                    # above. Legacy unanchored propositions stay strict.
+                    proposition = expected
+                elif _strip_end_punctuation(proposition) != _strip_end_punctuation(expected):
+                    return None, "proposition_mismatch"
         if formed_by != "confirmed":
             use_no_prepend = (
                 targeted_attribute
