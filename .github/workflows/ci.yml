@@ -319,6 +319,8 @@ jobs:
   python-parity:
     name: Python parity (uv · pytest + mypy)
     runs-on: ubuntu-latest
+    env:
+      MEMOWEFT_SEMANTIC_ENABLED: '0' # Frozen literal gate; semantic tests inject synthetic CPU vectors.
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
@@ -329,7 +331,7 @@ jobs:
           python-version: '3.11'
       - name: Sync (dev)
         working-directory: py
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra semantic
       - name: Parity suite (bit-exact vs TS via shared/parity)
         working-directory: py
         run: uv run pytest -q

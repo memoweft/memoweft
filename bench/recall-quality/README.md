@@ -1,5 +1,7 @@
 # Synthetic recall quality regression corpus
 
+MEM-6 owner decision: deploy production B for trial with at most three semantic additions and a conservative development-set threshold, retain every baseline hit and the 18 mandatory review probes, and report unrelated additions honestly. This explicitly supersedes the research-only new-blind requirement below for this implementation. Frozen labels/results and the strict literal regression gate remain unchanged. See [production configuration](../../docs/semantic-recall.md) and [production evidence](semantic-results/quality.json).
+
 This change adds evaluation and baseline evidence only. The attempted MEM-4 handwritten vocabulary implementation was rejected and reverted: product sources match `origin/main` at `233cc2f`. Recall behavior, dependencies, model usage and storage formats are unchanged (Python schema 21, TypeScript/shared 6, Portable 4).
 
 All facts, accounts and hosts are fictional. The runner creates temporary SQLite stores and exercises the complete `QueryService.preview_recall` path: permissions, currentness, correction notices, recent evidence and rendering. It checks deterministic repeated output and absence of World writes. It performs no model requests and reads no personal store.

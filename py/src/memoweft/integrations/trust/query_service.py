@@ -112,7 +112,7 @@ TRUST_PROVIDER_TOOL_SCHEMAS: tuple[dict[str, object], ...] = (
     },
     {
         "name": "memoweft_preview_recall",
-        "description": "Preview the deterministic production Recall snapshot with zero model calls and zero writes.",
+        "description": "Preview the production Recall snapshot with zero generation-model calls and zero World writes.",
         "parameters": {
             "type": "object",
             "properties": {"query": {"type": "string"}},

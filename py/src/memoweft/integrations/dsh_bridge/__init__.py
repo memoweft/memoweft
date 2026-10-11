@@ -771,6 +771,8 @@ class DshMemoWeftRuntime:
             host_id=f"weftmate:{platform}",
         )
         self._ingestor.initialize()
+        from ...semantic.runtime import configure_runtime
+        configure_runtime(db_path)
         route = kwargs.get("one_shot_llm")
         model_api_key = kwargs.get("model_api_key")
         if model_api_key is not None and (
@@ -1083,6 +1085,7 @@ class DshMemoWeftRuntime:
             db.close()
 
     def health(self) -> dict[str, object]:
+        from ...semantic.runtime import runtime_for
         return {
             "enabled": self._enabled,
             "db_path": str(self.db_path) if self.db_path is not None else None,
@@ -1093,6 +1096,7 @@ class DshMemoWeftRuntime:
             "model_tier": self._model_tier,
             "route_ready": self._route_ready,
             "route_error": self._route_error,
+            "semantic_recall": runtime_for(self.db_path).status() if self.db_path is not None else {"state": "disabled", "reason": "not_initialized"},
         }
 
     def kick_world_worker(self) -> bool:
@@ -1111,6 +1115,9 @@ class DshMemoWeftRuntime:
             return False
 
     def shutdown(self) -> None:
+        from ...semantic.runtime import close_runtime
+        if self.db_path is not None:
+            close_runtime(self.db_path)
         worker = self._world_worker
         self._world_worker = None
         self._enabled = False
