@@ -1,0 +1,109 @@
+{
+  "embedding": {
+    "model": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "license": "MIT",
+    "dimensions": 384,
+    "model_source": "https://huggingface.co/intfloat/multilingual-e5-small/tree/614241f622f53c4eeff9890bdc4f31cfecc418b3/onnx",
+    "license_source": "https://huggingface.co/intfloat/multilingual-e5-small/blob/614241f622f53c4eeff9890bdc4f31cfecc418b3/README.md",
+    "files": {
+      "config.json": {
+        "bytes": 653,
+        "sha256": "bbb7c1333fc4b3e27fbc9cd5d2070aabcc1d4dfb99917c3633e772f97545a6b6"
+      },
+      "model_qint8_avx512_vnni.onnx": {
+        "bytes": 118346824,
+        "sha256": "dd476dd0c2514e9b9be83aeb3853fac0763e0bdf4a71645407587d77c48a2d88"
+      },
+      "README.md": {
+        "bytes": 497538,
+        "sha256": "0038de97aee16258cecbad7ffda4b4febd6953e747a00e0ddbc8e6ed241e9c1c"
+      },
+      "tokenizer.json": {
+        "bytes": 17082730,
+        "sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39"
+      }
+    },
+    "load_ms": 897.028399980627,
+    "rss_after_load_bytes": 475787264,
+    "rss_load_delta_bytes": 400748544,
+    "providers": ["CPUExecutionProvider"],
+    "intra_op_threads": 2,
+    "max_tokens": 512,
+    "pooling": "attention-mask mean; L2 normalized",
+    "quantization": "Publisher qint8 ONNX; CPUExecutionProvider only"
+  },
+  "single_write": {
+    "n": 100,
+    "p50_ms": 2.3311999975703657,
+    "p95_ms": 3.2862999942153692,
+    "mean_ms": 2.440802996279672
+  },
+  "query_encode": {
+    "n": 60,
+    "p50_ms": 3.591100045014173,
+    "p95_ms": 5.594099988229573,
+    "mean_ms": 3.7106266701205946
+  },
+  "batch_backfill": {
+    "measured_records": 1000,
+    "batch": 16,
+    "seconds": 1.219753600016702,
+    "estimated_seconds": {
+      "1000": 1.219753600016702,
+      "10000": 12.19753600016702,
+      "50000": 60.9876800008351
+    }
+  },
+  "vector_payload_bytes_per_record": 1536,
+  "matrix_search": {
+    "1000": {
+      "n": 60,
+      "p50_ms": 0.024699955247342587,
+      "p95_ms": 0.08920003892853856,
+      "mean_ms": 0.10616500027632962,
+      "matrix_bytes": 1536000,
+      "mean_with_query_encode_ms": 3.816791670396924,
+      "scope": "Preloaded float32 matrix, exact cosine dot + top32 order; no World/permission filtering; larger N tiles the 1000 measured vectors, not a quality corpus"
+    },
+    "10000": {
+      "n": 60,
+      "p50_ms": 0.251400051638484,
+      "p95_ms": 0.5415000487118959,
+      "mean_ms": 0.29470500206419575,
+      "matrix_bytes": 15360000,
+      "mean_with_query_encode_ms": 4.0053316721847905,
+      "scope": "Preloaded float32 matrix, exact cosine dot + top32 order; no World/permission filtering; larger N tiles the 1000 measured vectors, not a quality corpus"
+    },
+    "50000": {
+      "n": 60,
+      "p50_ms": 3.0465999734587967,
+      "p95_ms": 3.7881999742239714,
+      "mean_ms": 3.1377516619007415,
+      "matrix_bytes": 76800000,
+      "mean_with_query_encode_ms": 6.848378332021336,
+      "scope": "Preloaded float32 matrix, exact cosine dot + top32 order; no World/permission filtering; larger N tiles the 1000 measured vectors, not a quality corpus"
+    }
+  },
+  "storage": {
+    "1000": {
+      "base_bytes": 65536,
+      "vector_extra_bytes": 2052096,
+      "alias_extra_bytes": 184320,
+      "scope": "Isolated SQLite sidecar tables including pages, not a production schema migration; aliases cycle through dev sidecars"
+    },
+    "10000": {
+      "base_bytes": 557056,
+      "vector_extra_bytes": 20529152,
+      "alias_extra_bytes": 1806336,
+      "scope": "Isolated SQLite sidecar tables including pages, not a production schema migration; aliases cycle through dev sidecars"
+    },
+    "50000": {
+      "base_bytes": 2768896,
+      "vector_extra_bytes": 102653952,
+      "alias_extra_bytes": 9052160,
+      "scope": "Isolated SQLite sidecar tables including pages, not a production schema migration; aliases cycle through dev sidecars"
+    }
+  },
+  "rss_after_benchmark_bytes": 584171520
+}

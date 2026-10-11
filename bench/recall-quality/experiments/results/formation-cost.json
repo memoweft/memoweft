@@ -1,0 +1,1081 @@
+{
+  "model": "mimo-v2.6-flash",
+  "sample_rule": "First two development seeds in six fixed positive categories; 12 pairs; no blind/review input",
+  "scope": "Current _SYSTEM_PROMPT and _user_payload, synthetic Evidence, empty World; extended top-level sidecars are measured but not applied/compiled",
+  "calls": [
+    {
+      "case_id": "dev-synonym-00-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 68,
+        "prompt_tokens": 4626,
+        "total_tokens": 4694,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        }
+      },
+      "latency_ms": 3474.5727999834344,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "我周末常去骑行。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-synonym-01-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 63,
+        "prompt_tokens": 4620,
+        "total_tokens": 4683,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        }
+      },
+      "latency_ms": 3483.591600030195,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "…",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-synonym-01-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 103,
+        "prompt_tokens": 4799,
+        "total_tokens": 4902,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        }
+      },
+      "latency_ms": 4115.8787999884225,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "…",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "徒步爱好",
+            "aliases": ["徒步", "hiking", "远足", "登山徒步", "户外徒步", "徒步运动", "trekking"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-synonym-00-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 113,
+        "prompt_tokens": 4805,
+        "total_tokens": 4918,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        }
+      },
+      "latency_ms": 4198.297800030559,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "我周末常去骑行。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "周末骑行习惯",
+            "aliases": [
+              "骑行",
+              "周末骑行",
+              "骑车",
+              "cycling",
+              "weekend cycling",
+              "周末骑车",
+              "自行车运动",
+              "户外骑行"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-hierarchy-00-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 67,
+        "prompt_tokens": 4626,
+        "total_tokens": 4693,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 2295.7412999821827,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我养了一只狗。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-hierarchy-01-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 67,
+        "prompt_tokens": 4626,
+        "total_tokens": 4693,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 1949.2115000030026,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我养了一只猫。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-hierarchy-01-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 102,
+        "prompt_tokens": 4805,
+        "total_tokens": 4907,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 2417.812999978196,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我养了一只猫。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "养猫",
+            "aliases": ["宠物猫", "猫咪", "养宠物", "cat", "pet cat", "家猫"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-bilingual-00-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 103,
+        "prompt_tokens": 4802,
+        "total_tokens": 4905,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 2742.898399999831,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我每周一开会。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "每周一开会",
+            "aliases": ["周一会议", "星期一开会", "Monday meeting", "周一会", "例会安排"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-hierarchy-00-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 102,
+        "prompt_tokens": 4805,
+        "total_tokens": 4907,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        }
+      },
+      "latency_ms": 6247.614399995655,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我养了一只狗。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "养狗",
+            "aliases": ["宠物狗", "养宠物", "dog owner", "养犬", "家有狗狗"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-bilingual-01-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 108,
+        "prompt_tokens": 4799,
+        "total_tokens": 4907,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 4298.685399990063,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "我喜欢远程办公。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "远程办公偏好",
+            "aliases": [
+              "远程工作",
+              "在家办公",
+              "居家办公",
+              "remote work",
+              "telecommuting",
+              "WFH",
+              "弹性办公"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-bilingual-01-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 66,
+        "prompt_tokens": 4620,
+        "total_tokens": 4686,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 3498.5140999779105,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "我喜欢远程办公。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-bilingual-00-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 65,
+        "prompt_tokens": 4623,
+        "total_tokens": 4688,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 7148.025100002997,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我每周一开会。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-colloquial-00-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 65,
+        "prompt_tokens": 4623,
+        "total_tokens": 4688,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 3441.220599983353,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我最近入睡困难。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-colloquial-00-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 111,
+        "prompt_tokens": 4802,
+        "total_tokens": 4913,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 5084.9863000330515,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我最近入睡困难。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "入睡困难",
+            "aliases": [
+              "难以入睡",
+              "入睡困难",
+              "睡眠问题",
+              "入睡障碍",
+              "difficulty falling asleep",
+              "sleep onset difficulty",
+              "失眠",
+              "入睡"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-abbreviation-00-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 69,
+        "prompt_tokens": 4631,
+        "total_tokens": 4700,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 3497.232099995017,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "我使用中华人民共和国标准时间。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-colloquial-01-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 67,
+        "prompt_tokens": 4626,
+        "total_tokens": 4693,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 3772.8242999874055,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我乘车会晕动。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-colloquial-01-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 105,
+        "prompt_tokens": 4805,
+        "total_tokens": 4910,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 4808.034999994561,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我乘车会晕动。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "晕动（乘车）",
+            "aliases": ["晕车", "motion sickness", "晕动症", "乘车不适", "晕交通工具"]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-abbreviation-01-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 66,
+        "prompt_tokens": 4620,
+        "total_tokens": 4686,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 1099.7031000442803,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "我喜欢科幻小说。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-indirect-00-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 65,
+        "prompt_tokens": 4620,
+        "total_tokens": 4685,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4544
+        }
+      },
+      "latency_ms": 1150.6527000456117,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我对花生过敏。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-abbreviation-00-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 163,
+        "prompt_tokens": 4810,
+        "total_tokens": 4973,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 3121.349300025031,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "我使用中华人民共和国标准时间。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ],
+            "entity": {
+              "canonical_name": "中华人民共和国标准时间",
+              "kind": "topic",
+              "aliases": [
+                "中国标准时间",
+                "北京时间",
+                "CST",
+                "UTC+8",
+                "中国时区",
+                "国家标准时间",
+                "China Standard Time",
+                "PRC time"
+              ]
+            }
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "中华人民共和国标准时间",
+            "aliases": [
+              "中国标准时间",
+              "北京时间",
+              "CST",
+              "UTC+8",
+              "中国时区",
+              "国家标准时间",
+              "China Standard Time",
+              "PRC time"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-abbreviation-01-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 135,
+        "prompt_tokens": 4799,
+        "total_tokens": 4934,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 2412.474599957932,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "我喜欢科幻小说。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ],
+            "entity": {
+              "canonical_name": "科幻小说",
+              "kind": "topic",
+              "aliases": ["科幻", "science fiction", "sci-fi", "科幻文学", "科幻类小说"]
+            }
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "科幻小说偏好",
+            "aliases": [
+              "喜欢科幻小说",
+              "科幻阅读偏好",
+              "科幻",
+              "science fiction",
+              "sci-fi",
+              "科幻文学"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-indirect-00-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 148,
+        "prompt_tokens": 4799,
+        "total_tokens": 4947,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 3263.8109999825247,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我对花生过敏。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ],
+            "entity": {
+              "canonical_name": "花生",
+              "kind": "topic",
+              "aliases": ["花生过敏", "花生制品", "peanut allergy", "peanuts", "坚果花生"]
+            }
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "花生过敏",
+            "aliases": [
+              "花生过敏",
+              "对花生过敏",
+              "花生不耐受",
+              "忌口花生",
+              "避免花生",
+              "peanut allergy",
+              "peanuts allergy",
+              "坚果过敏",
+              "花生制品过敏"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-indirect-01-0",
+      "arm": "current",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 68,
+        "prompt_tokens": 4632,
+        "total_tokens": 4700,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4480
+        }
+      },
+      "latency_ms": 2344.737700012047,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我有乳糖不耐受。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "dev-indirect-01-0",
+      "arm": "extended",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 159,
+        "prompt_tokens": 4811,
+        "total_tokens": 4970,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 4736
+        }
+      },
+      "latency_ms": 3401.8552000052296,
+      "response": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "attribute",
+            "formed_by": "stated",
+            "proposition": "我有乳糖不耐受。",
+            "supports": [
+              {
+                "evidence_id": "synthetic-evidence",
+                "sentence_id": "t0"
+              }
+            ],
+            "entity": {
+              "canonical_name": "乳糖不耐受",
+              "kind": "topic",
+              "aliases": [
+                "乳糖不耐",
+                "lactose intolerance",
+                "乳糖吸收不良",
+                "不能喝牛奶",
+                "乳制品不耐受"
+              ]
+            }
+          }
+        ],
+        "retrieval_sidecars": [
+          {
+            "cognition_index": 0,
+            "theme": "乳糖不耐受",
+            "aliases": [
+              "乳糖不耐",
+              "lactose intolerance",
+              "乳糖吸收不良",
+              "不能喝牛奶",
+              "乳制品不耐受"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "totals": {
+    "current": {
+      "prompt_tokens": 55493,
+      "completion_tokens": 796,
+      "total_tokens": 56289,
+      "cached_input_tokens": 54336,
+      "formed_cognitions": 12,
+      "requests": 12
+    },
+    "extended": {
+      "prompt_tokens": 57641,
+      "completion_tokens": 1452,
+      "total_tokens": 59093,
+      "cached_input_tokens": 56064,
+      "formed_cognitions": 12,
+      "requests": 12
+    }
+  },
+  "incremental": {
+    "prompt_tokens": 2148,
+    "completion_tokens": 656,
+    "total_tokens": 2804,
+    "requests": 0
+  },
+  "incremental_cny_per_1000_uncached": 0.28833333333333333,
+  "incremental_tokens_per_input": {
+    "prompt_tokens": 179.0,
+    "completion_tokens": 54.666666666666664,
+    "total_tokens": 233.66666666666666,
+    "requests": 0.0
+  },
+  "pricing_source": "https://mimo.mi.com/static/docs/price/pay-as-you-go.md",
+  "caveat": "12 paired synthetic inputs, assuming one memory/input; output length/model formation decisions can vary. Current formation already emits equivalent topic aliases. No production incremental bill is established."
+}

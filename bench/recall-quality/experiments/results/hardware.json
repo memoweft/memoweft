@@ -1,0 +1,11 @@
+{
+  "os_version": "10.0.26200",
+  "physical_cores": 8,
+  "cpu": "AMD Ryzen 7 9700X 8-Core Processor             ",
+  "os": "Microsoft Windows 11 专业版",
+  "total_memory_bytes": 50526015488,
+  "logical_processors": 16,
+  "provider": "CPUExecutionProvider",
+  "onnx_threads": 2,
+  "scope": "Public hardware model only; no hostname, username, processor ID or serials"
+}

@@ -1,0 +1,20 @@
+{
+  "scope": "One cold-ish paired observation per size, baseline and B; real seeded World, raw candidate scores then real eligibility/full scan/render. No p95 claim; repeated template content models scan cost only.",
+  "sizes": {
+    "1000": {
+      "seed_seconds": 0.040589299984276295,
+      "baseline": 170.69150001043454,
+      "B": 124.90200001047924
+    },
+    "10000": {
+      "seed_seconds": 0.1266438000020571,
+      "baseline": 6464.834199985489,
+      "B": 7069.290500017814
+    },
+    "50000": {
+      "seed_seconds": 0.8518168999580666,
+      "baseline": 407105.4540000041,
+      "B": 448345.4870999558
+    }
+  }
+}

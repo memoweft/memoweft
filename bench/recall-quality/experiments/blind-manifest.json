@@ -1,0 +1,36 @@
+{
+  "model": "mimo-v2.6-flash",
+  "requests": 16,
+  "usage": {
+    "prompt_tokens": 4822,
+    "completion_tokens": 16291,
+    "total_tokens": 21113
+  },
+  "seconds": 117.58709960000124,
+  "aborted_prior_author_run": {
+    "requests": 5,
+    "usage": null,
+    "reason": "Short batch rejected structurally; no fixture was written; responses were not retained. Tokens unavailable. No retrieval implementation or scoring existed."
+  },
+  "sha256_lf": "ea1f99eb2b600cdc8412e1c5aff3763e0cf1cae604f9b257db1ed8ac035fa10a",
+  "queries": 195,
+  "positive": 150,
+  "negative": 45,
+  "categories": {
+    "synonym": 15,
+    "hierarchy": 15,
+    "bilingual": 15,
+    "colloquial": 15,
+    "abbreviation": 15,
+    "typo": 15,
+    "indirect": 15,
+    "time": 15,
+    "correction": 15,
+    "nearby": 15,
+    "polysemy": 15,
+    "lifecycle": 15,
+    "technical_polysemy": 15
+  },
+  "protocol": "No per-case reading/output during tuning. Blind runner refuses a second final invocation; freeze parameters before first final run.",
+  "freeze_note": "Prettier formatting applied before first commit; no scoring/route implementation existed."
+}

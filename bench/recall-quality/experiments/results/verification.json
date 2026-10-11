@@ -1,0 +1,61 @@
+{
+  "base_commit": "dc7803262e016623f83b1951210fe7c779b25361",
+  "core_test_coverage": {
+    "command": "npm run test:coverage",
+    "pass": 636,
+    "fail": 0
+  },
+  "workspaces": {
+    "command": "npm test --workspaces --if-present",
+    "pass_by_workspace_in_command_order": [636, 46, 10, 33, 11, 22, 11, 11, 19, 18],
+    "total_pass_includes_root": 817,
+    "fail": 0
+  },
+  "python": {
+    "command": "uv run pytest -q",
+    "pass": 1928,
+    "fail": 0
+  },
+  "types": {
+    "commands": [
+      "npm run typecheck",
+      "npm run typecheck --workspaces --if-present",
+      "uv run mypy --strict src tests"
+    ],
+    "mypy_files": 223,
+    "passed": true
+  },
+  "checks": [
+    "npm run lint",
+    "npm run format",
+    "npm run api:check",
+    "npm run shared:check",
+    "npm run docs:links",
+    "npm run docs:snippets",
+    "npm run smoke:dist",
+    "npm run build --workspaces --if-present",
+    "uv run python scripts/smoke_distribution.py"
+  ],
+  "regression": {
+    "command": "uv run python ../bench/recall-quality/evaluate.py --check --exact-baseline --repeats 3",
+    "queries": 638,
+    "passed": true
+  },
+  "experimental_tests": {
+    "command": "test_routes.py",
+    "pass": 6
+  },
+  "resource_segments": [
+    "1 core coverage",
+    "2 Python full suite",
+    "3 full workspace tests",
+    "4 dev attempt: alias shape rejection",
+    "5 dev attempt: temp connection cleanup failure",
+    "6 dev freeze run",
+    "7 fixed-threshold dev timing repair",
+    "8 single final blind/review run",
+    "9 matrix/storage/backfill",
+    "10 real-chain capacity"
+  ],
+  "resource_contract": "One atomic heavy slot per segment; released in finally on success/failure. Wait-only retries do not acquire a slot. No parallel heavy runs within this package."
+}
