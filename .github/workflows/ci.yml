@@ -322,7 +322,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
-          fetch-depth: 0 # Exact historical matcher for paired recall latency.
+          fetch-depth: 0 # Retain history for optional recall reference diagnostics.
       - name: Install uv
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
@@ -336,9 +336,9 @@ jobs:
       - name: Types (mypy --strict)
         working-directory: py
         run: uv run mypy --strict src tests
-      - name: Synthetic paraphrase recall quality gate
+      - name: Synthetic recall quality regression gate
         working-directory: py
-        run: uv run python ../bench/recall-quality/evaluate.py --check --reference-ref 233cc2f --repeats 3
+        run: uv run python ../bench/recall-quality/evaluate.py --check --repeats 3
       - name: Wheel and sdist smoke
         working-directory: py
         run: uv run python scripts/smoke_distribution.py

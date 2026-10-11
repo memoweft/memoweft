@@ -1,7 +1,7 @@
-"""Final fresh holdout after retiring the first split as a challenge set.
+"""Reproduce the historical final retained set, now exposed regression data.
 
-Frozen after the generic ambiguity guard, before evaluation. No vocabulary or
-rules are tuned against this split. Five new facts per category, two queries.
+Five facts per category, two queries. This generator and its samples were
+already visible during MEM-4; they cannot be reused as a new blind evaluation.
 """
 import json
 from pathlib import Path
@@ -101,4 +101,4 @@ if __name__ == "__main__":
                 if memory["id"] != "unrelated":
                     memory["content"] = "我每天阅读一本书。"
     assert len(cases) == 120
-    (Path(__file__).parent / "holdout.json").write_text(json.dumps({"version": 2, "provenance": "Entirely fictional, manually labeled. Fresh final holdout after retiring the initial split as challenge data. Frozen after generic ambiguity guard, never used for tuning.", "cases": cases}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (Path(__file__).parent / "holdout.json").write_text(json.dumps({"version": 2, "provenance": "Entirely fictional, manually labeled. Fresh final holdout after retiring the initial split as challenge data. Frozen after generic ambiguity guard, never used for tuning.", "cases": cases}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")

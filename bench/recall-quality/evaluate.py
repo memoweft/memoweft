@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from contextlib import ExitStack, closing, contextmanager
-from dataclasses import replace
 from hashlib import sha256
 import importlib.util
 import json
@@ -48,6 +47,12 @@ def seed(path, case, padding=0):
             db.execute("INSERT INTO cognition_transitions VALUES(?,?,?,?,?)", ("t-" + mid, memory["predecessor"], mid, "corrects", 1))
         if state in {"expired", "future"}:
             db.execute("INSERT INTO observed_source(subject_id,host_id,source_hash,evidence_id,version,payload_hash,permission_version,valid_at,valid_until) VALUES(?,?,?,?,?,?,?,?,?)", (subject, "synthetic-host", mid, "e-" + mid, "1", "synthetic", "1", "9999-01-01T00:00:00.000Z" if state == "future" else "2000-01-01T00:00:00.000Z", "2000-01-02T00:00:00.000Z" if state == "expired" else None))
+    if case.get("person_name"):
+        name = case["person_name"]
+        text = case["memories"][0]["content"]
+        db.execute("INSERT INTO entity(id,world_id,kind,canonical_name,invalid_at,created_at,updated_at,aliases_json) VALUES('synthetic-person','fictional-owner','person',?,NULL,'2026-01-01','2026-01-01','[]')", (name,))
+        db.execute("INSERT INTO cognition_target(cognition_id,target_entity_id) VALUES('person-fact','synthetic-person')")
+        db.execute("INSERT INTO evidence_ledger(id,content,payload_json) VALUES(?,?,?)", ('naming-support', json.dumps({'relation': 'support', 'entity_id': 'synthetic-person', 'evidence_id': 'e-person-fact'}), json.dumps({'schema_version': 1, 'start': 0, 'end': len(text)})))
     advance_world_revision(db)
     db.commit()
     db.close()
@@ -147,91 +152,76 @@ def run(cases, repeats=7, reference=None, padding=0):
     return {"reference": {"overall": aggregate(reference_results), "categories": {category: aggregate([row for row in reference_results if row["category"] == category]) for category in sorted({row["category"] for row in reference_results})}, "results": reference_results} if reference else None, "overall": aggregate(results), "per_call_latency_ms": {"p50": percentile([t for row in results for t in row["call_latency_ms"]], 50), "p95": percentile([t for row in results for t in row["call_latency_ms"]], 95)}, "reference_per_call_latency_ms": {"p50": percentile([t for row in results for t in row.get("reference_call_latency_ms", [])], 50), "p95": percentile([t for row in results for t in row.get("reference_call_latency_ms", [])], 95)}, "categories": {category: aggregate([row for row in results if row["category"] == category]) for category in sorted({row["category"] for row in results})}, "results": results}
 
 
-def check(report, baseline, accepted):
+def fixture_hash(raw):
+    """Hash UTF-8 fixture content with CRLF/CR normalized to LF."""
+    return sha256(raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")).hexdigest()
+
+
+def check_fixtures(hashes, baseline):
+    for split, digest in hashes.items():
+        if baseline["fixture_hashes"].get(split) != digest:
+            raise SystemExit(f"{split}: frozen fixture changed")
+
+
+def check(report, baseline, exact=False):
     failures = []
     for split, current in report["splits"].items():
-        before = baseline["splits"].get("validation" if split == "challenge" else split) or current.get("reference")
-        if before is not None:
-            prior = {row["id"]: row for row in before["results"]}
-            for row in current["results"]:
-                old = prior[row["id"]]
-                if set(row["wrong"]) - set(old["wrong"]):
-                    failures.append(row["id"] + ": new false recall")
-                if 0 < old["rank"] <= 5 and row["rank"] == 0:
-                    failures.append(row["id"] + ": lost baseline positive")
-        if accepted is not None:
-            for category, score in current["categories"].items():
-                floor = accepted["splits"][split]["categories"][category]
-                for metric in ("hit1", "hit3", "hit5", "mrr5"):
-                    if score[metric] + 1e-9 < floor[metric]:
-                        failures.append(f"{split}/{category}: {metric} below accepted")
-                if score["negative_false_recall_rate"] > floor["negative_false_recall_rate"] + 1e-9:
-                    failures.append(f"{split}/{category}: false recall above accepted")
-        blocked = [row for row in current["results"] if row["category"] == "lifecycle" and row["selected"]]
-        failures += [row["id"] + ": lifecycle leak" for row in blocked]
-        paired = [row for row in current["results"] if "reference_latency_ms" in row]
-        if paired:
-            old95 = percentile([row["reference_latency_ms"] for row in paired], 95)
-            new95 = percentile([row["latency_ms"] for row in paired], 95)
-            if new95 > old95 * 1.2:
-                failures.append(f"{split}: paired p95 {new95:.3f} > 1.2 * {old95:.3f} ms")
+        prior = {row["id"]: row for row in baseline["splits"][split]["results"]}
+        ids = [row["id"] for row in current["results"]]
+        if len(ids) != len(set(ids)) or set(ids) != set(prior):
+            failures.append(split + ": missing, duplicate or unexpected cases")
+        for row in current["results"]:
+            if row["id"] not in prior:
+                continue
+            old = prior[row["id"]]
+            if set(row["wrong"]) - set(old["wrong"]):
+                failures.append(row["id"] + ": new false recall")
+            if 0 < old["rank"] <= 5 and not 0 < row["rank"] <= 5:
+                failures.append(row["id"] + ": lost baseline positive")
+            if old.get("must_hit") and not 0 < row["rank"] <= 5:
+                failures.append(row["id"] + ": required review positive missing")
+            if old.get("must_abstain") and row["selected"]:
+                failures.append(row["id"] + ": required review abstention failed")
+            if row["category"] == "lifecycle" and row["selected"]:
+                failures.append(row["id"] + ": lifecycle leak")
+            if exact and any(row[key] != old[key] for key in ("selected", "rank", "wrong")):
+                failures.append(row["id"] + ": differs from recorded baseline")
+    # Small fixture stores and shared-machine scheduling produce unstable p95.
+    # Timings remain in reports, but are not an acceptance gate.
     if failures:
         raise SystemExit("Quality regressions:\n" + "\n".join(failures))
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--split", choices=["dev", "challenge", "holdout", "all"], default="all")
+    parser.add_argument("--split", choices=["dev", "challenge", "holdout", "review", "all"], default="all")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--reference-ref")
     parser.add_argument("--repeats", type=int, default=7)
     parser.add_argument("--padding", type=int, default=0)
-    parser.add_argument("--arm", choices=["guarded", "normalization", "topics", "multigrain"], default="guarded")
+    parser.add_argument("--exact-baseline", action="store_true", help="Require identical per-case selection, hit and false-recall results")
     args = parser.parse_args()
     if args.repeats < 1 or args.padding < 0:
         parser.error("repeats must be positive and padding nonnegative")
     started = perf_counter()
-    splits = ["dev", "challenge", "holdout"] if args.split == "all" else [args.split]
+    splits = ["dev", "challenge", "holdout", "review"] if args.split == "all" else [args.split]
     fixtures = {split: json.loads((HERE / f"{split}.json").read_text(encoding="utf-8"))["cases"] for split in splits}
-    report = {"version": 1, "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(), "schema_version": SCHEMA_VERSION, "fixture_hashes": {split: sha256((HERE / f"{split}.json").read_bytes()).hexdigest() for split in splits}, "measurement": "Trust QueryService.preview_recall, median of interleaved warm calls per query; includes connection, currentness, recent evidence, pending corrections and rendering", "repeats": args.repeats, "padding": args.padding, "splits": {}}
-    report["arm"] = args.arm
+    report = {"version": 2, "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(), "product_recall_sha256": fixture_hash((ROOT / "py/src/memoweft/integrations/hermes/recall.py").read_bytes()), "schema_version": SCHEMA_VERSION, "fixture_hashes": {split: fixture_hash((HERE / f"{split}.json").read_bytes()) for split in splits}, "measurement": "Trust QueryService.preview_recall, median of interleaved warm calls per query; includes connection, currentness, recent evidence, pending corrections and rendering", "latency_policy": "Report only: small synthetic stores and shared-machine timing are not a stable relative performance gate", "repeats": args.repeats, "padding": args.padding, "splits": {}}
+    baseline = json.loads((HERE / "regression-baseline.json").read_text(encoding="utf-8")) if args.check else None
+    if baseline is not None:
+        check_fixtures(report["fixture_hashes"], baseline)
     with ExitStack() as stack:
-        if args.arm in {"normalization", "multigrain"}:
-            stack.enter_context(patch.object(recall, "_semantic_world_rows", lambda query, rows: ([], rows)))
-        if args.arm == "topics":
-            original_parse = recall.QueryTerms.parse
-            stack.enter_context(patch.object(recall.QueryTerms, "parse", lambda query: replace(original_parse(query), constraints=(), excluded_domains=(), details=())))
-        if args.arm == "multigrain":
-            original_bigrams = recall._bigrams
-            def multigrain(text):
-                tokens = original_bigrams(text)
-                for run_text in recall._CJK_RUN.findall(recall.normalize(text)):
-                    tokens.update(run_text[i:i + width] for width in (3, 4) for i in range(len(run_text) - width + 1))
-                return tokens
-            stack.enter_context(patch.object(recall, "_bigrams", multigrain))
         reference = stack.enter_context(historical_module(args.reference_ref)) if args.reference_ref else None
         report["splits"] = {split: run(fixtures[split], args.repeats, reference, args.padding) for split in splits}
     report["duration_seconds"] = perf_counter() - started
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        args.out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     for split, result in report["splits"].items():
         print(split, json.dumps(result["overall"], ensure_ascii=False))
     if args.check:
-        baseline = json.loads((HERE / "baseline.json").read_text(encoding="utf-8"))
-        accepted_path = HERE / "accepted.json"
-        accepted = json.loads(accepted_path.read_text(encoding="utf-8")) if accepted_path.exists() else None
-        for split, digest in report["fixture_hashes"].items():
-            historical_split = "validation" if split == "challenge" else split
-            frozen = baseline["fixture_hashes"].get(historical_split)
-            if frozen is None and accepted is not None:
-                frozen = accepted["fixture_hashes"][split]
-            if frozen is not None:
-                assert digest == frozen, "frozen fixture changed"
-            elif not args.reference_ref:
-                raise SystemExit("New split requires --reference-ref or accepted.json")
-        check(report, baseline, accepted)
+        check(report, baseline, args.exact_baseline)
         print("Quality gate passed")
 
 

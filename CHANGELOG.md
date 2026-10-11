@@ -4,7 +4,7 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
-- Recall recognizes bounded Chinese/English topic equivalents, common spelling variants and relevant personal constraints on legacy memories, with domain/detail guards against unrelated matches. Add a 600-query synthetic paraphrase quality gate with a frozen baseline, exposed challenge split and final held-out split; ambiguous topic expansion requires one uniquely eligible claim. No model calls, new dependencies or storage migration.
+- Add synthetic recall quality evaluations, frozen baselines and independent review regression probes; this change does not alter recall behavior.
 
 ## 2.0.0 — 2026-10-09
 

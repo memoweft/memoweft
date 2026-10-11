@@ -200,4 +200,4 @@ if __name__ == "__main__":
     for split, seeds in [("dev", DEV), ("challenge", HOLD)]:
         cases = build(seeds, "dev" if split == "dev" else "holdout")
         assert len(cases) == (360 if split == "dev" else 120)
-        (root / f"{split}.json").write_text(json.dumps({"version": 1, "provenance": "Entirely fictional, manually labeled. No real people, organizations, addresses, or memory stores. Frozen before tuning. Distinct held-out seeds.", "cases": cases}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        (root / f"{split}.json").write_text(json.dumps({"version": 1, "provenance": "Entirely fictional, manually labeled. No real people, organizations, addresses, or memory stores. Frozen before tuning. Distinct held-out seeds.", "cases": cases}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")

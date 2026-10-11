@@ -14,11 +14,6 @@ owner-approved semantic category table closes the observed lexical gap
 member names ONLY when direct bigram matching produced zero hits (Owner
 decision 2026-08-16: fallback-only), keeping the matcher deterministic,
 model-free, and byte-stable.
-
-Bounded multilingual equivalents additionally select a uniquely eligible claim
-before lexical ranking. Competing claims require a uniquely resolving detail;
-otherwise expansion abstains without removing literal candidates. Existing
-durable topic labels, permissions and correction transitions stay authoritative.
 """
 
 from __future__ import annotations
@@ -32,10 +27,6 @@ import json
 import re
 import sqlite3
 from typing import Any, Callable, Iterable, Literal, Mapping, Sequence, TypeVar, cast
-
-from .recall_terms import (
-    QueryTerms, normalize, topics,
-)
 
 from ..trust.currentness import (
     current_entity_aliases,
@@ -241,7 +232,7 @@ def _bigrams(text: str) -> set[str]:
     For Latin/alphanumeric words, extracts lowercased whole-word tokens to avoid
     spurious sub-morpheme letter collisions and whitespace boundary artifacts.
     """
-    text = normalize(text).strip()
+    text = text.strip()
     if not text:
         return set()
     tokens: set[str] = set()
@@ -259,7 +250,7 @@ def _bigrams(text: str) -> set[str]:
 def _query_signal(query: str) -> str:
     """Remove presentation-only request wrappers before lexical scoring."""
 
-    signal = normalize(query).strip()
+    signal = query.strip()
     for prefix in _QUERY_WRAPPER_PREFIXES:
         pattern = re.compile(
             r"(^|[\s。！？?!；;：:,，])" + re.escape(prefix) + r"[\s：:,，]*"
@@ -563,17 +554,7 @@ def _digest(value: object) -> str:
     return sha256(_canonical_json(value).encode("utf-8")).hexdigest()
 
 
-def _score_world_rows(
-    query: str, rows: Iterable[Mapping[str, object]], *,
-    token_cache: dict[str, set[str]] | None = None,
-) -> list[dict[str, object]]:
-    def content_tokens(text: str) -> set[str]:
-        if token_cache is None:
-            return _bigrams(text)
-        if text not in token_cache:
-            token_cache[text] = _bigrams(text)
-        return token_cache[text]
-
+def _score_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
     query_bigrams = _bigrams(query)
     if not query_bigrams:
         return []
@@ -586,7 +567,7 @@ def _score_world_rows(
         variants = _row_match_variants(query, row)
         score = max((
             _compute_overlap_score(query_bigrams, bigrams, query_bigrams & bigrams)
-            for text in variants if (bigrams := content_tokens(text))
+            for text in variants if (bigrams := _bigrams(text))
             and query_bigrams & bigrams
         ), default=0.0)
         if score < MIN_SCORE:
@@ -684,80 +665,8 @@ def _topic_cue_is_explicit(query: str, cue: str) -> bool:
                for index in range(len(query)) if query.startswith(cue, index))
 
 
-_TIME_TOPICS = frozenset({"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "morning", "afternoon", "evening", "noon", "bedtime", "month_end", "year_end", "fortnight"})
-
-
-def _semantic_world_rows(query: str, rows: list[Mapping[str, object]]) -> tuple[list[dict[str, object]], list[Mapping[str, object]]]:
-    """Match bounded topic equivalents on already permission-filtered rows.
-
-    Each predecessor is tested independently. Its old values are never copied
-    into selected content. Detail filtering applies only with competing claims
-    on the same known topic, preserving a lone general preference as context.
-    """
-    terms = QueryTerms.parse(query)
-    wanted = terms.wanted
-    topical = wanted - _TIME_TOPICS
-    matches: list[tuple[Mapping[str, object], str, int]] = []
-    compatible = [row for row in rows if not terms.incompatible(str(row["content"]))]
-    if not wanted and not terms.constraints:
-        return [], compatible
-    query_bigrams = _bigrams(query)
-    for row in compatible:
-        # Explicit topic labels and their lifecycle remain authoritative. The
-        # static vocabulary must not reconstruct a removed/denied stored alias.
-        # Such rows use the existing permission-checked topic_cues channel.
-        if row.get("has_topic_labels"):
-            continue
-        variants = _row_match_variants(query, row)
-        best_text, best_count = "", 0
-        for text in variants:
-            if terms.incompatible(text):
-                continue
-            found = topics(text)
-            common = wanted & found
-            constraint = terms.constraint(text)
-            if topical and not common - _TIME_TOPICS and not constraint:
-                continue
-            count = len(common) + int(constraint)
-            if count > best_count:
-                best_text, best_count = text, count
-        if best_count:
-            matches.append((row, best_text, best_count))
-    competing = len(matches) > 1
-    excluded: set[tuple[str, str]] = set()
-    hits: list[dict[str, object]] = []
-    for row, text, count in matches:
-        if competing and not terms.detail(text):
-            excluded.add((str(row["kind"]), str(row["id"])))
-            continue
-        # Bounded topic score is independent of wording length. Explicit local
-        # details and multiple shared topics rank above a topic-only match.
-        lexical_common = (query_bigrams & _bigrams(text)) - _GENERIC_PREDICATE_BIGRAMS
-        hits.append({"kind": row["kind"], "id": row["id"], "content": row["content"],
-                     "confidence": row.get("confidence", 600), "is_superseded": row.get("is_superseded", False),
-                     "score": 0.30 + min(0.12, 0.04 * count) + min(0.12, 0.02 * len(lexical_common))})
-    # Detail cues must identify exactly one claim before expansion can change
-    # either selection or ranking. Multiple claims with the same requested
-    # detail are still ambiguous; confidence and IDs cannot resolve that.
-    # On abstention, keep the literal channel's candidates intact.
-    if len(hits) != 1:
-        return [], compatible
-    compatible = [row for row in compatible if (str(row["kind"]), str(row["id"])) not in excluded]
-    return hits, compatible
-
-
 def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
-    # Fallback variants score the same claims repeatedly. Cache only tokens
-    # within this call; no user text survives the invocation or crosses a
-    # revision, account, permission change or local/cloud destination.
-    token_cache: dict[str, set[str]] = {}
-
-    def score_rows(signal: str, candidates: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
-        return _score_world_rows(signal, candidates, token_cache=token_cache)
-
     rows_list = list(rows)
-    if not rows_list:
-        return []
     raw_query = query
     query = _query_signal(query)
     is_historical = bool(_HISTORICAL_QUERY_PATTERN.search(raw_query))
@@ -788,7 +697,7 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
             ))
         ]
         identity = _score_world_anchor_rows(query, [row for row in rows_list if row.get("statement_kind") == "naming"])
-        relevant = score_rows(query, rows_list)
+        relevant = _score_world_rows(query, rows_list)
         anchored = _score_world_anchor_rows(query, rows_list)
         result: list[dict[str, object]] = []
         seen: set[tuple[str, str]] = set()
@@ -798,7 +707,6 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
                 result.append(item)
                 seen.add(key)
         return result[:MAX_ITEMS]
-    semantic, rows_list = _semantic_world_rows(query, rows_list)
     topic_rows = [
         {**row, "anchors": row.get("topic_cues", ())}
         for row in rows_list if row.get("topic_cues")
@@ -806,27 +714,16 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     topic_hits = _score_world_anchor_rows(query, topic_rows, topic=True)
     if topic_hits:
         return topic_hits
-    hits = score_rows(query, rows_list)
-    if semantic:
-        # Merge every supported equivalent, then rank/truncate once. A lexical
-        # distractor cannot suppress the whole semantic channel.
-        semantic_best = {(str(item["kind"]), str(item["id"])): item for item in semantic}
-        for item in hits:
-            key = (str(item["kind"]), str(item["id"]))
-            if key not in semantic_best or float(cast(Any, item["score"])) > float(cast(Any, semantic_best[key]["score"])):
-                semantic_best[key] = item
-        return sorted(semantic_best.values(), key=lambda item: (
-            -float(cast(Any, item["score"])), -int(cast(Any, item["confidence"])), str(item["id"]), _KIND_ORDER[str(item["kind"])]
-        ))[:MAX_ITEMS]
+    hits = _score_world_rows(query, rows_list)
     if hits:
         return hits
     if not _is_inquiry(query) and len(query) > 12:
         return []
     for variant in _fallback_query_variants(query):
-        hits = score_rows(variant, rows_list)
+        hits = _score_world_rows(variant, rows_list)
         if hits:
             return hits
-    hits = _local_inquiry_matches(query, rows_list, score_rows)
+    hits = _local_inquiry_matches(query, rows_list, _score_world_rows)
     if hits:
         return hits
     # A retained predecessor may itself be very short ("only Wednesday
@@ -839,7 +736,7 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
         for row in rows_list:
             for text in cast(Sequence[str], row.get("predecessor_match_texts", ())):
                 for cue in sorted(query_topics & _bigrams(text)):
-                    for hit in score_rows(cue, [row]):
+                    for hit in _score_world_rows(cue, [row]):
                         candidate_id = str(hit["id"])
                         if candidate_id not in best or float(cast(Any, hit["score"])) > float(cast(Any, best[candidate_id]["score"])):
                             best[candidate_id] = hit
@@ -1054,10 +951,6 @@ def _current_world_rows(
     db: sqlite3.Connection, subject_id: str, model_tier: ModelTier = "local"
 ) -> list[dict[str, object]]:
     items: list[dict[str, object]] = []
-    declared_topics = tuple(str(row[0]) for row in db.execute(
-        "SELECT canonical_name FROM entity WHERE world_id=? AND kind='topic'",
-        (subject_id,),
-    ).fetchall())
     try:
         transitions = db.execute(
             "SELECT prior_cognition_id FROM cognition_transitions"
@@ -1137,10 +1030,9 @@ def _current_world_rows(
                     "topic_cues": tuple(dict.fromkeys(
                         cue for text in (content, *predecessor_texts)
                         for cue in _graph_topic_cues(db, subject_id, text, model_tier)
-                    )) if declared_topics else (),
+                    )),
                     "is_superseded": row_id in superseded_ids,
                     "predecessor_match_texts": predecessor_texts,
-                    "has_topic_labels": any(topic in text for topic in declared_topics for text in (content, *predecessor_texts)),
                 }
             )
     return items
