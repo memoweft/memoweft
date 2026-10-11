@@ -101,4 +101,4 @@ if __name__ == "__main__":
                 if memory["id"] != "unrelated":
                     memory["content"] = "我每天阅读一本书。"
     assert len(cases) == 120
-    (Path(__file__).parent / "holdout.json").write_text(json.dumps({"version": 2, "provenance": "Entirely fictional, manually labeled. Fresh final holdout after retiring the initial split as validation. Frozen after generic ambiguity guard, never used for tuning.", "cases": cases}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (Path(__file__).parent / "holdout.json").write_text(json.dumps({"version": 2, "provenance": "Entirely fictional, manually labeled. Fresh final holdout after retiring the initial split as challenge data. Frozen after generic ambiguity guard, never used for tuning.", "cases": cases}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

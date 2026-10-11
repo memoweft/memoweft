@@ -1,0 +1,1330 @@
+{
+  "scope": "12 fixed development cases, first seed/query per category; 1000 fictional unrelated padding claims per store",
+  "padding": 1000,
+  "repeats": 7,
+  "duration_seconds": 24.804581000003964,
+  "result": {
+    "reference": {
+      "overall": {
+        "n": 12,
+        "positive_n": 10,
+        "negative_query_n": 2,
+        "hit1": 0.0,
+        "hit3": 0.0,
+        "hit5": 0.0,
+        "mrr5": 0.0,
+        "negative_false_recall_rate": 0.08333333333333333,
+        "negative_query_false_recall_rate": 0.5,
+        "negative_returned_count": 1,
+        "latency_ms": {
+          "p50": 135.1715000346303,
+          "p95": 173.16000000573695
+        },
+        "returned_mean": 0.08333333333333333,
+        "returned_p95": 1,
+        "miss_causes": {
+          "null": 10
+        }
+      },
+      "categories": {
+        "abbreviation": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 110.57980003533885,
+            "p95": 110.57980003533885
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "bilingual": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 121.44710001302883,
+            "p95": 121.44710001302883
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "colloquial": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 120.70999998832121,
+            "p95": 120.70999998832121
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "correction": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 142.09330000448972,
+            "p95": 142.09330000448972
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "hierarchy": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 144.0952999982983,
+            "p95": 144.0952999982983
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "indirect": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 103.41699997661635,
+            "p95": 103.41699997661635
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "lifecycle": {
+          "n": 1,
+          "positive_n": 0,
+          "negative_query_n": 1,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 135.1715000346303,
+            "p95": 135.1715000346303
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {}
+        },
+        "nearby": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 136.3124999916181,
+            "p95": 136.3124999916181
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "polysemy": {
+          "n": 1,
+          "positive_n": 0,
+          "negative_query_n": 1,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 1.0,
+          "negative_query_false_recall_rate": 1.0,
+          "negative_returned_count": 1,
+          "latency_ms": {
+            "p50": 96.61480004433542,
+            "p95": 96.61480004433542
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "synonym": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 173.16000000573695,
+            "p95": 173.16000000573695
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "time": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 149.50750005664304,
+            "p95": 149.50750005664304
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        },
+        "typo": {
+          "n": 1,
+          "positive_n": 1,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 138.68340000044554,
+            "p95": 138.68340000044554
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "null": 1
+          }
+        }
+      },
+      "results": [
+        {
+          "id": "dev-synonym-00-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 173.16000000573695,
+          "call_latency_ms": [
+            123.8337000249885,
+            131.56140001956373,
+            138.8130999985151,
+            145.01619996735826,
+            140.5683999764733,
+            128.15669999690726,
+            126.4200999867171
+          ],
+          "reference_latency_ms": 173.16000000573695,
+          "reference_call_latency_ms": [
+            156.6370000364259,
+            160.0155999767594,
+            173.16000000573695,
+            173.66180004319176,
+            174.58210000768304,
+            192.91899999370798,
+            162.46909997425973
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-hierarchy-00-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 144.0952999982983,
+          "call_latency_ms": [
+            138.14709999132901,
+            137.24430004367605,
+            155.63280001515523,
+            135.76240005204454,
+            158.85579999303445,
+            150.15639999182895,
+            110.71300000185147
+          ],
+          "reference_latency_ms": 144.0952999982983,
+          "reference_call_latency_ms": [
+            123.36560001131147,
+            136.6470999782905,
+            179.01839996920899,
+            144.3678000359796,
+            208.45900004496798,
+            144.0952999982983,
+            101.30959999514744
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-bilingual-00-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 121.44710001302883,
+          "call_latency_ms": [
+            141.12200000090525,
+            135.35860000411049,
+            123.01710003521293,
+            131.68109999969602,
+            125.06990000838414,
+            141.80909999413416,
+            142.90190004976466
+          ],
+          "reference_latency_ms": 121.44710001302883,
+          "reference_call_latency_ms": [
+            127.53070000326261,
+            119.8003999888897,
+            116.9512000051327,
+            121.73780001467094,
+            123.09629999799654,
+            121.35789997410029,
+            121.44710001302883
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-colloquial-00-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 120.70999998832121,
+          "call_latency_ms": [
+            121.38889997731894,
+            120.60000002384186,
+            116.21680000098422,
+            131.94539997493848,
+            114.83679997036234,
+            131.9636999978684,
+            126.75970001146197
+          ],
+          "reference_latency_ms": 120.70999998832121,
+          "reference_call_latency_ms": [
+            113.54150000261143,
+            120.7801999989897,
+            123.96019999869168,
+            128.1217000214383,
+            111.22190003516153,
+            119.53780002659187,
+            120.70999998832121
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-abbreviation-00-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 110.57980003533885,
+          "call_latency_ms": [
+            133.51690000854433,
+            111.33079999126494,
+            103.15539996372536,
+            102.08029998466372,
+            118.29519999446347,
+            128.09850001940504,
+            127.88499996531755
+          ],
+          "reference_latency_ms": 110.57980003533885,
+          "reference_call_latency_ms": [
+            109.29739999119192,
+            112.04080004245043,
+            98.72160002123564,
+            100.11060000397265,
+            114.04019995825365,
+            110.57980003533885,
+            130.74220000999048
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-typo-00-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 138.68340000044554,
+          "call_latency_ms": [
+            124.1061000037007,
+            131.90909998957068,
+            132.10439996328205,
+            105.94179999316111,
+            108.06810000212863,
+            100.3208999754861,
+            108.8154999888502
+          ],
+          "reference_latency_ms": 138.68340000044554,
+          "reference_call_latency_ms": [
+            148.97440001368523,
+            168.08480001054704,
+            150.50779999000952,
+            134.62019996950403,
+            131.07810000656173,
+            138.68340000044554,
+            134.01889998931438
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-indirect-00-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 103.41699997661635,
+          "call_latency_ms": [
+            112.4095999985002,
+            109.6358000067994,
+            107.54729999462143,
+            112.6155000529252,
+            106.78269999334589,
+            102.69279999192804,
+            106.60190001362935
+          ],
+          "reference_latency_ms": 103.41699997661635,
+          "reference_call_latency_ms": [
+            106.47210001479834,
+            102.69270004937425,
+            95.28780000982806,
+            106.26079997746274,
+            103.79640001337975,
+            103.41699997661635,
+            100.17940000398085
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-time-00-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 149.50750005664304,
+          "call_latency_ms": [
+            115.06820004433393,
+            104.6529000159353,
+            102.3748999577947,
+            112.42369998944923,
+            110.6955999857746,
+            124.67480002669618,
+            127.37270002253354
+          ],
+          "reference_latency_ms": 149.50750005664304,
+          "reference_call_latency_ms": [
+            142.61860004626215,
+            146.56030002515763,
+            162.07140003098175,
+            155.86150001036003,
+            142.76680001057684,
+            149.50750005664304,
+            154.30639998521656
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-correction-00-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 142.09330000448972,
+          "call_latency_ms": [
+            134.8308000015095,
+            122.36989999655634,
+            118.25930001214147,
+            117.72249999921769,
+            116.04980000993237,
+            118.9130000420846,
+            111.54050001641735
+          ],
+          "reference_latency_ms": 142.09330000448972,
+          "reference_call_latency_ms": [
+            169.11860002437606,
+            158.33099995506927,
+            141.72529999632388,
+            139.3911999766715,
+            134.48670000070706,
+            142.09330000448972,
+            155.90620000148192
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-nearby-00-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 136.3124999916181,
+          "call_latency_ms": [
+            106.83260002406314,
+            123.32340003922582,
+            109.38009998062626,
+            100.0672000227496,
+            99.90079997805879,
+            104.25689996918663,
+            103.72579999966547
+          ],
+          "reference_latency_ms": 136.3124999916181,
+          "reference_call_latency_ms": [
+            135.53859997773543,
+            168.96699997596443,
+            156.69979999074712,
+            139.5839999895543,
+            131.04120001662523,
+            136.3124999916181,
+            128.9695999585092
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "dev-polysemy-00-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 96.61480004433542,
+          "call_latency_ms": [
+            119.90019999211654,
+            107.82019997714087,
+            102.87639999296516,
+            105.71560001699254,
+            111.2748000305146,
+            111.05940002016723,
+            123.50270000752062
+          ],
+          "reference_latency_ms": 96.61480004433542,
+          "reference_call_latency_ms": [
+            101.53280000668019,
+            96.4426000136882,
+            97.58879995206371,
+            88.12100003706291,
+            93.401099962648,
+            96.61480004433542,
+            106.43809998873621
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "dev-lifecycle-00-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 135.1715000346303,
+          "call_latency_ms": [
+            126.83259998448193,
+            130.3990000160411,
+            131.34550000540912,
+            133.16799997119233,
+            125.14039996312931,
+            122.27230001008138,
+            119.69169997610152
+          ],
+          "reference_latency_ms": 135.1715000346303,
+          "reference_call_latency_ms": [
+            132.59880000259727,
+            141.6385000338778,
+            144.7018000180833,
+            147.39149995148182,
+            134.58339998032898,
+            135.1715000346303,
+            128.1452999683097
+          ],
+          "reference_selected": []
+        }
+      ]
+    },
+    "overall": {
+      "n": 12,
+      "positive_n": 10,
+      "negative_query_n": 2,
+      "hit1": 1.0,
+      "hit3": 1.0,
+      "hit5": 1.0,
+      "mrr5": 1.0,
+      "negative_false_recall_rate": 0.0,
+      "negative_query_false_recall_rate": 0.0,
+      "negative_returned_count": 0,
+      "latency_ms": {
+        "p50": 118.25930001214147,
+        "p95": 138.14709999132901
+      },
+      "returned_mean": 0.8333333333333334,
+      "returned_p95": 1,
+      "miss_causes": {}
+    },
+    "per_call_latency_ms": {
+      "p50": 120.60000002384186,
+      "p95": 142.90190004976466
+    },
+    "reference_per_call_latency_ms": {
+      "p50": 132.59880000259727,
+      "p95": 173.66180004319176
+    },
+    "categories": {
+      "abbreviation": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 118.29519999446347,
+          "p95": 118.29519999446347
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "bilingual": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 135.35860000411049,
+          "p95": 135.35860000411049
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "colloquial": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 121.38889997731894,
+          "p95": 121.38889997731894
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "correction": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 118.25930001214147,
+          "p95": 118.25930001214147
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "hierarchy": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 138.14709999132901,
+          "p95": 138.14709999132901
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "indirect": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 107.54729999462143,
+          "p95": 107.54729999462143
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "lifecycle": {
+        "n": 1,
+        "positive_n": 0,
+        "negative_query_n": 1,
+        "hit1": 0,
+        "hit3": 0,
+        "hit5": 0,
+        "mrr5": 0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0.0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 126.83259998448193,
+          "p95": 126.83259998448193
+        },
+        "returned_mean": 0.0,
+        "returned_p95": 0,
+        "miss_causes": {}
+      },
+      "nearby": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 104.25689996918663,
+          "p95": 104.25689996918663
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "polysemy": {
+        "n": 1,
+        "positive_n": 0,
+        "negative_query_n": 1,
+        "hit1": 0,
+        "hit3": 0,
+        "hit5": 0,
+        "mrr5": 0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0.0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 111.05940002016723,
+          "p95": 111.05940002016723
+        },
+        "returned_mean": 0.0,
+        "returned_p95": 0,
+        "miss_causes": {}
+      },
+      "synonym": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 131.56140001956373,
+          "p95": 131.56140001956373
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "time": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 112.42369998944923,
+          "p95": 112.42369998944923
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "typo": {
+        "n": 1,
+        "positive_n": 1,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 108.8154999888502,
+          "p95": 108.8154999888502
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      }
+    },
+    "results": [
+      {
+        "id": "dev-synonym-00-0",
+        "category": "synonym",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 131.56140001956373,
+        "call_latency_ms": [
+          123.8337000249885,
+          131.56140001956373,
+          138.8130999985151,
+          145.01619996735826,
+          140.5683999764733,
+          128.15669999690726,
+          126.4200999867171
+        ],
+        "reference_latency_ms": 173.16000000573695,
+        "reference_call_latency_ms": [
+          156.6370000364259,
+          160.0155999767594,
+          173.16000000573695,
+          173.66180004319176,
+          174.58210000768304,
+          192.91899999370798,
+          162.46909997425973
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-hierarchy-00-0",
+        "category": "hierarchy",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 138.14709999132901,
+        "call_latency_ms": [
+          138.14709999132901,
+          137.24430004367605,
+          155.63280001515523,
+          135.76240005204454,
+          158.85579999303445,
+          150.15639999182895,
+          110.71300000185147
+        ],
+        "reference_latency_ms": 144.0952999982983,
+        "reference_call_latency_ms": [
+          123.36560001131147,
+          136.6470999782905,
+          179.01839996920899,
+          144.3678000359796,
+          208.45900004496798,
+          144.0952999982983,
+          101.30959999514744
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-bilingual-00-0",
+        "category": "bilingual",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 135.35860000411049,
+        "call_latency_ms": [
+          141.12200000090525,
+          135.35860000411049,
+          123.01710003521293,
+          131.68109999969602,
+          125.06990000838414,
+          141.80909999413416,
+          142.90190004976466
+        ],
+        "reference_latency_ms": 121.44710001302883,
+        "reference_call_latency_ms": [
+          127.53070000326261,
+          119.8003999888897,
+          116.9512000051327,
+          121.73780001467094,
+          123.09629999799654,
+          121.35789997410029,
+          121.44710001302883
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-colloquial-00-0",
+        "category": "colloquial",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 121.38889997731894,
+        "call_latency_ms": [
+          121.38889997731894,
+          120.60000002384186,
+          116.21680000098422,
+          131.94539997493848,
+          114.83679997036234,
+          131.9636999978684,
+          126.75970001146197
+        ],
+        "reference_latency_ms": 120.70999998832121,
+        "reference_call_latency_ms": [
+          113.54150000261143,
+          120.7801999989897,
+          123.96019999869168,
+          128.1217000214383,
+          111.22190003516153,
+          119.53780002659187,
+          120.70999998832121
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-abbreviation-00-0",
+        "category": "abbreviation",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 118.29519999446347,
+        "call_latency_ms": [
+          133.51690000854433,
+          111.33079999126494,
+          103.15539996372536,
+          102.08029998466372,
+          118.29519999446347,
+          128.09850001940504,
+          127.88499996531755
+        ],
+        "reference_latency_ms": 110.57980003533885,
+        "reference_call_latency_ms": [
+          109.29739999119192,
+          112.04080004245043,
+          98.72160002123564,
+          100.11060000397265,
+          114.04019995825365,
+          110.57980003533885,
+          130.74220000999048
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-typo-00-0",
+        "category": "typo",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 108.8154999888502,
+        "call_latency_ms": [
+          124.1061000037007,
+          131.90909998957068,
+          132.10439996328205,
+          105.94179999316111,
+          108.06810000212863,
+          100.3208999754861,
+          108.8154999888502
+        ],
+        "reference_latency_ms": 138.68340000044554,
+        "reference_call_latency_ms": [
+          148.97440001368523,
+          168.08480001054704,
+          150.50779999000952,
+          134.62019996950403,
+          131.07810000656173,
+          138.68340000044554,
+          134.01889998931438
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-indirect-00-0",
+        "category": "indirect",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 107.54729999462143,
+        "call_latency_ms": [
+          112.4095999985002,
+          109.6358000067994,
+          107.54729999462143,
+          112.6155000529252,
+          106.78269999334589,
+          102.69279999192804,
+          106.60190001362935
+        ],
+        "reference_latency_ms": 103.41699997661635,
+        "reference_call_latency_ms": [
+          106.47210001479834,
+          102.69270004937425,
+          95.28780000982806,
+          106.26079997746274,
+          103.79640001337975,
+          103.41699997661635,
+          100.17940000398085
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-time-00-0",
+        "category": "time",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 112.42369998944923,
+        "call_latency_ms": [
+          115.06820004433393,
+          104.6529000159353,
+          102.3748999577947,
+          112.42369998944923,
+          110.6955999857746,
+          124.67480002669618,
+          127.37270002253354
+        ],
+        "reference_latency_ms": 149.50750005664304,
+        "reference_call_latency_ms": [
+          142.61860004626215,
+          146.56030002515763,
+          162.07140003098175,
+          155.86150001036003,
+          142.76680001057684,
+          149.50750005664304,
+          154.30639998521656
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-correction-00-0",
+        "category": "correction",
+        "expect": [
+          "current"
+        ],
+        "selected": [
+          "current"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 118.25930001214147,
+        "call_latency_ms": [
+          134.8308000015095,
+          122.36989999655634,
+          118.25930001214147,
+          117.72249999921769,
+          116.04980000993237,
+          118.9130000420846,
+          111.54050001641735
+        ],
+        "reference_latency_ms": 142.09330000448972,
+        "reference_call_latency_ms": [
+          169.11860002437606,
+          158.33099995506927,
+          141.72529999632388,
+          139.3911999766715,
+          134.48670000070706,
+          142.09330000448972,
+          155.90620000148192
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-nearby-00-0",
+        "category": "nearby",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 104.25689996918663,
+        "call_latency_ms": [
+          106.83260002406314,
+          123.32340003922582,
+          109.38009998062626,
+          100.0672000227496,
+          99.90079997805879,
+          104.25689996918663,
+          103.72579999966547
+        ],
+        "reference_latency_ms": 136.3124999916181,
+        "reference_call_latency_ms": [
+          135.53859997773543,
+          168.96699997596443,
+          156.69979999074712,
+          139.5839999895543,
+          131.04120001662523,
+          136.3124999916181,
+          128.9695999585092
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "dev-polysemy-00-0",
+        "category": "polysemy",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 111.05940002016723,
+        "call_latency_ms": [
+          119.90019999211654,
+          107.82019997714087,
+          102.87639999296516,
+          105.71560001699254,
+          111.2748000305146,
+          111.05940002016723,
+          123.50270000752062
+        ],
+        "reference_latency_ms": 96.61480004433542,
+        "reference_call_latency_ms": [
+          101.53280000668019,
+          96.4426000136882,
+          97.58879995206371,
+          88.12100003706291,
+          93.401099962648,
+          96.61480004433542,
+          106.43809998873621
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "dev-lifecycle-00-0",
+        "category": "lifecycle",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 126.83259998448193,
+        "call_latency_ms": [
+          126.83259998448193,
+          130.3990000160411,
+          131.34550000540912,
+          133.16799997119233,
+          125.14039996312931,
+          122.27230001008138,
+          119.69169997610152
+        ],
+        "reference_latency_ms": 135.1715000346303,
+        "reference_call_latency_ms": [
+          132.59880000259727,
+          141.6385000338778,
+          144.7018000180833,
+          147.39149995148182,
+          134.58339998032898,
+          135.1715000346303,
+          128.1452999683097
+        ],
+        "reference_selected": []
+      }
+    ]
+  }
+}

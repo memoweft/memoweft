@@ -1,0 +1,24 @@
+{
+  "heavy_slot": "heavy-3.lock",
+  "tests": [
+    {
+      "label": "Core",
+      "exit": 0,
+      "seconds": 7.382,
+      "summary": [
+        "ℹ tests 636",
+        "ℹ pass 636",
+        "ℹ fail 0",
+        "ℹ skipped 0"
+      ]
+    },
+    {
+      "label": "Python",
+      "exit": 0,
+      "seconds": 104.735,
+      "summary": [
+        "1946 passed in 103.66s (0:01:43)"
+      ]
+    }
+  ]
+}

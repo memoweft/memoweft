@@ -119,6 +119,7 @@ _GROUPS: dict[str, tuple[str, ...]] = {
 }
 
 _TERM_KEYS = {normalize(term): key for key, terms in _GROUPS.items() for term in terms}
+_TERM_STARTS = frozenset(term[0] for term in _TERM_KEYS)
 
 
 def _term_pattern(term: str) -> str:
@@ -138,7 +139,12 @@ _TERMS = re.compile("|".join(
 
 
 def topics(text: str) -> frozenset[str]:
-    return frozenset(_TERM_KEYS[match[0]] for match in _TERMS.finditer(normalize(text)))
+    normalized = normalize(text)
+    # Most large stores contain unrelated claims. Avoid the long alternation
+    # when no term can even start; this cannot exclude a vocabulary match.
+    if not _TERM_STARTS.intersection(normalized):
+        return frozenset()
+    return frozenset(_TERM_KEYS[match[0]] for match in _TERMS.finditer(normalized))
 
 
 # Directed query categories: a dog can answer a pet question; a generic pet

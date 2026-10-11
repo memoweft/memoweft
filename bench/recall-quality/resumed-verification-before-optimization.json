@@ -1,0 +1,15 @@
+{
+  "heavy_slot": "heavy-3.lock",
+  "tests": [
+    {
+      "label": "Core",
+      "exit": 0,
+      "seconds": 8.288
+    },
+    {
+      "label": "Python",
+      "exit": 0,
+      "seconds": 129.098
+    }
+  ]
+}

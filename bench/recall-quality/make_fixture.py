@@ -1,6 +1,6 @@
 """Freeze wholly fictional paraphrase cases; never used by the quality runner.
 
-Each seed has three development queries. Held-out seeds have different facts
+Each seed has three development queries. Challenge seeds have different facts
 and vocabulary and two queries. Labels are explicit; no model labels the corpus.
 """
 import json
@@ -148,7 +148,7 @@ DEV = {
     ]],
 }
 
-# Freeze these before tuning; evaluation does not load this split until --holdout.
+# Initial holdout, exposed during tuning; permanently retained as challenge data.
 HOLD = {
     "synonym": [("我喜欢滑雪。", "skiing怎么安排", "雪上运动怎么选"), ("我喜欢钓鱼。", "垂钓装备怎么选", "fishing怎么安排"), ("我喜欢唱歌。", "歌唱怎么安排", "singing怎么选"), ("我喜欢手工。", "crafting怎么安排", "手作活动怎么选"), ("我喜欢骑摩托车。", "motorcycling怎么安排", "摩托骑行怎么选")],
     "hierarchy": [("我养兔子。", "宠物怎么喂", "pet用品怎么选"), ("我喜欢闽菜。", "中餐怎么点", "中国菜怎么选"), ("我喜欢芒果。", "水果怎么选", "fruit怎么点"), ("我弹钢琴。", "乐器怎么选", "instrument怎么练"), ("我喜欢牡丹。", "花卉怎么选", "鲜花怎么选")],
@@ -197,7 +197,7 @@ def build(seeds, split):
 
 if __name__ == "__main__":
     root = Path(__file__).parent
-    for split, seeds in [("dev", DEV), ("validation", HOLD)]:
+    for split, seeds in [("dev", DEV), ("challenge", HOLD)]:
         cases = build(seeds, "dev" if split == "dev" else "holdout")
         assert len(cases) == (360 if split == "dev" else 120)
         (root / f"{split}.json").write_text(json.dumps({"version": 1, "provenance": "Entirely fictional, manually labeled. No real people, organizations, addresses, or memory stores. Frozen before tuning. Distinct held-out seeds.", "cases": cases}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

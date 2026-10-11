@@ -73,6 +73,20 @@ def test_unknown_detail_abstains_from_ambiguous_expansion_and_keeps_literal_hit(
     assert [item["id"] for item in _match_world_rows("做饭不粘锅怎么选？", memories)] == ["0"]
 
 
+def test_multiple_claims_with_same_requested_detail_do_not_expand() -> None:
+    memories = rows("我的骑行路线是平路。", "我的骑行路线是山路。")
+    assert _match_world_rows("单车坡度怎么选？", memories) == []
+
+
+def test_ambiguous_expansion_preserves_literal_candidates() -> None:
+    from memoweft.integrations.hermes.recall import _semantic_world_rows
+
+    memories = rows("我的骑行路线是平路。", "我的骑行路线是山路。", "我的骑行头盔是蓝色。")
+    expanded, literal = _semantic_world_rows("骑行路线坡度怎么选？", [row for row in memories])
+    assert expanded == []
+    assert literal == memories
+
+
 def test_permission_checked_predecessor_selects_only_successor_content() -> None:
     memories = rows("更正，现在只走平路。")
     memories[0]["predecessor_match_texts"] = ("我骑行时喜欢山路。",)

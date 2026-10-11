@@ -33,6 +33,9 @@ from memoweft.store.schema import SCHEMA_VERSION  # noqa: E402
 
 def seed(path, case, padding=0):
     db = open_db(str(path))
+    # Fixture setup is outside latency measurement. Seed atomically instead of
+    # fsyncing each synthetic insert, keeping the offline CI gate short.
+    db.execute("BEGIN")
     memories = case["memories"] + [{"id": f"padding-{i:04}", "content": f"我收藏虚构邮票编号{i:04}。"} for i in range(padding)]
     for memory in memories:
         mid, text, state = memory["id"], memory["content"], memory.get("state", "active")
@@ -96,6 +99,7 @@ def historical_module(ref):
 
 def run(cases, repeats=7, reference=None, padding=0):
     results = []
+    reference_results = []
     with TemporaryDirectory(prefix="memoweft-recall-quality-") as folder:
         paths = {}
         for case in cases:
@@ -134,14 +138,19 @@ def run(cases, repeats=7, reference=None, padding=0):
                 row["reference_latency_ms"] = percentile(reference_latencies, 50)
                 row["reference_call_latency_ms"] = reference_latencies
                 row["reference_selected"] = [pair[1] for pair in previous["selected_item_ids"]]
+                reference_selected = row["reference_selected"]
+                reference_results.append({**row, "selected": reference_selected,
+                    "rank": next((i + 1 for i, mid in enumerate(reference_selected) if mid in expected), 0),
+                    "wrong": sorted(set(reference_selected) & set(case["forbid"])),
+                    "latency_ms": row["reference_latency_ms"], "miss_cause": None})
             results.append(row)
-    return {"overall": aggregate(results), "per_call_latency_ms": {"p50": percentile([t for row in results for t in row["call_latency_ms"]], 50), "p95": percentile([t for row in results for t in row["call_latency_ms"]], 95)}, "reference_per_call_latency_ms": {"p50": percentile([t for row in results for t in row.get("reference_call_latency_ms", [])], 50), "p95": percentile([t for row in results for t in row.get("reference_call_latency_ms", [])], 95)}, "categories": {category: aggregate([row for row in results if row["category"] == category]) for category in sorted({row["category"] for row in results})}, "results": results}
+    return {"reference": {"overall": aggregate(reference_results), "categories": {category: aggregate([row for row in reference_results if row["category"] == category]) for category in sorted({row["category"] for row in reference_results})}, "results": reference_results} if reference else None, "overall": aggregate(results), "per_call_latency_ms": {"p50": percentile([t for row in results for t in row["call_latency_ms"]], 50), "p95": percentile([t for row in results for t in row["call_latency_ms"]], 95)}, "reference_per_call_latency_ms": {"p50": percentile([t for row in results for t in row.get("reference_call_latency_ms", [])], 50), "p95": percentile([t for row in results for t in row.get("reference_call_latency_ms", [])], 95)}, "categories": {category: aggregate([row for row in results if row["category"] == category]) for category in sorted({row["category"] for row in results})}, "results": results}
 
 
 def check(report, baseline, accepted):
     failures = []
     for split, current in report["splits"].items():
-        before = baseline["splits"].get(split)
+        before = baseline["splits"].get("validation" if split == "challenge" else split) or current.get("reference")
         if before is not None:
             prior = {row["id"]: row for row in before["results"]}
             for row in current["results"]:
@@ -172,7 +181,7 @@ def check(report, baseline, accepted):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--split", choices=["dev", "validation", "holdout", "all"], default="all")
+    parser.add_argument("--split", choices=["dev", "challenge", "holdout", "all"], default="all")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--reference-ref")
@@ -180,7 +189,10 @@ def main():
     parser.add_argument("--padding", type=int, default=0)
     parser.add_argument("--arm", choices=["guarded", "normalization", "topics", "multigrain"], default="guarded")
     args = parser.parse_args()
-    splits = ["dev", "validation", "holdout"] if args.split == "all" else [args.split]
+    if args.repeats < 1 or args.padding < 0:
+        parser.error("repeats must be positive and padding nonnegative")
+    started = perf_counter()
+    splits = ["dev", "challenge", "holdout"] if args.split == "all" else [args.split]
     fixtures = {split: json.loads((HERE / f"{split}.json").read_text(encoding="utf-8"))["cases"] for split in splits}
     report = {"version": 1, "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(), "schema_version": SCHEMA_VERSION, "fixture_hashes": {split: sha256((HERE / f"{split}.json").read_bytes()).hexdigest() for split in splits}, "measurement": "Trust QueryService.preview_recall, median of interleaved warm calls per query; includes connection, currentness, recent evidence, pending corrections and rendering", "repeats": args.repeats, "padding": args.padding, "splits": {}}
     report["arm"] = args.arm
@@ -200,6 +212,7 @@ def main():
             stack.enter_context(patch.object(recall, "_bigrams", multigrain))
         reference = stack.enter_context(historical_module(args.reference_ref)) if args.reference_ref else None
         report["splits"] = {split: run(fixtures[split], args.repeats, reference, args.padding) for split in splits}
+    report["duration_seconds"] = perf_counter() - started
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -210,7 +223,14 @@ def main():
         accepted_path = HERE / "accepted.json"
         accepted = json.loads(accepted_path.read_text(encoding="utf-8")) if accepted_path.exists() else None
         for split, digest in report["fixture_hashes"].items():
-            assert digest == (baseline if split in baseline["fixture_hashes"] else accepted)["fixture_hashes"][split], "frozen fixture changed"
+            historical_split = "validation" if split == "challenge" else split
+            frozen = baseline["fixture_hashes"].get(historical_split)
+            if frozen is None and accepted is not None:
+                frozen = accepted["fixture_hashes"][split]
+            if frozen is not None:
+                assert digest == frozen, "frozen fixture changed"
+            elif not args.reference_ref:
+                raise SystemExit("New split requires --reference-ref or accepted.json")
         check(report, baseline, accepted)
         print("Quality gate passed")
 
