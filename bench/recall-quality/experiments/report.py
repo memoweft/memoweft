@@ -216,7 +216,9 @@ def render_curves(dev, final):
         ax.set(title=arm + (": alias Dice" if arm == "A" else ": cosine similarity"), xlabel="Threshold", ylabel="Percent", ylim=(-1, 101))
         ax.grid(alpha=.2)
         ax.legend(fontsize=8)
-    fig.savefig(OUT / "threshold-curves.svg")
+    svg_path = OUT / "threshold-curves.svg"
+    fig.savefig(svg_path)
+    svg_path.write_text("\n".join(line.rstrip() for line in svg_path.read_text(encoding="utf-8").splitlines()) + "\n", encoding="utf-8", newline="\n")
     fig.savefig(HERE.parents[2] / ".local/mem5/threshold-curves.png", dpi=150)
     plt.close(fig)
 
