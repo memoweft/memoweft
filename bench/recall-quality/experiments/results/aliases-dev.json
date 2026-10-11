@@ -1,0 +1,5532 @@
+{
+  "model": "mimo-v2.6-flash",
+  "prompt_sha256": "0b08caa08ef4500a0862972e080431243d07bbcb53cdde60664aac60f80e4d66",
+  "entries": {
+    "db9ac1239dd863f760763bc266ed365d434cd5b9c715c0051d82daf357b4195c": {
+      "content": "我一直喜欢徒步。",
+      "sidecar": {
+        "theme": "徒步爱好",
+        "aliases": [
+          "徒步",
+          "徒步旅行",
+          "hiking",
+          "徒步运动",
+          "远足",
+          "登山徒步",
+          "户外徒步",
+          "徒步爱好者"
+        ]
+      },
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 32,
+        "prompt_tokens": 131,
+        "total_tokens": 163,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "latency_ms": 2683.7033999618143
+    },
+    "d9fc1ed23dfe4aab3746fc852ace7cc9337f790772b4dc1ea331d5dfe72660fe": {
+      "content": "我不喜欢拥挤环境。",
+      "sidecar": {
+        "theme": "不喜欢拥挤环境",
+        "aliases": [
+          "讨厌拥挤",
+          "厌恶人群",
+          "不喜欢人多",
+          "怕拥挤",
+          "crowd aversion",
+          "dislike crowded places",
+          "avoid crowds",
+          "不喜欢拥挤环境"
+        ]
+      },
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 132,
+        "total_tokens": 173,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "latency_ms": 1575.6693999865092
+    },
+    "4317bff2b6f1ac07108c4dd61a9cc3e464c9bd98f7e73cbdbb59fb5cad9686ff": {
+      "content": "我不能吃辣。",
+      "sidecar": {
+        "theme": "不能吃辣",
+        "aliases": [
+          "忌辣",
+          "不吃辣",
+          "辣食禁忌",
+          "避免辛辣",
+          "spicy food allergy",
+          "no spicy food",
+          "spicy food intolerance"
+        ]
+      },
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 132,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "latency_ms": 2832.459600002039
+    },
+    "ff67e95b0b8fb501e8bea3ac2be37ecac23346129545e995270c4c7061d0d8c0": {
+      "content": "我乘船带橙色水壶。",
+      "sidecar": {
+        "theme": "乘船携带橙色水壶",
+        "aliases": [
+          "乘船带水壶",
+          "乘船带橙色水壶",
+          "橙色水壶",
+          "水壶",
+          "乘船",
+          "橙色水壶携带",
+          "orange water bottle",
+          "boat trip with water bottle"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 61,
+        "prompt_tokens": 136,
+        "total_tokens": 197,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 128
+        }
+      },
+      "latency_ms": 1726.02130001178
+    },
+    "ee1ee113b1c38f84312c787074069dd646fc2efce42478cf46e22b3819cae88e": {
+      "content": "我乘船带白色水壶。",
+      "sidecar": {
+        "theme": "乘船携带白色水壶",
+        "aliases": [
+          "乘船带水壶",
+          "船上带白色水壶",
+          "白色水壶",
+          "乘船时携带水壶",
+          "白色水壶",
+          "白色水壶",
+          "白色水壶",
+          "白色水壶"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 60,
+        "prompt_tokens": 135,
+        "total_tokens": 195,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 128
+        }
+      },
+      "latency_ms": 2269.607199996244
+    },
+    "af4054bf94ef7ada6bf9e2263c03648845d1091b9fd9fd7318cf6761214f7f8c": {
+      "content": "我不能摄入咖啡因。",
+      "sidecar": {
+        "theme": "咖啡因摄入限制",
+        "aliases": [
+          "咖啡因不耐受",
+          "咖啡因过敏",
+          "咖啡因禁忌",
+          "避免咖啡因",
+          "无咖啡因",
+          "咖啡因限制",
+          "caffeine intolerance",
+          "caffeine allergy"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 48,
+        "prompt_tokens": 133,
+        "total_tokens": 181,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2342.479299986735
+    },
+    "6c25bb0229f54860cb3e52db347e7393dd634193f9b98c9ba87674b33a7e4740": {
+      "content": "我不能吃麸质。",
+      "sidecar": {
+        "theme": "麸质不耐受/无麸质饮食限制",
+        "aliases": [
+          "麸质过敏",
+          "麸质不耐受",
+          "无麸质饮食",
+          "不能吃麸质",
+          "gluten intolerance",
+          "gluten allergy",
+          "gluten-free diet",
+          "celiac disease"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 55,
+        "prompt_tokens": 133,
+        "total_tokens": 188,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2422.577499994077
+    },
+    "7f0b96adf5e16ee1e7ea3a4e9492e299d517cde28f75888e401fbb2b4907a7a0": {
+      "content": "我乘船喜欢靠窗座位。",
+      "sidecar": {
+        "theme": "乘船靠窗座位偏好",
+        "aliases": [
+          "船票靠窗",
+          "乘船选座",
+          "船舱靠窗",
+          "靠窗座位偏好",
+          "乘船座位偏好",
+          "window seat on boats",
+          "boat window seat preference",
+          "seating preference"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 52,
+        "prompt_tokens": 135,
+        "total_tokens": 187,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3105.9720999910496
+    },
+    "61118230d93522db06d47319bed78b1be091b7e2f2b1bd70dba96755d26a42f8": {
+      "content": "我乘船带灰色水壶。",
+      "sidecar": {
+        "theme": "乘船携带灰色水壶",
+        "aliases": [
+          "乘船带水壶",
+          "船上带灰色水壶",
+          "灰色水壶",
+          "乘船时携带水壶",
+          "boat with gray water bottle",
+          "gray water bottle",
+          "water bottle",
+          "灰色保温杯"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 66,
+        "prompt_tokens": 135,
+        "total_tokens": 201,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 128
+        }
+      },
+      "latency_ms": 3673.777699994389
+    },
+    "662315a3a069379319d791962f0d489cb96169b98f0bd890a86d42f5902ff1aa": {
+      "content": "我乘船带紫色水壶。",
+      "sidecar": {
+        "theme": "乘船携带紫色水壶",
+        "aliases": [
+          "乘船带水壶",
+          "船上带紫色水壶",
+          "携带紫色水壶",
+          "紫色水壶",
+          "乘船",
+          "坐船带水壶",
+          "bringing purple water bottle on boat",
+          "purple water bottle"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 62,
+        "prompt_tokens": 135,
+        "total_tokens": 197,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 128
+        }
+      },
+      "latency_ms": 2403.6965999985114
+    },
+    "21173c90315b821ee4a990f5b6ce9a3ada38bf799b4659d6d17957762a7f3b2f": {
+      "content": "我乘车会晕动。",
+      "sidecar": {
+        "theme": "晕动症（乘车晕车）",
+        "aliases": [
+          "晕车",
+          "晕动",
+          "晕动症",
+          "motion sickness",
+          "carsickness",
+          "乘车晕车",
+          "晕车症"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 48,
+        "prompt_tokens": 133,
+        "total_tokens": 181,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2550.8540999726392
+    },
+    "2e5709097ead11a5f2bdaa68f4a49499fb0ded1a966c84c17dbe7bcbbf5f230e": {
+      "content": "我乘船带蓝色水壶。",
+      "sidecar": {
+        "theme": "乘船携带蓝色水壶",
+        "aliases": [
+          "乘船带水壶",
+          "船上带蓝色水壶",
+          "蓝色水壶",
+          "乘船携带水壶",
+          "带水壶乘船",
+          "蓝色水壶乘船",
+          "blue water bottle on boat",
+          "bring blue bottle by boat"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 59,
+        "prompt_tokens": 135,
+        "total_tokens": 194,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 128
+        }
+      },
+      "latency_ms": 3420.294000010472
+    },
+    "3b9c62c13d4ae9275a3ff85638fac2dd05dcc80c69ce17d8ee545a401476e2e5": {
+      "content": "我乘船带红色水壶。",
+      "sidecar": {
+        "theme": "乘船携带红色水壶",
+        "aliases": [
+          "乘船带水壶",
+          "船上带水壶",
+          "红色水壶",
+          "乘船时带红色水壶",
+          "boat red kettle",
+          "red water bottle on boat",
+          "bring red kettle on boat"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 59,
+        "prompt_tokens": 135,
+        "total_tokens": 194,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3586.0756000038236
+    },
+    "f63ade24eec850065d9e50f605f3b46449028c8c3820441252cbbd064a081e69": {
+      "content": "我习惯先写待办事项。",
+      "sidecar": {
+        "theme": "先写待办事项的习惯",
+        "aliases": [
+          "待办事项",
+          "待办清单",
+          "To-Do List",
+          "TODO",
+          "任务清单",
+          "先列待办",
+          "写待办",
+          "待办事项习惯"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 48,
+        "prompt_tokens": 135,
+        "total_tokens": 183,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2413.6664000106975
+    },
+    "8b8de72291eeb354efde996050466743c0dfc461aac26ae3d4f53ef7dc1d40e8": {
+      "content": "我习惯公共交通出行。",
+      "sidecar": {
+        "theme": "偏好公共交通出行",
+        "aliases": [
+          "公共交通",
+          "公交出行",
+          "乘公交",
+          "坐公交",
+          "公共交通工具",
+          "public transport",
+          "public transit",
+          "公交"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 40,
+        "prompt_tokens": 132,
+        "total_tokens": 172,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2088.490800000727
+    },
+    "e07f9cbd18aebd2503152b7c72cc6eabafea15a1d921d23a2c218cf0b48ed315": {
+      "content": "我习惯备份文件。",
+      "sidecar": {
+        "theme": "文件备份习惯",
+        "aliases": [
+          "文件备份",
+          "备份文件",
+          "资料备份",
+          "数据备份",
+          "存档文件",
+          "备份习惯",
+          "file backup",
+          "data backup"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 36,
+        "prompt_tokens": 132,
+        "total_tokens": 168,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2016.09659998212
+    },
+    "77b0ff701f92d0fc6063251c60f1a6627dce457c53d88f37c47ecc05a896bb8c": {
+      "content": "我习惯每天锻炼。",
+      "sidecar": {
+        "theme": "每日锻炼习惯",
+        "aliases": [
+          "日常锻炼",
+          "每天运动",
+          "每日运动",
+          "锻炼习惯",
+          "运动习惯",
+          "daily exercise",
+          "daily workout",
+          "regular exercise"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 132,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2030.0009000347927
+    },
+    "5f8a12c15eb6e0fd197058e5c44fc67c16a4150f61e4365222dba8316e7f6206": {
+      "content": "我使用小米手机。",
+      "sidecar": {
+        "theme": "小米手机使用",
+        "aliases": [
+          "小米手机",
+          "小米机型",
+          "Xiaomi手机",
+          "Xiaomi phone",
+          "小米设备",
+          "小米手机使用",
+          "使用小米手机",
+          "小米手机用户"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 132,
+        "total_tokens": 173,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1636.3021999713965
+    },
+    "bdeb3124b2c93113d667df5ebd969b27c0997f03e9429bd144d95d7fa73d4e12": {
+      "content": "我以前喜欢辣味川菜。",
+      "sidecar": {
+        "theme": "喜欢辣味川菜",
+        "aliases": [
+          "川菜",
+          "辣味川菜",
+          "四川菜",
+          "川味菜",
+          "辣味菜",
+          "Sichuan cuisine",
+          "spicy Sichuan food",
+          "川菜口味"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 135,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3679.5676999608986
+    },
+    "1522502c0dc4f8050a6d63a04381c3f08ba8f4bb3b873fb5102c8cf9a5d6013e": {
+      "content": "我使用苹果手机。",
+      "sidecar": {
+        "theme": "苹果手机使用",
+        "aliases": [
+          "iPhone使用",
+          "苹果手机",
+          "iPhone",
+          "苹果手机使用",
+          "苹果手机使用",
+          "苹果手机使用",
+          "苹果手机使用",
+          "苹果手机使用"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 132,
+        "total_tokens": 171,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2122.5596999865957
+    },
+    "a43428b953ceb3034847e04e410f3e1f20acde6801c66ef4f462a21b19d455f9": {
+      "content": "我使用中华人民共和国标准时间。",
+      "sidecar": {
+        "theme": "中华人民共和国标准时间",
+        "aliases": [
+          "中国标准时间",
+          "中国时间",
+          "北京时间",
+          "CST",
+          "China Standard Time",
+          "PRC标准时间",
+          "中华人民共和国时间"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 134,
+        "total_tokens": 172,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3923.060400004033
+    },
+    "dd180d86182fbfea27d9103d60498ec6d88e2401ffa4d4b8db3d0eb4bfc96f00": {
+      "content": "我倾向节约开支。",
+      "sidecar": {
+        "theme": "节约开支倾向",
+        "aliases": [
+          "省钱",
+          "节俭",
+          "节约",
+          "节省开支",
+          "控制开销",
+          "消费节制",
+          "frugality",
+          "cost saving"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 132,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "latency_ms": 2541.461299988441
+    },
+    "182beafec3dce7fc41113813fd71690dcb825345deb2cdf38af1def57e22b447": {
+      "content": "我做过质量保证。",
+      "sidecar": {
+        "theme": "质量保证工作经历",
+        "aliases": [
+          "QA",
+          "质量保证",
+          "质量保证工作",
+          "质量保证经历",
+          "Quality Assurance",
+          "QA工作",
+          "QA经历",
+          "质保工作"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 132,
+        "total_tokens": 169,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2316.548199974932
+    },
+    "c2efc4e836ac61586fb4d4f7d0cc336cf91be40a17bbe7240be3aa7dc9754826": {
+      "content": "我做饭喜欢放花生。",
+      "sidecar": {
+        "theme": "做饭放花生",
+        "aliases": [
+          "烹饪加花生",
+          "做饭用花生",
+          "菜肴放花生",
+          "花生入菜",
+          "花生配料",
+          "peanut in cooking",
+          "cooking with peanuts",
+          "花生调味"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 133,
+        "total_tokens": 175,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2185.692899976857
+    },
+    "ba8cb390cea6cbd95196044d81ae1cb95dd100df12b5506df93d8b17a1f61e11": {
+      "content": "我养了一只猫。",
+      "sidecar": {
+        "theme": "养猫",
+        "aliases": ["宠物猫", "猫咪", "家猫", "养宠物", "猫", "cat", "pet cat", "keeping a cat"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 31,
+        "prompt_tokens": 133,
+        "total_tokens": 164,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3719.1036000149325
+    },
+    "3fcab415ab14541028fb3713573eac6c00cc13855f3d4cd631e5e188ce9cb699": {
+      "content": "我养了一只狗。",
+      "sidecar": {
+        "theme": "养狗",
+        "aliases": ["宠物狗", "犬", "dog", "养宠物", "dog owner", "宠物饲养"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 25,
+        "prompt_tokens": 133,
+        "total_tokens": 158,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4130.26229996467
+    },
+    "799317bfd24413edd7c8c0bee99c4eb7f0ebe25175f498a6839e73d6ad4d425e": {
+      "content": "我吃素。",
+      "sidecar": {
+        "theme": "素食饮食习惯",
+        "aliases": [
+          "吃素",
+          "素食",
+          "素食者",
+          "vegetarian",
+          "vegetarianism",
+          "vegan",
+          "纯素",
+          "素食主义"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 131,
+        "total_tokens": 181,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4647.61990000261
+    },
+    "736b906db5768d37dfc0b5bd5d871c3d58e21a9ec24fabe454401603ae110c28": {
+      "content": "我习惯午间休息。",
+      "sidecar": {
+        "theme": "午间休息习惯",
+        "aliases": [
+          "午休",
+          "午间小憩",
+          "中午休息",
+          "午餐后休息",
+          "midday break",
+          "noon break",
+          "lunch break",
+          "午睡"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 40,
+        "prompt_tokens": 133,
+        "total_tokens": 173,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 12612.50819999259
+    },
+    "b9fc4d4c57fe0702a76182a9c9a761ebb5796e901c73685f311d8ddac344cdee": {
+      "content": "我乘船带黑色水壶。",
+      "sidecar": {
+        "theme": "乘船携带黑色水壶",
+        "aliases": [
+          "乘船带水壶",
+          "船上带黑色水壶",
+          "黑色水壶",
+          "乘船携带水壶",
+          "boat black water bottle",
+          "black flask on boat",
+          "乘船用品",
+          "水壶"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 60,
+        "prompt_tokens": 135,
+        "total_tokens": 195,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 16108.971799956635
+    },
+    "048619870c10cd437acfc7c8c0a0c1644e83c6e0db05db87b388c38f66199a2c": {
+      "content": "我关注用户体验。",
+      "sidecar": {
+        "theme": "用户体验",
+        "aliases": [
+          "UX",
+          "User Experience",
+          "用户体验设计",
+          "UXD",
+          "用户界面体验",
+          "交互体验",
+          "使用体验"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 29,
+        "prompt_tokens": 131,
+        "total_tokens": 160,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 8787.84689999884
+    },
+    "3123b07c7dcb6ff55c96b61d7909ace9715451ed0cb730314d3ed90a0d6cafe8": {
+      "content": "我喜欢Java编程。",
+      "sidecar": {
+        "theme": "Java编程",
+        "aliases": [
+          "Java",
+          "Java语言",
+          "Java开发",
+          "Java programming",
+          "Java语言编程",
+          "编程",
+          "软件开发",
+          "编程语言"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 40,
+        "prompt_tokens": 131,
+        "total_tokens": 171,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1666.0965000046417
+    },
+    "314c4c9d3a78ef12c2d5c558597b00c8b2df00e22584ebe8c666e5f355641714": {
+      "content": "我周末常去骑行。",
+      "sidecar": {
+        "theme": "周末骑行",
+        "aliases": [
+          "骑行",
+          "周末骑车",
+          "骑自行车",
+          "周末自行车运动",
+          "cycling",
+          "weekend cycling",
+          "bike riding",
+          "weekend bike ride"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 133,
+        "total_tokens": 171,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 5223.929999978282
+    },
+    "bc9470618dcf244ceb401198813ee85102e10b49f6a8756b80fe918ecf8fc938": {
+      "content": "我周末骑自行车。",
+      "sidecar": {
+        "theme": "周末骑自行车",
+        "aliases": [
+          "骑车",
+          "骑自行车",
+          "自行车骑行",
+          "周末骑行",
+          "cycling",
+          "bicycle riding",
+          "weekend cycling",
+          "bike ride"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 44,
+        "prompt_tokens": 132,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 5531.495700008236
+    },
+    "2a55c712d150e396e134b77f3c53b5ad00de5eee91218ca14b8043d0f1f49e3b": {
+      "content": "我喜欢吃梨。",
+      "sidecar": {
+        "theme": "喜欢吃的水果：梨",
+        "aliases": ["梨", "吃梨", "喜欢梨", "爱吃梨", "梨子", "pear", "喜欢吃的水果"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 40,
+        "prompt_tokens": 131,
+        "total_tokens": 171,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2625.217800028622
+    },
+    "fcab1ab58ed86a16ddb6030a30cca907024342ed5ff1da25f7f45813bcc04cff": {
+      "content": "我喜欢吃小米粥。",
+      "sidecar": {
+        "theme": "喜欢小米粥",
+        "aliases": [
+          "小米粥",
+          "小米稀饭",
+          "小米粥喜好",
+          "喜欢小米粥",
+          "millet porridge",
+          "小米",
+          "粥",
+          "杂粮粥"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 132,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4142.642999999225
+    },
+    "742fe0d978fdaec83f580d87d9fcca360d1ee5184155f7afa252f77bd28ce800": {
+      "content": "我喜欢健身。",
+      "sidecar": {
+        "theme": "健身爱好",
+        "aliases": [
+          "健身",
+          "锻炼",
+          "运动",
+          "健身运动",
+          "fitness",
+          "working out",
+          "exercise",
+          "健身爱好"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 36,
+        "prompt_tokens": 130,
+        "total_tokens": 166,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 5090.481800027192
+    },
+    "19cf4231aa2459be83ea066620815dbb3d966e2dc532e1def2c5efc985983243": {
+      "content": "我喜欢川菜。",
+      "sidecar": {
+        "theme": "川菜",
+        "aliases": ["四川菜", "川味", "Sichuan cuisine", "Sichuan food", "川菜系", "四川风味菜"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 34,
+        "prompt_tokens": 131,
+        "total_tokens": 165,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1410.181500017643
+    },
+    "618f72a1f602365b7b2fe90134660f764f66733831d46030ab72baa61bfd4290": {
+      "content": "我喜欢咖啡。",
+      "sidecar": {
+        "theme": "咖啡喜好",
+        "aliases": [
+          "喜欢咖啡",
+          "爱喝咖啡",
+          "咖啡偏好",
+          "coffee preference",
+          "liking coffee",
+          "coffee lover",
+          "咖啡口味",
+          "咖啡爱好"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 130,
+        "total_tokens": 165,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3529.2221000418067
+    },
+    "2549d3eeed83f3e91359db27a620b9cab517f62cce72bc7a4c1e1b6114145c66": {
+      "content": "我喜欢园艺。",
+      "sidecar": {
+        "theme": "园艺爱好",
+        "aliases": [
+          "园艺",
+          "gardening",
+          "种花",
+          "种菜",
+          "种植",
+          "花草种植",
+          "庭院园艺",
+          "hobby-gardening"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 45,
+        "prompt_tokens": 131,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2821.8368000234477
+    },
+    "eddedb37b9abf9767237c291d9900c2abd29e6d4fef9a8a3b90d33a399c5849e": {
+      "content": "我喜欢拿铁。",
+      "sidecar": {
+        "theme": "喜欢拿铁",
+        "aliases": [
+          "拿铁偏好",
+          "喜欢拿铁咖啡",
+          "latte偏好",
+          "拿铁",
+          "latte",
+          "咖啡偏好",
+          "喜欢的咖啡",
+          "咖啡口味"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 131,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3213.5383000131696
+    },
+    "f24466766330b442fd57a00f331a0298a872bda5dc47c8def408a43d00084700": {
+      "content": "我喜欢旅行。",
+      "sidecar": {
+        "theme": "旅行爱好",
+        "aliases": ["旅行", "旅游", "出游", "出行", "travel", "tourism", "traveling", "爱好旅行"]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 40,
+        "prompt_tokens": 130,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1610.7738999999128
+    },
+    "0e73353dc3795201c11d4d64a851fbbb5d56f6616bbf79a941c41ec2924f705d": {
+      "content": "我喜欢吃苹果。",
+      "sidecar": {
+        "theme": "喜欢苹果",
+        "aliases": [
+          "爱吃苹果",
+          "苹果喜好",
+          "喜欢苹果",
+          "喜欢吃的水果",
+          "apple preference",
+          "喜欢苹果口味"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 30,
+        "prompt_tokens": 131,
+        "total_tokens": 161,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 6301.7737999907695
+    },
+    "2ba4f14fce4ad9d7c5380f3dd72382e6ddab60abec9f4fd06556d2be5bacfb0b": {
+      "content": "我喜欢摄影。",
+      "sidecar": {
+        "theme": "摄影爱好",
+        "aliases": ["摄影", "拍照", "照相", "photography", "taking photos", "摄影兴趣", "爱好摄影"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 130,
+        "total_tokens": 165,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2292.598500032909
+    },
+    "1ff64ee20d07256096b194ad6ed43a7470a62ac1894757888b62bd1b004e1cee": {
+      "content": "我喜欢提前规划。",
+      "sidecar": {
+        "theme": "提前规划偏好",
+        "aliases": [
+          "提前规划",
+          "计划偏好",
+          "喜欢规划",
+          "planning preference",
+          "advance planning",
+          "pre-planning",
+          "做事提前计划",
+          "偏好提前安排"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 131,
+        "total_tokens": 169,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3187.2071999823675
+    },
+    "71d970d576b3bd82f2bcd4309b7b8f9b2fe3e72ee0ab09108a8d33cab816248c": {
+      "content": "我喜欢步行通勤。",
+      "sidecar": {
+        "theme": "步行通勤",
+        "aliases": [
+          "走路通勤",
+          "步行上班",
+          "徒步通勤",
+          "walking commute",
+          "walk to work",
+          "步行通勤方式"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 132,
+        "total_tokens": 171,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2352.271199983079
+    },
+    "ff3fb420ec12038ad15a94b3b3ea6341fb146d6ea2b2ba42b113d5f3f00aa0fb": {
+      "content": "我喜欢游泳。",
+      "sidecar": {
+        "theme": "游泳",
+        "aliases": ["swimming", "游泳运动", "游水", "泳游", "水上运动", "swim"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 34,
+        "prompt_tokens": 130,
+        "total_tokens": 164,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2045.0159999891184
+    },
+    "e634ed8ce75c9746933c881760cc21c2a740888bfa72d1855aa81b63052f7769": {
+      "content": "我喜欢清淡饮食。",
+      "sidecar": {
+        "theme": "清淡饮食偏好",
+        "aliases": [
+          "清淡口味",
+          "饮食清淡",
+          "喜欢清淡",
+          "轻淡饮食",
+          "少油少盐饮食",
+          "清淡菜系",
+          "light diet",
+          "mild flavor preference"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 131,
+        "total_tokens": 173,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2824.8918000026606
+    },
+    "918767e6538b827d1e2c175da3a65c189ef5034806dea519d741e1eb7569349c": {
+      "content": "我喜欢爵士乐。",
+      "sidecar": {
+        "theme": "爵士乐爱好",
+        "aliases": [
+          "爵士乐",
+          "jazz",
+          "爵士",
+          "爵士音乐",
+          "喜欢爵士乐",
+          "爱好爵士乐",
+          "音乐爱好",
+          "音乐偏好"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 131,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2601.014200015925
+    },
+    "9e3cabfd95f613127debef0fda5e944b0dbf5661ed6fd061585022120c125f27": {
+      "content": "我喜欢独处。",
+      "sidecar": {
+        "theme": "喜欢独处",
+        "aliases": [
+          "独处",
+          "喜欢一个人待着",
+          "享受独处",
+          "偏好独处",
+          "独处偏好",
+          "喜欢独来独往",
+          "独处时光",
+          "solitude"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 52,
+        "prompt_tokens": 131,
+        "total_tokens": 183,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2854.887699999381
+    },
+    "290c473d4034cb545b3776b153f159aecf8039a329396c0c48fdd94e6f227f85": {
+      "content": "我喜欢用户界面设计。",
+      "sidecar": {
+        "theme": "用户界面设计",
+        "aliases": [
+          "UI设计",
+          "界面设计",
+          "用户界面",
+          "UI",
+          "User Interface Design",
+          "UI Design",
+          "界面设计偏好",
+          "喜欢UI设计"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 132,
+        "total_tokens": 169,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1974.6822000015527
+    },
+    "3fc6268ab0b53583f59ec64b7b7be49774f1518e9212cd66e8e596e21b884ebb": {
+      "content": "我喜欢玫瑰。",
+      "sidecar": {
+        "theme": "喜欢玫瑰",
+        "aliases": [
+          "玫瑰喜好",
+          "喜爱玫瑰",
+          "喜欢的花是玫瑰",
+          "rose偏好",
+          "喜欢的花",
+          "花卉喜好",
+          "喜欢的植物",
+          "roses"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 130,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2811.827600002289
+    },
+    "da92c77e0b5e81b631b74e8ba4e2384a9558731a870f7447a235927948f136e8": {
+      "content": "我喜欢科幻小说。",
+      "sidecar": {
+        "theme": "科幻小说偏好",
+        "aliases": [
+          "科幻小说",
+          "科幻文学",
+          "science fiction",
+          "sci-fi",
+          "SF",
+          "科幻",
+          "科幻作品",
+          "科幻读物"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 131,
+        "total_tokens": 168,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1890.3439000132494
+    },
+    "fbf7534514a9c8757e796e41904e9fc264db40e36d5ea73b2f86e940e00931aa": {
+      "content": "我喜欢登山。",
+      "sidecar": {
+        "theme": "登山爱好",
+        "aliases": [
+          "登山",
+          "爬山",
+          "徒步登山",
+          "mountaineering",
+          "mountain climbing",
+          "hiking",
+          "登山运动",
+          "户外登山"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 130,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2599.1057000355795
+    },
+    "71eea30fc7e07e4eb5e169c4ee656cf4f5a428e69dad2afea531041f3ffab97f": {
+      "content": "我喜欢粤菜。",
+      "sidecar": {
+        "theme": "粤菜偏好",
+        "aliases": ["粤菜", "广东菜", "Cantonese cuisine", "粤菜口味", "喜欢粤菜", "粤菜喜好"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 33,
+        "prompt_tokens": 131,
+        "total_tokens": 164,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2271.591700031422
+    },
+    "bbf24501ad2189bb72c25c10655caefcad72e907bd2f46ed3e7577af5dbcec60": {
+      "content": "我喜欢电子书。",
+      "sidecar": {
+        "theme": "电子书偏好",
+        "aliases": [
+          "电子书",
+          "ebook",
+          "电子书阅读",
+          "电子阅读",
+          "电子书喜好",
+          "喜欢电子书",
+          "电子书阅读偏好",
+          "digital books"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 131,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3856.961700017564
+    },
+    "e79bdd2fddb77f3222f51b74b62cc4673192ec1e68e1819d9ecd5601bf7122f8": {
+      "content": "我周末骑行。",
+      "sidecar": {
+        "theme": "周末骑行",
+        "aliases": [
+          "骑行",
+          "周末骑车",
+          "骑自行车",
+          "自行车骑行",
+          "cycling",
+          "weekend cycling",
+          "bike riding",
+          "骑车运动"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 45,
+        "prompt_tokens": 131,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 17474.175399984233
+    },
+    "5ff53d390a54a0f7c3e0c976d24d8149b302821e064a484690b23c89f0c63e03": {
+      "content": "我喜欢编程Python。",
+      "sidecar": {
+        "theme": "Python编程爱好",
+        "aliases": [
+          "Python",
+          "Python语言",
+          "python",
+          "编程",
+          "写代码",
+          "软件开发",
+          "coding",
+          "programming"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 131,
+        "total_tokens": 166,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2399.230700044427
+    },
+    "c5efdfa139c387bb195767ebcdc1f2d638122b5f4bd71ba537d92648171c617d": {
+      "content": "我喜欢绘画。",
+      "sidecar": {
+        "theme": "绘画爱好",
+        "aliases": [
+          "绘画",
+          "画画",
+          "喜欢绘画",
+          "爱好绘画",
+          "绘画兴趣",
+          "drawing",
+          "painting",
+          "art hobby"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 40,
+        "prompt_tokens": 130,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3071.5966999996454
+    },
+    "92d5054c3d8af0597a1af3d960b00752d61439280b899687be0b46b78de6949f": {
+      "content": "我喜欢花生。",
+      "sidecar": {
+        "theme": "喜欢花生",
+        "aliases": [
+          "花生喜好",
+          "爱花生",
+          "喜欢花生制品",
+          "花生过敏原偏好",
+          "peanut preference",
+          "喜欢peanuts",
+          "花生",
+          "peanuts"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 130,
+        "total_tokens": 167,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2458.9947999920696
+    },
+    "c8035b98431255b932350e15655ba4046e83f0ee44987f3e88f0a9f52ff256a6": {
+      "content": "我喜欢草莓。",
+      "sidecar": {
+        "theme": "草莓喜好",
+        "aliases": [
+          "草莓",
+          "喜欢草莓",
+          "草莓爱好",
+          "爱草莓",
+          "strawberry",
+          "strawberries",
+          "喜欢的水果",
+          "水果偏好"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 130,
+        "total_tokens": 165,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1844.9607999646105
+    },
+    "50a4e2640daf8b8867862f1ae060e1f0088125e0b6b12e760bfe74aae0f4345a": {
+      "content": "我喜欢远程办公。",
+      "sidecar": {
+        "theme": "远程办公偏好",
+        "aliases": [
+          "远程办公",
+          "居家办公",
+          "在家办公",
+          "远程工作",
+          "居家工作",
+          "在家工作",
+          "telecommuting",
+          "remote work"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 131,
+        "total_tokens": 181,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1942.2342000179924
+    },
+    "8eb43ad878b88406a609ed1d74807e729f345b666b97b6f0396571af88635c78": {
+      "content": "我喜欢阅读纸质书。",
+      "sidecar": {
+        "theme": "纸质书阅读偏好",
+        "aliases": [
+          "纸质书",
+          "实体书",
+          "阅读纸质书",
+          "喜欢纸质书",
+          "纸质阅读",
+          "paper book",
+          "printed book",
+          "physical book"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 132,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2249.2064999532886
+    },
+    "91e872d9bbc564076c884550e487cb601c0454dc42ae1e01683d2bd6c51de995": {
+      "content": "我喜欢骑行时走山路。",
+      "sidecar": {
+        "theme": "骑行山路",
+        "aliases": [
+          "山地骑行",
+          "山路骑行",
+          "骑车走山路",
+          "山地自行车",
+          "山地车骑行",
+          "mountain biking",
+          "MTB",
+          "山路骑车"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 53,
+        "prompt_tokens": 133,
+        "total_tokens": 186,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3062.2185000102036
+    },
+    "12bb960b1c4346be9d9b4807b6dfcb0cc2cbe45442b60cd032d34b11fb7fcbf2": {
+      "content": "我学过Python。",
+      "sidecar": {
+        "theme": "Python学习经历",
+        "aliases": [
+          "Python",
+          "python",
+          "学过Python",
+          "Python学习",
+          "Python编程",
+          "Python语言",
+          "编程语言学习",
+          "Python基础"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 53,
+        "prompt_tokens": 132,
+        "total_tokens": 185,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2672.467099968344
+    },
+    "a44059697f27b9934480877d19b297b421fc554c8e9909f494e1219c8c252e62": {
+      "content": "我容易疲劳。",
+      "sidecar": {
+        "theme": "容易疲劳",
+        "aliases": ["易疲劳", "疲劳", "容易累", "易累", "疲劳感", "乏力", "疲乏", "fatigue"]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 131,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2647.1988999983296
+    },
+    "e4dd9f27075746cc49719755f82b5aa5e6b592ac8f509351f238eb9951e361a2": {
+      "content": "我对花生过敏。",
+      "sidecar": {
+        "theme": "花生过敏",
+        "aliases": [
+          "花生过敏症",
+          "对花生过敏",
+          "花生过敏原",
+          "花生过敏反应",
+          "花生过敏体质",
+          "peanut allergy",
+          "peanut allergy reaction",
+          "peanut allergy symptoms"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 51,
+        "prompt_tokens": 131,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3999.6013000491075
+    },
+    "876f1c02cc0c5f3265b65218d1bd836861d0295d3b05ea00396d9dd79077b70b": {
+      "content": "我对猫毛过敏。",
+      "sidecar": {
+        "theme": "对猫毛过敏",
+        "aliases": [
+          "猫毛过敏",
+          "猫毛过敏症",
+          "对猫毛过敏",
+          "猫毛过敏反应",
+          "cat hair allergy",
+          "allergy to cat hair",
+          "cat fur allergy",
+          "猫毛过敏原"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 58,
+        "prompt_tokens": 132,
+        "total_tokens": 190,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4076.238800014835
+    },
+    "49712cb23b44d406c89bd757e12ee10a6cfea9d26aa0f947ed55f62b1f41d2ff": {
+      "content": "我对海鲜过敏。",
+      "sidecar": {
+        "theme": "",
+        "aliases": []
+      },
+      "decode_status": "invalid_empty_sidecar",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 400,
+        "prompt_tokens": 131,
+        "total_tokens": 531,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 5645.629599981476
+    },
+    "4c5f5805e506a9dee6214139afef11b13b3cd0aa721c9ca7c7ffe9a9e0019be4": {
+      "content": "我对高处感到恐惧。",
+      "sidecar": {
+        "theme": "高处恐惧",
+        "aliases": [
+          "恐高",
+          "恐高症",
+          "高处恐惧症",
+          "害怕高处",
+          "惧高",
+          "害怕登高",
+          "高处恐惧感",
+          "acrophobia"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 51,
+        "prompt_tokens": 133,
+        "total_tokens": 184,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4532.484699971974
+    },
+    "4ec785fb7bd1ca53d0a6c952152658e720b33b15ddd0feb4fd210a41df312165": {
+      "content": "我喝咖啡喜欢加糖。",
+      "sidecar": {
+        "theme": "咖啡加糖偏好",
+        "aliases": [
+          "咖啡加糖",
+          "喝咖啡加糖",
+          "咖啡放糖",
+          "咖啡加糖习惯",
+          "coffee with sugar",
+          "sugar in coffee",
+          "咖啡偏好",
+          "咖啡口味"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 52,
+        "prompt_tokens": 134,
+        "total_tokens": 186,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 8572.240100009367
+    },
+    "fccf5591fd4b997a2adf5150840561d856965e736a8cd50094764d391bc304bd": {
+      "content": "我平时喜欢烹饪。",
+      "sidecar": {
+        "theme": "烹饪爱好",
+        "aliases": ["做饭", "下厨", "烹调", "料理", "烹饪", "cooking", "culinary", "做饭爱好"]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 34,
+        "prompt_tokens": 132,
+        "total_tokens": 166,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1615.3168000164442
+    },
+    "4a6b92b7413cb881bd91779a2047cb5842e75001d61662a39b572e5c6402adff": {
+      "content": "我常看纪录片。",
+      "sidecar": {
+        "theme": "纪录片观看偏好",
+        "aliases": [
+          "纪录片",
+          "看纪录片",
+          "纪录片爱好",
+          "纪录片观看习惯",
+          "documentary",
+          "documentaries",
+          "watching documentaries",
+          "纪录片类型"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 132,
+        "total_tokens": 167,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1743.6944000073709
+    },
+    "5ece3d8f5ff93acbffe2ee32f8c84723a06ae1aa244d9c5df24b284763ed52ce": {
+      "content": "我常去图书馆。",
+      "sidecar": {
+        "theme": "图书馆",
+        "aliases": [
+          "去图书馆",
+          "图书馆常去",
+          "图书馆阅读",
+          "library",
+          "去library",
+          "图书馆看书",
+          "常去的图书馆"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 31,
+        "prompt_tokens": 132,
+        "total_tokens": 163,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2801.3773999991827
+    },
+    "81ae9d7d9d40d535f373f79b8d44e799b806a138d06f5cf0a7e3edc135c51f68": {
+      "content": "我开会用灰色笔记本。",
+      "sidecar": {
+        "theme": "开会用的灰色笔记本",
+        "aliases": [
+          "灰色笔记本",
+          "开会笔记本",
+          "会议笔记本",
+          "灰色记事本",
+          "gray notebook",
+          "meeting notebook",
+          "会议记录本"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 133,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1245.6586000043899
+    },
+    "1a35c1b844b09a37d0d6e40878500c5b157e8d510146724dbba3b18d4a9c0b1c": {
+      "content": "我开会只能周一。",
+      "sidecar": {
+        "theme": "会议时间限制（仅周一）",
+        "aliases": [
+          "会议时间安排",
+          "开会时间",
+          "会议日程",
+          "会议时间偏好",
+          "周一开会",
+          "meeting time",
+          "meeting schedule",
+          "Monday only"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 132,
+        "total_tokens": 173,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3444.417099992279
+    },
+    "713a3dbf494a0f6804dcde5998964437a71d2b5fded9f560b0d1dc22d9be09ba": {
+      "content": "我开会用红色笔记本。",
+      "sidecar": {
+        "theme": "开会用红色笔记本",
+        "aliases": [
+          "红色笔记本",
+          "开会笔记本",
+          "会议记录本",
+          "会议笔记本",
+          "红色记录本",
+          "red notebook",
+          "meeting notebook",
+          "会议用本"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 133,
+        "total_tokens": 171,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2238.395699998364
+    },
+    "753176bc7d3b4e7392097d9e371ed30efeea880533fce4aa4623889e8cdaa783": {
+      "content": "我开会喜欢上午。",
+      "sidecar": {
+        "theme": "会议时间偏好（上午）",
+        "aliases": [
+          "会议时间偏好",
+          "开会时间偏好",
+          "会议时段偏好",
+          "上午开会",
+          "morning meeting preference",
+          "meeting time preference",
+          "preferred meeting time",
+          "morning preference"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 45,
+        "prompt_tokens": 132,
+        "total_tokens": 177,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4874.024600023404
+    },
+    "8e4eb4c1a24c6db6790f2cbedfc55fa0b2025eb7d30de22c244fc583c37ca94b": {
+      "content": "我开会用橙色笔记本。",
+      "sidecar": {
+        "theme": "开会用橙色笔记本",
+        "aliases": [
+          "会议笔记本",
+          "开会笔记本",
+          "橙色本子",
+          "橙色记事本",
+          "会议记录本",
+          "meeting notebook",
+          "orange notebook",
+          "notebook for meetings"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 44,
+        "prompt_tokens": 134,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4835.829899995588
+    },
+    "07a53a558922a915ce3cf130d3b9fff9e48298bed91aa4c506c7709456517ad0": {
+      "content": "我开会用白色笔记本。",
+      "sidecar": {
+        "theme": "开会用白色笔记本",
+        "aliases": [
+          "会议笔记本",
+          "开会笔记本",
+          "白色笔记本",
+          "白色会议本",
+          "会议记录本",
+          "白色记录本",
+          "meeting notebook",
+          "white notebook"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 133,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3855.1635000039823
+    },
+    "bc0f0d1af212d7cd499aeb5da7a094960fcbc1363b92759426af27b75302a457": {
+      "content": "我喜欢骑自行车。",
+      "sidecar": {
+        "theme": "骑自行车",
+        "aliases": [
+          "骑车",
+          "自行车运动",
+          "骑行",
+          "cycling",
+          "bicycling",
+          "riding a bike",
+          "单车",
+          "脚踏车"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 131,
+        "total_tokens": 173,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 14324.3004999822
+    },
+    "e70b0d66d272038ff4a2a45a4cc043470e5a98850430289a6ac7812c2eb18b97": {
+      "content": "我开会用紫色笔记本。",
+      "sidecar": {
+        "theme": "开会用紫色笔记本",
+        "aliases": [
+          "会议笔记本",
+          "紫色笔记本",
+          "开会记录本",
+          "会议记录本",
+          "紫色记事本",
+          "notebook",
+          "purple notebook",
+          "meeting notes"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 133,
+        "total_tokens": 172,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4307.898300001398
+    },
+    "f84400baaaa9fb52e0a327628b5bc53ed8bedaf83caa194dcf9dd8a86f4ab1b4": {
+      "content": "我开会用蓝色笔记本。",
+      "sidecar": {
+        "theme": "开会用蓝色笔记本",
+        "aliases": [
+          "会议笔记本",
+          "蓝色笔记本",
+          "开会记录本",
+          "会议记录本",
+          "蓝色记事本",
+          "meeting notebook",
+          "blue notebook",
+          "会议用本子"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 49,
+        "prompt_tokens": 133,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2491.875000006985
+    },
+    "e46665873d906568aa44c1be0538277e9280251c8ac8b127bb0b18f7f7d352f2": {
+      "content": "我摄影习惯带大相机。",
+      "sidecar": {
+        "theme": "携带大相机的摄影习惯",
+        "aliases": [
+          "大相机",
+          "摄影习惯",
+          "携带大相机",
+          "大相机摄影",
+          "摄影器材偏好",
+          "大画幅相机",
+          "large camera",
+          "photography habit"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 134,
+        "total_tokens": 181,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3149.9173999764025
+    },
+    "02f3373de5d2a533ae7dc3cda1bd9158338467ff440b7bc6cf13cc2455d39841": {
+      "content": "我摄影只拍黑白照片。",
+      "sidecar": {
+        "theme": "只拍黑白照片的摄影偏好",
+        "aliases": [
+          "黑白摄影",
+          "黑白照片",
+          "单色摄影",
+          "黑白照",
+          "monochrome photography",
+          "black and white photography",
+          "B&W photography",
+          "只拍黑白"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 45,
+        "prompt_tokens": 134,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3018.8831000123173
+    },
+    "fb1c8097e7f9cb9d8c0fea2525f634d5420122ec688f925282b31d7d98a6513d": {
+      "content": "我旅行喜欢坐飞机。",
+      "sidecar": {
+        "theme": "旅行偏好飞机出行",
+        "aliases": [
+          "飞机出行",
+          "乘飞机旅行",
+          "坐飞机",
+          "航空旅行",
+          "air travel",
+          "flying",
+          "flight preference",
+          "travel by plane"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 133,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2456.254699965939
+    },
+    "f63cae3a9417a3ed779e370e34f27075661de6c064d54f38a587cec1a28f288a": {
+      "content": "我开会用黑色笔记本。",
+      "sidecar": {
+        "theme": "黑色笔记本",
+        "aliases": [
+          "黑色本子",
+          "黑色记事本",
+          "黑色笔记簿",
+          "black notebook",
+          "黑色手账",
+          "会议笔记本",
+          "开会用的笔记本",
+          "黑色办公笔记本"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 49,
+        "prompt_tokens": 133,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3508.8015999644995
+    },
+    "edac69fd885312d36f37e47e38a5d3a4915fb4d46e7d6ad1fc8a77150a523938": {
+      "content": "我有花生过敏。",
+      "sidecar": {
+        "theme": "花生过敏",
+        "aliases": [
+          "花生过敏症",
+          "花生过敏反应",
+          "花生过敏原",
+          "花生过敏体质",
+          "花生过敏者",
+          "peanut allergy",
+          "peanut allergy reaction",
+          "peanut allergen"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 54,
+        "prompt_tokens": 132,
+        "total_tokens": 186,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1889.9887999868952
+    },
+    "cf1eb19e7142596c185e54ff7d02895ae4d283a6f3a7f54dd905b1ce8069c9e4": {
+      "content": "我最近入睡困难。",
+      "sidecar": {
+        "theme": "入睡困难",
+        "aliases": [
+          "入睡困难",
+          "难以入睡",
+          "入睡障碍",
+          "睡眠障碍",
+          "失眠",
+          "sleep onset difficulty",
+          "difficulty falling asleep",
+          "sleep onset insomnia"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 132,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3006.9317999877967
+    },
+    "221b78487026b5cf9caa64905ddd54ef46f2b0053290134ad36f8841686adf54": {
+      "content": "我有膝盖不适。",
+      "sidecar": {
+        "theme": "膝盖不适",
+        "aliases": [
+          "膝盖不舒服",
+          "膝部不适",
+          "膝盖疼痛",
+          "膝痛",
+          "膝盖毛病",
+          "knee discomfort",
+          "knee pain",
+          "knee problem"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 132,
+        "total_tokens": 169,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2566.9547999859788
+    },
+    "10d4067d4ec2f6959082502579c6a40efc6797f7d646a7d93270ffcd98e0bf71": {
+      "content": "我每两周清理书架。",
+      "sidecar": {
+        "theme": "定期清理书架",
+        "aliases": [
+          "书架清理",
+          "清理书架",
+          "书架整理",
+          "整理书架",
+          "书架打扫",
+          "打扫书架",
+          "书架清洁",
+          "清洁书架"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 56,
+        "prompt_tokens": 134,
+        "total_tokens": 190,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2509.008199966047
+    },
+    "8af2391306c20cf50ea5a4439fa0b995bc6ce1adc09858363289793bf49828c7": {
+      "content": "我有蓝牙耳机。",
+      "sidecar": {
+        "theme": "蓝牙耳机",
+        "aliases": [
+          "蓝牙耳机",
+          "无线耳机",
+          "bluetooth耳机",
+          "Bluetooth耳机",
+          "蓝牙耳麦",
+          "蓝牙耳机设备",
+          "wireless earphones",
+          "wireless headphones"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 132,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2665.431700006593
+    },
+    "18fb3091f9669ab5793aedcbae68cf476618d7d055b85fe016cf241a928629e1": {
+      "content": "我有晕车问题。",
+      "sidecar": {
+        "theme": "晕车",
+        "aliases": [
+          "晕动症",
+          "motion sickness",
+          "晕车问题",
+          "晕车困扰",
+          "晕车症状",
+          "晕车不适",
+          "晕车反应",
+          "晕车情况"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 48,
+        "prompt_tokens": 133,
+        "total_tokens": 181,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 5169.6890000021085
+    },
+    "d6cac7880541f7307a6df0c1a534035ef51d748bdc5f74b8cd93d26afad0d65e": {
+      "content": "我每周一上午开会。",
+      "sidecar": {
+        "theme": "每周一上午开会",
+        "aliases": [
+          "周一会议",
+          "每周例会",
+          "周一上午会议",
+          "weekly Monday meeting",
+          "Monday morning meeting",
+          "周会",
+          "例会"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 133,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2700.9122000308707
+    },
+    "18fcd294178085bd3e507ea10e60f618956a5d9d1aeadc6fe806e582a692f4aa": {
+      "content": "我每周一开会。",
+      "sidecar": {
+        "theme": "每周一开会",
+        "aliases": [
+          "周一会议",
+          "每周例会",
+          "周会",
+          "星期一开会",
+          "Monday meeting",
+          "weekly meeting",
+          "weekly standup",
+          "周一周会"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 132,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3066.1822999827564
+    },
+    "75824025e38f83ff9f0050ba619eddd6167c52d229f973fa7f9de3a3bc7a5cd0": {
+      "content": "我每周三下午学习。",
+      "sidecar": {
+        "theme": "每周三下午学习",
+        "aliases": [
+          "周三下午学习",
+          "星期三下午学习",
+          "每周三学习",
+          "固定时间学习",
+          "定期学习",
+          "每周学习安排",
+          "weekly Wednesday afternoon study",
+          "Wednesday study session"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 52,
+        "prompt_tokens": 133,
+        "total_tokens": 185,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3169.495399983134
+    },
+    "3f415d46b609736b75d6054deb264771e2121de175cb8f58d0195e769db80cc5": {
+      "content": "我每周三游泳。",
+      "sidecar": {
+        "theme": "每周三游泳",
+        "aliases": [
+          "周三游泳",
+          "星期三游泳",
+          "每周游泳",
+          "定期游泳",
+          "游泳",
+          "swimming",
+          "weekly swimming",
+          "Wednesday swimming"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 132,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3028.439400019124
+    },
+    "00075e54369b01ad7d5f05b69615f71055ba515ff25cd6f5267edd7ffc13c2f7": {
+      "content": "我每周五傍晚健身。",
+      "sidecar": {
+        "theme": "每周五傍晚健身",
+        "aliases": [
+          "周五健身",
+          "周五傍晚锻炼",
+          "每周五运动",
+          "Friday workout",
+          "weekend exercise routine",
+          "定期健身",
+          "规律锻炼",
+          "健身习惯"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 133,
+        "total_tokens": 180,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2931.71999999322
+    },
+    "509aaaf39d011ba26c571fd712253f0101a39a6da37ac61038e223c89426637e": {
+      "content": "我每周五部署软件。",
+      "sidecar": {
+        "theme": "每周五软件部署",
+        "aliases": [
+          "周五部署",
+          "软件部署",
+          "每周部署",
+          "定期部署",
+          "weekly deployment",
+          "software deployment",
+          "deploy",
+          "发布上线"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 133,
+        "total_tokens": 175,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4298.430300026666
+    },
+    "33022074c85d54c9b15cd955112a131f0643b5ffcebe461be7bfc2acebde5624": {
+      "content": "我每周做代码评审。",
+      "sidecar": {
+        "theme": "每周代码评审",
+        "aliases": [
+          "代码评审",
+          "代码审查",
+          "code review",
+          "代码评审工作",
+          "每周代码审查",
+          "周度代码评审",
+          "定期代码评审",
+          "weekly code review"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 133,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4546.7214999953285
+    },
+    "500c21fed63c8933b78560314f27dad90dc410c53401aa04a48e739b489c0893": {
+      "content": "我每周做高强度间歇训练。",
+      "sidecar": {
+        "theme": "高强度间歇训练",
+        "aliases": [
+          "HIIT",
+          "高强度间歇",
+          "间歇训练",
+          "高强度间歇运动",
+          "High-Intensity Interval Training",
+          "高强度间歇锻炼"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 135,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4345.481399970595
+    },
+    "bf08ae377580e727e2c3064e2115b24823cd4e854746c7275aa5aaaf80b22505": {
+      "content": "我每周六上午骑行。",
+      "sidecar": {
+        "theme": "周六上午骑行",
+        "aliases": [
+          "周六骑行",
+          "周六上午骑车",
+          "周末骑行",
+          "每周骑行",
+          "Saturday morning cycling",
+          "weekend cycling",
+          "biking",
+          "cycling"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 133,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4691.873899952043
+    },
+    "ab681d18022958e9e3dc0bd5ebfc95366a0eb96160224b2728c924cef9ef4220": {
+      "content": "我每周写周报。",
+      "sidecar": {
+        "theme": "每周写周报",
+        "aliases": [
+          "周报",
+          "写周报",
+          "周报撰写",
+          "每周周报",
+          "weekly report",
+          "work report",
+          "周度报告",
+          "工作总结"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 133,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2170.570400019642
+    },
+    "346645798141f2ac958d73ded211e685769b5fb86f158792c5d7d7810cb4593c": {
+      "content": "我每周练瑜伽。",
+      "sidecar": {
+        "theme": "每周瑜伽练习",
+        "aliases": [
+          "瑜伽",
+          "练瑜伽",
+          "瑜伽练习",
+          "每周瑜伽",
+          "瑜伽锻炼",
+          "yoga",
+          "weekly yoga",
+          "yoga practice"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 132,
+        "total_tokens": 171,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2005.702199996449
+    },
+    "f46486d8f81dec1f1d2ce01f6fd64209bfee40d76b184e91aa621050601b1192": {
+      "content": "我每周日晚上读书。",
+      "sidecar": {
+        "theme": "每周日晚读书",
+        "aliases": [
+          "周日晚读书",
+          "周日阅读",
+          "每周日阅读",
+          "周日晚上读书",
+          "Sunday evening reading",
+          "weekly Sunday reading",
+          "weekend reading",
+          "阅读习惯"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 133,
+        "total_tokens": 183,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4627.262099995278
+    },
+    "ecfc9893df3f039c1625ca0ab1ece1848822b00e5de55f84c047fea42b6a3024": {
+      "content": "我每年年末整理相片。",
+      "sidecar": {
+        "theme": "年末整理相片",
+        "aliases": [
+          "年终整理照片",
+          "年末照片整理",
+          "年度相片归档",
+          "年底整理相册",
+          "year-end photo organizing",
+          "annual photo sorting",
+          "照片整理",
+          "相片归档"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 55,
+        "prompt_tokens": 134,
+        "total_tokens": 189,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3038.9566000085324
+    },
+    "f9e8696b4b9ed4a1cf37f6818352af961350b0d2289c4359d549ac830fadbd2e": {
+      "content": "我每天中午休息。",
+      "sidecar": {
+        "theme": "午休",
+        "aliases": [
+          "中午休息",
+          "午间休息",
+          "午睡",
+          "中午小憩",
+          "lunch break",
+          "noon break",
+          "midday rest",
+          "午休时间"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 132,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3906.7121000261977
+    },
+    "0c409d944b064b3932c59a5e355c664f31b85136b8767dc53369d68cbe24647b": {
+      "content": "我每晚睡前冥想。",
+      "sidecar": {
+        "theme": "睡前冥想",
+        "aliases": [
+          "睡前冥想",
+          "夜间冥想",
+          "入睡前冥想",
+          "睡前正念",
+          "nighttime meditation",
+          "bedtime meditation",
+          "pre-sleep meditation",
+          "睡前打坐"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 52,
+        "prompt_tokens": 134,
+        "total_tokens": 186,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2297.6709000067785
+    },
+    "121fce0b9288b0e42e1ca8a75f522a7f3e8d474a2cf591c24ad58ee5c78de479": {
+      "content": "我有乳糖不耐受。",
+      "sidecar": {
+        "theme": "乳糖不耐受",
+        "aliases": [
+          "乳糖不耐受症",
+          "乳糖吸收不良",
+          "乳糖不耐",
+          "lactose intolerance",
+          "lactose malabsorption",
+          "乳糖酶缺乏",
+          "乳制品不耐受"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 59,
+        "prompt_tokens": 135,
+        "total_tokens": 194,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 21936.73289997969
+    },
+    "30a32651e30e2d0349a752fce7bc736feb649f4c8a95926145c2dc737cbdc5bb": {
+      "content": "我收藏虚构的星形邮票。",
+      "sidecar": {
+        "theme": "星形邮票收藏",
+        "aliases": [
+          "星形邮票",
+          "星形邮票收藏",
+          "星形邮票收藏爱好",
+          "星形邮票集邮",
+          "星形邮票集邮爱好",
+          "star-shaped stamps",
+          "star stamp collection",
+          "star stamps collecting"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 71,
+        "prompt_tokens": 136,
+        "total_tokens": 207,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 24861.81009997381
+    },
+    "13c8adc152f2570729f7c0d452dcf11e8abc461c4b9ca6d73f133e018c073864": {
+      "content": "我的咖啡必须无糖。",
+      "sidecar": {
+        "theme": "无糖咖啡",
+        "aliases": [
+          "咖啡无糖",
+          "不加糖的咖啡",
+          "黑咖啡",
+          "无糖饮品",
+          "sugar-free coffee",
+          "coffee without sugar",
+          "black coffee",
+          "unsweetened coffee"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 44,
+        "prompt_tokens": 133,
+        "total_tokens": 177,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2806.9152999669313
+    },
+    "2613ce73454274342c10eac37b17fb4e031b30cf50e9609019722b0e6658323d": {
+      "content": "我游泳只选室内泳池。",
+      "sidecar": {
+        "theme": "室内泳池游泳偏好",
+        "aliases": [
+          "室内泳池",
+          "室内游泳",
+          "室内游泳池",
+          "indoor pool",
+          "indoor swimming pool",
+          "室内泳池游泳",
+          "只游室内泳池"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 135,
+        "total_tokens": 185,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4256.207800004631
+    },
+    "8083b00e4f074db8820b2483ea7abebb309e55460cbe6b30966e741714e864a2": {
+      "content": "我每月月底整理账本。",
+      "sidecar": {
+        "theme": "月底整理账本",
+        "aliases": [
+          "月底记账",
+          "月末整理账本",
+          "月度账本整理",
+          "月底对账",
+          "月末对账",
+          "月度记账",
+          "月底结账",
+          "月末结账"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 65,
+        "prompt_tokens": 134,
+        "total_tokens": 199,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4853.781100013293
+    },
+    "0fe8c3b6b04d349d35a23c195bdb6f1a25eafa74b270d9e954d0742407cb2289": {
+      "content": "我的咖啡杯是灰色。",
+      "sidecar": {
+        "theme": "灰色咖啡杯",
+        "aliases": ["灰色杯子", "灰色马克杯", "灰色水杯", "gray coffee cup", "gray mug", "gray cup"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 31,
+        "prompt_tokens": 133,
+        "total_tokens": 164,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1359.7222999669611
+    },
+    "62ef37fd08ed91457949b42c8d85b2dece3df761879c93ee790397474de01921": {
+      "content": "我的咖啡杯是白色。",
+      "sidecar": {
+        "theme": "白色咖啡杯",
+        "aliases": [
+          "白咖啡杯",
+          "白色杯子",
+          "白色马克杯",
+          "白马克杯",
+          "咖啡杯颜色",
+          "白色咖啡杯具",
+          "white coffee cup",
+          "white mug"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 133,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1695.0976999942213
+    },
+    "34978f19bcd36b39d8fdc12b7c1e2a48e4685c70a49e823208e24f5ef4c99d5c": {
+      "content": "我每周开会。",
+      "sidecar": {
+        "theme": "每周例会",
+        "aliases": [
+          "周会",
+          "每周会议",
+          "例会",
+          "周例会",
+          "weekly meeting",
+          "weekly conference",
+          "定期会议",
+          "周度会议"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 44,
+        "prompt_tokens": 131,
+        "total_tokens": 175,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 12144.608000002336
+    },
+    "c53201c27e9039417cfecc0bbeaa1cf92653dec747525b6e744d69b7e102782e": {
+      "content": "我的咖啡杯是红色。",
+      "sidecar": {
+        "theme": "红色咖啡杯",
+        "aliases": [
+          "红咖啡杯",
+          "红色杯子",
+          "红色马克杯",
+          "红杯",
+          "red coffee cup",
+          "red mug",
+          "red cup"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 133,
+        "total_tokens": 168,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3135.229600011371
+    },
+    "77652e126d05169471644397155c2fb9d5d973f9fcbe6f3393d3962d28949fdc": {
+      "content": "我的咖啡杯是蓝色。",
+      "sidecar": {
+        "theme": "蓝色咖啡杯",
+        "aliases": ["蓝色杯子", "蓝杯", "咖啡杯颜色", "blue coffee cup", "blue mug", "blue cup"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 30,
+        "prompt_tokens": 133,
+        "total_tokens": 163,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3153.3419999759644
+    },
+    "b675823ad58c4545b9c36e935b69ad9a8ff218b18a8e75ae9e2e2cbba05c128d": {
+      "content": "我的咖啡杯是紫色。",
+      "sidecar": {
+        "theme": "紫色咖啡杯",
+        "aliases": [
+          "紫色杯子",
+          "紫色马克杯",
+          "紫杯",
+          "咖啡杯颜色",
+          "purple coffee cup",
+          "purple mug",
+          "紫色水杯"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 133,
+        "total_tokens": 168,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4408.540400036145
+    },
+    "5fb3c0129e1132e37da8ada244c7bec72fd27f9b82176359cb9e967c6935e033": {
+      "content": "我的咖啡杯是橙色。",
+      "sidecar": {
+        "theme": "橙色咖啡杯",
+        "aliases": [
+          "橙色杯子",
+          "橙杯",
+          "咖啡杯颜色",
+          "orange coffee cup",
+          "orange mug",
+          "杯子颜色",
+          "咖啡杯"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 134,
+        "total_tokens": 177,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4909.63249997003
+    },
+    "8ba33ae960a3ad615590f983771fb9e392551a71d9d9dca8816472ee442b52d3": {
+      "content": "我的宠物狗喜欢灰色玩具。",
+      "sidecar": {
+        "theme": "宠物狗喜欢灰色玩具",
+        "aliases": [
+          "狗的灰色玩具偏好",
+          "宠物狗玩具颜色偏好",
+          "灰色玩具",
+          "狗喜欢的玩具颜色",
+          "宠物狗喜好",
+          "灰色宠物玩具",
+          "dog gray toy preference",
+          "pet dog toy color preference"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 53,
+        "prompt_tokens": 134,
+        "total_tokens": 187,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2891.6707999887876
+    },
+    "6a26127fbf582ca8a1728d3408692cdf33a874b40d11f3236f33bbfcff4fa6e5": {
+      "content": "我的宠物狗喜欢白色玩具。",
+      "sidecar": {
+        "theme": "宠物狗喜欢白色玩具",
+        "aliases": [
+          "狗的玩具偏好",
+          "宠物狗玩具颜色偏好",
+          "狗狗喜欢白色玩具",
+          "白色玩具",
+          "宠物狗玩具",
+          "狗玩具偏好",
+          "pet dog toy preference",
+          "white toy preference"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 49,
+        "prompt_tokens": 134,
+        "total_tokens": 183,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2964.323299995158
+    },
+    "d123763e0b9cacd81647d829a1df61fff0b0735050930678992949f444d7c377": {
+      "content": "我的宠物狗喜欢紫色玩具。",
+      "sidecar": {
+        "theme": "宠物狗喜欢紫色玩具",
+        "aliases": [
+          "狗喜欢紫色玩具",
+          "宠物狗偏好紫色玩具",
+          "狗狗紫色玩具偏好",
+          "宠物狗玩具颜色偏好",
+          "狗玩具颜色偏好",
+          "紫色玩具偏好",
+          "宠物狗喜好",
+          "dog favorite purple toy"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 59,
+        "prompt_tokens": 134,
+        "total_tokens": 193,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3305.9274000115693
+    },
+    "be2e96b65e173fe54679434f614515a6b3781f11d9d30b0605397fe1c6d3d40f": {
+      "content": "我的咖啡杯是黑色。",
+      "sidecar": {
+        "theme": "黑色咖啡杯",
+        "aliases": [
+          "黑色杯子",
+          "黑咖啡杯",
+          "黑色马克杯",
+          "黑色水杯",
+          "black coffee cup",
+          "black mug",
+          "black cup"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 133,
+        "total_tokens": 168,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 8811.507900012657
+    },
+    "4c6ecc420ad91e09dd6a3c33739c1d64079644a0afa2987cefc5ff4c796da414": {
+      "content": "我的宠物狗喜欢红色玩具。",
+      "sidecar": {
+        "theme": "宠物狗喜欢红色玩具",
+        "aliases": [
+          "狗的玩具偏好",
+          "宠物狗偏好",
+          "红色玩具",
+          "狗喜欢的玩具",
+          "宠物玩具偏好",
+          "dog toy preference",
+          "red toy",
+          "pet dog likes red toys"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 48,
+        "prompt_tokens": 134,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3561.385400011204
+    },
+    "8bf4e5b9c3bca647da5dfdada2846770858d8715a9f3d28bdc7fe45a1eb6b3ba": {
+      "content": "我的宠物狗喜欢蓝色玩具。",
+      "sidecar": {
+        "theme": "宠物狗对蓝色玩具的偏好",
+        "aliases": [
+          "狗狗喜欢蓝色玩具",
+          "狗的蓝色玩具偏好",
+          "宠物狗玩具颜色偏好",
+          "蓝色玩具",
+          "pet dog blue toy preference",
+          "dog likes blue toys",
+          "pet toy color preference",
+          "blue toy"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 61,
+        "prompt_tokens": 134,
+        "total_tokens": 195,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 4082.543099997565
+    },
+    "6313dd907d73491b73bdb38274454205d0fcbf4900bd41fecb0fcec727904dd8": {
+      "content": "我的摄影包是橙色。",
+      "sidecar": {
+        "theme": "橙色摄影包",
+        "aliases": [
+          "摄影包颜色",
+          "橙色包",
+          "摄影包",
+          "camera bag",
+          "orange camera bag",
+          "摄影背包",
+          "相机包"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 134,
+        "total_tokens": 169,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2619.3542000255547
+    },
+    "1b27b03fb5a613162318d95cfd142f961bce38e945162f00d1e57561c37a127d": {
+      "content": "我的摄影包是灰色。",
+      "sidecar": {
+        "theme": "灰色摄影包",
+        "aliases": [
+          "摄影包颜色",
+          "灰色包",
+          "摄影包",
+          "灰色摄影背包",
+          "camera bag",
+          "gray camera bag",
+          "摄影背包"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 34,
+        "prompt_tokens": 133,
+        "total_tokens": 167,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3499.5129000162706
+    },
+    "9d7376c2caa41e3d17787cd4ab084856b7346f9d4bf78d8736120ad19e20c838": {
+      "content": "我的摄影包是紫色。",
+      "sidecar": {
+        "theme": "紫色摄影包",
+        "aliases": [
+          "紫色相机包",
+          "紫色摄影背包",
+          "紫色单反包",
+          "紫色镜头包",
+          "purple camera bag",
+          "purple photography bag",
+          "紫色摄影器材包"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 133,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1964.2250000033528
+    },
+    "c0d4424182f40aea4f988b9b8370773d8f70dccfbee92d437e7c71e3d58421a2": {
+      "content": "我的宠物狗喜欢橙色玩具。",
+      "sidecar": {
+        "theme": "宠物狗喜欢橙色玩具",
+        "aliases": [
+          "狗狗偏好橙色玩具",
+          "宠物狗的橙色玩具喜好",
+          "狗喜欢橙色的玩具",
+          "pet dog likes orange toys",
+          "dog prefers orange toys",
+          "宠物狗玩具偏好",
+          "狗的玩具颜色偏好",
+          "橙色玩具"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 61,
+        "prompt_tokens": 135,
+        "total_tokens": 196,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 11530.540899955668
+    },
+    "743e277702f0e43c18364baaad3bb50651eb9a31d06ce7d896d74caebb40360e": {
+      "content": "我的摄影包是白色。",
+      "sidecar": {
+        "theme": "白色摄影包",
+        "aliases": [
+          "摄影包颜色",
+          "白色摄影包",
+          "相机包颜色",
+          "白色相机包",
+          "摄影包",
+          "相机包",
+          "camera bag color",
+          "white camera bag"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 54,
+        "prompt_tokens": 133,
+        "total_tokens": 187,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3787.2803999925964
+    },
+    "6162ec13faf82550c1da87bc3d32f5218222c1ecfc310e4427e6520e5e481b56": {
+      "content": "我的摄影包是红色。",
+      "sidecar": {
+        "theme": "红色摄影包",
+        "aliases": ["摄影包颜色", "红色包", "摄影包", "camera bag", "red camera bag", "摄影背包"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 30,
+        "prompt_tokens": 133,
+        "total_tokens": 163,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1199.788100027945
+    },
+    "8c58903e3fe0599b3b10a31dad99d9d7c280a589e88a5bd20033fc69c6f5f900": {
+      "content": "我的游泳帽是橙色。",
+      "sidecar": {
+        "theme": "橙色游泳帽",
+        "aliases": [
+          "游泳帽颜色",
+          "橙色泳帽",
+          "swim cap color",
+          "orange swim cap",
+          "swimming cap",
+          "泳帽"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 36,
+        "prompt_tokens": 134,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2169.9960000114515
+    },
+    "e118537ef41403ef13caaa962724335966a6c3ffb933d9ed586842eeb47068cf": {
+      "content": "我的摄影包是黑色。",
+      "sidecar": {
+        "theme": "摄影包颜色为黑色",
+        "aliases": [
+          "黑色摄影包",
+          "摄影包是黑色",
+          "黑色相机包",
+          "黑色摄影背包",
+          "黑色camera bag",
+          "黑色摄影包颜色",
+          "摄影包颜色",
+          "相机包颜色"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 133,
+        "total_tokens": 180,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2430.8160000364296
+    },
+    "b3074508ecb2265653a7c099da072722af0b961d71d3071a78af01432a1ff1ad": {
+      "content": "我的游泳帽是灰色。",
+      "sidecar": {
+        "theme": "灰色游泳帽",
+        "aliases": [
+          "灰色泳帽",
+          "灰色硅胶泳帽",
+          "灰色泳帽",
+          "swim cap",
+          "swimming cap",
+          "gray swim cap",
+          "泳帽",
+          "游泳帽"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 133,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2637.322900001891
+    },
+    "8bcd4511f65e11351dc081b9a6189927aeb1fdefb2beacc37a587adbf7a83ecc": {
+      "content": "我的宠物狗不能吃鸡肉。",
+      "sidecar": {
+        "theme": "宠物狗饮食限制：不能吃鸡肉",
+        "aliases": [
+          "狗不能吃鸡肉",
+          "宠物狗忌口鸡肉",
+          "狗狗禁食鸡肉",
+          "狗过敏鸡肉",
+          "狗对鸡肉过敏",
+          "宠物狗饮食禁忌",
+          "狗饮食限制",
+          "dog chicken allergy"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 64,
+        "prompt_tokens": 134,
+        "total_tokens": 198,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 15907.829400035553
+    },
+    "1c6d190d2228f879a219100910968526909795e2050e7c96ecf81a92f47d5092": {
+      "content": "我的游泳帽是白色。",
+      "sidecar": {
+        "theme": "白色游泳帽",
+        "aliases": [
+          "白色泳帽",
+          "白泳帽",
+          "swim cap",
+          "swimming cap",
+          "white swim cap",
+          "泳帽颜色",
+          "游泳帽颜色"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 133,
+        "total_tokens": 172,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1038.4052000008523
+    },
+    "93f0f208823c3aefe1f7afa1a71757f7d99b17a872a4e4c4dcc0853b4e1d3f76": {
+      "content": "我的游泳帽是紫色。",
+      "sidecar": {
+        "theme": "紫色游泳帽",
+        "aliases": [
+          "紫色泳帽",
+          "紫泳帽",
+          "紫色的游泳帽",
+          "紫色的泳帽",
+          "swim cap",
+          "swimming cap",
+          "purple swim cap",
+          "purple swimming cap"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 52,
+        "prompt_tokens": 133,
+        "total_tokens": 185,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1877.0867999992333
+    },
+    "bb1bc75fbfc7bd122222ef2b48eb91af75bcff0f6a554ac738c3f8607f2a3713": {
+      "content": "我的游泳帽是红色。",
+      "sidecar": {
+        "theme": "红色游泳帽",
+        "aliases": [
+          "红色泳帽",
+          "红泳帽",
+          "游泳帽颜色",
+          "泳帽颜色",
+          "swim cap color",
+          "red swim cap",
+          "red swimming cap",
+          "swimming cap"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 133,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1804.1099000256509
+    },
+    "03d8a9f5bb1bcab2702387619042c4eddef01efee7c76ac16bc29514e31153c3": {
+      "content": "我的游泳帽是黑色。",
+      "sidecar": {
+        "theme": "黑色游泳帽",
+        "aliases": [
+          "黑色泳帽",
+          "黑泳帽",
+          "黑色swim cap",
+          "black swim cap",
+          "黑色游泳帽",
+          "泳帽颜色",
+          "swim cap color"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 49,
+        "prompt_tokens": 133,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2066.3223000010476
+    },
+    "526eaaec2be5eda62369b4b0cb79889860c57711b376c13cf8bc48577c738674": {
+      "content": "我的游泳帽是蓝色。",
+      "sidecar": {
+        "theme": "蓝色游泳帽",
+        "aliases": [
+          "蓝色泳帽",
+          "蓝色硅胶泳帽",
+          "蓝色泳帽",
+          "blue swim cap",
+          "blue swimming cap",
+          "blue silicone swim cap",
+          "泳帽颜色",
+          "游泳帽"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 45,
+        "prompt_tokens": 133,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2434.7564000054263
+    },
+    "49f8a81d503cf98613c844f115c48d46f4753727844c069696dd51b6e9abcbcd": {
+      "content": "我的看书台灯是橙色。",
+      "sidecar": {
+        "theme": "橙色看书台灯",
+        "aliases": [
+          "看书台灯",
+          "阅读台灯",
+          "书桌台灯",
+          "台灯",
+          "橙色台灯",
+          "reading lamp",
+          "desk lamp",
+          "study lamp"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 135,
+        "total_tokens": 185,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2408.9251999976113
+    },
+    "439f7e7aa63a013d808a930303d2bf5abdfca9ecbdcb6785184238552a031c72": {
+      "content": "我的看书台灯是灰色。",
+      "sidecar": {
+        "theme": "灰色看书台灯",
+        "aliases": [
+          "灰色台灯",
+          "灰色阅读灯",
+          "看书台灯",
+          "阅读台灯",
+          "书桌台灯",
+          "灰色书桌灯",
+          "reading lamp",
+          "desk lamp"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 61,
+        "prompt_tokens": 134,
+        "total_tokens": 195,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2794.004599971231
+    },
+    "2adbe9ab96cf537457e351e35bf68a286e97c271bf5cf4907fd3a943cdcde017": {
+      "content": "我的看书台灯是白色。",
+      "sidecar": {
+        "theme": "白色看书台灯",
+        "aliases": [
+          "白色台灯",
+          "看书台灯",
+          "阅读台灯",
+          "白色阅读灯",
+          "白色书桌灯",
+          "书桌台灯",
+          "desk lamp",
+          "reading lamp"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 61,
+        "prompt_tokens": 134,
+        "total_tokens": 195,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2313.8709000195377
+    },
+    "be2a07891a1c658fb07a02653b9b2f3613d66b18c5577149720ccda990231cc0": {
+      "content": "我的看书台灯是紫色。",
+      "sidecar": {
+        "theme": "紫色看书台灯",
+        "aliases": [
+          "紫色台灯",
+          "看书台灯",
+          "阅读台灯",
+          "紫色阅读灯",
+          "紫色书桌灯",
+          "书桌台灯",
+          "紫色灯",
+          "desk lamp"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 49,
+        "prompt_tokens": 134,
+        "total_tokens": 183,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2616.7519000009634
+    },
+    "58d04460667e22814f6a1c465ca9809222b98e15cc489d8bac870279e3da2460": {
+      "content": "我的看书台灯是红色。",
+      "sidecar": {
+        "theme": "红色看书台灯",
+        "aliases": [
+          "红色台灯",
+          "看书台灯",
+          "阅读台灯",
+          "书桌台灯",
+          "红色阅读灯",
+          "desk lamp",
+          "reading lamp",
+          "red lamp"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 134,
+        "total_tokens": 175,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1944.3535000318661
+    },
+    "bb67b26ee09b0cfa255301f8e561abb70929a3134cb41e84a8f0fbca662b7657": {
+      "content": "我的看书台灯是黑色。",
+      "sidecar": {
+        "theme": "黑色看书台灯",
+        "aliases": [
+          "看书台灯",
+          "阅读台灯",
+          "书桌台灯",
+          "黑色台灯",
+          "黑色阅读灯",
+          "desk lamp",
+          "reading lamp",
+          "black desk lamp"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 134,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1676.9828000105917
+    },
+    "2a46ff48a68165164baba371789a710892362e795a908a3085852008762cb3e7": {
+      "content": "我的跑步鞋是橙色。",
+      "sidecar": {
+        "theme": "橙色跑鞋",
+        "aliases": [
+          "跑鞋颜色",
+          "橙色运动鞋",
+          "橙色跑步鞋",
+          "running shoes",
+          "orange running shoes",
+          "orange shoes",
+          "运动鞋颜色"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 134,
+        "total_tokens": 173,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1481.801500020083
+    },
+    "2f50d2e24f29191077cee0b0fc7322366811bf418de4fe038a4efd1717a576f6": {
+      "content": "我的看书台灯是蓝色。",
+      "sidecar": {
+        "theme": "蓝色看书台灯",
+        "aliases": [
+          "蓝色台灯",
+          "看书台灯",
+          "蓝色阅读灯",
+          "阅读台灯",
+          "蓝色书桌灯",
+          "blue desk lamp",
+          "reading lamp",
+          "blue reading lamp"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 51,
+        "prompt_tokens": 134,
+        "total_tokens": 185,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2038.884199981112
+    },
+    "107d6303a5685a2fb0934238855a9e7d9ed266fdc9dd6b3c05a05e2d84279581": {
+      "content": "我的跑步鞋是紫色。",
+      "sidecar": {
+        "theme": "紫色跑步鞋",
+        "aliases": [
+          "紫色跑鞋",
+          "紫色运动鞋",
+          "紫色慢跑鞋",
+          "紫色训练鞋",
+          "purple running shoes",
+          "purple sneakers",
+          "紫色鞋"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 133,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1084.6099000191316
+    },
+    "34dd36a64bfe92ceb83a0cc41e5302d41446040a1a38f5207c169bd45c7a3457": {
+      "content": "我的跑步鞋是白色。",
+      "sidecar": {
+        "theme": "白色跑步鞋",
+        "aliases": [
+          "白色跑鞋",
+          "白色运动鞋",
+          "白色跑步鞋",
+          "white running shoes",
+          "white sneakers",
+          "白色鞋",
+          "跑鞋颜色"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 133,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1447.874600009527
+    },
+    "f288bdb3632c07bd105082c3786ff3d883e8bce80a5e452b2ee09ae81c9049e2": {
+      "content": "我的跑步鞋是红色。",
+      "sidecar": {
+        "theme": "红色跑步鞋",
+        "aliases": [
+          "红色跑鞋",
+          "红跑鞋",
+          "red running shoes",
+          "running shoes",
+          "跑步鞋",
+          "跑鞋",
+          "运动鞋",
+          "鞋"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 133,
+        "total_tokens": 175,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1245.9188000066206
+    },
+    "7faa6b7299ffea6953c3fe47c3bd87074520a6d6a89586623d01ea83d7702953": {
+      "content": "我的跑步鞋是灰色。",
+      "sidecar": {
+        "theme": "灰色跑步鞋",
+        "aliases": [
+          "灰色跑鞋",
+          "灰色运动鞋",
+          "灰色跑步运动鞋",
+          "gray running shoes",
+          "灰色鞋",
+          "跑鞋颜色"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 133,
+        "total_tokens": 168,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2761.8501000106335
+    },
+    "86dae02b7fd3059148bd39c8304eaaed9d810d7d8923cece8a6c9e49b22a83fc": {
+      "content": "我的宠物狗喜欢黑色玩具。",
+      "sidecar": {
+        "theme": "宠物狗喜欢黑色玩具",
+        "aliases": [
+          "狗狗偏好黑色玩具",
+          "宠物狗黑色玩具喜好",
+          "狗喜欢黑色的玩具",
+          "pet dog likes black toys",
+          "dog prefers black toys",
+          "宠物狗玩具偏好",
+          "狗玩具颜色偏好",
+          "黑色玩具偏好"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 56,
+        "prompt_tokens": 134,
+        "total_tokens": 190,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 19118.33679996198
+    },
+    "5d5015b6671dc0952e88f6bb0608ba32e605259a64a1d619289bb47221e5352e": {
+      "content": "我的跑步鞋是黑色。",
+      "sidecar": {
+        "theme": "黑色跑步鞋",
+        "aliases": [
+          "跑鞋颜色",
+          "黑色跑鞋",
+          "跑步鞋",
+          "running shoes",
+          "black running shoes",
+          "运动鞋颜色",
+          "鞋的颜色"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 133,
+        "total_tokens": 168,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1354.7235000296496
+    },
+    "6291f4c655f81a9bfda659aebac7d46ca672668223ed8d72ef9bd8eac83b7560": {
+      "content": "我的跑步鞋是蓝色。",
+      "sidecar": {
+        "theme": "蓝色跑步鞋",
+        "aliases": [
+          "蓝色跑鞋",
+          "蓝色运动鞋",
+          "蓝色训练鞋",
+          "blue running shoes",
+          "blue sneakers",
+          "blue trainers",
+          "跑鞋颜色",
+          "运动鞋颜色"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 133,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1610.5500000412576
+    },
+    "aa3d2527443c6612c8c66345457e9347efa73eb6e5164659298aca825e6b0049": {
+      "content": "我的锻炼毛巾是灰色。",
+      "sidecar": {
+        "theme": "锻炼毛巾颜色",
+        "aliases": [
+          "健身毛巾颜色",
+          "运动毛巾颜色",
+          "锻炼毛巾",
+          "健身毛巾",
+          "运动毛巾",
+          "毛巾颜色",
+          "锻炼用毛巾"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 133,
+        "total_tokens": 168,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1218.5177000355907
+    },
+    "20928888b97b65757db65fe8b2316b1c2dd84b83814615f02eddce01eefc12b4": {
+      "content": "我的锻炼毛巾是橙色。",
+      "sidecar": {
+        "theme": "锻炼毛巾颜色",
+        "aliases": [
+          "运动毛巾颜色",
+          "健身毛巾颜色",
+          "锻炼毛巾",
+          "运动毛巾",
+          "健身毛巾",
+          "锻炼毛巾橙色",
+          "workout towel color",
+          "exercise towel color"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 55,
+        "prompt_tokens": 134,
+        "total_tokens": 189,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2045.2426999690942
+    },
+    "51de7bc27eabdb0dabf781042942fb76273fabd9c10ca6cb8087cdbba48c9ec1": {
+      "content": "我的锻炼毛巾是白色。",
+      "sidecar": {
+        "theme": "锻炼毛巾颜色",
+        "aliases": [
+          "运动毛巾颜色",
+          "健身毛巾颜色",
+          "锻炼毛巾是白色",
+          "运动毛巾是白色",
+          "健身毛巾是白色",
+          "锻炼毛巾白色",
+          "运动毛巾白色",
+          "健身毛巾白色"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 72,
+        "prompt_tokens": 133,
+        "total_tokens": 205,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1802.7799000265077
+    },
+    "1e00e4f317bf7323425af75bc9bba11a221d068c228a460bee7755e3b384736c": {
+      "content": "我的锻炼毛巾是紫色。",
+      "sidecar": {
+        "theme": "锻炼毛巾颜色",
+        "aliases": [
+          "锻炼毛巾",
+          "健身毛巾",
+          "运动毛巾",
+          "毛巾颜色",
+          "毛巾紫色",
+          "紫色毛巾",
+          "exercise towel color",
+          "workout towel"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 45,
+        "prompt_tokens": 133,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1887.621100002434
+    },
+    "25f1e5d4c3a41df3d842d951f45b7bfc035ce09cfa65afb84a301c84d16059e9": {
+      "content": "我的锻炼毛巾是蓝色。",
+      "sidecar": {
+        "theme": "锻炼毛巾颜色",
+        "aliases": [
+          "锻炼毛巾",
+          "健身毛巾",
+          "运动毛巾",
+          "毛巾颜色",
+          "毛巾是蓝色",
+          "蓝色毛巾",
+          "workout towel",
+          "gym towel"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 133,
+        "total_tokens": 183,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1444.2109999945387
+    },
+    "fa1462333e05b7db41b804d85c4fcfcfd95db70ecac2433f2c095087ba3c6705": {
+      "content": "我的锻炼毛巾是红色。",
+      "sidecar": {
+        "theme": "锻炼毛巾颜色",
+        "aliases": [
+          "锻炼毛巾",
+          "健身毛巾",
+          "运动毛巾",
+          "毛巾颜色",
+          "毛巾红色",
+          "红色毛巾",
+          "workout towel",
+          "gym towel"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 53,
+        "prompt_tokens": 133,
+        "total_tokens": 186,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1918.4919000254013
+    },
+    "6c293d8b2d683a0531a7f45e5562159886aebf5191e2b14ed5f4f0d136d6057d": {
+      "content": "我的摄影包是蓝色。",
+      "sidecar": {
+        "theme": "摄影包颜色",
+        "aliases": [
+          "摄影包",
+          "相机包",
+          "摄影包颜色",
+          "蓝色摄影包",
+          "blue camera bag",
+          "camera bag color"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 33,
+        "prompt_tokens": 133,
+        "total_tokens": 166,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 14617.010099987965
+    },
+    "5aad16ce3996ba642946962e4d90369b007b2caa68c2da4ba90021d9097dbdc8": {
+      "content": "我的骑行头盔是橙色。",
+      "sidecar": {
+        "theme": "橙色骑行头盔",
+        "aliases": [
+          "骑行头盔",
+          "自行车头盔",
+          "单车头盔",
+          "cycling helmet",
+          "bike helmet",
+          "橙色头盔",
+          "头盔颜色",
+          "helmet color"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 52,
+        "prompt_tokens": 135,
+        "total_tokens": 187,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1315.060299995821
+    },
+    "149ee1a6ddfe97038cbb70dccd83a84548dddd90ea161a5e9d4c5d8181952c64": {
+      "content": "我的锻炼毛巾是黑色。",
+      "sidecar": {
+        "theme": "锻炼毛巾颜色",
+        "aliases": [
+          "运动毛巾颜色",
+          "健身毛巾颜色",
+          "锻炼毛巾",
+          "运动毛巾",
+          "健身毛巾",
+          "毛巾颜色",
+          "锻炼毛巾黑色",
+          "workout towel color"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 48,
+        "prompt_tokens": 133,
+        "total_tokens": 181,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2231.834100035485
+    },
+    "ec731e274c1a476e992f7d07784ff8f181fa22c0cf3b31f9c16ac858ee37d01f": {
+      "content": "我的骑行头盔是灰色。",
+      "sidecar": {
+        "theme": "灰色骑行头盔",
+        "aliases": [
+          "灰色头盔",
+          "骑行头盔",
+          "自行车头盔",
+          "单车头盔",
+          "cycling helmet",
+          "gray helmet",
+          "grey helmet",
+          "bike helmet"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 44,
+        "prompt_tokens": 134,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1811.2524999887682
+    },
+    "143b153eec8f181d4ed2f7e4d3c9c5d8388550c71e6f996b0769231b159706bf": {
+      "content": "我的骑行头盔是白色。",
+      "sidecar": {
+        "theme": "白色骑行头盔",
+        "aliases": [
+          "骑行头盔颜色",
+          "白色头盔",
+          "自行车头盔",
+          "单车头盔",
+          "cycling helmet",
+          "bike helmet",
+          "white helmet",
+          "helmet color"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 134,
+        "total_tokens": 184,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2306.209999951534
+    },
+    "a35fa3ec2c8080bd4edf38a871b404f7bf646a23f28e6f17ca228b59167a8517": {
+      "content": "我的骑行头盔是紫色。",
+      "sidecar": {
+        "theme": "紫色骑行头盔",
+        "aliases": [
+          "紫色头盔",
+          "骑行头盔",
+          "自行车头盔",
+          "紫色自行车头盔",
+          "紫色骑行头盔",
+          "purple helmet",
+          "purple bike helmet",
+          "cycling helmet"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 48,
+        "prompt_tokens": 134,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2388.971999986097
+    },
+    "6a7a307861ac9fb2aff5a2b8da1d883382cbf99bc66f7eda64bbc526024ecdaa": {
+      "content": "我的骑行头盔是红色。",
+      "sidecar": {
+        "theme": "红色骑行头盔",
+        "aliases": [
+          "红色头盔",
+          "骑行头盔",
+          "自行车头盔",
+          "红色自行车头盔",
+          "cycling helmet",
+          "red helmet",
+          "red cycling helmet",
+          "bike helmet"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 134,
+        "total_tokens": 177,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2415.0374000309967
+    },
+    "4b44c45cd68428f0d05a28b09067d8b175217217f37ba41f2b31295f349d8e1a": {
+      "content": "我的骑行头盔是黑色。",
+      "sidecar": {
+        "theme": "黑色骑行头盔",
+        "aliases": [
+          "骑行头盔",
+          "自行车头盔",
+          "单车头盔",
+          "黑色头盔",
+          "cycling helmet",
+          "bike helmet",
+          "helmet",
+          "黑色骑行头盔颜色"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 134,
+        "total_tokens": 177,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2100.5192000302486
+    },
+    "958e2154eed295c433979193d8e13bc09b8a65e3996f8cf27da92d747e0f5f5b": {
+      "content": "我研究人工智能。",
+      "sidecar": {
+        "theme": "人工智能研究",
+        "aliases": [
+          "AI研究",
+          "人工智能",
+          "AI",
+          "artificial intelligence",
+          "机器学习",
+          "machine learning",
+          "深度学习",
+          "deep learning"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 36,
+        "prompt_tokens": 131,
+        "total_tokens": 167,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1313.708300003782
+    },
+    "4f20e763b027b592630a1efcabb2152bf64a9a1279fc7eaec92a5528df43d731": {
+      "content": "我经常打羽毛球。",
+      "sidecar": {
+        "theme": "羽毛球运动",
+        "aliases": [
+          "羽毛球",
+          "打羽毛球",
+          "羽毛球运动",
+          "badminton",
+          "羽毛球爱好",
+          "羽毛球锻炼",
+          "羽毛球健身",
+          "球拍运动"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 42,
+        "prompt_tokens": 132,
+        "total_tokens": 174,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1059.637099970132
+    },
+    "05062cf47d8c35d76514806d84ae1cb0ec190194a86ce95a4ebfea7648b87c7e": {
+      "content": "我的骑行路线必须是平路。",
+      "sidecar": {
+        "theme": "平路骑行路线要求",
+        "aliases": [
+          "平路骑行",
+          "平路路线",
+          "平坦道路骑行",
+          "平路骑行偏好",
+          "平坦路线要求",
+          "flat road cycling",
+          "flat route",
+          "level road cycling"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 44,
+        "prompt_tokens": 135,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2185.938300041016
+    },
+    "c8ae84b28cdfdbb88b736ed65f9d69f46b9524765415e7b6aa2bfeed6d30ef62": {
+      "content": "我经常跑步。",
+      "sidecar": {
+        "theme": "跑步",
+        "aliases": ["running", "jogging", "慢跑", "长跑", "晨跑", "夜跑", "跑步运动", "锻炼"]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 35,
+        "prompt_tokens": 131,
+        "total_tokens": 166,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1146.574399957899
+    },
+    "c462a8a561efa309264d0dc0bb679f295ccccf58a171ddfdc7bc42f7f74dbd35": {
+      "content": "我的骑行头盔是蓝色。",
+      "sidecar": {
+        "theme": "蓝色骑行头盔",
+        "aliases": [
+          "蓝色头盔",
+          "骑行头盔",
+          "自行车头盔",
+          "蓝色自行车头盔",
+          "cycling helmet",
+          "blue helmet",
+          "blue cycling helmet",
+          "bike helmet"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 50,
+        "prompt_tokens": 134,
+        "total_tokens": 184,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3994.9008999974467
+    },
+    "bf014e7c51f623d4fa433ceb645884e82a861ef564b08fc7171b3c12e1d9686d": {
+      "content": "我负责项目管理。",
+      "sidecar": {
+        "theme": "项目管理职责",
+        "aliases": [
+          "项目管理",
+          "项目管理岗位",
+          "项目管理职责",
+          "项目管理工作",
+          "project management",
+          "PM",
+          "项目经理职责"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 32,
+        "prompt_tokens": 132,
+        "total_tokens": 164,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1506.278500019107
+    },
+    "cd82955247ea83660c66b2e75e9a45a1cd8064d38dfbdaad7a5e7fd8bfc8f166": {
+      "content": "我跑步每次只跑三公里。",
+      "sidecar": {
+        "theme": "跑步距离三公里",
+        "aliases": [
+          "跑步3公里",
+          "三公里跑",
+          "3公里跑",
+          "跑步距离",
+          "跑步里程",
+          "running 3km",
+          "3km run",
+          "跑步"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 135,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1734.5064000110142
+    },
+    "4010bd1bebad62138b8af61c82be555441ab919235499a6fabc79d4c988c119a": {
+      "content": "我读书喜欢纸质版。",
+      "sidecar": {
+        "theme": "偏好纸质书阅读",
+        "aliases": [
+          "纸质书偏好",
+          "纸质版阅读",
+          "纸质书",
+          "实体书",
+          "纸质书籍",
+          "纸质阅读",
+          "纸质版",
+          "paper book preference"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 133,
+        "total_tokens": 179,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2049.1039999760687
+    },
+    "d42d1aa85797109b530c36c972a90f94dfbe1aa430a7bae4d2a63fd32078604a": {
+      "content": "我锻炼只在傍晚。",
+      "sidecar": {
+        "theme": "傍晚锻炼",
+        "aliases": ["傍晚运动", "晚间锻炼", "晚上锻炼", "evening workout", "evening exercise"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 27,
+        "prompt_tokens": 133,
+        "total_tokens": 160,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1815.1367000536993
+    },
+    "5a0ca492ab5af81b367c6e728e1a548a5e34c577aa3fe647a513d51dcd8e9a16": {
+      "content": "我锻炼喜欢早晨。",
+      "sidecar": {
+        "theme": "早晨锻炼偏好",
+        "aliases": [
+          "晨练",
+          "早晨运动",
+          "清晨锻炼",
+          "morning workout",
+          "morning exercise",
+          "晨间锻炼",
+          "早起锻炼",
+          "锻炼时间偏好"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 40,
+        "prompt_tokens": 132,
+        "total_tokens": 172,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2188.9675999991596
+    },
+    "79b2bf1cf542dafd6fde098b98a25c670fcd3645064660011e07a6bfd9659d77": {
+      "content": "我需要定期备份文件。",
+      "sidecar": {
+        "theme": "定期备份文件",
+        "aliases": [
+          "文件备份",
+          "定期备份",
+          "备份文件",
+          "文件定期备份",
+          "file backup",
+          "regular backup",
+          "backing up files",
+          "数据备份"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_tokens": 133,
+        "total_tokens": 170,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2050.8001999696717
+    },
+    "dbfb03045fb302c8fb04ee0c2c35e58eeebfd2335e4d446b63b429a925c717cf": {
+      "content": "更正，现在只在下午。",
+      "sidecar": {
+        "theme": "下午跑步",
+        "aliases": [
+          "下午慢跑",
+          "下午锻炼",
+          "下午运动",
+          "afternoon run",
+          "afternoon jogging",
+          "afternoon exercise",
+          "PM run"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 135,
+        "total_tokens": 176,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1481.2701999908313
+    },
+    "4a176455404597b9d007c94c018365595535cd01b96cc8ee4ce22887bffe92fe": {
+      "content": "更正，现在只喝无糖。",
+      "sidecar": {
+        "theme": "只喝无糖饮品",
+        "aliases": [
+          "无糖饮料",
+          "无糖饮品",
+          "无糖",
+          "零糖",
+          "sugar-free drinks",
+          "sugar-free",
+          "无糖茶",
+          "无糖咖啡"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 44,
+        "prompt_tokens": 136,
+        "total_tokens": 180,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2172.576899989508
+    },
+    "4506fb9c2e619fd32cf726bb5746a7628e38059322584ed41b1b85a1e3de65f8": {
+      "content": "更正，现在不能吃辣。",
+      "sidecar": {
+        "theme": "不能吃辣",
+        "aliases": [
+          "忌辣",
+          "不吃辣",
+          "避免辛辣",
+          "不能吃辛辣食物",
+          "no spicy food",
+          "avoid spicy",
+          "spicy allergy"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 43,
+        "prompt_tokens": 135,
+        "total_tokens": 178,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2527.8073999797925
+    },
+    "25393cf9f3c52c6218e15fc524e93e4911adadccbe9e6ae061ae97dd7e1f1605": {
+      "content": "更正，现在只坐火车。",
+      "sidecar": {
+        "theme": "出行方式更正为只坐火车",
+        "aliases": [
+          "只坐火车",
+          "仅乘火车",
+          "火车出行",
+          "铁路出行",
+          "train only",
+          "rail travel",
+          "出行方式",
+          "交通方式"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 49,
+        "prompt_tokens": 135,
+        "total_tokens": 184,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2285.92600004049
+    },
+    "7d005ef6436aa64d7df43005be04e818e2192b92bb0504ef5c06fcc377345c11": {
+      "content": "更正，现在只看电子版。",
+      "sidecar": {
+        "theme": "只看电子版",
+        "aliases": [
+          "仅看电子版",
+          "只读电子版",
+          "电子版阅读",
+          "电子书阅读",
+          "只看电子书",
+          "电子版",
+          "e-book only",
+          "digital version only"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 53,
+        "prompt_tokens": 136,
+        "total_tokens": 189,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 2194.2352000041865
+    },
+    "ceb35fe3096004e4242b71f5ade4de0145431918a807b0a8a43ae01582a9a830": {
+      "content": "更正，现在对花生过敏。",
+      "sidecar": {
+        "theme": "花生过敏",
+        "aliases": [
+          "花生过敏症",
+          "花生过敏反应",
+          "花生过敏原",
+          "对花生过敏",
+          "花生过敏史",
+          "peanut allergy",
+          "peanut allergy reaction",
+          "peanut allergen"
+        ]
+      },
+      "decode_status": "bounded_to_first_8",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 48,
+        "prompt_tokens": 135,
+        "total_tokens": 183,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 1781.3443999621086
+    },
+    "71da3547cf40ed5f27e7dd6ad7332e6ea248604db7876ae4852811b2fad6c18e": {
+      "content": "我看书只看科幻小说。",
+      "sidecar": {
+        "theme": "只读科幻小说的阅读偏好",
+        "aliases": [
+          "科幻小说",
+          "科幻",
+          "science fiction",
+          "sci-fi",
+          "SF",
+          "阅读偏好",
+          "读书偏好",
+          "只读科幻"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 134,
+        "total_tokens": 180,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 8900.315399980173
+    },
+    "8a08692df563a29e9e83ebe0bbf46f974c67e2a0b0fc078be8ad1bcb1e0161c9": {
+      "content": "更正，现在只选傍晚。",
+      "sidecar": {
+        "theme": "傍晚",
+        "aliases": ["傍晚时分", "黄昏", "傍晚时段", "evening", "dusk", "twilight"]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 32,
+        "prompt_tokens": 135,
+        "total_tokens": 167,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 3085.5288000311702
+    },
+    "e6369b1c0c99e862e8e0f3ba3fe8b320865f9def56972255b9bd6168fe07e645": {
+      "content": "更正，现在只带小相机。",
+      "sidecar": {
+        "theme": "携带小相机",
+        "aliases": [
+          "带小相机",
+          "只带小相机",
+          "携带小型相机",
+          "小相机",
+          "小型相机",
+          "compact camera",
+          "small camera",
+          "携带相机"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 46,
+        "prompt_tokens": 136,
+        "total_tokens": 182,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 13911.155399982817
+    },
+    "f3cf7c171efefc40848c6c23640e6bc5fdc9d1a227f487376adb83dfa8c34b1c": {
+      "content": "更正，现在改周五。",
+      "sidecar": {
+        "theme": "周五安排更正",
+        "aliases": [
+          "改周五",
+          "调整为周五",
+          "周五改期",
+          "改到周五",
+          "Friday",
+          "Friday change",
+          "schedule change to Friday",
+          "reschedule to Friday"
+        ]
+      },
+      "decode_status": "valid",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 134,
+        "total_tokens": 175,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 12682.322899985593
+    },
+    "9af1525df7c12eabd8d173b3840fb8ef76f99f8b2aeaf6bdc8aab616702c20dd": {
+      "content": "更正，现在只走平路。",
+      "sidecar": {
+        "theme": "",
+        "aliases": []
+      },
+      "decode_status": "invalid_empty_sidecar",
+      "requests": 1,
+      "usage": {
+        "completion_tokens": 400,
+        "prompt_tokens": 136,
+        "total_tokens": 536,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        }
+      },
+      "latency_ms": 30871.261499996763
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "thresholds": {
+    "A": 0.3,
+    "B": 0.86
+  },
+  "selection_rule": "Dev only: maximize Hit@5 with <=3/360 new false queries, zero new pure-negative false queries, zero baseline Hit@5 loss and zero lifecycle leaks; ties fewer false queries then higher threshold. AB unions independently chosen A/B, no extra tuning.",
+  "blind_freeze_commit": "c30f14b",
+  "blind_sha256_lf": "ea1f99eb2b600cdc8412e1c5aff3763e0cf1cae604f9b257db1ed8ac035fa10a",
+  "dev_sha256_lf": "0bd30223c20bb731ec08c0e21e28622567f9768bc6e5cbd0657f96560b345d8e",
+  "source_sha256": {
+    "runner.py": "cbc2a279704df7fd0072d5881589c524b05b1fe283845bbf01790caba0c69240",
+    "aliases.py": "b51859e69f018cfc611fb5a454cefac9ac5506970d6d938dd50fcac381c0aada",
+    "models.py": "0792dfe60280fb171a4acb8ea3fdca33b2f94c88127d71f3c0f854b699aa2a51"
+  },
+  "preblind_repair": "Before blind: avoid computing an unused embedding in A. Thresholds and every dev selection/rank/error were asserted identical. Only final chosen-arm timing was remeasured; no retuning."
+}
