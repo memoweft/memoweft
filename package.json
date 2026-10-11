@@ -72,6 +72,7 @@
     "shared:check": "node scripts/gen-shared-assets.mjs --check",
     "bench": "node bench/bulk-updateProfile.mjs",
     "bench:retrieval": "node bench/eval-retrieval.mjs",
+    "bench:recall-quality": "cd py && uv run python ../bench/recall-quality/evaluate.py --check --repeats 3",
     "bench:consolidation": "node bench/eval-consolidation.mjs",
     "smoke:dist": "node tests/smoke/dist-smoke.mjs",
     "docs:links": "node scripts/doc-links.mjs",

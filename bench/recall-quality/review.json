@@ -1,0 +1,2612 @@
+{
+  "version": 1,
+  "provenance": "Independent REV-MEM-4 probes.py, names_probe.py and shared20.py at 6535ea4; now exposed regression data. 36 distinct samples, 38 queries including both local/cloud name probes.",
+  "cases": [
+    {
+      "id": "review-regression-0",
+      "seed": "review-regression-0",
+      "category": "review_regression",
+      "query": "摄影海边地点怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我摄影一般去海边。"
+        },
+        {
+          "id": "d0",
+          "content": "我在室内清洁摄影器材。"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "d0"
+      ],
+      "must_hit": true
+    },
+    {
+      "id": "review-regression-1",
+      "seed": "review-regression-1",
+      "category": "review_regression",
+      "query": "吃苹果时怎么用手机记录？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢吃苹果。"
+        },
+        {
+          "id": "d0",
+          "content": "我的手机用了三年。"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "d0"
+      ],
+      "must_hit": true
+    },
+    {
+      "id": "review-regression-2",
+      "seed": "review-regression-2",
+      "category": "review_regression",
+      "query": "用苹果电脑记录水果清单怎么做？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我使用苹果电脑。"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [],
+      "must_hit": true
+    },
+    {
+      "id": "review-regression-3",
+      "seed": "review-regression-3",
+      "category": "review_regression",
+      "query": "骑行单车保险怎么续？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我给单车买了保险。"
+        },
+        {
+          "id": "d0",
+          "content": "我的骑行路线在室内。"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "d0"
+      ],
+      "must_hit": true
+    },
+    {
+      "id": "review-negative-0",
+      "seed": "review-negative-0",
+      "category": "review_negative",
+      "query": "cat命令怎么显示文件？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我养了一只猫。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-1",
+      "seed": "review-negative-1",
+      "category": "review_negative",
+      "query": "rose过去式怎么用？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢玫瑰。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-2",
+      "seed": "review-negative-2",
+      "category": "review_negative",
+      "query": "tea tree精油怎么保存？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢奶茶。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-3",
+      "seed": "review-negative-3",
+      "category": "review_negative",
+      "query": "8 pm是什么意思？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我负责项目管理。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-4",
+      "seed": "review-negative-4",
+      "category": "review_negative",
+      "query": "running process怎么停止？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我经常慢跑。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-5",
+      "seed": "review-negative-5",
+      "category": "review_negative",
+      "query": "种花家这个网络用语是什么意思？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢园艺。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-6",
+      "seed": "review-negative-6",
+      "category": "review_negative",
+      "query": "meeting point在几何学里是什么意思？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周开会。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-7",
+      "seed": "review-negative-7",
+      "category": "review_negative",
+      "query": "美式英语怎么练发音？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢咖啡。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-8",
+      "seed": "review-negative-8",
+      "category": "review_negative",
+      "query": "exercise book封面怎么设计？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯每天锻炼。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-negative-9",
+      "seed": "review-negative-9",
+      "category": "review_negative",
+      "query": "painting软件崩溃怎么修？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢画画。"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target"
+      ],
+      "must_abstain": true
+    },
+    {
+      "id": "review-name-traditional-local",
+      "seed": "review-name-traditional",
+      "category": "review_name",
+      "query": "樂现在喜欢什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "person-fact",
+          "content": "虚构朋友昵称“樂”，她喜欢在安静的角落拼复杂的木制拼图。"
+        }
+      ],
+      "person_name": "樂",
+      "expect": [
+        "person-fact"
+      ],
+      "forbid": [],
+      "must_hit": true
+    },
+    {
+      "id": "review-name-traditional-cloud",
+      "seed": "review-name-traditional",
+      "category": "review_name",
+      "query": "樂现在喜欢什么？",
+      "tier": "cloud",
+      "memories": [
+        {
+          "id": "person-fact",
+          "content": "虚构朋友昵称“樂”，她喜欢在安静的角落拼复杂的木制拼图。"
+        }
+      ],
+      "person_name": "樂",
+      "expect": [
+        "person-fact"
+      ],
+      "forbid": [],
+      "must_hit": true
+    },
+    {
+      "id": "review-name-control-local",
+      "seed": "review-name-control",
+      "category": "review_name",
+      "query": "云现在喜欢什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "person-fact",
+          "content": "虚构朋友昵称“云”，她喜欢在安静的角落拼复杂的木制拼图。"
+        }
+      ],
+      "person_name": "云",
+      "expect": [
+        "person-fact"
+      ],
+      "forbid": [],
+      "must_hit": true
+    },
+    {
+      "id": "review-name-control-cloud",
+      "seed": "review-name-control",
+      "category": "review_name",
+      "query": "云现在喜欢什么？",
+      "tier": "cloud",
+      "memories": [
+        {
+          "id": "person-fact",
+          "content": "虚构朋友昵称“云”，她喜欢在安静的角落拼复杂的木制拼图。"
+        }
+      ],
+      "person_name": "云",
+      "expect": [
+        "person-fact"
+      ],
+      "forbid": [],
+      "must_hit": true
+    },
+    {
+      "id": "shared20-0",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "动车出行有什么需要记住的？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-0"
+      ],
+      "forbid": [
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-1",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "土豆怎么做适合我？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-1"
+      ],
+      "forbid": [
+        "target-0",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-2",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "宠物笼子怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-2"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-3",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "甲壳类海鲜能安排吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-3"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-4",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "球类运动有哪些适合我？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-4"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-5",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "subway出行怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-5"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-6",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "ANC设备怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-6"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-7",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "zip附件怎么准备？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-7"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-8",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "coriander菜品适合我吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-8"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-9",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "安排住宿时隔音有什么要求？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-9"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-10",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "yoga放在morning合适吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-10"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-11",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "cooking用什么加热设备？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-11"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-12",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "photography的色彩怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-12"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-13",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "podcast活动怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-13"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-14",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "boat休息有什么习惯？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-14"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-15",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "sunday应该安排什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-15"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-16",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-16",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "workout放在afternoon怎么样？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-16"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-17",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-17",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "instrument练习怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-17"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-18",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-18",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "fruit口味怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-18"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-19"
+      ]
+    },
+    {
+      "id": "shared20-19",
+      "seed": "shared20",
+      "category": "review_shared20",
+      "query": "bedtime看书怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target-0",
+          "content": "我出差习惯乘坐高铁。"
+        },
+        {
+          "id": "target-1",
+          "content": "我喜欢马铃薯。"
+        },
+        {
+          "id": "target-2",
+          "content": "我家有一只仓鼠。"
+        },
+        {
+          "id": "target-3",
+          "content": "我对虾过敏。"
+        },
+        {
+          "id": "target-4",
+          "content": "我喜欢打乒乓球。"
+        },
+        {
+          "id": "target-5",
+          "content": "我通勤只坐地铁。"
+        },
+        {
+          "id": "target-6",
+          "content": "我平时使用降噪耳机。"
+        },
+        {
+          "id": "target-7",
+          "content": "我习惯把文件压缩后发送。"
+        },
+        {
+          "id": "target-8",
+          "content": "我不吃香菜。"
+        },
+        {
+          "id": "target-9",
+          "content": "我睡觉很轻，一有声音就醒。"
+        },
+        {
+          "id": "target-10",
+          "content": "我晨间固定练习瑜伽。"
+        },
+        {
+          "id": "target-11",
+          "content": "我做饭只用电磁炉。"
+        },
+        {
+          "id": "target-12",
+          "content": "我喜欢黑白摄影。"
+        },
+        {
+          "id": "target-13",
+          "content": "我喜欢边散步边听播客。"
+        },
+        {
+          "id": "target-14",
+          "content": "我乘船时总在甲板休息。"
+        },
+        {
+          "id": "target-15",
+          "content": "我每周日整理旧文件。"
+        },
+        {
+          "id": "target-16",
+          "content": "我只在午后锻炼。"
+        },
+        {
+          "id": "target-17",
+          "content": "我喜欢用钢琴演奏慢曲。"
+        },
+        {
+          "id": "target-18",
+          "content": "我喜欢酸味的芒果。"
+        },
+        {
+          "id": "target-19",
+          "content": "我习惯睡前阅读传记。"
+        }
+      ],
+      "expect": [
+        "target-19"
+      ],
+      "forbid": [
+        "target-0",
+        "target-1",
+        "target-2",
+        "target-3",
+        "target-4",
+        "target-5",
+        "target-6",
+        "target-7",
+        "target-8",
+        "target-9",
+        "target-10",
+        "target-11",
+        "target-12",
+        "target-13",
+        "target-14",
+        "target-15",
+        "target-16",
+        "target-17",
+        "target-18"
+      ]
+    }
+  ]
+}

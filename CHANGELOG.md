@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Add synthetic recall quality evaluations, frozen baselines and independent review regression probes; this change does not alter recall behavior.
+
 ## 2.0.0 — 2026-10-09
 
 ### Added

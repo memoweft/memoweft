@@ -1,0 +1,1144 @@
+{
+  "source": "final-evaluation.json, fixture labels; no new recall execution",
+  "pure_negative_queries": 100,
+  "protected_state_leaks": [],
+  "lost_baseline_positives": [],
+  "checks": [
+    {
+      "split": "dev",
+      "id": "dev-polysemy-00-0",
+      "query": "苹果手机怎么设置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-00-1",
+      "query": "苹果电脑怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-00-2",
+      "query": "Apple设备怎么升级？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-01-0",
+      "query": "吃苹果有什么建议？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-01-1",
+      "query": "苹果水果怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-01-2",
+      "query": "apple fruit怎么吃？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-02-0",
+      "query": "小米手机怎么设置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-02-1",
+      "query": "小米电脑怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-02-2",
+      "query": "Xiaomi设备怎么用？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-03-0",
+      "query": "小米粥怎么煮？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-03-1",
+      "query": "小米粮食怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-03-2",
+      "query": "millet粥怎么吃？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-04-0",
+      "query": "离职怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-04-1",
+      "query": "离线模式怎么设置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-04-2",
+      "query": "分离变量怎么做？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-05-0",
+      "query": "蟒蛇宠物怎么养？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-05-1",
+      "query": "python snake怎么喂？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-05-2",
+      "query": "蛇的饲料怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-06-0",
+      "query": "爪哇岛旅行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-06-1",
+      "query": "java island怎么游览？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-06-2",
+      "query": "爪哇咖啡怎么点？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-07-0",
+      "query": "牙齿护理怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-07-1",
+      "query": "洗牙有什么建议？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-07-2",
+      "query": "牙科怎么预约？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-08-0",
+      "query": "汽车单车道怎么驾驶？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-08-1",
+      "query": "小汽车车道怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-08-2",
+      "query": "汽车道路怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-09-0",
+      "query": "花生壳服务器怎么设置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-09-1",
+      "query": "花生壳域名怎么配置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-polysemy-09-2",
+      "query": "域名花生壳怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-00-0",
+      "query": "单车路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-00-1",
+      "query": "请问，单车路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-00-2",
+      "query": "请告诉我，单车路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-01-0",
+      "query": "骑行路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-01-1",
+      "query": "请问，骑行路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-01-2",
+      "query": "请告诉我，骑行路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-02-0",
+      "query": "自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-02-1",
+      "query": "请问，自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-02-2",
+      "query": "请告诉我，自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-03-0",
+      "query": "骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-03-1",
+      "query": "请问，骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-03-2",
+      "query": "请告诉我，骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-04-0",
+      "query": "骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-04-1",
+      "query": "请问，骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-04-2",
+      "query": "请告诉我，骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-05-0",
+      "query": "骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-05-1",
+      "query": "请问，骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-05-2",
+      "query": "请告诉我，骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-06-0",
+      "query": "单车路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-06-1",
+      "query": "请问，单车路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-06-2",
+      "query": "请告诉我，单车路线怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-07-0",
+      "query": "自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-07-1",
+      "query": "请问，自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-07-2",
+      "query": "请告诉我，自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-08-0",
+      "query": "骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-08-1",
+      "query": "请问，骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-08-2",
+      "query": "请告诉我，骑行怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-09-0",
+      "query": "自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-09-1",
+      "query": "请问，自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "dev",
+      "id": "dev-lifecycle-09-2",
+      "query": "请告诉我，自行车怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-nearby-01-0",
+      "query": "钓鱼水域怎么选？",
+      "selected": [
+        "target",
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2"
+      ],
+      "wrong": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2"
+      ],
+      "baseline_selected": [
+        "target",
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2"
+      ],
+      "baseline_wrong": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-00-0",
+      "query": "橙色油漆怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-00-1",
+      "query": "orange paint怎么选？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-01-0",
+      "query": "网络球形拓扑怎么设置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-01-1",
+      "query": "网络怎么连接？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-02-0",
+      "query": "铁锈怎么去除？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-02-1",
+      "query": "rust removal怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-03-0",
+      "query": "火龙游戏怎么设置？",
+      "selected": [
+        "target"
+      ],
+      "wrong": [
+        "target"
+      ],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-03-1",
+      "query": "火龙显卡怎么选？",
+      "selected": [
+        "target"
+      ],
+      "wrong": [
+        "target"
+      ],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-04-0",
+      "query": "海鲜市场软件怎么安装？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-polysemy-04-1",
+      "query": "软件海鲜市场怎么设置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-00-0",
+      "query": "skiing怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-00-1",
+      "query": "请问，skiing怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-01-0",
+      "query": "滑雪怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-01-1",
+      "query": "请问，滑雪怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-02-0",
+      "query": "滑雪怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-02-1",
+      "query": "请问，滑雪怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-03-0",
+      "query": "滑雪怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-03-1",
+      "query": "请问，滑雪怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-04-0",
+      "query": "滑雪怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "challenge",
+      "id": "holdout-lifecycle-04-1",
+      "query": "请问，滑雪怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-00-0",
+      "query": "苹果电脑怎么升级？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-00-1",
+      "query": "apple phone怎么设置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-01-0",
+      "query": "java island怎么游览？",
+      "selected": [
+        "target"
+      ],
+      "wrong": [
+        "target"
+      ],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-01-1",
+      "query": "爪哇咖啡怎么点？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-02-0",
+      "query": "python snake怎么养？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [
+        "target"
+      ],
+      "baseline_wrong": [
+        "target"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-02-1",
+      "query": "蟒蛇宠物怎么喂？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-03-0",
+      "query": "石榴桌面软件怎么设置？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-03-1",
+      "query": "石榴手机软件怎么安装？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-04-0",
+      "query": "猫眼石如何保养？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-polysemy-04-1",
+      "query": "cat eye gemstone怎么收藏？",
+      "selected": [
+        "target"
+      ],
+      "wrong": [
+        "target"
+      ],
+      "baseline_selected": [
+        "unrelated"
+      ],
+      "baseline_wrong": [
+        "unrelated"
+      ],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-00-0",
+      "query": "reading怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-00-1",
+      "query": "请问，reading怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-01-0",
+      "query": "看书怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-01-1",
+      "query": "请问，看书怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-02-0",
+      "query": "阅读怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-02-1",
+      "query": "请问，阅读怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-03-0",
+      "query": "reading怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-03-1",
+      "query": "请问，reading怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-04-0",
+      "query": "看书怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    },
+    {
+      "split": "holdout",
+      "id": "holdout-lifecycle-04-1",
+      "query": "请问，看书怎么安排？",
+      "selected": [],
+      "wrong": [],
+      "baseline_selected": [],
+      "baseline_wrong": [],
+      "protected_state_hits": []
+    }
+  ]
+}

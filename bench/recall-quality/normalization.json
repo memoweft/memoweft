@@ -1,0 +1,4682 @@
+{
+  "version": 1,
+  "commit": "233cc2f0b27a921a699a9c4c43b1a612375970f8",
+  "schema_version": 21,
+  "fixture_hashes": {
+    "dev": "67a9b11e82e4f0a7ee892140fdcf1fb3af2ddaa7e17d2f3909120c7c59304fe0"
+  },
+  "measurement": "Trust QueryService.preview_recall, median of interleaved warm calls per query; includes connection, currentness, recent evidence, pending corrections and rendering",
+  "repeats": 7,
+  "padding": 0,
+  "splits": {
+    "dev": {
+      "overall": {
+        "n": 360,
+        "positive_n": 300,
+        "hit1": 0.18,
+        "hit3": 0.18,
+        "hit5": 0.18,
+        "mrr5": 0.18,
+        "negative_false_recall_rate": 0.05,
+        "negative_returned_count": 37,
+        "latency_ms": {
+          "p50": 1.7492000479251146,
+          "p95": 2.7768000145442784
+        },
+        "returned_mean": 0.25277777777777777,
+        "returned_p95": 1,
+        "miss_causes": {
+          "candidate": 244,
+          "rank_cutoff": 2
+        }
+      },
+      "categories": {
+        "abbreviation": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.23333333333333334,
+          "hit3": 0.23333333333333334,
+          "hit5": 0.23333333333333334,
+          "mrr5": 0.23333333333333334,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.6907000099308789,
+            "p95": 1.874400011729449
+          },
+          "returned_mean": 0.23333333333333334,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 23
+          }
+        },
+        "bilingual": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.13333333333333333,
+          "hit3": 0.13333333333333333,
+          "hit5": 0.13333333333333333,
+          "mrr5": 0.13333333333333333,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.6656999941915274,
+            "p95": 1.8994000274688005
+          },
+          "returned_mean": 0.13333333333333333,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 26
+          }
+        },
+        "colloquial": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.6471000271849334,
+            "p95": 2.0427999552339315
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "candidate": 30
+          }
+        },
+        "correction": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.3333333333333333,
+          "hit3": 0.3333333333333333,
+          "hit5": 0.3333333333333333,
+          "mrr5": 0.3333333333333333,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.880299998447299,
+            "p95": 2.5185999693349004
+          },
+          "returned_mean": 0.3333333333333333,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 20
+          }
+        },
+        "hierarchy": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.13333333333333333,
+          "hit3": 0.13333333333333333,
+          "hit5": 0.13333333333333333,
+          "mrr5": 0.13333333333333333,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.5317999641411006,
+            "p95": 1.726499991491437
+          },
+          "returned_mean": 0.13333333333333333,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 26
+          }
+        },
+        "indirect": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.13333333333333333,
+          "hit3": 0.13333333333333333,
+          "hit5": 0.13333333333333333,
+          "mrr5": 0.13333333333333333,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.8554999842308462,
+            "p95": 3.198399965185672
+          },
+          "returned_mean": 0.13333333333333333,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 26
+          }
+        },
+        "lifecycle": {
+          "n": 30,
+          "positive_n": 0,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.906599965877831,
+            "p95": 2.8603000100702047
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {}
+        },
+        "nearby": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.06666666666666667,
+          "hit3": 0.06666666666666667,
+          "hit5": 0.06666666666666667,
+          "mrr5": 0.06666666666666667,
+          "negative_false_recall_rate": 0.16666666666666666,
+          "negative_returned_count": 24,
+          "latency_ms": {
+            "p50": 2.5097999605350196,
+            "p95": 6.630199961364269
+          },
+          "returned_mean": 0.8666666666666667,
+          "returned_p95": 5,
+          "miss_causes": {
+            "candidate": 26,
+            "rank_cutoff": 2
+          }
+        },
+        "polysemy": {
+          "n": 30,
+          "positive_n": 0,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.43333333333333335,
+          "negative_returned_count": 13,
+          "latency_ms": {
+            "p50": 1.7309000249952078,
+            "p95": 2.487399964593351
+          },
+          "returned_mean": 0.43333333333333335,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "synonym": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.824699982535094,
+            "p95": 2.50990001950413
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "candidate": 30
+          }
+        },
+        "time": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.3333333333333333,
+          "hit3": 0.3333333333333333,
+          "hit5": 0.3333333333333333,
+          "mrr5": 0.3333333333333333,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.830300025176257,
+            "p95": 3.1285000150091946
+          },
+          "returned_mean": 0.3333333333333333,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 20
+          }
+        },
+        "typo": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.43333333333333335,
+          "hit3": 0.43333333333333335,
+          "hit5": 0.43333333333333335,
+          "mrr5": 0.43333333333333335,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.5434000524692237,
+            "p95": 2.047999994829297
+          },
+          "returned_mean": 0.43333333333333335,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 17
+          }
+        }
+      },
+      "results": [
+        {
+          "id": "dev-synonym-00-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.089400019031018
+        },
+        {
+          "id": "dev-synonym-00-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.15859996387735
+        },
+        {
+          "id": "dev-synonym-00-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.236599975731224
+        },
+        {
+          "id": "dev-synonym-01-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.223999996203929
+        },
+        {
+          "id": "dev-synonym-01-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9055999582633376
+        },
+        {
+          "id": "dev-synonym-01-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.5188999716192484
+        },
+        {
+          "id": "dev-synonym-02-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.360599988605827
+        },
+        {
+          "id": "dev-synonym-02-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.372099959757179
+        },
+        {
+          "id": "dev-synonym-02-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.454900008160621
+        },
+        {
+          "id": "dev-synonym-03-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.119600016158074
+        },
+        {
+          "id": "dev-synonym-03-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.09060002816841
+        },
+        {
+          "id": "dev-synonym-03-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.50990001950413
+        },
+        {
+          "id": "dev-synonym-04-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.83269998524338
+        },
+        {
+          "id": "dev-synonym-04-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8396000377833843
+        },
+        {
+          "id": "dev-synonym-04-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.824699982535094
+        },
+        {
+          "id": "dev-synonym-05-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6194999916478992
+        },
+        {
+          "id": "dev-synonym-05-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.2651000288315117
+        },
+        {
+          "id": "dev-synonym-05-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3269999762997031
+        },
+        {
+          "id": "dev-synonym-06-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5314000193029642
+        },
+        {
+          "id": "dev-synonym-06-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.66090001584962
+        },
+        {
+          "id": "dev-synonym-06-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6083999653346837
+        },
+        {
+          "id": "dev-synonym-07-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6458999598398805
+        },
+        {
+          "id": "dev-synonym-07-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6613000188954175
+        },
+        {
+          "id": "dev-synonym-07-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.4822999839670956
+        },
+        {
+          "id": "dev-synonym-08-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6626999713480473
+        },
+        {
+          "id": "dev-synonym-08-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.4073000056669116
+        },
+        {
+          "id": "dev-synonym-08-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.34529999922961
+        },
+        {
+          "id": "dev-synonym-09-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5888999914750457
+        },
+        {
+          "id": "dev-synonym-09-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3566000270657241
+        },
+        {
+          "id": "dev-synonym-09-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.309199957177043
+        },
+        {
+          "id": "dev-hierarchy-00-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.726499991491437
+        },
+        {
+          "id": "dev-hierarchy-00-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.2592999846674502
+        },
+        {
+          "id": "dev-hierarchy-00-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3155000051483512
+        },
+        {
+          "id": "dev-hierarchy-01-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.462099957279861
+        },
+        {
+          "id": "dev-hierarchy-01-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.4745999942533672
+        },
+        {
+          "id": "dev-hierarchy-01-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5166000230237842
+        },
+        {
+          "id": "dev-hierarchy-02-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.2549999519251287
+        },
+        {
+          "id": "dev-hierarchy-02-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.261299999896437
+        },
+        {
+          "id": "dev-hierarchy-02-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.2874999665655196
+        },
+        {
+          "id": "dev-hierarchy-03-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.637500012293458
+        },
+        {
+          "id": "dev-hierarchy-03-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5317999641411006
+        },
+        {
+          "id": "dev-hierarchy-03-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6006999649107456
+        },
+        {
+          "id": "dev-hierarchy-04-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6310999635607004
+        },
+        {
+          "id": "dev-hierarchy-04-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5184999792836607
+        },
+        {
+          "id": "dev-hierarchy-04-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.2675000471062958
+        },
+        {
+          "id": "dev-hierarchy-05-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6302000149153173
+        },
+        {
+          "id": "dev-hierarchy-05-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.741599990054965
+        },
+        {
+          "id": "dev-hierarchy-05-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7036999925039709
+        },
+        {
+          "id": "dev-hierarchy-06-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.1468000011518598
+        },
+        {
+          "id": "dev-hierarchy-06-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.4711000258103013
+        },
+        {
+          "id": "dev-hierarchy-06-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.4657999854534864
+        },
+        {
+          "id": "dev-hierarchy-07-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5955999842844903
+        },
+        {
+          "id": "dev-hierarchy-07-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5006999601610005
+        },
+        {
+          "id": "dev-hierarchy-07-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5971999964676797
+        },
+        {
+          "id": "dev-hierarchy-08-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.560300006531179
+        },
+        {
+          "id": "dev-hierarchy-08-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6856000293046236
+        },
+        {
+          "id": "dev-hierarchy-08-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.5573999844491482
+        },
+        {
+          "id": "dev-hierarchy-09-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.597599999513477
+        },
+        {
+          "id": "dev-hierarchy-09-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.694299979135394
+        },
+        {
+          "id": "dev-hierarchy-09-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6939000342972577
+        },
+        {
+          "id": "dev-bilingual-00-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7883999971672893
+        },
+        {
+          "id": "dev-bilingual-00-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8994000274688005
+        },
+        {
+          "id": "dev-bilingual-00-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8763000261969864
+        },
+        {
+          "id": "dev-bilingual-01-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8363000126555562
+        },
+        {
+          "id": "dev-bilingual-01-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6827000072225928
+        },
+        {
+          "id": "dev-bilingual-01-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6112999874167144
+        },
+        {
+          "id": "dev-bilingual-02-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8001000280492008
+        },
+        {
+          "id": "dev-bilingual-02-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7480000387877226
+        },
+        {
+          "id": "dev-bilingual-02-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7678000149317086
+        },
+        {
+          "id": "dev-bilingual-03-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.0305999787524343
+        },
+        {
+          "id": "dev-bilingual-03-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.873500004876405
+        },
+        {
+          "id": "dev-bilingual-03-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5790999750606716
+        },
+        {
+          "id": "dev-bilingual-04-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6892999992705882
+        },
+        {
+          "id": "dev-bilingual-04-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7628000350669026
+        },
+        {
+          "id": "dev-bilingual-04-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5724999830126762
+        },
+        {
+          "id": "dev-bilingual-05-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.692199963144958
+        },
+        {
+          "id": "dev-bilingual-05-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5375000075437129
+        },
+        {
+          "id": "dev-bilingual-05-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8150000250898302
+        },
+        {
+          "id": "dev-bilingual-06-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.699899963568896
+        },
+        {
+          "id": "dev-bilingual-06-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6654000501148403
+        },
+        {
+          "id": "dev-bilingual-06-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5623000217601657
+        },
+        {
+          "id": "dev-bilingual-07-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5873000374995172
+        },
+        {
+          "id": "dev-bilingual-07-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5255999751389027
+        },
+        {
+          "id": "dev-bilingual-07-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.2407000176608562
+        },
+        {
+          "id": "dev-bilingual-08-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6151000163517892
+        },
+        {
+          "id": "dev-bilingual-08-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6214000061154366
+        },
+        {
+          "id": "dev-bilingual-08-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.3487999676726758
+        },
+        {
+          "id": "dev-bilingual-09-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6338999848812819
+        },
+        {
+          "id": "dev-bilingual-09-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6656999941915274
+        },
+        {
+          "id": "dev-bilingual-09-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.448800030630082
+        },
+        {
+          "id": "dev-colloquial-00-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6217000083997846
+        },
+        {
+          "id": "dev-colloquial-00-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7589000053703785
+        },
+        {
+          "id": "dev-colloquial-00-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7211000085808337
+        },
+        {
+          "id": "dev-colloquial-01-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.0427999552339315
+        },
+        {
+          "id": "dev-colloquial-01-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.060099970549345
+        },
+        {
+          "id": "dev-colloquial-01-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.671800040639937
+        },
+        {
+          "id": "dev-colloquial-02-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8348000012338161
+        },
+        {
+          "id": "dev-colloquial-02-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8315999768674374
+        },
+        {
+          "id": "dev-colloquial-02-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7499999958090484
+        },
+        {
+          "id": "dev-colloquial-03-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7707000370137393
+        },
+        {
+          "id": "dev-colloquial-03-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.559099997393787
+        },
+        {
+          "id": "dev-colloquial-03-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7465000273659825
+        },
+        {
+          "id": "dev-colloquial-04-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6771999653428793
+        },
+        {
+          "id": "dev-colloquial-04-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.472200034186244
+        },
+        {
+          "id": "dev-colloquial-04-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5490999794565141
+        },
+        {
+          "id": "dev-colloquial-05-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5416000387631357
+        },
+        {
+          "id": "dev-colloquial-05-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5207999967969954
+        },
+        {
+          "id": "dev-colloquial-05-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5395000227726996
+        },
+        {
+          "id": "dev-colloquial-06-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5813999925740063
+        },
+        {
+          "id": "dev-colloquial-06-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6062000067904592
+        },
+        {
+          "id": "dev-colloquial-06-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6198999946936965
+        },
+        {
+          "id": "dev-colloquial-07-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6885999939404428
+        },
+        {
+          "id": "dev-colloquial-07-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9335999968461692
+        },
+        {
+          "id": "dev-colloquial-07-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.609999977517873
+        },
+        {
+          "id": "dev-colloquial-08-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7254999838769436
+        },
+        {
+          "id": "dev-colloquial-08-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7229999648407102
+        },
+        {
+          "id": "dev-colloquial-08-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.642199989873916
+        },
+        {
+          "id": "dev-colloquial-09-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6471000271849334
+        },
+        {
+          "id": "dev-colloquial-09-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3585000415332615
+        },
+        {
+          "id": "dev-colloquial-09-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5464999596588314
+        },
+        {
+          "id": "dev-abbreviation-00-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.390000048559159
+        },
+        {
+          "id": "dev-abbreviation-00-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.561199955176562
+        },
+        {
+          "id": "dev-abbreviation-00-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.556200033519417
+        },
+        {
+          "id": "dev-abbreviation-01-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6670000040903687
+        },
+        {
+          "id": "dev-abbreviation-01-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6663999995216727
+        },
+        {
+          "id": "dev-abbreviation-01-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6767000197432935
+        },
+        {
+          "id": "dev-abbreviation-02-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.83119997382164
+        },
+        {
+          "id": "dev-abbreviation-02-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7870999872684479
+        },
+        {
+          "id": "dev-abbreviation-02-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6211000038310885
+        },
+        {
+          "id": "dev-abbreviation-03-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.408600015565753
+        },
+        {
+          "id": "dev-abbreviation-03-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7529000178910792
+        },
+        {
+          "id": "dev-abbreviation-03-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6573999891988933
+        },
+        {
+          "id": "dev-abbreviation-04-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.750800001900643
+        },
+        {
+          "id": "dev-abbreviation-04-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6663999995216727
+        },
+        {
+          "id": "dev-abbreviation-04-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7248000367544591
+        },
+        {
+          "id": "dev-abbreviation-05-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8362999544478953
+        },
+        {
+          "id": "dev-abbreviation-05-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5932000242173672
+        },
+        {
+          "id": "dev-abbreviation-05-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8367000157013535
+        },
+        {
+          "id": "dev-abbreviation-06-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.874400011729449
+        },
+        {
+          "id": "dev-abbreviation-06-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7362000071443617
+        },
+        {
+          "id": "dev-abbreviation-06-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.217700006440282
+        },
+        {
+          "id": "dev-abbreviation-07-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.697800005786121
+        },
+        {
+          "id": "dev-abbreviation-07-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5287999995052814
+        },
+        {
+          "id": "dev-abbreviation-07-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6995000187307596
+        },
+        {
+          "id": "dev-abbreviation-08-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.736900012474507
+        },
+        {
+          "id": "dev-abbreviation-08-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.734199991915375
+        },
+        {
+          "id": "dev-abbreviation-08-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6907000099308789
+        },
+        {
+          "id": "dev-abbreviation-09-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3780000153928995
+        },
+        {
+          "id": "dev-abbreviation-09-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.3844000059179962
+        },
+        {
+          "id": "dev-abbreviation-09-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7881999956443906
+        },
+        {
+          "id": "dev-typo-00-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.047999994829297
+        },
+        {
+          "id": "dev-typo-00-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3876999728381634
+        },
+        {
+          "id": "dev-typo-00-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6797000425867736
+        },
+        {
+          "id": "dev-typo-01-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5588999958708882
+        },
+        {
+          "id": "dev-typo-01-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6340999864041805
+        },
+        {
+          "id": "dev-typo-01-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.491700008045882
+        },
+        {
+          "id": "dev-typo-02-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6827000072225928
+        },
+        {
+          "id": "dev-typo-02-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.539899967610836
+        },
+        {
+          "id": "dev-typo-02-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6196999931707978
+        },
+        {
+          "id": "dev-typo-03-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.224299998488277
+        },
+        {
+          "id": "dev-typo-03-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.992400037124753
+        },
+        {
+          "id": "dev-typo-03-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8526000203564763
+        },
+        {
+          "id": "dev-typo-04-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3114000321365893
+        },
+        {
+          "id": "dev-typo-04-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.4968999894335866
+        },
+        {
+          "id": "dev-typo-04-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.5588999958708882
+        },
+        {
+          "id": "dev-typo-05-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.763199979905039
+        },
+        {
+          "id": "dev-typo-05-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5462000155821443
+        },
+        {
+          "id": "dev-typo-05-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.498800003901124
+        },
+        {
+          "id": "dev-typo-06-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.3844000059179962
+        },
+        {
+          "id": "dev-typo-06-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3262000284157693
+        },
+        {
+          "id": "dev-typo-06-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.3663999852724373
+        },
+        {
+          "id": "dev-typo-07-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.5434000524692237
+        },
+        {
+          "id": "dev-typo-07-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.4635000261478126
+        },
+        {
+          "id": "dev-typo-07-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.4742999919690192
+        },
+        {
+          "id": "dev-typo-08-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.3257000246085227
+        },
+        {
+          "id": "dev-typo-08-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.67709996458143
+        },
+        {
+          "id": "dev-typo-08-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.2955000274814665
+        },
+        {
+          "id": "dev-typo-09-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6810999950394034
+        },
+        {
+          "id": "dev-typo-09-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6896000015549362
+        },
+        {
+          "id": "dev-typo-09-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.4733999851159751
+        },
+        {
+          "id": "dev-indirect-00-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.811699999962002
+        },
+        {
+          "id": "dev-indirect-00-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5938999713398516
+        },
+        {
+          "id": "dev-indirect-00-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7476999782957137
+        },
+        {
+          "id": "dev-indirect-01-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7229000222869217
+        },
+        {
+          "id": "dev-indirect-01-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9262999994680285
+        },
+        {
+          "id": "dev-indirect-01-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.873800007160753
+        },
+        {
+          "id": "dev-indirect-02-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.739799976348877
+        },
+        {
+          "id": "dev-indirect-02-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7645999905653298
+        },
+        {
+          "id": "dev-indirect-02-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6326000331901014
+        },
+        {
+          "id": "dev-indirect-03-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.699600019492209
+        },
+        {
+          "id": "dev-indirect-03-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8554999842308462
+        },
+        {
+          "id": "dev-indirect-03-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8321999814361334
+        },
+        {
+          "id": "dev-indirect-04-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.641000028233975
+        },
+        {
+          "id": "dev-indirect-04-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7459000227972865
+        },
+        {
+          "id": "dev-indirect-04-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8566999933682382
+        },
+        {
+          "id": "dev-indirect-05-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9426000071689487
+        },
+        {
+          "id": "dev-indirect-05-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.589899999089539
+        },
+        {
+          "id": "dev-indirect-05-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9502000068314373
+        },
+        {
+          "id": "dev-indirect-06-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7597999540157616
+        },
+        {
+          "id": "dev-indirect-06-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.1564000053331256
+        },
+        {
+          "id": "dev-indirect-06-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8007999751716852
+        },
+        {
+          "id": "dev-indirect-07-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.120100019965321
+        },
+        {
+          "id": "dev-indirect-07-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.503100025933236
+        },
+        {
+          "id": "dev-indirect-07-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.534899966325611
+        },
+        {
+          "id": "dev-indirect-08-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.412899979390204
+        },
+        {
+          "id": "dev-indirect-08-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9386999774724245
+        },
+        {
+          "id": "dev-indirect-08-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.853699970524758
+        },
+        {
+          "id": "dev-indirect-09-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9942999933846295
+        },
+        {
+          "id": "dev-indirect-09-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9109999993816018
+        },
+        {
+          "id": "dev-indirect-09-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.198399965185672
+        },
+        {
+          "id": "dev-time-00-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.7190999826416373
+        },
+        {
+          "id": "dev-time-00-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.6496000355109572
+        },
+        {
+          "id": "dev-time-00-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9667999586090446
+        },
+        {
+          "id": "dev-time-01-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9783000461757183
+        },
+        {
+          "id": "dev-time-01-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8062999588437378
+        },
+        {
+          "id": "dev-time-01-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9025999936275184
+        },
+        {
+          "id": "dev-time-02-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.5543000190518796
+        },
+        {
+          "id": "dev-time-02-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8477999838069081
+        },
+        {
+          "id": "dev-time-02-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.4801999786868691
+        },
+        {
+          "id": "dev-time-03-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.569800020661205
+        },
+        {
+          "id": "dev-time-03-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9002999761141837
+        },
+        {
+          "id": "dev-time-03-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6275999951176345
+        },
+        {
+          "id": "dev-time-04-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7569000483490527
+        },
+        {
+          "id": "dev-time-04-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.803399994969368
+        },
+        {
+          "id": "dev-time-04-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7816000035963953
+        },
+        {
+          "id": "dev-time-05-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.7155000027269125
+        },
+        {
+          "id": "dev-time-05-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.3139999830164015
+        },
+        {
+          "id": "dev-time-05-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8277000053785741
+        },
+        {
+          "id": "dev-time-06-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.830300025176257
+        },
+        {
+          "id": "dev-time-06-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7629999783821404
+        },
+        {
+          "id": "dev-time-06-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7730999970808625
+        },
+        {
+          "id": "dev-time-07-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.070399990770966
+        },
+        {
+          "id": "dev-time-07-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7775000305846334
+        },
+        {
+          "id": "dev-time-07-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8315999768674374
+        },
+        {
+          "id": "dev-time-08-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.0693999831564724
+        },
+        {
+          "id": "dev-time-08-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.7768000145442784
+        },
+        {
+          "id": "dev-time-08-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.1285000150091946
+        },
+        {
+          "id": "dev-time-09-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8496999982744455
+        },
+        {
+          "id": "dev-time-09-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6771000227890909
+        },
+        {
+          "id": "dev-time-09-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.2032999657094479
+        },
+        {
+          "id": "dev-correction-00-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.079099998809397
+        },
+        {
+          "id": "dev-correction-00-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7374999588355422
+        },
+        {
+          "id": "dev-correction-00-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6932000289671123
+        },
+        {
+          "id": "dev-correction-01-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.944800023920834
+        },
+        {
+          "id": "dev-correction-01-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9423000048846006
+        },
+        {
+          "id": "dev-correction-01-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.22540000686422
+        },
+        {
+          "id": "dev-correction-02-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6905000084079802
+        },
+        {
+          "id": "dev-correction-02-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.663199975155294
+        },
+        {
+          "id": "dev-correction-02-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7994000227190554
+        },
+        {
+          "id": "dev-correction-03-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9580000080168247
+        },
+        {
+          "id": "dev-correction-03-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.564200036227703
+        },
+        {
+          "id": "dev-correction-03-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6342999879270792
+        },
+        {
+          "id": "dev-correction-04-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6093000303953886
+        },
+        {
+          "id": "dev-correction-04-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.4933999627828598
+        },
+        {
+          "id": "dev-correction-04-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9598999642767012
+        },
+        {
+          "id": "dev-correction-05-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.996500010136515
+        },
+        {
+          "id": "dev-correction-05-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.7084000282920897
+        },
+        {
+          "id": "dev-correction-05-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8405999871902168
+        },
+        {
+          "id": "dev-correction-06-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.22389999544248
+        },
+        {
+          "id": "dev-correction-06-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9409999949857593
+        },
+        {
+          "id": "dev-correction-06-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.538700016681105
+        },
+        {
+          "id": "dev-correction-07-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.0268000080250204
+        },
+        {
+          "id": "dev-correction-07-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.5185999693349004
+        },
+        {
+          "id": "dev-correction-07-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.880299998447299
+        },
+        {
+          "id": "dev-correction-08-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9410999957472086
+        },
+        {
+          "id": "dev-correction-08-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 4.3320999830029905
+        },
+        {
+          "id": "dev-correction-08-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.29049997869879
+        },
+        {
+          "id": "dev-correction-09-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.08020000718534
+        },
+        {
+          "id": "dev-correction-09-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.6118999919854105
+        },
+        {
+          "id": "dev-correction-09-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6005999641492963
+        },
+        {
+          "id": "dev-nearby-00-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.0320999794639647
+        },
+        {
+          "id": "dev-nearby-00-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.7724000392481685
+        },
+        {
+          "id": "dev-nearby-00-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.56170000648126
+        },
+        {
+          "id": "dev-nearby-01-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 1.9252999918535352
+        },
+        {
+          "id": "dev-nearby-01-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.086699998471886
+        },
+        {
+          "id": "dev-nearby-01-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 1.7926999717019498
+        },
+        {
+          "id": "dev-nearby-02-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.8157000304199755
+        },
+        {
+          "id": "dev-nearby-02-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9370000227354467
+        },
+        {
+          "id": "dev-nearby-02-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7492000479251146
+        },
+        {
+          "id": "dev-nearby-03-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.0736000151373446
+        },
+        {
+          "id": "dev-nearby-03-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.0473999795503914
+        },
+        {
+          "id": "dev-nearby-03-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.127900021150708
+        },
+        {
+          "id": "dev-nearby-04-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 1.9687000312842429
+        },
+        {
+          "id": "dev-nearby-04-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.5097999605350196
+        },
+        {
+          "id": "dev-nearby-04-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.2108000121079385
+        },
+        {
+          "id": "dev-nearby-05-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.8047000523656607
+        },
+        {
+          "id": "dev-nearby-05-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.4863000037148595
+        },
+        {
+          "id": "dev-nearby-05-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "candidate",
+          "latency_ms": 2.9480999801307917
+        },
+        {
+          "id": "dev-nearby-06-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.5739000304602087
+        },
+        {
+          "id": "dev-nearby-06-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 5.0205999868921936
+        },
+        {
+          "id": "dev-nearby-06-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 4.5347000123001635
+        },
+        {
+          "id": "dev-nearby-07-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 6.630199961364269
+        },
+        {
+          "id": "dev-nearby-07-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 9.74760000826791
+        },
+        {
+          "id": "dev-nearby-07-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "candidate",
+          "latency_ms": 4.390799964312464
+        },
+        {
+          "id": "dev-nearby-08-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.7507999911904335
+        },
+        {
+          "id": "dev-nearby-08-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.27280001854524
+        },
+        {
+          "id": "dev-nearby-08-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target",
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2"
+          ],
+          "rank": 1,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.1707999985665083
+        },
+        {
+          "id": "dev-nearby-09-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.614299999549985
+        },
+        {
+          "id": "dev-nearby-09-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.0750000257976353
+        },
+        {
+          "id": "dev-nearby-09-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.267500036396086
+        },
+        {
+          "id": "dev-polysemy-00-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.6519000055268407
+        },
+        {
+          "id": "dev-polysemy-00-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.4964999863877892
+        },
+        {
+          "id": "dev-polysemy-00-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.618299982510507
+        },
+        {
+          "id": "dev-polysemy-01-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.5717999776825309
+        },
+        {
+          "id": "dev-polysemy-01-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.5171000268310308
+        },
+        {
+          "id": "dev-polysemy-01-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6220000106841326
+        },
+        {
+          "id": "dev-polysemy-02-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.6700000269338489
+        },
+        {
+          "id": "dev-polysemy-02-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.678000029642135
+        },
+        {
+          "id": "dev-polysemy-02-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7932999762706459
+        },
+        {
+          "id": "dev-polysemy-03-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.9360000151209533
+        },
+        {
+          "id": "dev-polysemy-03-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.512100046966225
+        },
+        {
+          "id": "dev-polysemy-03-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6344999894499779
+        },
+        {
+          "id": "dev-polysemy-04-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9048999529331923
+        },
+        {
+          "id": "dev-polysemy-04-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.040299994405359
+        },
+        {
+          "id": "dev-polysemy-04-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6341999871656299
+        },
+        {
+          "id": "dev-polysemy-05-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.844800019171089
+        },
+        {
+          "id": "dev-polysemy-05-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.870799984317273
+        },
+        {
+          "id": "dev-polysemy-05-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9431000109761953
+        },
+        {
+          "id": "dev-polysemy-06-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8323000404052436
+        },
+        {
+          "id": "dev-polysemy-06-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.6973000019788742
+        },
+        {
+          "id": "dev-polysemy-06-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6994999605230987
+        },
+        {
+          "id": "dev-polysemy-07-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6923000221140683
+        },
+        {
+          "id": "dev-polysemy-07-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8061000155285
+        },
+        {
+          "id": "dev-polysemy-07-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7961999983526766
+        },
+        {
+          "id": "dev-polysemy-08-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.094399998895824
+        },
+        {
+          "id": "dev-polysemy-08-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.051500021480024
+        },
+        {
+          "id": "dev-polysemy-08-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.487399964593351
+        },
+        {
+          "id": "dev-polysemy-09-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.5141999940387905
+        },
+        {
+          "id": "dev-polysemy-09-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.7309000249952078
+        },
+        {
+          "id": "dev-polysemy-09-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.007999981287867
+        },
+        {
+          "id": "dev-lifecycle-00-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.301200001966208
+        },
+        {
+          "id": "dev-lifecycle-00-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8322999821975827
+        },
+        {
+          "id": "dev-lifecycle-00-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.160599979106337
+        },
+        {
+          "id": "dev-lifecycle-01-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.552000001538545
+        },
+        {
+          "id": "dev-lifecycle-01-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.1575000137090683
+        },
+        {
+          "id": "dev-lifecycle-01-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8906999612227082
+        },
+        {
+          "id": "dev-lifecycle-02-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8360000103712082
+        },
+        {
+          "id": "dev-lifecycle-02-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8114999984391034
+        },
+        {
+          "id": "dev-lifecycle-02-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.906599965877831
+        },
+        {
+          "id": "dev-lifecycle-03-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7507000011391938
+        },
+        {
+          "id": "dev-lifecycle-03-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.3777000131085515
+        },
+        {
+          "id": "dev-lifecycle-03-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7864999826997519
+        },
+        {
+          "id": "dev-lifecycle-04-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.105900028254837
+        },
+        {
+          "id": "dev-lifecycle-04-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.5154999932274222
+        },
+        {
+          "id": "dev-lifecycle-04-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3163000005297363
+        },
+        {
+          "id": "dev-lifecycle-05-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7040999955497682
+        },
+        {
+          "id": "dev-lifecycle-05-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.1675999742001295
+        },
+        {
+          "id": "dev-lifecycle-05-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.114000031724572
+        },
+        {
+          "id": "dev-lifecycle-06-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.0188000053167343
+        },
+        {
+          "id": "dev-lifecycle-06-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8801999976858497
+        },
+        {
+          "id": "dev-lifecycle-06-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.0414000027813017
+        },
+        {
+          "id": "dev-lifecycle-07-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.722700020764023
+        },
+        {
+          "id": "dev-lifecycle-07-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9213000196032226
+        },
+        {
+          "id": "dev-lifecycle-07-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.0235999836586416
+        },
+        {
+          "id": "dev-lifecycle-08-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9292999641038477
+        },
+        {
+          "id": "dev-lifecycle-08-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6454000142402947
+        },
+        {
+          "id": "dev-lifecycle-08-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.5562999760732055
+        },
+        {
+          "id": "dev-lifecycle-09-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8603000100702047
+        },
+        {
+          "id": "dev-lifecycle-09-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7856000340543687
+        },
+        {
+          "id": "dev-lifecycle-09-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9188000005669892
+        }
+      ]
+    }
+  },
+  "arm": "normalization"
+}

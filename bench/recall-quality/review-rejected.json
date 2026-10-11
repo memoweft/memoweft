@@ -1,0 +1,2202 @@
+{
+  "status": "Rejected implementation, archived observation; never an acceptance floor",
+  "commit": "6535ea4a549891bc481b0a6500cb9d193d1751ba",
+  "fixture_hash": "fedeb417ba926e258c49f9c8e69a102460667c1ba2b9bab1498b05dd2f412eda",
+  "measurement": "Current restored baseline interleaved with rejected Git module; reference results below denote the rejected implementation",
+  "result": {
+    "reference": {
+      "overall": {
+        "n": 38,
+        "positive_n": 28,
+        "negative_query_n": 10,
+        "hit1": 0.4642857142857143,
+        "hit3": 0.4642857142857143,
+        "hit5": 0.4642857142857143,
+        "mrr5": 0.4642857142857143,
+        "negative_false_recall_rate": 0.3157894736842105,
+        "negative_query_false_recall_rate": 1.0,
+        "negative_returned_count": 12,
+        "latency_ms": {
+          "p50": 2.181599964387715,
+          "p95": 3.6231999984011054
+        },
+        "returned_mean": 0.6578947368421053,
+        "returned_p95": 1,
+        "miss_causes": {
+          "null": 15
+        }
+      },
+      "categories": {
+        "review_name": {
+          "n": 4,
+          "positive_n": 4,
+          "negative_query_n": 0,
+          "hit1": 0.5,
+          "hit3": 0.5,
+          "hit5": 0.5,
+          "mrr5": 0.5,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.6318999696522951,
+            "p95": 1.7826000112108886
+          },
+          "returned_mean": 0.5,
+          "returned_p95": 1,
+          "miss_causes": {
+            "null": 2
+          }
+        },
+        "review_negative": {
+          "n": 10,
+          "positive_n": 0,
+          "negative_query_n": 10,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 1.0,
+          "negative_query_false_recall_rate": 1.0,
+          "negative_returned_count": 10,
+          "latency_ms": {
+            "p50": 1.2215000460855663,
+            "p95": 1.6461999621242285
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "review_regression": {
+          "n": 4,
+          "positive_n": 4,
+          "negative_query_n": 0,
+          "hit1": 0.25,
+          "hit3": 0.25,
+          "hit5": 0.25,
+          "mrr5": 0.25,
+          "negative_false_recall_rate": 0.25,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 1,
+          "latency_ms": {
+            "p50": 1.5242999652400613,
+            "p95": 1.7117999959737062
+          },
+          "returned_mean": 0.5,
+          "returned_p95": 1,
+          "miss_causes": {
+            "null": 3
+          }
+        },
+        "review_shared20": {
+          "n": 20,
+          "positive_n": 20,
+          "negative_query_n": 0,
+          "hit1": 0.5,
+          "hit3": 0.5,
+          "hit5": 0.5,
+          "mrr5": 0.5,
+          "negative_false_recall_rate": 0.05,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 1,
+          "latency_ms": {
+            "p50": 2.8774000238627195,
+            "p95": 3.6231999984011054
+          },
+          "returned_mean": 0.55,
+          "returned_p95": 1,
+          "miss_causes": {
+            "null": 10
+          }
+        }
+      },
+      "results": [
+        {
+          "id": "review-regression-0",
+          "category": "review_regression",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "d0"
+          ],
+          "rank": 0,
+          "wrong": [
+            "d0"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.7117999959737062,
+          "call_latency_ms": [
+            1.392600010149181,
+            1.471899973694235,
+            1.2701000086963177
+          ],
+          "reference_latency_ms": 1.7117999959737062,
+          "reference_call_latency_ms": [
+            3.472299955319613,
+            1.664999988861382,
+            1.7117999959737062
+          ],
+          "reference_selected": [
+            "d0"
+          ]
+        },
+        {
+          "id": "review-regression-1",
+          "category": "review_regression",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.5242999652400613,
+          "call_latency_ms": [
+            1.452399999834597,
+            1.153399993199855,
+            1.4392999582923949
+          ],
+          "reference_latency_ms": 1.5242999652400613,
+          "reference_call_latency_ms": [
+            1.6907000099308789,
+            1.3572000316344202,
+            1.5242999652400613
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "review-regression-2",
+          "category": "review_regression",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7033999902196229,
+          "call_latency_ms": [
+            1.396199979353696,
+            1.4457000070251524,
+            1.0846999939531088
+          ],
+          "reference_latency_ms": 1.7033999902196229,
+          "reference_call_latency_ms": [
+            1.7033999902196229,
+            1.7383000231347978,
+            1.414500002283603
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "review-regression-3",
+          "category": "review_regression",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.5085000195540488,
+          "call_latency_ms": [
+            1.3074000016786158,
+            1.0480000055395067,
+            1.3903999933972955
+          ],
+          "reference_latency_ms": 1.5085000195540488,
+          "reference_call_latency_ms": [
+            1.5085000195540488,
+            1.2058999855071306,
+            1.839499978814274
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-0",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.1056999792344868,
+          "call_latency_ms": [
+            1.3797999708913267,
+            1.2400000123307109,
+            1.0203999700024724
+          ],
+          "reference_latency_ms": 1.1056999792344868,
+          "reference_call_latency_ms": [
+            1.2238999479450285,
+            1.0887999669648707,
+            1.1056999792344868
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-1",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.2215000460855663,
+          "call_latency_ms": [
+            1.2523999903351068,
+            1.0332000092603266,
+            1.2755000498145819
+          ],
+          "reference_latency_ms": 1.2215000460855663,
+          "reference_call_latency_ms": [
+            1.2788999592885375,
+            1.0927999974228442,
+            1.2215000460855663
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-2",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.407100004144013,
+          "call_latency_ms": [
+            1.5575999859720469,
+            1.1948999599553645,
+            1.1106000165455043
+          ],
+          "reference_latency_ms": 1.407100004144013,
+          "reference_call_latency_ms": [
+            1.5078999567776918,
+            1.2197000323794782,
+            1.407100004144013
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-3",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.1976000387221575,
+          "call_latency_ms": [
+            1.6138000064529479,
+            1.0437999735586345,
+            1.5656999894417822
+          ],
+          "reference_latency_ms": 1.1976000387221575,
+          "reference_call_latency_ms": [
+            1.2605999945662916,
+            1.1976000387221575,
+            1.0938000050373375
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-4",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.3173000188544393,
+          "call_latency_ms": [
+            1.7646999913267791,
+            1.3414999702945352,
+            1.129099982790649
+          ],
+          "reference_latency_ms": 1.3173000188544393,
+          "reference_call_latency_ms": [
+            1.736000005621463,
+            1.3173000188544393,
+            1.1167999473400414
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-5",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.3414000277407467,
+          "call_latency_ms": [
+            1.796299999114126,
+            1.832100038882345,
+            1.1756999883800745
+          ],
+          "reference_latency_ms": 1.3414000277407467,
+          "reference_call_latency_ms": [
+            1.3414000277407467,
+            1.4831000007689,
+            1.1454999912530184
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-6",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.6461999621242285,
+          "call_latency_ms": [
+            1.817599986679852,
+            1.472499978262931,
+            1.5668999985791743
+          ],
+          "reference_latency_ms": 1.6461999621242285,
+          "reference_call_latency_ms": [
+            1.6461999621242285,
+            1.9271000055596232,
+            1.3755999971181154
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-7",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.1489999596960843,
+          "call_latency_ms": [
+            1.812300004530698,
+            1.131199998781085,
+            1.0466999956406653
+          ],
+          "reference_latency_ms": 1.1489999596960843,
+          "reference_call_latency_ms": [
+            1.2992999982088804,
+            1.1489999596960843,
+            1.137999992351979
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-8",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.1664999765343964,
+          "call_latency_ms": [
+            1.3854000135324895,
+            1.1063999845646322,
+            1.0379999876022339
+          ],
+          "reference_latency_ms": 1.1664999765343964,
+          "reference_call_latency_ms": [
+            1.556800038088113,
+            1.1664999765343964,
+            1.0767000494524837
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-negative-9",
+          "category": "review_negative",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 1.4803999802097678,
+          "call_latency_ms": [
+            1.5781999682076275,
+            1.3927000109106302,
+            1.3314999523572624
+          ],
+          "reference_latency_ms": 1.4803999802097678,
+          "reference_call_latency_ms": [
+            1.4944999711588025,
+            1.4803999802097678,
+            1.374599989503622
+          ],
+          "reference_selected": [
+            "target"
+          ]
+        },
+        {
+          "id": "review-name-traditional-local",
+          "category": "review_name",
+          "expect": [
+            "person-fact"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.3728999765589833,
+          "call_latency_ms": [
+            1.7635999829508364,
+            1.3770000077784061,
+            1.2716000201180577
+          ],
+          "reference_latency_ms": 1.3728999765589833,
+          "reference_call_latency_ms": [
+            1.424900023266673,
+            1.3093000161461532,
+            1.3728999765589833
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "review-name-traditional-cloud",
+          "category": "review_name",
+          "expect": [
+            "person-fact"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6490000416524708,
+          "call_latency_ms": [
+            1.407400006428361,
+            1.7960999975912273,
+            1.7227999633178115
+          ],
+          "reference_latency_ms": 1.6490000416524708,
+          "reference_call_latency_ms": [
+            1.6490000416524708,
+            1.269600004889071,
+            2.044500026386231
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "review-name-control-local",
+          "category": "review_name",
+          "expect": [
+            "person-fact"
+          ],
+          "selected": [
+            "person-fact"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6318999696522951,
+          "call_latency_ms": [
+            2.3583000293001533,
+            1.3197999796830118,
+            1.3277999823912978
+          ],
+          "reference_latency_ms": 1.6318999696522951,
+          "reference_call_latency_ms": [
+            1.6318999696522951,
+            1.505899999756366,
+            1.8506000051274896
+          ],
+          "reference_selected": [
+            "person-fact"
+          ]
+        },
+        {
+          "id": "review-name-control-cloud",
+          "category": "review_name",
+          "expect": [
+            "person-fact"
+          ],
+          "selected": [
+            "person-fact"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7826000112108886,
+          "call_latency_ms": [
+            1.776200020685792,
+            1.7665999475866556,
+            1.7386000254191458
+          ],
+          "reference_latency_ms": 1.7826000112108886,
+          "reference_call_latency_ms": [
+            1.812600006815046,
+            1.7826000112108886,
+            1.7617999692447484
+          ],
+          "reference_selected": [
+            "person-fact"
+          ]
+        },
+        {
+          "id": "shared20-0",
+          "category": "review_shared20",
+          "expect": [
+            "target-0"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.9549999637529254,
+          "call_latency_ms": [
+            3.9461000123992562,
+            4.746399994473904,
+            3.559500037226826
+          ],
+          "reference_latency_ms": 3.9549999637529254,
+          "reference_call_latency_ms": [
+            4.082600004039705,
+            3.9549999637529254,
+            3.507200046442449
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-1",
+          "category": "review_shared20",
+          "expect": [
+            "target-1"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.6231999984011054,
+          "call_latency_ms": [
+            3.61949997022748,
+            3.1997999758459628,
+            3.5028999554924667
+          ],
+          "reference_latency_ms": 3.6231999984011054,
+          "reference_call_latency_ms": [
+            2.550800039898604,
+            3.6231999984011054,
+            5.2355999941937625
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-2",
+          "category": "review_shared20",
+          "expect": [
+            "target-2"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.4224000410176814,
+          "call_latency_ms": [
+            2.642999985255301,
+            2.313599979970604,
+            2.5115999742411077
+          ],
+          "reference_latency_ms": 3.4224000410176814,
+          "reference_call_latency_ms": [
+            3.4224000410176814,
+            3.7183999666012824,
+            2.9794000438414514
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-3",
+          "category": "review_shared20",
+          "expect": [
+            "target-3"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.1536000315099955,
+          "call_latency_ms": [
+            2.0488000009208918,
+            3.0328999855555594,
+            3.049699997063726
+          ],
+          "reference_latency_ms": 3.1536000315099955,
+          "reference_call_latency_ms": [
+            3.8860999629832804,
+            2.7222000062465668,
+            3.1536000315099955
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-4",
+          "category": "review_shared20",
+          "expect": [
+            "target-4"
+          ],
+          "selected": [
+            "target-16"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target-16"
+          ],
+          "miss_cause": null,
+          "latency_ms": 3.0229000258259475,
+          "call_latency_ms": [
+            2.7353999903425574,
+            2.6235999539494514,
+            2.5418000295758247
+          ],
+          "reference_latency_ms": 3.0229000258259475,
+          "reference_call_latency_ms": [
+            3.110299992840737,
+            3.0229000258259475,
+            2.949099987745285
+          ],
+          "reference_selected": [
+            "target-16"
+          ]
+        },
+        {
+          "id": "shared20-5",
+          "category": "review_shared20",
+          "expect": [
+            "target-5"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.738300012424588,
+          "call_latency_ms": [
+            2.0594000234268606,
+            2.8797999839298427,
+            2.058700018096715
+          ],
+          "reference_latency_ms": 2.738300012424588,
+          "reference_call_latency_ms": [
+            2.738300012424588,
+            2.7754000038839877,
+            2.369399997405708
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-6",
+          "category": "review_shared20",
+          "expect": [
+            "target-6"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8418999863788486,
+          "call_latency_ms": [
+            2.660500002093613,
+            2.2531000431627035,
+            2.5625000125728548
+          ],
+          "reference_latency_ms": 2.8418999863788486,
+          "reference_call_latency_ms": [
+            3.11729998793453,
+            2.8418999863788486,
+            2.3324000067077577
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-7",
+          "category": "review_shared20",
+          "expect": [
+            "target-7"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5392999523319304,
+          "call_latency_ms": [
+            2.6855000178329647,
+            2.258300024550408,
+            2.2453999845311046
+          ],
+          "reference_latency_ms": 2.5392999523319304,
+          "reference_call_latency_ms": [
+            2.5392999523319304,
+            2.9634999809786677,
+            2.11130001116544
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-8",
+          "category": "review_shared20",
+          "expect": [
+            "target-8"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.181599964387715,
+          "call_latency_ms": [
+            1.9178999937139452,
+            2.4574999697506428,
+            1.9323999877087772
+          ],
+          "reference_latency_ms": 2.181599964387715,
+          "reference_call_latency_ms": [
+            2.174000022932887,
+            2.181599964387715,
+            2.375899988692254
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-9",
+          "category": "review_shared20",
+          "expect": [
+            "target-9"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3041000133380294,
+          "call_latency_ms": [
+            2.866299997549504,
+            2.9827000107616186,
+            2.223999996203929
+          ],
+          "reference_latency_ms": 3.3041000133380294,
+          "reference_call_latency_ms": [
+            3.3411000040359795,
+            3.3041000133380294,
+            3.2226000330410898
+          ],
+          "reference_selected": []
+        },
+        {
+          "id": "shared20-10",
+          "category": "review_shared20",
+          "expect": [
+            "target-10"
+          ],
+          "selected": [
+            "target-10"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.9094000346958637,
+          "call_latency_ms": [
+            2.071399998385459,
+            2.177500049583614,
+            1.9163000397384167
+          ],
+          "reference_latency_ms": 2.9094000346958637,
+          "reference_call_latency_ms": [
+            2.9094000346958637,
+            3.2454999745823443,
+            2.756300033070147
+          ],
+          "reference_selected": [
+            "target-10"
+          ]
+        },
+        {
+          "id": "shared20-11",
+          "category": "review_shared20",
+          "expect": [
+            "target-11"
+          ],
+          "selected": [
+            "target-11"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8774000238627195,
+          "call_latency_ms": [
+            3.132799989543855,
+            3.200399980414659,
+            2.6241999585181475
+          ],
+          "reference_latency_ms": 2.8774000238627195,
+          "reference_call_latency_ms": [
+            3.451900032814592,
+            2.796199987642467,
+            2.8774000238627195
+          ],
+          "reference_selected": [
+            "target-11"
+          ]
+        },
+        {
+          "id": "shared20-12",
+          "category": "review_shared20",
+          "expect": [
+            "target-12"
+          ],
+          "selected": [
+            "target-12"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.0239999759942293,
+          "call_latency_ms": [
+            2.6489999727346003,
+            1.928799960296601,
+            2.550399978645146
+          ],
+          "reference_latency_ms": 3.0239999759942293,
+          "reference_call_latency_ms": [
+            3.0239999759942293,
+            2.494000014849007,
+            3.2964999554678798
+          ],
+          "reference_selected": [
+            "target-12"
+          ]
+        },
+        {
+          "id": "shared20-13",
+          "category": "review_shared20",
+          "expect": [
+            "target-13"
+          ],
+          "selected": [
+            "target-13"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.230899979826063,
+          "call_latency_ms": [
+            2.2227000445127487,
+            2.0858999923802912,
+            2.8128999983891845
+          ],
+          "reference_latency_ms": 3.230899979826063,
+          "reference_call_latency_ms": [
+            3.382599970791489,
+            2.3318000021390617,
+            3.230899979826063
+          ],
+          "reference_selected": [
+            "target-13"
+          ]
+        },
+        {
+          "id": "shared20-14",
+          "category": "review_shared20",
+          "expect": [
+            "target-14"
+          ],
+          "selected": [
+            "target-14"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.525800013449043,
+          "call_latency_ms": [
+            2.029099967330694,
+            2.963599981740117,
+            2.8365000034682453
+          ],
+          "reference_latency_ms": 3.525800013449043,
+          "reference_call_latency_ms": [
+            2.71279999287799,
+            4.466600017622113,
+            3.525800013449043
+          ],
+          "reference_selected": [
+            "target-14"
+          ]
+        },
+        {
+          "id": "shared20-15",
+          "category": "review_shared20",
+          "expect": [
+            "target-15"
+          ],
+          "selected": [
+            "target-15"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.4831000482663512,
+          "call_latency_ms": [
+            2.2831999813206494,
+            1.9922000356018543,
+            2.0390000427141786
+          ],
+          "reference_latency_ms": 2.4831000482663512,
+          "reference_call_latency_ms": [
+            2.311200019903481,
+            2.8728999895974994,
+            2.4831000482663512
+          ],
+          "reference_selected": [
+            "target-15"
+          ]
+        },
+        {
+          "id": "shared20-16",
+          "category": "review_shared20",
+          "expect": [
+            "target-16"
+          ],
+          "selected": [
+            "target-16"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.749399980530143,
+          "call_latency_ms": [
+            2.4014999507926404,
+            2.0425000111572444,
+            2.4794000200927258
+          ],
+          "reference_latency_ms": 2.749399980530143,
+          "reference_call_latency_ms": [
+            3.349499951582402,
+            2.749399980530143,
+            2.5519999908283353
+          ],
+          "reference_selected": [
+            "target-16"
+          ]
+        },
+        {
+          "id": "shared20-17",
+          "category": "review_shared20",
+          "expect": [
+            "target-17"
+          ],
+          "selected": [
+            "target-17"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.273000020068139,
+          "call_latency_ms": [
+            1.985599985346198,
+            1.9289999618194997,
+            2.063299994915724
+          ],
+          "reference_latency_ms": 2.273000020068139,
+          "reference_call_latency_ms": [
+            2.273000020068139,
+            2.3837999906390905,
+            2.2660999675281346
+          ],
+          "reference_selected": [
+            "target-17"
+          ]
+        },
+        {
+          "id": "shared20-18",
+          "category": "review_shared20",
+          "expect": [
+            "target-18"
+          ],
+          "selected": [
+            "target-18"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3966000298969448,
+          "call_latency_ms": [
+            2.1762000396847725,
+            2.0358000183478,
+            2.6562000275589526
+          ],
+          "reference_latency_ms": 2.3966000298969448,
+          "reference_call_latency_ms": [
+            2.217500004917383,
+            2.5366999907419086,
+            2.3966000298969448
+          ],
+          "reference_selected": [
+            "target-18"
+          ]
+        },
+        {
+          "id": "shared20-19",
+          "category": "review_shared20",
+          "expect": [
+            "target-19"
+          ],
+          "selected": [
+            "target-19"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3305999930016696,
+          "call_latency_ms": [
+            1.902199990581721,
+            2.24170001456514,
+            2.6113000349141657
+          ],
+          "reference_latency_ms": 2.3305999930016696,
+          "reference_call_latency_ms": [
+            2.3305999930016696,
+            2.212700026575476,
+            2.467599988449365
+          ],
+          "reference_selected": [
+            "target-19"
+          ]
+        }
+      ]
+    },
+    "overall": {
+      "n": 38,
+      "positive_n": 28,
+      "negative_query_n": 10,
+      "hit1": 0.2857142857142857,
+      "hit3": 0.2857142857142857,
+      "hit5": 0.2857142857142857,
+      "mrr5": 0.2857142857142857,
+      "negative_false_recall_rate": 0.0,
+      "negative_query_false_recall_rate": 0.0,
+      "negative_returned_count": 0,
+      "latency_ms": {
+        "p50": 1.9323999877087772,
+        "p95": 3.5028999554924667
+      },
+      "returned_mean": 0.21052631578947367,
+      "returned_p95": 1,
+      "miss_causes": {
+        "candidate": 20
+      }
+    },
+    "per_call_latency_ms": {
+      "p50": 1.928799960296601,
+      "p95": 3.200399980414659
+    },
+    "reference_per_call_latency_ms": {
+      "p50": 2.212700026575476,
+      "p95": 3.7183999666012824
+    },
+    "categories": {
+      "review_name": {
+        "n": 4,
+        "positive_n": 4,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 1.3770000077784061,
+          "p95": 1.7665999475866556
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "review_negative": {
+        "n": 10,
+        "positive_n": 0,
+        "negative_query_n": 10,
+        "hit1": 0,
+        "hit3": 0,
+        "hit5": 0,
+        "mrr5": 0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0.0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 1.2523999903351068,
+          "p95": 1.796299999114126
+        },
+        "returned_mean": 0.0,
+        "returned_p95": 0,
+        "miss_causes": {}
+      },
+      "review_regression": {
+        "n": 4,
+        "positive_n": 4,
+        "negative_query_n": 0,
+        "hit1": 1.0,
+        "hit3": 1.0,
+        "hit5": 1.0,
+        "mrr5": 1.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 1.392600010149181,
+          "p95": 1.4392999582923949
+        },
+        "returned_mean": 1.0,
+        "returned_p95": 1,
+        "miss_causes": {}
+      },
+      "review_shared20": {
+        "n": 20,
+        "positive_n": 20,
+        "negative_query_n": 0,
+        "hit1": 0.0,
+        "hit3": 0.0,
+        "hit5": 0.0,
+        "mrr5": 0.0,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 2.4014999507926404,
+          "p95": 3.5028999554924667
+        },
+        "returned_mean": 0.0,
+        "returned_p95": 0,
+        "miss_causes": {
+          "candidate": 20
+        }
+      }
+    },
+    "results": [
+      {
+        "id": "review-regression-0",
+        "category": "review_regression",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.392600010149181,
+        "call_latency_ms": [
+          1.392600010149181,
+          1.471899973694235,
+          1.2701000086963177
+        ],
+        "reference_latency_ms": 1.7117999959737062,
+        "reference_call_latency_ms": [
+          3.472299955319613,
+          1.664999988861382,
+          1.7117999959737062
+        ],
+        "reference_selected": [
+          "d0"
+        ]
+      },
+      {
+        "id": "review-regression-1",
+        "category": "review_regression",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.4392999582923949,
+        "call_latency_ms": [
+          1.452399999834597,
+          1.153399993199855,
+          1.4392999582923949
+        ],
+        "reference_latency_ms": 1.5242999652400613,
+        "reference_call_latency_ms": [
+          1.6907000099308789,
+          1.3572000316344202,
+          1.5242999652400613
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "review-regression-2",
+        "category": "review_regression",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.396199979353696,
+        "call_latency_ms": [
+          1.396199979353696,
+          1.4457000070251524,
+          1.0846999939531088
+        ],
+        "reference_latency_ms": 1.7033999902196229,
+        "reference_call_latency_ms": [
+          1.7033999902196229,
+          1.7383000231347978,
+          1.414500002283603
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "review-regression-3",
+        "category": "review_regression",
+        "expect": [
+          "target"
+        ],
+        "selected": [
+          "target"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.3074000016786158,
+        "call_latency_ms": [
+          1.3074000016786158,
+          1.0480000055395067,
+          1.3903999933972955
+        ],
+        "reference_latency_ms": 1.5085000195540488,
+        "reference_call_latency_ms": [
+          1.5085000195540488,
+          1.2058999855071306,
+          1.839499978814274
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-0",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.2400000123307109,
+        "call_latency_ms": [
+          1.3797999708913267,
+          1.2400000123307109,
+          1.0203999700024724
+        ],
+        "reference_latency_ms": 1.1056999792344868,
+        "reference_call_latency_ms": [
+          1.2238999479450285,
+          1.0887999669648707,
+          1.1056999792344868
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-1",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.2523999903351068,
+        "call_latency_ms": [
+          1.2523999903351068,
+          1.0332000092603266,
+          1.2755000498145819
+        ],
+        "reference_latency_ms": 1.2215000460855663,
+        "reference_call_latency_ms": [
+          1.2788999592885375,
+          1.0927999974228442,
+          1.2215000460855663
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-2",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.1948999599553645,
+        "call_latency_ms": [
+          1.5575999859720469,
+          1.1948999599553645,
+          1.1106000165455043
+        ],
+        "reference_latency_ms": 1.407100004144013,
+        "reference_call_latency_ms": [
+          1.5078999567776918,
+          1.2197000323794782,
+          1.407100004144013
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-3",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.5656999894417822,
+        "call_latency_ms": [
+          1.6138000064529479,
+          1.0437999735586345,
+          1.5656999894417822
+        ],
+        "reference_latency_ms": 1.1976000387221575,
+        "reference_call_latency_ms": [
+          1.2605999945662916,
+          1.1976000387221575,
+          1.0938000050373375
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-4",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.3414999702945352,
+        "call_latency_ms": [
+          1.7646999913267791,
+          1.3414999702945352,
+          1.129099982790649
+        ],
+        "reference_latency_ms": 1.3173000188544393,
+        "reference_call_latency_ms": [
+          1.736000005621463,
+          1.3173000188544393,
+          1.1167999473400414
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-5",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.796299999114126,
+        "call_latency_ms": [
+          1.796299999114126,
+          1.832100038882345,
+          1.1756999883800745
+        ],
+        "reference_latency_ms": 1.3414000277407467,
+        "reference_call_latency_ms": [
+          1.3414000277407467,
+          1.4831000007689,
+          1.1454999912530184
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-6",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.5668999985791743,
+        "call_latency_ms": [
+          1.817599986679852,
+          1.472499978262931,
+          1.5668999985791743
+        ],
+        "reference_latency_ms": 1.6461999621242285,
+        "reference_call_latency_ms": [
+          1.6461999621242285,
+          1.9271000055596232,
+          1.3755999971181154
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-7",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.131199998781085,
+        "call_latency_ms": [
+          1.812300004530698,
+          1.131199998781085,
+          1.0466999956406653
+        ],
+        "reference_latency_ms": 1.1489999596960843,
+        "reference_call_latency_ms": [
+          1.2992999982088804,
+          1.1489999596960843,
+          1.137999992351979
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-8",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.1063999845646322,
+        "call_latency_ms": [
+          1.3854000135324895,
+          1.1063999845646322,
+          1.0379999876022339
+        ],
+        "reference_latency_ms": 1.1664999765343964,
+        "reference_call_latency_ms": [
+          1.556800038088113,
+          1.1664999765343964,
+          1.0767000494524837
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-negative-9",
+        "category": "review_negative",
+        "expect": [],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.3927000109106302,
+        "call_latency_ms": [
+          1.5781999682076275,
+          1.3927000109106302,
+          1.3314999523572624
+        ],
+        "reference_latency_ms": 1.4803999802097678,
+        "reference_call_latency_ms": [
+          1.4944999711588025,
+          1.4803999802097678,
+          1.374599989503622
+        ],
+        "reference_selected": [
+          "target"
+        ]
+      },
+      {
+        "id": "review-name-traditional-local",
+        "category": "review_name",
+        "expect": [
+          "person-fact"
+        ],
+        "selected": [
+          "person-fact"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.3770000077784061,
+        "call_latency_ms": [
+          1.7635999829508364,
+          1.3770000077784061,
+          1.2716000201180577
+        ],
+        "reference_latency_ms": 1.3728999765589833,
+        "reference_call_latency_ms": [
+          1.424900023266673,
+          1.3093000161461532,
+          1.3728999765589833
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "review-name-traditional-cloud",
+        "category": "review_name",
+        "expect": [
+          "person-fact"
+        ],
+        "selected": [
+          "person-fact"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.7227999633178115,
+        "call_latency_ms": [
+          1.407400006428361,
+          1.7960999975912273,
+          1.7227999633178115
+        ],
+        "reference_latency_ms": 1.6490000416524708,
+        "reference_call_latency_ms": [
+          1.6490000416524708,
+          1.269600004889071,
+          2.044500026386231
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "review-name-control-local",
+        "category": "review_name",
+        "expect": [
+          "person-fact"
+        ],
+        "selected": [
+          "person-fact"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.3277999823912978,
+        "call_latency_ms": [
+          2.3583000293001533,
+          1.3197999796830118,
+          1.3277999823912978
+        ],
+        "reference_latency_ms": 1.6318999696522951,
+        "reference_call_latency_ms": [
+          1.6318999696522951,
+          1.505899999756366,
+          1.8506000051274896
+        ],
+        "reference_selected": [
+          "person-fact"
+        ]
+      },
+      {
+        "id": "review-name-control-cloud",
+        "category": "review_name",
+        "expect": [
+          "person-fact"
+        ],
+        "selected": [
+          "person-fact"
+        ],
+        "rank": 1,
+        "wrong": [],
+        "miss_cause": null,
+        "latency_ms": 1.7665999475866556,
+        "call_latency_ms": [
+          1.776200020685792,
+          1.7665999475866556,
+          1.7386000254191458
+        ],
+        "reference_latency_ms": 1.7826000112108886,
+        "reference_call_latency_ms": [
+          1.812600006815046,
+          1.7826000112108886,
+          1.7617999692447484
+        ],
+        "reference_selected": [
+          "person-fact"
+        ]
+      },
+      {
+        "id": "shared20-0",
+        "category": "review_shared20",
+        "expect": [
+          "target-0"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 3.9461000123992562,
+        "call_latency_ms": [
+          3.9461000123992562,
+          4.746399994473904,
+          3.559500037226826
+        ],
+        "reference_latency_ms": 3.9549999637529254,
+        "reference_call_latency_ms": [
+          4.082600004039705,
+          3.9549999637529254,
+          3.507200046442449
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-1",
+        "category": "review_shared20",
+        "expect": [
+          "target-1"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 3.5028999554924667,
+        "call_latency_ms": [
+          3.61949997022748,
+          3.1997999758459628,
+          3.5028999554924667
+        ],
+        "reference_latency_ms": 3.6231999984011054,
+        "reference_call_latency_ms": [
+          2.550800039898604,
+          3.6231999984011054,
+          5.2355999941937625
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-2",
+        "category": "review_shared20",
+        "expect": [
+          "target-2"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.5115999742411077,
+        "call_latency_ms": [
+          2.642999985255301,
+          2.313599979970604,
+          2.5115999742411077
+        ],
+        "reference_latency_ms": 3.4224000410176814,
+        "reference_call_latency_ms": [
+          3.4224000410176814,
+          3.7183999666012824,
+          2.9794000438414514
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-3",
+        "category": "review_shared20",
+        "expect": [
+          "target-3"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 3.0328999855555594,
+        "call_latency_ms": [
+          2.0488000009208918,
+          3.0328999855555594,
+          3.049699997063726
+        ],
+        "reference_latency_ms": 3.1536000315099955,
+        "reference_call_latency_ms": [
+          3.8860999629832804,
+          2.7222000062465668,
+          3.1536000315099955
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-4",
+        "category": "review_shared20",
+        "expect": [
+          "target-4"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.6235999539494514,
+        "call_latency_ms": [
+          2.7353999903425574,
+          2.6235999539494514,
+          2.5418000295758247
+        ],
+        "reference_latency_ms": 3.0229000258259475,
+        "reference_call_latency_ms": [
+          3.110299992840737,
+          3.0229000258259475,
+          2.949099987745285
+        ],
+        "reference_selected": [
+          "target-16"
+        ]
+      },
+      {
+        "id": "shared20-5",
+        "category": "review_shared20",
+        "expect": [
+          "target-5"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.0594000234268606,
+        "call_latency_ms": [
+          2.0594000234268606,
+          2.8797999839298427,
+          2.058700018096715
+        ],
+        "reference_latency_ms": 2.738300012424588,
+        "reference_call_latency_ms": [
+          2.738300012424588,
+          2.7754000038839877,
+          2.369399997405708
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-6",
+        "category": "review_shared20",
+        "expect": [
+          "target-6"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.5625000125728548,
+        "call_latency_ms": [
+          2.660500002093613,
+          2.2531000431627035,
+          2.5625000125728548
+        ],
+        "reference_latency_ms": 2.8418999863788486,
+        "reference_call_latency_ms": [
+          3.11729998793453,
+          2.8418999863788486,
+          2.3324000067077577
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-7",
+        "category": "review_shared20",
+        "expect": [
+          "target-7"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.258300024550408,
+        "call_latency_ms": [
+          2.6855000178329647,
+          2.258300024550408,
+          2.2453999845311046
+        ],
+        "reference_latency_ms": 2.5392999523319304,
+        "reference_call_latency_ms": [
+          2.5392999523319304,
+          2.9634999809786677,
+          2.11130001116544
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-8",
+        "category": "review_shared20",
+        "expect": [
+          "target-8"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 1.9323999877087772,
+        "call_latency_ms": [
+          1.9178999937139452,
+          2.4574999697506428,
+          1.9323999877087772
+        ],
+        "reference_latency_ms": 2.181599964387715,
+        "reference_call_latency_ms": [
+          2.174000022932887,
+          2.181599964387715,
+          2.375899988692254
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-9",
+        "category": "review_shared20",
+        "expect": [
+          "target-9"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.866299997549504,
+        "call_latency_ms": [
+          2.866299997549504,
+          2.9827000107616186,
+          2.223999996203929
+        ],
+        "reference_latency_ms": 3.3041000133380294,
+        "reference_call_latency_ms": [
+          3.3411000040359795,
+          3.3041000133380294,
+          3.2226000330410898
+        ],
+        "reference_selected": []
+      },
+      {
+        "id": "shared20-10",
+        "category": "review_shared20",
+        "expect": [
+          "target-10"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.071399998385459,
+        "call_latency_ms": [
+          2.071399998385459,
+          2.177500049583614,
+          1.9163000397384167
+        ],
+        "reference_latency_ms": 2.9094000346958637,
+        "reference_call_latency_ms": [
+          2.9094000346958637,
+          3.2454999745823443,
+          2.756300033070147
+        ],
+        "reference_selected": [
+          "target-10"
+        ]
+      },
+      {
+        "id": "shared20-11",
+        "category": "review_shared20",
+        "expect": [
+          "target-11"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 3.132799989543855,
+        "call_latency_ms": [
+          3.132799989543855,
+          3.200399980414659,
+          2.6241999585181475
+        ],
+        "reference_latency_ms": 2.8774000238627195,
+        "reference_call_latency_ms": [
+          3.451900032814592,
+          2.796199987642467,
+          2.8774000238627195
+        ],
+        "reference_selected": [
+          "target-11"
+        ]
+      },
+      {
+        "id": "shared20-12",
+        "category": "review_shared20",
+        "expect": [
+          "target-12"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.550399978645146,
+        "call_latency_ms": [
+          2.6489999727346003,
+          1.928799960296601,
+          2.550399978645146
+        ],
+        "reference_latency_ms": 3.0239999759942293,
+        "reference_call_latency_ms": [
+          3.0239999759942293,
+          2.494000014849007,
+          3.2964999554678798
+        ],
+        "reference_selected": [
+          "target-12"
+        ]
+      },
+      {
+        "id": "shared20-13",
+        "category": "review_shared20",
+        "expect": [
+          "target-13"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.2227000445127487,
+        "call_latency_ms": [
+          2.2227000445127487,
+          2.0858999923802912,
+          2.8128999983891845
+        ],
+        "reference_latency_ms": 3.230899979826063,
+        "reference_call_latency_ms": [
+          3.382599970791489,
+          2.3318000021390617,
+          3.230899979826063
+        ],
+        "reference_selected": [
+          "target-13"
+        ]
+      },
+      {
+        "id": "shared20-14",
+        "category": "review_shared20",
+        "expect": [
+          "target-14"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.8365000034682453,
+        "call_latency_ms": [
+          2.029099967330694,
+          2.963599981740117,
+          2.8365000034682453
+        ],
+        "reference_latency_ms": 3.525800013449043,
+        "reference_call_latency_ms": [
+          2.71279999287799,
+          4.466600017622113,
+          3.525800013449043
+        ],
+        "reference_selected": [
+          "target-14"
+        ]
+      },
+      {
+        "id": "shared20-15",
+        "category": "review_shared20",
+        "expect": [
+          "target-15"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.0390000427141786,
+        "call_latency_ms": [
+          2.2831999813206494,
+          1.9922000356018543,
+          2.0390000427141786
+        ],
+        "reference_latency_ms": 2.4831000482663512,
+        "reference_call_latency_ms": [
+          2.311200019903481,
+          2.8728999895974994,
+          2.4831000482663512
+        ],
+        "reference_selected": [
+          "target-15"
+        ]
+      },
+      {
+        "id": "shared20-16",
+        "category": "review_shared20",
+        "expect": [
+          "target-16"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.4014999507926404,
+        "call_latency_ms": [
+          2.4014999507926404,
+          2.0425000111572444,
+          2.4794000200927258
+        ],
+        "reference_latency_ms": 2.749399980530143,
+        "reference_call_latency_ms": [
+          3.349499951582402,
+          2.749399980530143,
+          2.5519999908283353
+        ],
+        "reference_selected": [
+          "target-16"
+        ]
+      },
+      {
+        "id": "shared20-17",
+        "category": "review_shared20",
+        "expect": [
+          "target-17"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 1.985599985346198,
+        "call_latency_ms": [
+          1.985599985346198,
+          1.9289999618194997,
+          2.063299994915724
+        ],
+        "reference_latency_ms": 2.273000020068139,
+        "reference_call_latency_ms": [
+          2.273000020068139,
+          2.3837999906390905,
+          2.2660999675281346
+        ],
+        "reference_selected": [
+          "target-17"
+        ]
+      },
+      {
+        "id": "shared20-18",
+        "category": "review_shared20",
+        "expect": [
+          "target-18"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.1762000396847725,
+        "call_latency_ms": [
+          2.1762000396847725,
+          2.0358000183478,
+          2.6562000275589526
+        ],
+        "reference_latency_ms": 2.3966000298969448,
+        "reference_call_latency_ms": [
+          2.217500004917383,
+          2.5366999907419086,
+          2.3966000298969448
+        ],
+        "reference_selected": [
+          "target-18"
+        ]
+      },
+      {
+        "id": "shared20-19",
+        "category": "review_shared20",
+        "expect": [
+          "target-19"
+        ],
+        "selected": [],
+        "rank": 0,
+        "wrong": [],
+        "miss_cause": "candidate",
+        "latency_ms": 2.24170001456514,
+        "call_latency_ms": [
+          1.902199990581721,
+          2.24170001456514,
+          2.6113000349141657
+        ],
+        "reference_latency_ms": 2.3305999930016696,
+        "reference_call_latency_ms": [
+          2.3305999930016696,
+          2.212700026575476,
+          2.467599988449365
+        ],
+        "reference_selected": [
+          "target-19"
+        ]
+      }
+    ]
+  }
+}

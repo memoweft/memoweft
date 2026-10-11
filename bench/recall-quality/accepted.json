@@ -1,0 +1,811 @@
+{
+  "version": 1,
+  "status": "recorded; baseline per-query gate failed on holdout-polysemy-04-1; not approved for merge",
+  "evaluation_commit": "5657cee68dce3e421f39da77e3c7c10ef00666b1",
+  "fixture_hashes": {
+    "dev": "67a9b11e82e4f0a7ee892140fdcf1fb3af2ddaa7e17d2f3909120c7c59304fe0",
+    "challenge": "750be9682f5fbacbbc310950fa7bce32b57d7cfd5012fa079fae90a36dd3bb62",
+    "holdout": "c7fd7cdbff039321861c17c1187959e210cbff2b2ffc51b00561bd0e9f2a9cd4"
+  },
+  "splits": {
+    "dev": {
+      "overall": {
+        "n": 360,
+        "positive_n": 300,
+        "negative_query_n": 60,
+        "hit1": 0.9966666666666667,
+        "hit3": 0.9966666666666667,
+        "hit5": 0.9966666666666667,
+        "mrr5": 0.9966666666666667,
+        "negative_false_recall_rate": 0.0,
+        "negative_query_false_recall_rate": 0.0,
+        "negative_returned_count": 0,
+        "latency_ms": {
+          "p50": 1.466000045184046,
+          "p95": 2.2346999612636864
+        },
+        "returned_mean": 0.8305555555555556,
+        "returned_p95": 1,
+        "miss_causes": {
+          "candidate": 1
+        }
+      },
+      "categories": {
+        "abbreviation": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.4706000220030546,
+            "p95": 1.6418000450357795
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "bilingual": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.3165000127628446,
+            "p95": 1.6297000111080706
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "colloquial": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.2725000269711018,
+            "p95": 1.4974999940022826
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "correction": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.490800001192838,
+            "p95": 1.7315999721176922
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "hierarchy": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.3241000124253333,
+            "p95": 1.8319999799132347
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "indirect": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.2336000218056142,
+            "p95": 1.4890999882481992
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "lifecycle": {
+          "n": 30,
+          "positive_n": 0,
+          "negative_query_n": 30,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.5462999581359327,
+            "p95": 1.7300000181421638
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {}
+        },
+        "nearby": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.269199991133064,
+            "p95": 2.765100041870028
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "polysemy": {
+          "n": 30,
+          "positive_n": 0,
+          "negative_query_n": 30,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.5272999880835414,
+            "p95": 1.7802999936975539
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {}
+        },
+        "synonym": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.6293999506160617,
+            "p95": 2.1428000181913376
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "time": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 0.9666666666666667,
+          "hit3": 0.9666666666666667,
+          "hit5": 0.9666666666666667,
+          "mrr5": 0.9666666666666667,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.5286999987438321,
+            "p95": 1.8483000458218157
+          },
+          "returned_mean": 0.9666666666666667,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 1
+          }
+        },
+        "typo": {
+          "n": 30,
+          "positive_n": 30,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.3238000101409853,
+            "p95": 1.5403999714180827
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        }
+      }
+    },
+    "challenge": {
+      "overall": {
+        "n": 120,
+        "positive_n": 100,
+        "negative_query_n": 20,
+        "hit1": 0.64,
+        "hit3": 0.64,
+        "hit5": 0.64,
+        "mrr5": 0.64,
+        "negative_false_recall_rate": 0.025,
+        "negative_query_false_recall_rate": 0.1,
+        "negative_returned_count": 6,
+        "latency_ms": {
+          "p50": 2.0691000390797853,
+          "p95": 3.2594999647699296
+        },
+        "returned_mean": 0.5833333333333334,
+        "returned_p95": 1,
+        "miss_causes": {
+          "candidate": 36
+        }
+      },
+      "categories": {
+        "abbreviation": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.8,
+          "hit3": 0.8,
+          "hit5": 0.8,
+          "mrr5": 0.8,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.154799993149936,
+            "p95": 2.5464000063948333
+          },
+          "returned_mean": 0.8,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 2
+          }
+        },
+        "bilingual": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.4,
+          "hit3": 0.4,
+          "hit5": 0.4,
+          "mrr5": 0.4,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.099800040014088,
+            "p95": 2.6304000057280064
+          },
+          "returned_mean": 0.4,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 6
+          }
+        },
+        "colloquial": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.0,
+          "hit3": 0.0,
+          "hit5": 0.0,
+          "mrr5": 0.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.0260000019334257,
+            "p95": 2.4760999949648976
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {
+            "candidate": 10
+          }
+        },
+        "correction": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.1282999659888446,
+            "p95": 4.056899982970208
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "hierarchy": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.6,
+          "hit3": 0.6,
+          "hit5": 0.6,
+          "mrr5": 0.6,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.1026000031270087,
+            "p95": 2.508700010366738
+          },
+          "returned_mean": 0.6,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 4
+          }
+        },
+        "indirect": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.1,
+          "hit3": 0.1,
+          "hit5": 0.1,
+          "mrr5": 0.1,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.7333999858237803,
+            "p95": 2.167199971154332
+          },
+          "returned_mean": 0.1,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 9
+          }
+        },
+        "lifecycle": {
+          "n": 10,
+          "positive_n": 0,
+          "negative_query_n": 10,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.6049999976530671,
+            "p95": 1.8425000016577542
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {}
+        },
+        "nearby": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.9,
+          "hit3": 0.9,
+          "hit5": 0.9,
+          "mrr5": 0.9,
+          "negative_false_recall_rate": 0.1,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 4,
+          "latency_ms": {
+            "p50": 3.1201999518088996,
+            "p95": 4.215899971313775
+          },
+          "returned_mean": 1.3,
+          "returned_p95": 5,
+          "miss_causes": {
+            "candidate": 1
+          }
+        },
+        "polysemy": {
+          "n": 10,
+          "positive_n": 0,
+          "negative_query_n": 10,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.2,
+          "negative_query_false_recall_rate": 0.2,
+          "negative_returned_count": 2,
+          "latency_ms": {
+            "p50": 1.9039000035263598,
+            "p95": 2.161000040359795
+          },
+          "returned_mean": 0.2,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "synonym": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.8,
+          "hit3": 0.8,
+          "hit5": 0.8,
+          "mrr5": 0.8,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.8518000142648816,
+            "p95": 2.1016999962739646
+          },
+          "returned_mean": 0.8,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 2
+          }
+        },
+        "time": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.9,
+          "hit3": 0.9,
+          "hit5": 0.9,
+          "mrr5": 0.9,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.202000003308058,
+            "p95": 4.159000003710389
+          },
+          "returned_mean": 0.9,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 1
+          }
+        },
+        "typo": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.9,
+          "hit3": 0.9,
+          "hit5": 0.9,
+          "mrr5": 0.9,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.0490000024437904,
+            "p95": 2.182200027164072
+          },
+          "returned_mean": 0.9,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 1
+          }
+        }
+      }
+    },
+    "holdout": {
+      "overall": {
+        "n": 120,
+        "positive_n": 100,
+        "negative_query_n": 20,
+        "hit1": 0.66,
+        "hit3": 0.66,
+        "hit5": 0.66,
+        "mrr5": 0.66,
+        "negative_false_recall_rate": 0.016666666666666666,
+        "negative_query_false_recall_rate": 0.1,
+        "negative_returned_count": 2,
+        "latency_ms": {
+          "p50": 1.8189999973401427,
+          "p95": 2.6504999841563404
+        },
+        "returned_mean": 0.5666666666666667,
+        "returned_p95": 1,
+        "miss_causes": {
+          "candidate": 34
+        }
+      },
+      "categories": {
+        "abbreviation": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.6,
+          "hit3": 0.6,
+          "hit5": 0.6,
+          "mrr5": 0.6,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.052700030617416,
+            "p95": 2.2424000198952854
+          },
+          "returned_mean": 0.6,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 4
+          }
+        },
+        "bilingual": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.6,
+          "hit3": 0.6,
+          "hit5": 0.6,
+          "mrr5": 0.6,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.198200032580644,
+            "p95": 4.187899990938604
+          },
+          "returned_mean": 0.6,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 4
+          }
+        },
+        "colloquial": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.6,
+          "hit3": 0.6,
+          "hit5": 0.6,
+          "mrr5": 0.6,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.035799960140139,
+            "p95": 2.9924000264145434
+          },
+          "returned_mean": 0.6,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 4
+          }
+        },
+        "correction": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.8,
+          "hit3": 0.8,
+          "hit5": 0.8,
+          "mrr5": 0.8,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.7030999879352748,
+            "p95": 1.9264000002294779
+          },
+          "returned_mean": 0.8,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 2
+          }
+        },
+        "hierarchy": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.6,
+          "hit3": 0.6,
+          "hit5": 0.6,
+          "mrr5": 0.6,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.072000002954155,
+            "p95": 2.4499999708496034
+          },
+          "returned_mean": 0.6,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 4
+          }
+        },
+        "indirect": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.6,
+          "hit3": 0.6,
+          "hit5": 0.6,
+          "mrr5": 0.6,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.6321999719366431,
+            "p95": 1.9357000128366053
+          },
+          "returned_mean": 0.6,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 4
+          }
+        },
+        "lifecycle": {
+          "n": 10,
+          "positive_n": 0,
+          "negative_query_n": 10,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.8189999973401427,
+            "p95": 2.059199963696301
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {}
+        },
+        "nearby": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.8,
+          "hit3": 0.8,
+          "hit5": 0.8,
+          "mrr5": 0.8,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.58979998761788,
+            "p95": 2.890300005674362
+          },
+          "returned_mean": 0.8,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 2
+          }
+        },
+        "polysemy": {
+          "n": 10,
+          "positive_n": 0,
+          "negative_query_n": 10,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.2,
+          "negative_query_false_recall_rate": 0.2,
+          "negative_returned_count": 2,
+          "latency_ms": {
+            "p50": 1.641899987589568,
+            "p95": 1.8952999962493777
+          },
+          "returned_mean": 0.2,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "synonym": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.6,
+          "hit3": 0.6,
+          "hit5": 0.6,
+          "mrr5": 0.6,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.7327999812550843,
+            "p95": 1.9857999868690968
+          },
+          "returned_mean": 0.6,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 4
+          }
+        },
+        "time": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.8,
+          "hit3": 0.8,
+          "hit5": 0.8,
+          "mrr5": 0.8,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.5638999757356942,
+            "p95": 1.8852000357583165
+          },
+          "returned_mean": 0.8,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 2
+          }
+        },
+        "typo": {
+          "n": 10,
+          "positive_n": 10,
+          "negative_query_n": 0,
+          "hit1": 0.6,
+          "hit3": 0.6,
+          "hit5": 0.6,
+          "mrr5": 0.6,
+          "negative_false_recall_rate": 0.0,
+          "negative_query_false_recall_rate": 0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 1.5541999600827694,
+            "p95": 1.882400014437735
+          },
+          "returned_mean": 0.6,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 4
+          }
+        }
+      }
+    }
+  }
+}
