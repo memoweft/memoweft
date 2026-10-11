@@ -1,0 +1,4776 @@
+{
+  "version": 1,
+  "provenance": "Independent MiMo synthetic author; committed before route implementation. Core 180: 150 positive/30 negative, plus 15 new technical negatives. No exposed seed reuse. Model-author labels, no human semantic adjudication.",
+  "cases": [
+    {
+      "id": "blind-synonym-00",
+      "seed": "blind-synonym-00",
+      "category": "synonym",
+      "query": "我闲着没事的时候一般玩什么解压？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我周末喜欢在家拼拼图打发时间。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天上班前会喝一杯温水。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每个月会去一次理发店剪头发。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-01",
+      "seed": "blind-synonym-01",
+      "category": "synonym",
+      "query": "有什么适合我睡前放松的听觉习惯？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯晚上临睡前听播客助眠。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每周会去超市采购一次食材。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每天早上会整理一次办公桌面。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-02",
+      "seed": "blind-synonym-02",
+      "category": "synonym",
+      "query": "我平时琢磨什么饮品的制作参数比较多？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我业余时间爱捣鼓手冲咖啡豆的配比。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每年会更新一次家里的路由器固件。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每天会遛狗两次保持运动量。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-03",
+      "seed": "blind-synonym-03",
+      "category": "synonym",
+      "query": "我有空时爱去哪类地方寻宝？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我休息日常去旧书店淘绝版小说。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天会花十分钟背单词。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每季度会整理一次衣柜衣物。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-04",
+      "seed": "blind-synonym-04",
+      "category": "synonym",
+      "query": "我新培养的乐器爱好是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在学尤克里里练和弦转换。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯每周给父母打一次电话。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每天会检查一次工作邮箱。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-05",
+      "seed": "blind-synonym-05",
+      "category": "synonym",
+      "query": "我去旅行时会攒什么小物件？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我有收集各国硬币留作纪念的习惯。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每年会做一次全面体检。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每晚会用筋膜枪放松肩颈。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-06",
+      "seed": "blind-synonym-06",
+      "category": "synonym",
+      "query": "我休息日的文艺消遣一般是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我周末经常一个人去美术馆看展。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天会步行一万步保持健康。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每月会清理一次电脑硬盘垃圾。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-07",
+      "seed": "blind-synonym-07",
+      "category": "synonym",
+      "query": "我用什么方式来管理日常事务？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯把每日待办写在随身手账本上。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每周会和朋友视频通话一次。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每天早上会做十五分钟拉伸。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-08",
+      "seed": "blind-synonym-08",
+      "category": "synonym",
+      "query": "周末有什么适合艺术爱好者去逛的地方？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周末都会去美术馆看新展，尤其喜欢印象派画作。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯在工作日早上用煮蛋器准备早餐。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常去五金店买螺丝和砂纸修理旧书架。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-09",
+      "seed": "blind-synonym-09",
+      "category": "synonym",
+      "query": "有什么适合我周三晚上的集体活动推荐？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周三晚上都会在社区合唱团排练。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我通常在月初整理上个月的水电账单。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯用保温杯泡枸杞菊花当日常饮品。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-10",
+      "seed": "blind-synonym-10",
+      "category": "synonym",
+      "query": "有没有适合我闲暇时玩的桌面游戏？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我业余时间爱拼千片以上的拼图，桌上常备几盒。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次出差前都会提前打印登机牌和酒店确认单。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯在冰箱里囤不同口味的酸奶当夜宵。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-11",
+      "seed": "blind-synonym-11",
+      "category": "synonym",
+      "query": "周末有什么能锻炼身体又能解压的活动？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我常在周末去攀岩馆练习抱石线路。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯每月给绿萝和吊兰施一次液体肥。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每次换季都会把夏装塞进真空压缩袋里。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-12",
+      "seed": "blind-synonym-12",
+      "category": "synonym",
+      "query": "睡前有什么能让我放松下来的内容可以听？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我晚上睡觉前喜欢听播客助眠，尤其悬疑类。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯每周五下班前把办公桌彻底擦一遍。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常在通勤路上背单词软件里的新词表。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-13",
+      "seed": "blind-synonym-13",
+      "category": "synonym",
+      "query": "有什么适合我日常饮用的饮品推荐？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我收藏了十几款不同产地的手冲咖啡豆。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯在雨天出门前检查阳台窗户是否关好。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每次做账都会把发票按月份夹进文件夹。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-synonym-14",
+      "seed": "blind-synonym-14",
+      "category": "synonym",
+      "query": "有什么适合我定期去逛的线下市集？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每个月都会去一次旧书市淘二手小说。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我通常把快递纸箱拆平攒起来定期回收。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯在办公室抽屉里备几包独立包装的饼干。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-00",
+      "seed": "blind-hierarchy-00",
+      "category": "hierarchy",
+      "query": "我最喜欢吃什么水果？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱的水果是榴莲，但我不喜欢山竹。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天早上都会喝一杯温水。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯用左手写字。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-01",
+      "seed": "blind-hierarchy-01",
+      "category": "hierarchy",
+      "query": "我平时最喜欢听哪种音乐？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最常听的音乐类型是爵士乐。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我家里养了一盆绿萝。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯把闹钟定在七点。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-02",
+      "seed": "blind-hierarchy-02",
+      "category": "hierarchy",
+      "query": "我最爱喝哪种饮料？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱喝的饮料是乌龙茶，不喝咖啡。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我用的笔记本品牌是联想。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每周会去两次健身房。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-03",
+      "seed": "blind-hierarchy-03",
+      "category": "hierarchy",
+      "query": "我最常玩的运动是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最喜欢的运动项目是羽毛球。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯睡前听播客。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我办公桌上放着一个保温杯。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-04",
+      "seed": "blind-hierarchy-04",
+      "category": "hierarchy",
+      "query": "我最喜欢什么颜色？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最喜欢的颜色是墨绿色。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我住的城市夏天很潮湿。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯把文件按日期归档。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-05",
+      "seed": "blind-hierarchy-05",
+      "category": "hierarchy",
+      "query": "我最常读哪类书？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱读的书类型是科幻小说。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天会步行一万步。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用浏览器是 Chrome。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-06",
+      "seed": "blind-hierarchy-06",
+      "category": "hierarchy",
+      "query": "我最喜欢去哪类地方度假？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱去的旅游目的地是海边小城。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯用纸质日历记事。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的记账 App 是随手记。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-07",
+      "seed": "blind-hierarchy-07",
+      "category": "hierarchy",
+      "query": "我早餐最爱吃什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱吃的早餐是燕麦粥配蓝莓。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我办公室在三楼靠窗。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯晚上十一点前睡觉。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-08",
+      "seed": "blind-hierarchy-08",
+      "category": "hierarchy",
+      "query": "我最爱看什么类型的电影？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最喜欢的电影类型是悬疑片。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我有一台老式胶片相机。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯带伞出门防雨。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-09",
+      "seed": "blind-hierarchy-09",
+      "category": "hierarchy",
+      "query": "我最常用来记笔记的工具是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱用的记笔记工具是 Notion。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我住在城东的老公房。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每周会做一次大扫除。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-10",
+      "seed": "blind-hierarchy-10",
+      "category": "hierarchy",
+      "query": "我最常穿什么鞋？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱穿的鞋是帆布鞋。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯把钥匙放在门口的小碟里。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常去的理发店在小区对面。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-11",
+      "seed": "blind-hierarchy-11",
+      "category": "hierarchy",
+      "query": "我最爱吃什么甜点？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱吃的甜点是提拉米苏。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我用的行李箱是硬壳款。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯在便签上写待办事项。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-12",
+      "seed": "blind-hierarchy-12",
+      "category": "hierarchy",
+      "query": "我做任务时最习惯的流程是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最喜欢的工作方式是先列提纲再动手。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我家里有一只会说话的鹦鹉。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常听的播客是科技类的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-13",
+      "seed": "blind-hierarchy-13",
+      "category": "hierarchy",
+      "query": "我最爱喝哪种汤？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱喝的汤是番茄蛋花汤。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯把手机调成静音。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的地图是高德地图。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-hierarchy-14",
+      "seed": "blind-hierarchy-14",
+      "category": "hierarchy",
+      "query": "我最常逛什么类型的店？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最爱逛的商店类型是二手书店。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我家里挂着一幅山水画。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每周会和朋友打一次牌。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-00",
+      "seed": "blind-bilingual-00",
+      "category": "bilingual",
+      "query": "What language am I practicing on Tuesday evenings?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在学西班牙语，每周二晚上参加线上口语课。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "I always order bubble tea when I work at the café."
+        },
+        {
+          "id": "second-distractor",
+          "content": "My sister is training for a marathon in October."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-01",
+      "seed": "blind-bilingual-01",
+      "category": "bilingual",
+      "query": "Where do I work as a supply chain manager?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在一家德国汽车公司做供应链管理。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我养的多肉植物最近长得特别好。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "I take the ferry to work instead of driving."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-02",
+      "seed": "blind-bilingual-02",
+      "category": "bilingual",
+      "query": "What test am I studying for right now?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I'm preparing for the IELTS exam next month.",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我上周把厨房的灯泡换成了暖光的。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "My nephew just started learning the piano."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-03",
+      "seed": "blind-bilingual-03",
+      "category": "bilingual",
+      "query": "Which country do I want to visit to see the aurora?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我计划明年春天去冰岛看极光。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "I keep my old vinyl records in the basement."
+        },
+        {
+          "id": "second-distractor",
+          "content": "我们公司下个月要搬新办公室了。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-04",
+      "seed": "blind-bilingual-04",
+      "category": "bilingual",
+      "query": "What phone did I recently start using?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I switched from Android to iPhone last month.",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天早上会煮一壶龙井茶。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "My dog loves playing fetch at the park."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-05",
+      "seed": "blind-bilingual-05",
+      "category": "bilingual",
+      "query": "Which certification am I currently preparing for?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在准备注册会计师考试，每天晚上刷题两小时。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "I recently painted my bedroom walls light blue."
+        },
+        {
+          "id": "second-distractor",
+          "content": "I collect vintage postcards from different cities."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-06",
+      "seed": "blind-bilingual-06",
+      "category": "bilingual",
+      "query": "Where do I spend my weekends helping out?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I volunteer at the local animal shelter every weekend.",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我昨天把旧衣服捐给了社区回收站。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "My team is launching a new app next quarter."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-07",
+      "seed": "blind-bilingual-07",
+      "category": "bilingual",
+      "query": "What do I usually watch after work lately?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在追一部韩剧，每天下班后看一集。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "I bought a new standing desk for my home office."
+        },
+        {
+          "id": "second-distractor",
+          "content": "We're planning a surprise party for mom's birthday."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-08",
+      "seed": "blind-bilingual-08",
+      "category": "bilingual",
+      "query": "Which musical instrument am I currently picking up?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I'm learning to play the ukulele in my free time.",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我们家的猫最近特别喜欢晒太阳。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "I drive an electric car to reduce my carbon footprint."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-09",
+      "seed": "blind-bilingual-09",
+      "category": "bilingual",
+      "query": "What kind of documents do I translate as a side job?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在做兼职翻译，主要处理英译中的法律文件。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "I enjoy trying out new hiking trails on holidays."
+        },
+        {
+          "id": "second-distractor",
+          "content": "My roommate just adopted a rescue rabbit."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-10",
+      "seed": "blind-bilingual-10",
+      "category": "bilingual",
+      "query": "What eating pattern have I been following this year?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I've been practicing intermittent fasting since January.",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我新买了一台咖啡机，每天早上都会用它。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "She is studying architecture at a university in Berlin."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-11",
+      "seed": "blind-bilingual-11",
+      "category": "bilingual",
+      "query": "What new hobby class am I signed up for next month?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我报名了下个月的陶艺体验课，想学做杯子。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "I keep a journal of my dreams every morning."
+        },
+        {
+          "id": "second-distractor",
+          "content": "Our company offers remote work on Fridays."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-12",
+      "seed": "blind-bilingual-12",
+      "category": "bilingual",
+      "query": "What am I constructing outside my house to grow plants?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I'm building a small greenhouse in my backyard for herbs.",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我打算下个月换一份新工作。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "He speaks three languages fluently at work."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-13",
+      "seed": "blind-bilingual-13",
+      "category": "bilingual",
+      "query": "Which programming language am I currently studying?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在学习 Python，目标是明年能自己做数据分析项目。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "I usually eat lunch at the food court downstairs."
+        },
+        {
+          "id": "second-distractor",
+          "content": "我们计划暑假带孩子去海边度假。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-bilingual-14",
+      "seed": "blind-bilingual-14",
+      "category": "bilingual",
+      "query": "What happens to me if I don't drink coffee in the morning?",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I get migraines when I skip my morning coffee.",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我最近开始练习瑜伽来改善睡眠。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "My brother is renovating his garage into a studio."
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-00",
+      "seed": "blind-colloquial-00",
+      "category": "colloquial",
+      "query": "帮我把这段话改得口语一点，像平时聊天那样说。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯把工作邮件写成正式书面语再发出去。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天早上都会先整理当天的待办清单再开始工作。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的会议记录模板是按议题分栏的表格。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-01",
+      "seed": "blind-colloquial-01",
+      "category": "colloquial",
+      "query": "帮我把这份口语化的会议记录整理成书面汇报格式。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯用正式书面语写工作汇报。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每周五下午会做一次文件归档和清理。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的项目进度看板是按周更新的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-02",
+      "seed": "blind-colloquial-02",
+      "category": "colloquial",
+      "query": "帮我把这段客服回复改得更口语化一些，听起来亲切点。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我给客户写投诉回复时总是用很客气的书面敬语。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次出差前都会提前订好机场接送的车。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的报销单据分类是按交通、住宿、餐饮三类。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-03",
+      "seed": "blind-colloquial-03",
+      "category": "colloquial",
+      "query": "帮我把这段话改成正式的书面表达，用在求职邮件里。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我平时给朋友发消息都用很随意的口语和表情包。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每个月初会核对一次订阅服务的扣费记录。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的密码管理工具是按网站分组的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-04",
+      "seed": "blind-colloquial-04",
+      "category": "colloquial",
+      "query": "帮我把这段摘录改写成更口语化的版本，方便我讲给别人听。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我写读书笔记时偏好用简洁的书面语摘录要点。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每读完一本书都会在日历上标记完成日期。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的笔记软件是按标签分类整理的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-05",
+      "seed": "blind-colloquial-05",
+      "category": "colloquial",
+      "query": "帮我把这段群聊内容改写成正式的书面通知，要发给全公司。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在内部群里发言通常很随意，常用缩写和语气词。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次做季度预算都会留出10%的应急资金。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的报销审批流程是三级签字。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-06",
+      "seed": "blind-colloquial-06",
+      "category": "colloquial",
+      "query": "帮我把这段祝福改成更口语化、更自然的说法。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我给长辈发祝福语时习惯用比较工整的书面表达。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每年都会提前一个月准备家庭聚会的菜单。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的电子相册是按年份自动归类的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-07",
+      "seed": "blind-colloquial-07",
+      "category": "colloquial",
+      "query": "帮我把这段技术说明改写成口语化的表达，方便给新同事讲解。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我写技术文档时会刻意避免口语，全部用规范书面语。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次升级系统前都会先做一次完整备份。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的代码仓库是按功能模块建分支的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-08",
+      "seed": "blind-colloquial-08",
+      "category": "colloquial",
+      "query": "帮我把这段帖子改写成正式书面语，我要用在简历的自我介绍里。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在社交媒体发帖时喜欢用网络流行语和轻松口语。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次健身前都会先做十分钟动态拉伸。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的健身计划是按周循环四个训练日。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-09",
+      "seed": "blind-colloquial-09",
+      "category": "colloquial",
+      "query": "帮我把这段条款的解释改写成口语化的说法，让客户容易理解。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我写合同条款时坚持使用严谨的书面法律用语。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次签合同前都会先核对对方公司的注册信息。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的合同归档方式是按年份和项目编号。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-10",
+      "seed": "blind-colloquial-10",
+      "category": "colloquial",
+      "query": "帮我把这段家常话改写成正式的书面表达，我要用在感谢信里。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在家庭群里说话都是很生活化的口语。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次大扫除都会从窗户开始往外擦。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的收纳方式是按使用频率分区摆放。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-11",
+      "seed": "blind-colloquial-11",
+      "category": "colloquial",
+      "query": "帮我把这段摘要改写成口语化的版本，我想在组会上口头介绍。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我写学术论文摘要时只用规范的书面语。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次投稿前都会先查一遍期刊的格式要求。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的文献管理工具是按主题建文件夹的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-12",
+      "seed": "blind-colloquial-12",
+      "category": "colloquial",
+      "query": "帮我把这段询价内容改写成更随意的口语，我想直接打电话说。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我给供应商的询价邮件通常写得很正式客气。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次下单前都会先比较三家的报价。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的采购台账是按月份汇总的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-13",
+      "seed": "blind-colloquial-13",
+      "category": "colloquial",
+      "query": "帮我把这段回帖改写成正式书面语，我要引用到行业报告里。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在论坛回帖时常用简短口语和网络缩写。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次写报告都会先列提纲再填充内容。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的图表工具是按数据源自动更新的。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-colloquial-14",
+      "seed": "blind-colloquial-14",
+      "category": "colloquial",
+      "query": "帮我把这段评语改写成更口语化的说法，我要当面和家长聊。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我给学生写评语时习惯用温和但规范的书面表达。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每次家长会前都会整理一份学生近期表现清单。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的作业批改方式是用符号加简短批注。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-00",
+      "seed": "blind-abbreviation-00",
+      "category": "abbreviation",
+      "query": "周报里那个 PRD 的缩写，我总记混，它到底指什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我把公司内部的项目周报模板里的 PRD 统一理解为产品需求文档，而不是个人关系数据。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯把每月的家庭开支按类别分组记在表格里。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上次去宜家买的收纳盒放在玄关柜第二层了。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-01",
+      "seed": "blind-abbreviation-01",
+      "category": "abbreviation",
+      "query": "商品管理里 SKU 这三个字母，业内标准的中文说法是啥？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在做跨境电商时习惯把 SKU 读作「库存单位」，而不是「库存编号」。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天早上会先给阳台的薄荷浇一点水再出门。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "朋友送的那本讲北欧设计的书我还没拆封。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-02",
+      "seed": "blind-abbreviation-02",
+      "category": "abbreviation",
+      "query": "体检报告上的 BMI 展开成中文应该叫什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我学法语时记住 BMI 在健康报告里指的是身体质量指数，不是别的缩写。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我办公桌抽屉里常备一盒创可贴和几支笔。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上周把厨房的调味罐标签重新打印了一遍。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-03",
+      "seed": "blind-abbreviation-03",
+      "category": "abbreviation",
+      "query": "论文参考文献要求用 APA，这个缩写的全称是哪个机构？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我做学术投稿时把 APA 归为美国心理学会的引用格式标准。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯在睡前把第二天要穿的衣服提前叠好。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "去年买的那台空气净化器滤芯该换了。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-04",
+      "seed": "blind-abbreviation-04",
+      "category": "abbreviation",
+      "query": "合同里写的 SLA，展开成中文是什么意思？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在做客服系统时把 SLA 理解为服务等级协议，用来约定响应时限。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我周末常去的那家面馆周一休息。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "家里 Wi-Fi 密码写在冰箱贴背面了。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-05",
+      "seed": "blind-abbreviation-05",
+      "category": "abbreviation",
+      "query": "在家办公要连的那个 VPN，全称翻译过来叫什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我把远程办公软件里的 VPN 一直记作虚拟专用网络，用于安全连接公司内网。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "上个月把书房的旧书整理了一部分捐了出去。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常买的那款洗衣液最近换了新包装。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-06",
+      "seed": "blind-abbreviation-06",
+      "category": "abbreviation",
+      "query": "我写实验记录时把 differential 简写成什么来着？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在实验室记录数据时习惯把 differential 写成 diff，组里同事都看得懂。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯在购物清单上把 avocado 写成 avo 以节省空间。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在旅行日记里把 hostel 缩写成 hos，方便快速记录。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-07",
+      "seed": "blind-abbreviation-07",
+      "category": "abbreviation",
+      "query": "团队里 deliverable 的缩写是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "做项目周报时我总把 deliverable 缩写成 DLB，这是团队内部约定。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把 itinerary 缩写成 ITN 用来标记行程表。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在菜谱笔记里把 tablespoon 缩写成 tbsp，用量时更方便。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-08",
+      "seed": "blind-abbreviation-08",
+      "category": "abbreviation",
+      "query": "多作者论文里我习惯怎么缩写后面的人名？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "读文献时我用 et al. 来指代多作者论文的省略写法。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我在烘焙笔记里用 tsp 表示茶匙的用量。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在健身计划里用 reps 表示每组重复次数。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-09",
+      "seed": "blind-abbreviation-09",
+      "category": "abbreviation",
+      "query": "邮件主题里表示有附件我一般用什么缩写？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "写邮件时我常把 attachment 缩写成 att 放在主题行里。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我在记账 App 里把 subscription 缩写成 sub 来分类支出。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在学车笔记里把 parallel parking 缩写成 PP 便于复习。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-10",
+      "seed": "blind-abbreviation-10",
+      "category": "abbreviation",
+      "query": "报销单上 reimbursement 我一般简写成什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "整理报销单时我把 reimbursement 简写成 reimb，财务同事都认得。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我在滑雪计划里把 reservation 缩写成 resv 记录酒店。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在学琴笔记里把 metronome 缩写成 met，标记节拍练习。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-11",
+      "seed": "blind-abbreviation-11",
+      "category": "abbreviation",
+      "query": "设计稿图层里 background 一般怎么简写？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "做 PPT 时我常把 background 缩写成 bg 放在图层命名里。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我在旅行攻略里把 attraction 缩写成 attr 来列景点。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在菜市场清单上把 cilantro 缩写成 cil 方便速记。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-12",
+      "seed": "blind-abbreviation-12",
+      "category": "abbreviation",
+      "query": "代码注释里 parameter 我习惯怎么写？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "写代码注释时我把 parameter 缩写成 param，这是我的习惯。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我在读书笔记里把 protagonist 缩写成 prot 标记人物。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在烘焙食谱里把 ingredient 缩写成 ing 列材料。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-13",
+      "seed": "blind-abbreviation-13",
+      "category": "abbreviation",
+      "query": "排班表里时间还没定我用什么缩写？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "排班表上我用 TBA 表示时间待定，避免误会。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我在追剧清单里用 ONG 表示正在更新的剧集。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在旅行手账里用 TBD 表示目的地还没想好。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-abbreviation-14",
+      "seed": "blind-abbreviation-14",
+      "category": "abbreviation",
+      "query": "实验报告里 temperature 我一般简写成什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "写实验报告时我把 temperature 缩写成 temp，导师认可这个写法。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我在乐谱笔记里把 tempo 缩写成 tp 标记速度。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我在装修预算里把 estimate 缩写成 est 记录报价。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-00",
+      "seed": "blind-typo-00",
+      "category": "typo",
+      "query": "帮我看看我订的京都机票是哪天的",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我计划下个月去京都看红叶，机票已经订好了。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "公司下季度的差旅报销单还没提交给财务"
+        },
+        {
+          "id": "second-distractor",
+          "content": "家里厨房的洗碗机最近排水有点慢"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-01",
+      "seed": "blind-typo-01",
+      "category": "typo",
+      "query": "豆豆现在读几年级了",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我女儿小名叫豆豆，今年上小学三年级。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我养的绿萝放在阳台已经两个月没浇水了"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上周的会议纪要还存在共享文档里没归档"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-02",
+      "seed": "blind-typo-02",
+      "category": "typo",
+      "query": "我平时把密码记在哪个应用",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我把常用的密码都记在一个叫密本的笔记应用里。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "家里客厅的空调遥控器好像电池没电了"
+        },
+        {
+          "id": "second-distractor",
+          "content": "下周三要交的市场分析报告还差最后一节"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-03",
+      "seed": "blind-typo-03",
+      "category": "typo",
+      "query": "把界面调成夜间那种深色的样式",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯用深色模式，晚上看屏幕眼睛不累。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "去年买的行李箱轮子在机场托运时摔坏了一个"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我报的周末烘焙课已经上了四节"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-04",
+      "seed": "blind-typo-04",
+      "category": "typo",
+      "query": "我起床后的习惯是什么来着",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每天早上七点起床后会先喝一杯温水。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "公司新来的实习生下周开始跟我对接项目"
+        },
+        {
+          "id": "second-distractor",
+          "content": "客厅的书架第三层摆的全是专业教材"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-05",
+      "seed": "blind-typo-05",
+      "category": "typo",
+      "query": "我抽屉里放的常用药是什么",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我办公桌抽屉里常年备着一盒胃药以防万一。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "上个月买的蓝牙耳机在健身房弄丢了一只"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我准备下周末去郊区的民宿住两天"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-06",
+      "seed": "blind-typo-06",
+      "category": "typo",
+      "query": "我的车险什么时候到期要续",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的车保险明年三月份到期，需要提前续。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我手机里存着一份去年的体检报告PDF"
+        },
+        {
+          "id": "second-distractor",
+          "content": "朋友婚礼的伴手礼我还没来得及准备"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-07",
+      "seed": "blind-typo-07",
+      "category": "typo",
+      "query": "我一般怎么备份重要文件",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯把重要的文件都备份到移动硬盘里。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "厨房水龙头最近关不紧一直滴水"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我给爸妈买的按摩椅上周才送到家"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-08",
+      "seed": "blind-typo-08",
+      "category": "typo",
+      "query": "我收藏网页一般放在哪里",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我把常用的网址都收藏在浏览器的书签栏。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "这周六要陪老婆去产检，医院在城东"
+        },
+        {
+          "id": "second-distractor",
+          "content": "公司年会的节目单我还没开始排练"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-09",
+      "seed": "blind-typo-09",
+      "category": "typo",
+      "query": "我平时在哪儿买菜",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我买菜一般都去小区门口那家生鲜超市，近。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我电脑桌面上堆了一堆没整理的截图"
+        },
+        {
+          "id": "second-distractor",
+          "content": "下个月要参加的行业论坛还没提交演讲稿"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-10",
+      "seed": "blind-typo-10",
+      "category": "typo",
+      "query": "我的照片是怎么自动备份的",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我把手机相册设成了自动备份到云端。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "健身房的私教课我一周只去两次"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我表弟下个月要来我这城市找工作"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-11",
+      "seed": "blind-typo-11",
+      "category": "typo",
+      "query": "我邮箱签名档里放了什么联系方式",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的工作邮箱签名档里一直写着座机号码。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "楼下咖啡店的会员卡积分快到期了"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我准备把阳台改成一个小书房"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-12",
+      "seed": "blind-typo-12",
+      "category": "typo",
+      "query": "我平时记笔记用什么方法",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我做笔记习惯用康奈尔笔记法整理要点。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我的旧笔记本电脑风扇声音越来越大"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上季度的销售数据已经整理成表格了"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-13",
+      "seed": "blind-typo-13",
+      "category": "typo",
+      "query": "我一般什么时候规划下周日程",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯每周日晚上列好下周的日程安排。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我家猫的疫苗本被我放在书房抽屉里了"
+        },
+        {
+          "id": "second-distractor",
+          "content": "公司新办公楼的装修方案还在评审"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-typo-14",
+      "seed": "blind-typo-14",
+      "category": "typo",
+      "query": "我怎么处理不用的优惠券",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我把过期的优惠券统一放在钱包夹层里定期清理。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我报名的线上英语课还剩十节没上完"
+        },
+        {
+          "id": "second-distractor",
+          "content": "小区物业通知下周要停水检修两天"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-00",
+      "seed": "blind-indirect-00",
+      "category": "indirect",
+      "query": "帮我列一下家里调料柜该补充的酱料清单，注意避开我不适合吃的。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对花生严重过敏，所以家里的酱料柜里从不放花生酱。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯把香料按烘焙用和炒菜用分成两个抽屉收纳。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上个月我买了一个新的抽真空密封机用来保存干货。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-01",
+      "seed": "blind-indirect-01",
+      "category": "indirect",
+      "query": "推荐几款适合我房间采光条件的阅读照明方案。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我住的公寓朝北，冬天室内光线很暗，所以我在书桌上加了一盏色温5000K的护眼台灯。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我去年换掉了卧室的旧窗帘，改成遮光百叶帘。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每周给绿植擦一次叶子，让它们看起来更亮。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-02",
+      "seed": "blind-indirect-02",
+      "category": "indirect",
+      "query": "下次我点饮品时帮我记下需要替换的基底选项。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我有严重的乳糖不耐受，点奶茶时必须换成燕麦奶或厚椰乳。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我喝咖啡喜欢中深烘的豆子，不喜欢太酸的浅烘。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我办公桌上常年放一个保温杯，每天要喝够八杯水。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-03",
+      "seed": "blind-indirect-03",
+      "category": "indirect",
+      "query": "帮我把健身计划里不适合我身体状况的动作替换掉。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的膝盖旧伤没好全，医生叮嘱不能做深蹲和跳跃类动作。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每周会去游泳馆游两次自由泳作为有氧。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我买了一副新的跳绳放在玄关柜里准备开始练。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-04",
+      "seed": "blind-indirect-04",
+      "category": "indirect",
+      "query": "提醒我出门拜访前需要准备的个人防护事项。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对猫毛过敏，所以去朋友家前会提前吃一片抗过敏药。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我朋友上个月刚领养了一只三花猫，取名叫团子。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我手机里存了几个朋友家的地址，方便导航。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-05",
+      "seed": "blind-indirect-05",
+      "category": "indirect",
+      "query": "帮我规划一下今天下班回家的时间安排，考虑我平时的通勤习惯。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我住的小区停车位紧张，晚上七点后基本没位，所以我通常六点半前开车回家。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我车的保险下个月到期，需要提前比价续保。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每周三下班后去超市采购一周的食材。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-06",
+      "seed": "blind-indirect-06",
+      "category": "indirect",
+      "query": "推荐一个能解决我工位下午强光问题的方案。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的工作台靠近窗户，夏天下午阳光直射屏幕反光严重，所以我装了遮光帘。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我上周给显示器配了一个可调节高度的支架臂。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每天下班前整理桌面，把文件归到抽屉里。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-07",
+      "seed": "blind-indirect-07",
+      "category": "indirect",
+      "query": "帮我记下选购食材时需要特别注意的新鲜度要求。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对海鲜中的组胺敏感，吃不新鲜的鱼容易头痛，所以只买当天冰鲜的。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我周末喜欢去家附近的菜市场挑当季蔬菜。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我厨房的冰箱是双开门的，冷冻室在下面。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-08",
+      "seed": "blind-indirect-08",
+      "category": "indirect",
+      "query": "给我推荐一些夜间不打扰邻居的休闲方式。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的公寓隔音差，晚上十点后不能放音乐，只能戴耳机。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我买了一副降噪耳机，主要在通勤时用。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我书房里有一套蓝牙音箱，音质还不错。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-09",
+      "seed": "blind-indirect-09",
+      "category": "indirect",
+      "query": "帮我筛选一下适合我体质的香水香调方向。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对香水里的麝香成分过敏，试香时必须避开这类调性。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我梳妆台上有一排小样香水分装瓶。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯出门前在手腕喷一点淡香水提神。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-10",
+      "seed": "blind-indirect-10",
+      "category": "indirect",
+      "query": "提醒我做家务时需要准备的个人防护用品。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的手容易起湿疹，冬天洗碗必须戴橡胶手套。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我厨房水槽旁边挂了一个沥水篮放餐具。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我上周买了一瓶新的洗洁精，去油效果不错。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-11",
+      "seed": "blind-indirect-11",
+      "category": "indirect",
+      "query": "帮我准备一下下次自驾出行的随身物品清单。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对强光敏感偏头痛，长途自驾时必须戴偏光驾驶镜。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我车里常备一个车载手机支架和充电线。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我计划下个月开车去邻省自驾两天。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-12",
+      "seed": "blind-indirect-12",
+      "category": "indirect",
+      "query": "提醒我做深度清洁时的必要防护措施。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对粉尘过敏，换季大扫除时必须戴N95口罩。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我买了一台新的手持吸尘机，吸力比旧的强。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每个月最后一个周末集中打扫卫生。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-13",
+      "seed": "blind-indirect-13",
+      "category": "indirect",
+      "query": "帮我筛选一下适合我脚部状况的鞋型推荐。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我脚踝有旧伤，选鞋必须是高帮带支撑的款式，低帮鞋穿久了会疼。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我鞋柜里有三双不同颜色的帆布鞋。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我上个月刚清洗过一次所有皮鞋并上了油。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-indirect-14",
+      "seed": "blind-indirect-14",
+      "category": "indirect",
+      "query": "给我一些改善我房间夏季高温问题的实用建议。",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我住顶楼夏天西晒严重，下午必须拉遮光帘并开空调，否则室温超过33度。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我客厅装了一台三匹的柜式空调。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每年夏天来临前清洗一次空调滤网。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-00",
+      "seed": "blind-time-00",
+      "category": "time",
+      "query": "我一般几点开始准备入睡？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我通常晚上十点半左右上床睡觉。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天早上七点准时起床。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我中午会在办公桌上小憩二十分钟。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-01",
+      "seed": "blind-time-01",
+      "category": "time",
+      "query": "我一周里哪天会做整体规划？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯在周一上午安排一周的工作计划。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我周五下午会把当周的报销单提交给财务。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我周日晚上会提前准备好第二天的午餐便当。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-02",
+      "seed": "blind-time-02",
+      "category": "time",
+      "query": "我下午的固定放松时段是什么时候？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每天下午三点会给自己泡一杯绿茶休息十分钟。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我下午四点会去楼下便利店买一瓶矿泉水。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我下午五点半会整理桌面准备下班。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-03",
+      "seed": "blind-time-03",
+      "category": "time",
+      "query": "我固定在哪天晚上进行自主学习？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周三晚上会去社区图书馆自习两小时。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每周三中午会和同事一起在食堂吃饭。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每周三上午会参加部门例会。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-04",
+      "seed": "blind-time-04",
+      "category": "time",
+      "query": "我起床后的第一个习惯动作是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我早上六点半会先做十分钟拉伸再洗漱。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我早上七点会先查看手机上的天气预报。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我早上七点一刻会出门乘坐地铁。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-05",
+      "seed": "blind-time-05",
+      "category": "time",
+      "query": "我哪天会提前规划下一周的任务？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯在周四晚上整理下周的待办清单。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我周四晚上会追一集刚更新的电视剧。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我周四晚上会给家里的绿植浇一次水。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-06",
+      "seed": "blind-time-06",
+      "category": "time",
+      "query": "我通常在哪天进行一周的采买？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周日早上会去超市采购一周的食材。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我周日中午会和朋友在餐厅聚餐。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我周日下午会把衣服分类放进洗衣机。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-07",
+      "seed": "blind-time-07",
+      "category": "time",
+      "query": "我中午的休息时段大概是什么时间？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我午休时间一般是十二点半到一点之间。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我中午十二点会下楼取快递。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我中午一点会回复上午积攒的邮件。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-08",
+      "seed": "blind-time-08",
+      "category": "time",
+      "query": "我从几点开始进入不回复工作的状态？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我晚上九点后就不再处理工作消息了。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我晚上九点会看一小时纪录片。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我晚上九点会检查第二天的日程提醒。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-09",
+      "seed": "blind-time-09",
+      "category": "time",
+      "query": "我在上下班路上一般做什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每天通勤地铁上会听二十分钟的播客。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每天通勤时会带一本纸质书翻几页。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每天通勤时会在手机上背单词。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-10",
+      "seed": "blind-time-10",
+      "category": "time",
+      "query": "我周末哪半天会做家务？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我周六上午通常用来打扫房间和整理衣物。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我周六上午会去健身房做力量训练。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我周六上午会去早市买新鲜蔬菜。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-11",
+      "seed": "blind-time-11",
+      "category": "time",
+      "query": "我什么时候会回顾自己这个月的完成情况？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每月最后一个周五会做一次月度复盘。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每月最后一个周五会提交团队的周报。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每月最后一个周五会去理发店修剪头发。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-12",
+      "seed": "blind-time-12",
+      "category": "time",
+      "query": "我平日里一般几点吃晚饭？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我工作日的晚饭通常在晚上七点左右解决。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我工作日的晚饭会自己做两菜一汤。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我工作日的晚饭常和家人一起在客厅边看新闻边吃。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-13",
+      "seed": "blind-time-13",
+      "category": "time",
+      "query": "我上班后的第一件事通常是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我早上到公司后会先花十五分钟浏览行业资讯。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我早上到公司后会先泡一杯咖啡。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我早上到公司后会先和同事打个招呼寒暄。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-time-14",
+      "seed": "blind-time-14",
+      "category": "time",
+      "query": "我会在什么时候统一管理我的自动扣费项目？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每个月初会检查一次订阅服务的续费情况。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我每个月初会给房东转账支付房租。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每个月初会更新一次手机里的记账软件分类。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-00",
+      "seed": "blind-correction-00",
+      "category": "correction",
+      "query": "我平时喝什么饮料？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我最爱的饮料是冰镇含糖可乐。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我现在改喝无糖气泡水，不再喝含糖可乐了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯把会议纪要当天发完，不留到第二天。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我学吉他第三个月，正在练分解和弦。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-01",
+      "seed": "blind-correction-01",
+      "category": "correction",
+      "query": "我现在打字习惯用哪种键盘布局？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我一直用全键盘布局打字。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我把手机默认输入法换成了九宫格拼音，不再用全键盘。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我的书桌上常年放一盏色温4000K的台灯。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每周三下午固定去社区图书馆自习。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-02",
+      "seed": "blind-correction-02",
+      "category": "correction",
+      "query": "我早上几点起床？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我每天早上7:30起床。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我现在把闹钟设在6:40，比以前的7:30早了50分钟。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我抽屉里常备一盒创可贴和消毒棉片。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯用纸笔列周计划，不用电子日历。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-03",
+      "seed": "blind-correction-03",
+      "category": "correction",
+      "query": "我每天怎么去公司？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我每天骑共享单车去上班。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我把通勤方式换成了地铁，不再骑共享单车了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我的电脑桌面壁纸是一张雪山风景图。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每周五整理一次下载文件夹。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-04",
+      "seed": "blind-correction-04",
+      "category": "correction",
+      "query": "我最近主要用什么方式读书？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我一直是纸质书爱好者，从不看电子书。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我现在用电子书阅读器看书，纸质书买的少了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我办公椅的靠垫是记忆棉材质的。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我每天下午三点会起来接杯温水。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-05",
+      "seed": "blind-correction-05",
+      "category": "correction",
+      "query": "我现在一般几点睡？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我长期熬夜，通常凌晨1点后才睡。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我把睡眠时间调整到了23:30入睡，不再熬夜到凌晨。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我家路由器放在客厅电视柜第二层。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯把快递盒子攒到周末一起处理。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-06",
+      "seed": "blind-correction-06",
+      "category": "correction",
+      "query": "我通勤现在主要靠什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我以前每天挤早高峰地铁通勤。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我现在打车上班，不再挤早高峰地铁了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我书架上有一整套科幻小说合集。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯用语音备忘录记录灵感。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-07",
+      "seed": "blind-correction-07",
+      "category": "correction",
+      "query": "我工作时的姿势习惯是怎样的？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我一天到晚都坐着办公。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我换成了站立办公桌，不再全天坐着工作。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我的手机壳是磨砂深灰色的。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我周末常去超市一次性采购一周食材。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-08",
+      "seed": "blind-correction-08",
+      "category": "correction",
+      "query": "我平时怎么记账？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我一直坚持手写纸质账本记账。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我现在记账用手机App，不再手写账本了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我办公室抽屉里放着几支不同颜色的记号笔。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯睡前听15分钟白噪音。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-09",
+      "seed": "blind-correction-09",
+      "category": "correction",
+      "query": "我现在常喝哪种咖啡？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我每天早上都喝一杯热美式咖啡。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我把咖啡换成了冷萃，不再喝热美式了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我的耳机是入耳式降噪款。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每月初更新一次待办清单模板。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-10",
+      "seed": "blind-correction-10",
+      "category": "correction",
+      "query": "我最近上班路上怎么走？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我以前每天走路二十分钟去地铁站。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我现在骑电动车通勤，不再走路去地铁站了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我家里养了一盆水培绿萝。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯在便签上写当天三件要事。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-11",
+      "seed": "blind-correction-11",
+      "category": "correction",
+      "query": "我现在怎么管理账号密码？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我一直在用云端同步的密码管理器。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我把密码管理器换成了本地离线版，不再用云端同步的。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我的办公桌抽屉里有一把备用U盘。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每周日给植物浇一次水。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-12",
+      "seed": "blind-correction-12",
+      "category": "correction",
+      "query": "我开会时用什么设备记笔记？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我开会一直用笔记本电脑做笔记。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我现在用平板电脑做会议笔记，不再用笔记本电脑了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我家厨房的调料架放在灶台右侧。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯把重要文件打印出来标注。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-13",
+      "seed": "blind-correction-13",
+      "category": "correction",
+      "query": "我平时用什么刷牙？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我一直用手动牙刷刷牙。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我换成了电动牙刷，不再用手动牙刷了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我手机里存着去年旅行的地图截图。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每周整理一次桌面文件。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-correction-14",
+      "seed": "blind-correction-14",
+      "category": "correction",
+      "query": "我怎么给自己设提醒事项？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "previous",
+          "content": "我过去习惯把提醒写在便签上贴电脑旁。",
+          "state": "invalid"
+        },
+        {
+          "id": "target",
+          "content": "我现在用语音助手设提醒，不再写便签了。",
+          "state": "active",
+          "predecessor": "previous"
+        },
+        {
+          "id": "distractor",
+          "content": "我的行李箱里常年放着一个转换插头。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯在周报里先写结论再写过程。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["previous", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-00",
+      "seed": "blind-nearby-00",
+      "category": "nearby",
+      "query": "我周三晚上一般在练哪种小尺寸的拨弦乐器？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在学尤克里里，每周三晚上练指弹。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我办公室抽屉里放着一套便携茶具，午休时会泡一壶乌龙。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上个月我报了一个陶艺体验课，学了拉坯和修坯的基本手法。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-01",
+      "seed": "blind-nearby-01",
+      "category": "nearby",
+      "query": "我每天早上会打理的那株室内观叶植物叫什么名字？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我在阳台养了一盆琴叶榕，每天早上会给它擦一次叶子。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我书架上摆着一整套科幻小说系列，睡前会读几页。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我报名了周末的油画班，每次课要带自己的画板和调色刀。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-02",
+      "seed": "blind-nearby-02",
+      "category": "nearby",
+      "query": "我敲代码时偏好的键盘轴体是哪一种？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯用机械键盘，轴体选的是茶轴，写代码时手感比较舒服。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我家里有一台全自动咖啡机，每天早上会做一杯美式。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我常用的笔记软件支持双向链接，用来整理读书笔记。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-03",
+      "seed": "blind-nearby-03",
+      "category": "nearby",
+      "query": "我去年入坑的第一类实体音乐载体是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我去年开始收藏黑胶唱片，第一张买的是爵士乐专辑。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我办公桌上放着一个香薰机，下午困的时候会滴薄荷精油。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我周末常去的那家书店二楼有咖啡区，可以坐一下午。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-04",
+      "seed": "blind-nearby-04",
+      "category": "nearby",
+      "query": "我每天睡前用来记录花销的工具是哪个软件？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我手机里最常用的记账 App 是随手记，每天睡前会录一次开销。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我客厅的电视柜里收着一套旧游戏机卡带，偶尔会翻出来看。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯在通勤路上听播客，最近在追一档历史类节目。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-05",
+      "seed": "blind-nearby-05",
+      "category": "nearby",
+      "query": "我午休期间会使用哪一种缓解颈部疲劳的小电器？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我办公桌抽屉里常备一个颈椎按摩仪，午休时会用十分钟。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我书房墙上挂着一幅城市夜景的装饰画，是朋友送的乔迁礼。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我冰箱里长期备着几款不同口味的气泡水，用来代替含糖饮料。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-06",
+      "seed": "blind-nearby-06",
+      "category": "nearby",
+      "query": "我周末习惯绕着老城区步行的那条环线是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我周末喜欢去爬城墙，绕着老城区走一圈大概两小时。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我的钱包里夹着一张公交卡，平时出门主要坐地铁。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我养了一缸热带鱼，每周换一次水并测试水质。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-07",
+      "seed": "blind-nearby-07",
+      "category": "nearby",
+      "query": "我上下班地铁通勤的单程站数和耗时大概是多少？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每天通勤单程要坐 7 站地铁，全程大约 25 分钟。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我厨房的调料架上摆着十几种香料，做菜时喜欢自己配比。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我去年换了一台扫地机器人，每天定时清扫客厅。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-08",
+      "seed": "blind-nearby-08",
+      "category": "nearby",
+      "query": "我工位上养了三年、放在窗边的那盆植物是什么？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我办公室的绿萝已经养了三年，靠窗那盆长得最快。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我习惯用语音备忘录记录灵感，一天能录好几条。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我家的路由器放在玄关柜上，信号覆盖全屋还算稳定。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-09",
+      "seed": "blind-nearby-09",
+      "category": "nearby",
+      "query": "我一周中有哪两天的午餐是在楼下那家健康餐解决的？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周二和周四中午会去公司楼下的轻食店买沙拉。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我书桌上放着一个木质笔筒，里面插满了各种颜色的马克笔。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯把重要文件扫描后存到云盘，按项目分文件夹。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-10",
+      "seed": "blind-nearby-10",
+      "category": "nearby",
+      "query": "我当前备考的那项英语考试，每天的单词量和阅读任务是多少？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我正在准备雅思考试，每天背 50 个单词并做一篇阅读。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我客厅角落堆着几箱未拆封的书，准备周末整理上架。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯在便签纸上写当天的三件要事，贴在显示器边上。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-11",
+      "seed": "blind-nearby-11",
+      "category": "nearby",
+      "query": "我出差一周时通常带的那个拉杆箱是多大尺寸的？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我常用的行李箱是 24 寸的，出差一周刚好够用。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我阳台上装了可伸缩的晾衣架，阴雨天会用烘干机。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我手机相册里存了上千张截图，专门建了分类相簿。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-12",
+      "seed": "blind-nearby-12",
+      "category": "nearby",
+      "query": "我日常时间管理用的那套专注法，单个时长是多少？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯用番茄钟工作，每个专注段是 25 分钟。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我的车里常备一瓶玻璃水和一块超细纤维擦布。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我最近在学做手冲咖啡，磨豆机刻度调到了中细。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-13",
+      "seed": "blind-nearby-13",
+      "category": "nearby",
+      "query": "我工位上那把能调腰托的办公椅属于什么类型？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我办公室的椅子是人体工学款，腰托可以前后调节。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我电脑桌面壁纸每个月换一次，喜欢用自然风景图。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我习惯每周五下午整理邮箱，把待办转成任务清单。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-nearby-14",
+      "seed": "blind-nearby-14",
+      "category": "nearby",
+      "query": "我办了卡并且离地铁站很近的那家美发店是哪家？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我常去的那家理发店在地铁口，充值卡里还剩两百多。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我的书桌上摆着一个沙漏，写方案时会翻过来计时。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我手机里存着十几个菜谱收藏，周末照着做硬菜。"
+        }
+      ],
+      "expect": ["target"],
+      "forbid": ["distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-00",
+      "seed": "blind-polysemy-00",
+      "category": "polysemy",
+      "query": "润滑油的工业标准有哪些分类？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的公寓门锁最近有点卡，需要滴点润滑油。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我下周要去参加一个为期三天的数据分析培训。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "冰箱里的牛奶好像快过期了，明天记得买新的。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-01",
+      "seed": "blind-polysemy-01",
+      "category": "polysemy",
+      "query": "陶艺课一般会教哪些基础成型手法？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我报名了下个月的陶艺体验课，想学做杯子。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "公司年会我被安排负责抽奖环节的主持。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上次买的那款降噪耳塞戴着有点夹耳朵。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-02",
+      "seed": "blind-polysemy-02",
+      "category": "polysemy",
+      "query": "移动书架的承重和尺寸怎么选比较好？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我打算把书房的旧书架换成带滚轮的移动款。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "昨天把手机相册里重复的照片清理了一遍。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "周末想去看看新开的那家手冲咖啡店。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-03",
+      "seed": "blind-polysemy-03",
+      "category": "polysemy",
+      "query": "电动剃须刀旋转式和往复式哪个更适合硬胡须？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我准备给岳父买个电动剃须刀作为生日礼物。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "下个月要去参加大学同学的婚礼，得准备礼服。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "孩子学校的家长会改到了周四下午三点。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-04",
+      "seed": "blind-polysemy-04",
+      "category": "polysemy",
+      "query": "压面机做出来的面煮多久比较合适？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在学做意面，买了个压面机。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "办公室的打印机卡纸了，我已经联系了维修。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我把去年的体检报告整理进了云盘文件夹。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-05",
+      "seed": "blind-polysemy-05",
+      "category": "polysemy",
+      "query": "防潮垫选PVC还是XPE材质更耐用？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我准备把阳台改成小茶室，需要防潮垫。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "下周要去机场接从国外出差回来的同事。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我把明年的读书计划列了个书单表格。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-06",
+      "seed": "blind-polysemy-06",
+      "category": "polysemy",
+      "query": "抽油烟机的风量和噪音怎么平衡选择？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我想给厨房换个静音的抽油烟机。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "昨天帮邻居搬家具，闪到了腰。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "公司的团建活动定在了下下周五。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-07",
+      "seed": "blind-polysemy-07",
+      "category": "polysemy",
+      "query": "折叠桌椅选铝合金还是榉木更便携？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我买了一套新的露营折叠桌椅，准备去野餐。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我最近在练习左手写钢笔字。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "楼下的超市今晚十点才关门，可以晚点去买菜。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-08",
+      "seed": "blind-polysemy-08",
+      "category": "polysemy",
+      "query": "羊毛地毯怎么挑选密度和绒高？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我打算把客厅的旧地毯换成羊毛的。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我报名了周末的葡萄酒品鉴沙龙。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "孩子的钢琴课老师说要换本新的练习曲集。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-09",
+      "seed": "blind-polysemy-09",
+      "category": "polysemy",
+      "query": "卧室投影仪选多少流明比较合适？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我准备在卧室装个投影仪看电影。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "昨天去邮局寄了个包裹给外地的表弟。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我把去年的旅行照片打印成相册了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-10",
+      "seed": "blind-polysemy-10",
+      "category": "polysemy",
+      "query": "洗烘一体机的烘干效果和独立烘干机差多少？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我打算买个带烘干功能的洗衣机。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "公司的年度总结会我负责做PPT汇报。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "楼下新开的理发店周末人特别多。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-11",
+      "seed": "blind-polysemy-11",
+      "category": "polysemy",
+      "query": "电子血压计选臂式还是腕式更准确？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我准备给父母买个血压计，方便日常监测。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把阳台上的绿萝换了个大一号的花盆。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "明天要去税务局办理公司发票的事情。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-12",
+      "seed": "blind-polysemy-12",
+      "category": "polysemy",
+      "query": "老式收音机加装蓝牙模块需要改哪些电路？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在改装我的老式收音机，想加蓝牙功能。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我周末要去学做日式寿司卷。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我把车里的旧脚垫换成了新的橡胶款。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-13",
+      "seed": "blind-polysemy-13",
+      "category": "polysemy",
+      "query": "护眼台灯的色温和显色指数怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我打算把书房的灯换成护眼的台灯。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "公司新来的实习生我被安排带教。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "昨天把家里过期的药品都清理掉了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-polysemy-14",
+      "seed": "blind-polysemy-14",
+      "category": "polysemy",
+      "query": "智能门锁的指纹识别和密码哪个更安全？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我准备买个智能门锁，方便忘带钥匙时用。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我下周要去参加一个烘焙培训班。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我把去年的账单整理好准备归档了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-00",
+      "seed": "blind-lifecycle-00",
+      "category": "lifecycle",
+      "query": "我的储物柜密码是不是需要更新了？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "你的办公室储物柜密码已过期，需在下周前重新设置。",
+          "state": "forgotten"
+        },
+        {
+          "id": "distractor",
+          "content": "公司年会的地点定在了滨江酒店三楼宴会厅。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上周提交的报销单已经通过财务审核。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-01",
+      "seed": "blind-lifecycle-01",
+      "category": "lifecycle",
+      "query": "我之前设置的默认收货地址还能查到吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "该账号已被系统标记为长期未登录，相关个人偏好数据已隔离不可用。",
+          "state": "archived"
+        },
+        {
+          "id": "distractor",
+          "content": "市场部下周三要开季度复盘会，需要准备PPT。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你收藏的那篇关于时间管理的文章已经读完了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-02",
+      "seed": "blind-lifecycle-02",
+      "category": "lifecycle",
+      "query": "我还能打开上周上传到共享盘的合同文件吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "你的共享云盘访问权限已被管理员临时冻结，等待安全复核。",
+          "state": "muted"
+        },
+        {
+          "id": "distractor",
+          "content": "今天下午三点的产品评审会改到了会议室B。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你之前预约的牙科复诊时间是本月28号。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-03",
+      "seed": "blind-lifecycle-03",
+      "category": "lifecycle",
+      "query": "我以前给邮件打的分类标签现在还能看到吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "该邮箱账号因安全策略已进入遗忘流程，历史标签数据不再可见。",
+          "state": "invalid"
+        },
+        {
+          "id": "distractor",
+          "content": "前台通知有你的快递，取件码是5281。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "新版本的项目管理工具已经上线，可以在应用商店下载。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-04",
+      "seed": "blind-lifecycle-04",
+      "category": "lifecycle",
+      "query": "我用以前那个手机号还能收到验证码吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "你之前绑定的旧手机号已解绑，与之关联的验证信息已过期。",
+          "state": "local_denied"
+        },
+        {
+          "id": "distractor",
+          "content": "部门本季度的团建活动定在了周边温泉度假村。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你借阅的两本书将在本周五到期，记得按时归还。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-05",
+      "seed": "blind-lifecycle-05",
+      "category": "lifecycle",
+      "query": "我下个月去西安的航班是几点起飞的？",
+      "tier": "cloud",
+      "memories": [
+        {
+          "id": "target",
+          "content": "该会话中涉及的行程细节因账号隔离策略已不可返回。",
+          "state": "cloud_denied"
+        },
+        {
+          "id": "distractor",
+          "content": "图书馆新进了一批关于城市规划的外文期刊。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你昨天在超市买的牛奶保质期到下周三。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-06",
+      "seed": "blind-lifecycle-06",
+      "category": "lifecycle",
+      "query": "我家里路由器的密码是不是还能用之前记的那个？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "你之前在旧设备上保存的Wi-Fi密码因设备回收已失效。",
+          "state": "expired"
+        },
+        {
+          "id": "distractor",
+          "content": "公司食堂本周推出了新的素食窗口。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你订阅的技术周报已经连续三周没有打开过了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-07",
+      "seed": "blind-lifecycle-07",
+      "category": "lifecycle",
+      "query": "我还能看到设计组那个共享文档的修改历史吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "该工作区成员权限已被移除，相关协作记录不再对你开放。",
+          "state": "future"
+        },
+        {
+          "id": "distractor",
+          "content": "本周五下午有外部讲师来做AI应用的分享会。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你上次提交的差旅申请还差一张发票附件。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-08",
+      "seed": "blind-lifecycle-08",
+      "category": "lifecycle",
+      "query": "我账户里攒的那些积分下个月还能用吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "你的会员积分将于本月底因长期未消费而清零。",
+          "state": "cross_evidence"
+        },
+        {
+          "id": "distractor",
+          "content": "新来的实习生今天开始跟你们组一起做数据整理。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你预定的会议室因为空调检修临时换到了5楼。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-09",
+      "seed": "blind-lifecycle-09",
+      "category": "lifecycle",
+      "query": "我上周用这个账号做的那些操作还能查到吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "该临时账号的访问凭证已过期，历史操作日志已归档隔离。",
+          "state": "other_account"
+        },
+        {
+          "id": "distractor",
+          "content": "季度绩效自评表的提交截止时间是本月30号。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你办公桌上的绿植已经两周没浇水了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-10",
+      "seed": "blind-lifecycle-10",
+      "category": "lifecycle",
+      "query": "我出差期间设置的那个自动回信现在还在起作用吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "你之前设置的自动回复规则因邮箱迁移已失效不再生效。",
+          "state": "forgotten"
+        },
+        {
+          "id": "distractor",
+          "content": "公司新采购的升降桌已经陆续运到各楼层。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你昨天提到的那个竞品分析报告我已经转给同事了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-11",
+      "seed": "blind-lifecycle-11",
+      "category": "lifecycle",
+      "query": "我上个月和供应商的几通电话录音还能调出来吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "该手机号关联的通话记录因隐私策略已过期不可查询。",
+          "state": "archived"
+        },
+        {
+          "id": "distractor",
+          "content": "今年的员工体检套餐增加了两项新的筛查项目。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你常去的那家面馆这周推出了限量新品。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-12",
+      "seed": "blind-lifecycle-12",
+      "category": "lifecycle",
+      "query": "我之前那张门禁卡现在还能进A座吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "你的旧门禁卡因权限回收已注销，无法再刷开A座大门。",
+          "state": "muted"
+        },
+        {
+          "id": "distractor",
+          "content": "人力资源部正在收集下年度培训需求的问卷。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你上周末在书店买的那本小说已经读完一半了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-13",
+      "seed": "blind-lifecycle-13",
+      "category": "lifecycle",
+      "query": "我还能打开同事分享的那个团建相册吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "该共享相册的查看权限已被所有者撤销，照片内容不再可见。",
+          "state": "invalid"
+        },
+        {
+          "id": "distractor",
+          "content": "你负责的客户回访任务本周还剩三个待完成。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "公司楼下新开的咖啡店今天买一送一。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-lifecycle-14",
+      "seed": "blind-lifecycle-14",
+      "category": "lifecycle",
+      "query": "我之前给家人开的相册共享权限什么时候会到期？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "你已授权共享家庭相册的访问权限，直到明年一月自动失效。",
+          "state": "local_denied"
+        },
+        {
+          "id": "distractor",
+          "content": "你上次把厨房水槽下面的清洁剂换成了新的柠檬香型。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "你计划下个月去海边度假时带上那顶宽檐草帽。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-00",
+      "seed": "blind-technical_polysemy-00",
+      "category": "technical_polysemy",
+      "query": "这个 query 里的 stack trace 太长了，我只想知道怎么在日志里过滤出 error 级别的那几行？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我上周把厨房的旧烤箱换成了蒸烤一体机，周末试了两次做欧包。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把阳台的旧晾衣架拆了，换成了可折叠的升降款。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上周帮同事代购了一副防蓝光眼镜，还没寄出。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-01",
+      "seed": "blind-technical_polysemy-01",
+      "category": "technical_polysemy",
+      "query": "数据库连接池满了报错，是该调大 max connections 还是先查有没有慢查询没释放？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我女儿的钢琴考级曲目换成了肖邦的降E大调夜曲，每天要陪练半小时。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把书房的旧书桌换成了升降桌，站着办公的时候多了。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "上周订了去西安的高铁票，准备带爸妈去看城墙。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-02",
+      "seed": "blind-technical_polysemy-02",
+      "category": "technical_polysemy",
+      "query": "想问下 nginx 反向代理转发 WebSocket 的时候握手 400，配置里是不是漏了 Upgrade 头？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我昨天第一次尝试在家做手冲咖啡，用的是中浅烘的耶加雪菲。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我上个月换了新的电动车，续航比之前那辆多 30 公里。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我侄子的暑假作业还没写完，这周得盯着他。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-03",
+      "seed": "blind-technical_polysemy-03",
+      "category": "technical_polysemy",
+      "query": "公司内网访问 git 仓库突然特别慢，ping 得通但 clone 一直卡住，可能是 MTU 的问题吗？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我这周末要去学插花课，老师说这次主题是秋季的暖色调搭配。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把我妈的旧手机屏幕摔碎了，这周得带她去换屏。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我上个月办了张游泳月卡，打算每周去两次。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-04",
+      "seed": "blind-technical_polysemy-04",
+      "category": "technical_polysemy",
+      "query": "Python 里 dict 和 defaultdict 的区别到底在哪，什么时候必须用后者？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我上个月换了新的降噪耳机，坐地铁通勤的时候终于能听清播客了。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把我家的旧窗帘全换成了遮光款，卧室终于能睡到自然醒。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我上周预约了牙医洗牙，排到了下个月初。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-05",
+      "seed": "blind-technical_polysemy-05",
+      "category": "technical_polysemy",
+      "query": "CI 流水线里跑 pytest 老是偶发超时，重跑又过了，这种 flaky test 该怎么定位？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我女儿这学期换了新的游泳教练，说她的自由泳转身动作需要重练。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把车库里的旧自行车捐了，腾出地方放储物架。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我上周把家里的路由器固件升级了，信号反而变差了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-06",
+      "seed": "blind-technical_polysemy-06",
+      "category": "technical_polysemy",
+      "query": "Redis 主从切换之后有部分 key 读不到，是复制延迟还是我的 expire 时间设置有问题？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在学做粤式糖水，上周第一次尝试腐竹白果薏米水，糖放多了。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我上个月把阳台改成了小花房，摆了十几盆多肉。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我下周要去参加表姐的婚礼，还没想好穿什么。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-07",
+      "seed": "blind-technical_polysemy-07",
+      "category": "technical_polysemy",
+      "query": "想在本地搭个 Kubernetes 学习环境，minikube 和 kind 初学者选哪个更省事？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我把书房的旧台灯换成了可调色温的护眼灯，晚上看书眼睛没那么累了。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我上个月换了新的行李箱，出差的时候轮子顺滑多了。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我侄女今年高考完，正在纠结报什么专业。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-08",
+      "seed": "blind-technical_polysemy-08",
+      "category": "technical_polysemy",
+      "query": "SQL 里 INNER JOIN 和 LEFT JOIN 的区别，实际业务里怎么判断该用哪个？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在整理衣柜，把三年没穿的大衣都打包捐了。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我上周带我妈去做了体检，报告下周才出。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我把客厅的旧地毯换成了短绒的，扫地机器人终于能进去了。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-09",
+      "seed": "blind-technical_polysemy-09",
+      "category": "technical_polysemy",
+      "query": "Docker 容器里的进程 PID 1 收不到 SIGTERM，退出时总是被强杀，怎么处理信号转发？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我上个月开始学做日式便当，每天早上要早起半小时准备。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把我爸的老花镜度数重新验了，新配的戴着舒服多了。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我下周要去杭州出差三天，酒店还没订。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-10",
+      "seed": "blind-technical_polysemy-10",
+      "category": "technical_polysemy",
+      "query": "前端页面在 Safari 上 flex 布局换行失效，Chrome 却正常，是不是要加 -webkit 前缀？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我这周末准备把家里的旧书整理一遍，捐一半给社区图书馆。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我上个月换了新的床上四件套，纯棉的睡着比之前的舒服。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我女儿这周学校组织秋游，要准备零食和水壶。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-11",
+      "seed": "blind-technical_polysemy-11",
+      "category": "technical_polysemy",
+      "query": "Linux 上怎么排查磁盘 IO 特别高的情况，iostat 里的 %util 到底怎么看？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在练毛笔字，每天晚上写半小时楷书，已经坚持一个月了。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把我妈的旧缝纫机修好了，她又能改裤脚了。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我上个月换了新的通勤包，能装下笔记本和饭盒。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-12",
+      "seed": "blind-technical_polysemy-12",
+      "category": "technical_polysemy",
+      "query": "Git rebase 之后 force push 被服务器拒绝了，是要加 --force-with-lease 还是先和同事打招呼？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我上周开始尝试断舍离，把玄关的杂物柜清空了一半。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把我儿子的旧玩具整理出来送人了，留了几件有纪念意义的。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我这周末要去试驾一款新出的新能源车。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-13",
+      "seed": "blind-technical_polysemy-13",
+      "category": "technical_polysemy",
+      "query": "公司的 API 网关限流配置成 QPS 100，但压测时 QPS 才 60 就开始 429 了，什么原因？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我上个月换了新的咖啡豆研磨机，手摇的比电动的更能控制粗细。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把我爸的旧钓鱼竿送人了，他现在改玩无人机了。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我下周要给团队做一次季度汇报，PPT 还没写完。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    },
+    {
+      "id": "blind-technical_polysemy-14",
+      "seed": "blind-technical_polysemy-14",
+      "category": "technical_polysemy",
+      "query": "PostgreSQL 的事务隔离级别选 Read Committed 还是 Repeatable Read，业务上有幻读风险该怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我最近在学做德式碱水面包，配方里的烘焙碱不太好买。",
+          "state": "active"
+        },
+        {
+          "id": "distractor",
+          "content": "我把我妈的老年机换成了智能机，教了她一周才学会用微信。"
+        },
+        {
+          "id": "second-distractor",
+          "content": "我上个月把家里的旧床垫扔了，换了个偏硬的。"
+        }
+      ],
+      "expect": [],
+      "forbid": ["target", "distractor", "second-distractor"]
+    }
+  ]
+}
