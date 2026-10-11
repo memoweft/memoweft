@@ -617,6 +617,8 @@ class HermesMemoWeftRuntime:
             host_id=f"hermes:{platform}",
         )
         self._ingestor.initialize()
+        from ...semantic.runtime import configure_runtime
+        configure_runtime(db_path)
         self._outcome_store = TerminalOutcomeStore(db_path)
         # The host may inject its own strict one-shot model route
         # (``one_shot_llm`` initialize kwarg).  With it, the V1 formal batch
@@ -1008,6 +1010,9 @@ class HermesMemoWeftRuntime:
 
     def shutdown(self) -> None:
         """Boundedly stop the local asynchronous World-job worker."""
+        from ...semantic.runtime import close_runtime
+        if self.db_path is not None:
+            close_runtime(self.db_path)
 
         worker = self._world_worker
         self._world_worker = None

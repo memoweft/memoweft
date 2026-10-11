@@ -1,0 +1,98 @@
+{
+  "numpy": {
+    "version": "2.4.3",
+    "installed_file_bytes": 40991966,
+    "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+    "license_classifiers": []
+  },
+  "onnxruntime": {
+    "version": "1.24.4",
+    "installed_file_bytes": 36750330,
+    "license": "MIT License",
+    "license_classifiers": ["License :: OSI Approved :: MIT License"]
+  },
+  "tokenizers": {
+    "version": "0.22.2",
+    "installed_file_bytes": 7651523,
+    "license": null,
+    "license_classifiers": ["License :: OSI Approved :: Apache Software License"]
+  },
+  "flatbuffers": {
+    "version": "25.12.19",
+    "installed_file_bytes": 88178,
+    "license": "Apache 2.0",
+    "license_classifiers": ["License :: OSI Approved :: Apache Software License"]
+  },
+  "protobuf": {
+    "version": "7.36.2",
+    "installed_file_bytes": 1711545,
+    "license": "3-Clause BSD License",
+    "license_classifiers": []
+  },
+  "sympy": {
+    "version": "1.14.0",
+    "installed_file_bytes": 26888180,
+    "license": "BSD",
+    "license_classifiers": ["License :: OSI Approved :: BSD License"]
+  },
+  "mpmath": {
+    "version": "1.3.0",
+    "installed_file_bytes": 1950371,
+    "license": "BSD",
+    "license_classifiers": ["License :: OSI Approved :: BSD License"]
+  },
+  "huggingface-hub": {
+    "version": "1.33.0",
+    "installed_file_bytes": 3429803,
+    "license": "Apache-2.0",
+    "license_classifiers": ["License :: OSI Approved :: Apache Software License"]
+  },
+  "filelock": {
+    "version": "4.1.0",
+    "installed_file_bytes": 463278,
+    "license": "MIT",
+    "license_classifiers": ["License :: OSI Approved :: MIT License"]
+  },
+  "fsspec": {
+    "version": "2026.9.0",
+    "installed_file_bytes": 810762,
+    "license": "BSD-3-Clause",
+    "license_classifiers": []
+  },
+  "hf-xet": {
+    "version": "1.7.0",
+    "installed_file_bytes": 9664307,
+    "license": "Apache-2.0",
+    "license_classifiers": ["License :: OSI Approved :: Apache Software License"]
+  },
+  "pyyaml": {
+    "version": "6.0.3",
+    "installed_file_bytes": 478443,
+    "license": "MIT",
+    "license_classifiers": ["License :: OSI Approved :: MIT License"]
+  },
+  "tqdm": {
+    "version": "4.70.1",
+    "installed_file_bytes": 279811,
+    "license": "MPL-2.0 AND MIT",
+    "license_classifiers": []
+  },
+  "click": {
+    "version": "8.5.0",
+    "installed_file_bytes": 447891,
+    "license": "BSD-3-Clause",
+    "license_classifiers": []
+  },
+  "packaging": {
+    "version": "26.2",
+    "installed_file_bytes": 382152,
+    "license": "Apache-2.0 OR BSD-2-Clause",
+    "license_classifiers": []
+  },
+  "colorama": {
+    "version": "0.4.6",
+    "installed_file_bytes": 77847,
+    "license": null,
+    "license_classifiers": ["License :: OSI Approved :: BSD License"]
+  }
+}

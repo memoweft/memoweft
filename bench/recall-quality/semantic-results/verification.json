@@ -1,0 +1,53 @@
+{
+  "scope": "Synthetic production recall, local CI-equivalent checks; zero generation-model requests; no personal databases or production host requests",
+  "primary_schema_versions": { "python": 21, "typescript": 6, "portable": 4, "changed": false },
+  "parameters": {
+    "threshold": 0.87,
+    "max_additions": 3,
+    "selection_data": "MEM-5 exposed development curve; fixed before exposed blind replay"
+  },
+  "local_checks": {
+    "npm run test:coverage": { "passed": 636, "failed": 0 },
+    "npm workspace tests (all 9 CI workspaces)": { "passed": 181, "failed": 0 },
+    "uv run --extra dev --extra semantic pytest -q": { "passed": 1970, "failed": 0 },
+    "uv run --extra dev --extra semantic mypy --strict src tests": {
+      "checked_files": 229,
+      "errors": 0
+    },
+    "literal exact-baseline gate": {
+      "queries": 638,
+      "ordered_selections_hits_and_wrong_items_identical": true
+    },
+    "semantic boundary/lifecycle suite": { "passed": 42, "failed": 0 },
+    "mandatory exposed review probes": {
+      "positive_pass": 8,
+      "positive_total": 8,
+      "negative_empty": 10,
+      "negative_total": 10
+    },
+    "lost_existing_hits_all_original_collections": 0,
+    "format_lint_types_api_shared_links_snippets_builds": "passed",
+    "wheel_sdist_installed_smoke": "passed; repository assertions, offline uv wheel cache substituted for pip install to obey no-network boundary",
+    "node24_dist_smoke": "passed"
+  },
+  "heavy_slots": [
+    {
+      "slot": 3,
+      "phase": "initial production quality; stopped normally on temporary-connection cleanup error; corrected and rerun"
+    },
+    { "slot": 2, "phase": "complete production quality, five existing collections" },
+    {
+      "slot": 1,
+      "phase": "capacity attempts; two owned subprocesses stopped after derived-index bottlenecks were identified"
+    },
+    {
+      "slot": 1,
+      "phase": "final production capacity and actual 1000/10000/50000 backfill; all completed"
+    },
+    { "slot": 1, "phase": "complete local CI-equivalent checks; all completed" }
+  ],
+  "owned_processes_explicitly_cleaned": 2,
+  "owned_remaining_processes": 0,
+  "model_files_committed": false,
+  "frozen_labels_and_mem5_results_changed": false
+}

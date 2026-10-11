@@ -48,7 +48,10 @@ MemoWeft keeps these boundaries explicit:
   join the existing support/deletion graph; source queries expose both originals.
   An explicit user restatement stays verbatim and may retain a unique same-person
   preceding proposal as context. Assistant prose never becomes user Evidence.
-- Recall is deterministic for the same revision and performs no World writes.
+- Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
+  Python optionally supplements literal matches with up to three local CPU
+  semantic candidates; loading/failure preserves literal recall. See
+  [configuration and lifecycle](docs/semantic-recall.md).
   Short natural corrections can be retrieved through the topic of their
   permission-eligible predecessors. Only the current successor is rendered
   and selected; past preference values appear for historical questions or

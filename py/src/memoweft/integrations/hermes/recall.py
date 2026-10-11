@@ -7,8 +7,10 @@ lifecycle-eligible, permission-allowed formal claims in a byte-stable order
 for the same World revision.  It deliberately does NOT search raw Evidence and
 does not inject Evidence text, summaries, or internal IDs.
 
-Matching is a deterministic character-bigram overlap score (Dice) computed
-entirely in memory — no FTS index writes, no embedder, no model.  A small,
+Literal matching is a deterministic character-bigram overlap score (Dice) computed
+entirely in memory. An optional local CPU provider nominates at most three
+supplementary items; all original gates remain authoritative. Loading or failure
+preserves literal recall. A small,
 owner-approved semantic category table closes the observed lexical gap
 ("水果" vs "荔枝" share no bigrams): it expands the QUERY's category words to
 member names ONLY when direct bigram matching produced zero hits (Owner
@@ -19,11 +21,15 @@ model-free, and byte-stable.
 from __future__ import annotations
 
 from ..trust.confirmed_sources import assistant_sources
+from ...semantic.runtime import CandidateProvider, SemanticCandidate, provider_for
+from ...semantic.store import content_hash
 
 from dataclasses import dataclass
 from ...types import ModelTier
 from hashlib import sha256
+from itertools import islice
 import json
+import math
 import re
 import sqlite3
 from typing import Any, Callable, Iterable, Literal, Mapping, Sequence, TypeVar, cast
@@ -665,7 +671,8 @@ def _topic_cue_is_explicit(query: str, cue: str) -> bool:
                for index in range(len(query)) if query.startswith(cue, index))
 
 
-def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
+def _query_eligible_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[Mapping[str, object]]:
+    """Shared history/name restrictions for literal and semantic nominations."""
     rows_list = list(rows)
     raw_query = query
     query = _query_signal(query)
@@ -696,6 +703,17 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
                 _anchor_is_explicit(str(row["content"]).casefold(), name.casefold()) for name in named
             ))
         ]
+    return rows_list
+
+
+def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
+    rows_list = _query_eligible_rows(query, rows)
+    query = _query_signal(query)
+    named = {
+        str(anchor) for row in rows_list for anchor in _row_anchors(row)
+        if _anchor_is_explicit(query.casefold(), str(anchor).casefold())
+    }
+    if named:
         identity = _score_world_anchor_rows(query, [row for row in rows_list if row.get("statement_kind") == "naming"])
         relevant = _score_world_rows(query, rows_list)
         anchored = _score_world_anchor_rows(query, rows_list)
@@ -1120,7 +1138,8 @@ def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
 
 
 def recall_world_snapshot(
-    db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local"
+    db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local",
+    candidate_provider: CandidateProvider | None = None,
 ) -> RecallSnapshotV1 | None:
     """Read one coherent, deterministic Recall snapshot without writes.
 
@@ -1151,7 +1170,46 @@ def recall_world_snapshot(
                 "facts": facts,
             }
         )
-        selected = _match_world_rows(query, _current_world_rows(db, subject_id, model_tier))
+        # Optional providers nominate only; failures preserve the literal route.
+        provider = candidate_provider or provider_for(db)
+        nominees: tuple[SemanticCandidate, ...] = ()
+        if provider is not None and provider.config.enabled:
+            try:
+                nominees = tuple(islice(provider.candidates(db, subject_id, query), 32))
+            except Exception:
+                nominees = ()
+        rows = _current_world_rows(db, subject_id, model_tier)
+        selected = _match_world_rows(query, rows)
+        literal = selected
+        try:
+            selected = list(literal)
+            if nominees and provider is not None:
+                eligible = {(str(row["kind"]), str(row["id"])): row
+                            for row in _query_eligible_rows(query, rows)}
+                seen = {(str(item["kind"]), str(item["id"])) for item in selected}
+                additions = 0
+                for candidate in nominees:
+                    key = candidate.kind, candidate.item_id
+                    row = eligible.get(key)
+                    if (key in seen or row is None or not math.isfinite(candidate.score)
+                            or candidate.score < provider.config.threshold or candidate.score > 1.00001
+                            or additions >= min(3, provider.config.max_additions)):
+                        continue
+                    table = "world_event" if candidate.kind == "event" else candidate.kind
+                    if table not in {"cognition", "relationship", "world_event"}:
+                        continue
+                    raw = db.execute(f"SELECT content FROM {table} WHERE id=?", (candidate.item_id,)).fetchone()
+                    if raw is None or content_hash(str(raw[0])) != candidate.content_hash:
+                        continue
+                    selected.append({**row, "score": candidate.score})
+                    seen.add(key)
+                    additions += 1
+        except Exception:
+            selected = literal
+        # Final per-item gate shares the coherent read transaction and destination.
+        selected = [item for item in selected if world_item_visible(
+            db, subject_id, cast(Any, str(item["kind"])), str(item["id"]),
+            surface="model_cloud" if model_tier == "cloud" else "recall")]
         selected_item_ids = tuple(
             (str(item["kind"]), str(item["id"])) for item in selected
         )
