@@ -1,0 +1,147 @@
+{
+  "scope": "Derived from saved final results only; no rerun, relabeling or threshold changes",
+  "lifecycle_metric_note": "The frozen runner's lifecycle_leaks counts ANY return on a lifecycle-category query. It therefore includes unrelated active distractors. Actual blocked-memory returns are audited separately below; original rows remain unchanged.",
+  "splits": {
+    "dev": {
+      "baseline": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 0,
+        "baseline_misses": 249,
+        "positive_queries_with_wrong_memory": 5,
+        "false_queries": 18,
+        "review_failures": []
+      },
+      "A": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 64,
+        "baseline_misses": 249,
+        "positive_queries_with_wrong_memory": 8,
+        "false_queries": 21,
+        "review_failures": []
+      },
+      "B": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 106,
+        "baseline_misses": 249,
+        "positive_queries_with_wrong_memory": 7,
+        "false_queries": 20,
+        "review_failures": []
+      },
+      "AB": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 135,
+        "baseline_misses": 249,
+        "positive_queries_with_wrong_memory": 9,
+        "false_queries": 22,
+        "review_failures": []
+      }
+    },
+    "blind": {
+      "baseline": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 0,
+        "baseline_misses": 80,
+        "positive_queries_with_wrong_memory": 11,
+        "false_queries": 24,
+        "review_failures": []
+      },
+      "A": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 4,
+        "baseline_misses": 80,
+        "positive_queries_with_wrong_memory": 11,
+        "false_queries": 25,
+        "review_failures": []
+      },
+      "B": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 67,
+        "baseline_misses": 80,
+        "positive_queries_with_wrong_memory": 73,
+        "false_queries": 91,
+        "review_failures": []
+      },
+      "AB": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 68,
+        "baseline_misses": 80,
+        "positive_queries_with_wrong_memory": 73,
+        "false_queries": 91,
+        "review_failures": []
+      }
+    },
+    "review": {
+      "baseline": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 0,
+        "baseline_misses": 20,
+        "positive_queries_with_wrong_memory": 0,
+        "false_queries": 0,
+        "review_failures": []
+      },
+      "A": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 4,
+        "baseline_misses": 20,
+        "positive_queries_with_wrong_memory": 0,
+        "false_queries": 1,
+        "review_failures": [
+          {
+            "id": "review-negative-4",
+            "query": "running process怎么停止？",
+            "selected": ["target"],
+            "wrong": ["target"]
+          }
+        ]
+      },
+      "B": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 7,
+        "baseline_misses": 20,
+        "positive_queries_with_wrong_memory": 2,
+        "false_queries": 2,
+        "review_failures": [
+          {
+            "id": "review-regression-1",
+            "query": "吃苹果时怎么用手机记录？",
+            "selected": ["target", "d0"],
+            "wrong": ["d0"]
+          },
+          {
+            "id": "shared20-5",
+            "query": "subway出行怎么安排？",
+            "selected": ["target-0"],
+            "wrong": ["target-0"]
+          }
+        ]
+      },
+      "AB": {
+        "actual_blocked_returns": [],
+        "new_hits_over_baseline": 8,
+        "baseline_misses": 20,
+        "positive_queries_with_wrong_memory": 2,
+        "false_queries": 3,
+        "review_failures": [
+          {
+            "id": "review-regression-1",
+            "query": "吃苹果时怎么用手机记录？",
+            "selected": ["target", "d0"],
+            "wrong": ["d0"]
+          },
+          {
+            "id": "review-negative-4",
+            "query": "running process怎么停止？",
+            "selected": ["target"],
+            "wrong": ["target"]
+          },
+          {
+            "id": "shared20-5",
+            "query": "subway出行怎么安排？",
+            "selected": ["target-0"],
+            "wrong": ["target-0"]
+          }
+        ]
+      }
+    }
+  }
+}
