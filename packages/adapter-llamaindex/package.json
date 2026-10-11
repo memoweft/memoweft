@@ -52,7 +52,7 @@
   },
   "devDependencies": {
     "llamaindex": "^0.12",
-    "@llamaindex/workflow": "1.1.24",
+    "@llamaindex/workflow": "1.1.25",
     "memoweft": "*"
   }
 }
