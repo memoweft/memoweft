@@ -1,0 +1,645 @@
+{
+  "model": "mimo-v2.6-flash",
+  "fixture_split": "dev",
+  "scope": "query rewrite over exact 233cc2f recall; comparison uses final guarded recall",
+  "results": [
+    {
+      "id": "dev-synonym-00-0",
+      "category": "synonym",
+      "query": "单车路线怎么选？",
+      "rewrites": [
+        "骑行路线怎么选",
+        "单人骑行路线推荐",
+        "有没有适合新手的单车路线推荐"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "latency_ms": 3060.8467999845743,
+      "miss_cause": null,
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-synonym-01-0",
+      "category": "synonym",
+      "query": "远足装备怎么选？",
+      "rewrites": [
+        "远足装备怎么选 求推荐",
+        "徒步装备选购指南 个人偏好",
+        "户外远足装备选择技巧"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 8851.865599979647,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-hierarchy-00-0",
+      "category": "hierarchy",
+      "query": "宠物用品怎么选？",
+      "rewrites": [
+        "宠物用品挑选指南",
+        "适合自家猫咪的用品选择建议",
+        "宠物食品与用品选购要点"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 2798.1828000047244,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-hierarchy-01-0",
+      "category": "hierarchy",
+      "query": "宠物玩具怎么选？",
+      "rewrites": [
+        "宠物玩具挑选指南（避免难用款）",
+        "适合我家宠物的玩具推荐（需耐用）",
+        "如何选购宠物玩具 个人偏好+安全材质"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 2344.0288999699987,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-bilingual-00-0",
+      "category": "bilingual",
+      "query": "meeting安排在哪天？",
+      "rewrites": [
+        "会议安排日期",
+        "meeting时间安排",
+        "预定会议在哪天"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 2990.020099969115,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-bilingual-01-0",
+      "category": "bilingual",
+      "query": "WFH适合我吗？",
+      "rewrites": [
+        "居家办公是否适合我",
+        "有没有适合我的居家办公方式",
+        "我想了解我适合在家远程工作吗"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 1561.0526000382379,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-colloquial-00-0",
+      "category": "colloquial",
+      "query": "睡不着怎么安排作息？",
+      "rewrites": [
+        "失眠调整作息安排",
+        "睡不着的个人作息优化建议",
+        "如何制定睡眠作息方案"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 1452.078900008928,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-colloquial-01-0",
+      "category": "colloquial",
+      "query": "晕车时该注意什么？",
+      "rewrites": [
+        "晕车注意避免吃什么",
+        "晕车不宜做的活动",
+        "晕车注意事项和禁忌"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 6588.637400011066,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-abbreviation-00-0",
+      "category": "abbreviation",
+      "query": "北京时间怎么安排？",
+      "rewrites": [
+        "我可能在北京时间怎么安排",
+        "建议按北京时间给出安排吗",
+        "我会不会把北京时间的安排弄错"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 1845.2095999964513,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-abbreviation-01-0",
+      "category": "abbreviation",
+      "query": "科幻书怎么选？",
+      "rewrites": [
+        "科幻小说推荐 个人偏好",
+        "选科幻书 避雷 个人口味",
+        "经典科幻书籍 购买建议 个人需求"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "latency_ms": 4245.21670001559,
+      "miss_cause": null,
+      "baseline_selected": [
+        "target"
+      ],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-typo-00-0",
+      "category": "typo",
+      "query": "自型车路线怎么选？",
+      "rewrites": [
+        "自驾游路线推荐 个人偏好",
+        "自驾游路线规划 注意事项",
+        "自驾路线选择技巧 负面体验避免"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 16298.621600028127,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-typo-01-0",
+      "category": "typo",
+      "query": "咖非怎么选？",
+      "rewrites": [
+        "咖啡豆挑选推荐 偏好浅烘果酸",
+        "咖啡器具选购 要省心不坑 要便宜的不贵的",
+        "咖啡种类推荐 不要太苦的"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "latency_ms": 6551.8105999799445,
+      "miss_cause": null,
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-indirect-00-0",
+      "category": "indirect",
+      "query": "帮我点个泰国菜？",
+      "rewrites": [
+        "泰国菜推荐 点餐 不要太辣 清淡",
+        "泰国菜 外卖点餐 个人口味偏好推荐",
+        "泰国菜 用餐推荐 不用香菜 不吃海鲜"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 6321.32739998633,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-indirect-01-0",
+      "category": "indirect",
+      "query": "拿铁怎么点？",
+      "rewrites": [
+        "拿铁点单偏好推荐",
+        "拿铁咖啡点单攻略",
+        "拿铁怎么选口味推荐"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 2710.729499987792,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-time-00-0",
+      "category": "time",
+      "query": "周末早上骑车怎么安排？",
+      "rewrites": [
+        "周末早晨骑行路线安排，不喜欢太拥挤",
+        "周末晨骑计划，避开长途爬坡",
+        "早晨骑车时间与补给安排建议"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 3564.7414999548346,
+      "miss_cause": "candidate",
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-time-01-0",
+      "category": "time",
+      "query": "周日夜间看书怎么安排？",
+      "rewrites": [
+        "周日晚看书安排 求推荐",
+        "夜间阅读周日个人安排建议",
+        "周日晚夜间阅读安排 求建议"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "latency_ms": 6974.408000009134,
+      "miss_cause": null,
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-correction-00-0",
+      "category": "correction",
+      "query": "单车路线怎么选？",
+      "rewrites": [
+        "个人自行车路线规划推荐",
+        "适合我的单车骑行路线选择",
+        "本地骑行路线挑选建议"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "current"
+      ],
+      "selected": [
+        "current"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "latency_ms": 2753.692400001455,
+      "miss_cause": null,
+      "baseline_selected": [],
+      "guarded_selected": [
+        "current"
+      ]
+    },
+    {
+      "id": "dev-correction-01-0",
+      "category": "correction",
+      "query": "meeting选什么时候？",
+      "rewrites": [
+        "适合开会的时间",
+        "没有冲突的会议时间",
+        "团队可安排的会议时段"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "current"
+      ],
+      "selected": [
+        "current"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "latency_ms": 3505.7647000066936,
+      "miss_cause": null,
+      "baseline_selected": [],
+      "guarded_selected": [
+        "current"
+      ]
+    },
+    {
+      "id": "dev-nearby-00-0",
+      "category": "nearby",
+      "query": "单车路线坡度怎么选？",
+      "rewrites": [
+        "骑车路线坡度怎么选",
+        "自行车骑行路线坡度选择建议",
+        "通勤单车路线坡度偏好"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "latency_ms": 4698.004700010642,
+      "miss_cause": null,
+      "baseline_selected": [],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-nearby-01-0",
+      "category": "nearby",
+      "query": "咖啡甜度怎么选？",
+      "rewrites": [
+        "咖啡甜度选择推荐",
+        "低糖或无糖咖啡推荐",
+        "适合减糖人群的咖啡甜度"
+      ],
+      "rewrite_error": null,
+      "expect": [
+        "target"
+      ],
+      "selected": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3"
+      ],
+      "rank": 0,
+      "wrong": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3"
+      ],
+      "latency_ms": 2823.1118000112474,
+      "miss_cause": "candidate",
+      "baseline_selected": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3"
+      ],
+      "guarded_selected": [
+        "target"
+      ]
+    },
+    {
+      "id": "dev-polysemy-00-0",
+      "category": "polysemy",
+      "query": "苹果手机怎么设置？",
+      "rewrites": [
+        "苹果手机设置方法",
+        "iPhone个人偏好设置教程",
+        "Apple手机自定义配置建议"
+      ],
+      "rewrite_error": null,
+      "expect": [],
+      "selected": [
+        "target"
+      ],
+      "rank": 0,
+      "wrong": [
+        "target"
+      ],
+      "latency_ms": 5511.959499970544,
+      "miss_cause": null,
+      "baseline_selected": [
+        "target"
+      ],
+      "guarded_selected": []
+    },
+    {
+      "id": "dev-polysemy-01-0",
+      "category": "polysemy",
+      "query": "吃苹果有什么建议？",
+      "rewrites": [
+        "吃苹果推荐",
+        "苹果建议个人需求",
+        "吃苹果不适如何吃"
+      ],
+      "rewrite_error": null,
+      "expect": [],
+      "selected": [
+        "target"
+      ],
+      "rank": 0,
+      "wrong": [
+        "target"
+      ],
+      "latency_ms": 2768.6038999818265,
+      "miss_cause": null,
+      "baseline_selected": [
+        "target"
+      ],
+      "guarded_selected": []
+    },
+    {
+      "id": "dev-lifecycle-00-0",
+      "category": "lifecycle",
+      "query": "单车路线怎么选？",
+      "rewrites": [
+        "我的自行车骑行路线怎么选",
+        "骑行路线选择 个人偏好",
+        "想选单车路线有什么建议"
+      ],
+      "rewrite_error": null,
+      "expect": [],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 9828.048399998806,
+      "miss_cause": null,
+      "baseline_selected": [],
+      "guarded_selected": []
+    },
+    {
+      "id": "dev-lifecycle-01-0",
+      "category": "lifecycle",
+      "query": "骑行路线怎么选？",
+      "rewrites": [
+        "城市通勤骑行路线 避开拥堵 和 陡坡推荐",
+        "休闲骑游路线 附近风景好 平缓一点 不要太累",
+        "川西环线骑行路线 路况 小白也能骑 不挑战高难度"
+      ],
+      "rewrite_error": null,
+      "expect": [],
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "latency_ms": 9566.33729999885,
+      "miss_cause": null,
+      "baseline_selected": [],
+      "guarded_selected": []
+    }
+  ],
+  "answer_smoke": [
+    {
+      "id": "dev-synonym-00-0",
+      "memory": "记忆：我周末常去骑行。",
+      "query": "单车路线怎么选？",
+      "answer": "周末可去骑行，依你的体力选长度。",
+      "latency_ms": 4042.695600015577
+    },
+    {
+      "id": "dev-indirect-00-0",
+      "memory": "记忆：我对花生过敏。",
+      "query": "帮我点个泰国菜？",
+      "answer": "我不能下单。可以聊聊菜品。",
+      "latency_ms": 3459.4312999979593
+    },
+    {
+      "id": "dev-correction-00-0",
+      "memory": "记忆：更正，现在只走平路。",
+      "query": "单车路线怎么选？",
+      "answer": "平路。",
+      "latency_ms": 2692.621700000018
+    }
+  ],
+  "embedding": {
+    "status": "not_run",
+    "reason": "No authorized MEMOWEFT_EMBED_* endpoint/model/key configured. MiMo text-generation credentials do not establish an embedding model. No local model or new service was started.",
+    "requests": 0,
+    "cost": 0
+  },
+  "usage": {
+    "requests": 27,
+    "prompt_tokens": 2014,
+    "completion_tokens": 729,
+    "cache_tokens": 128
+  },
+  "overall": {
+    "n": 24,
+    "positive_n": 20,
+    "hit1": 0.35,
+    "hit3": 0.35,
+    "hit5": 0.35,
+    "mrr5": 0.35,
+    "negative_false_recall_rate": 0.125,
+    "negative_returned_count": 7,
+    "latency_ms": {
+      "p50": 3505.7647000066936,
+      "p95": 9828.048399998806
+    },
+    "returned_mean": 0.5833333333333334,
+    "returned_p95": 1,
+    "miss_causes": {
+      "candidate": 13
+    }
+  },
+  "estimated_cny_uncached_upper_bound": 0.003472,
+  "pricing_source": "https://mimo.mi.com/docs/pricing"
+}

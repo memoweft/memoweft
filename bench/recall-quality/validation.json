@@ -1,0 +1,3896 @@
+{
+  "version": 1,
+  "provenance": "Entirely fictional, manually labeled. No real people, organizations, addresses, or memory stores. Frozen before tuning. Distinct held-out seeds.",
+  "cases": [
+    {
+      "id": "holdout-synonym-00-0",
+      "seed": "holdout-synonym-00",
+      "category": "synonym",
+      "query": "skiing怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢滑雪。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-00-1",
+      "seed": "holdout-synonym-00",
+      "category": "synonym",
+      "query": "雪上运动怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢滑雪。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-01-0",
+      "seed": "holdout-synonym-01",
+      "category": "synonym",
+      "query": "垂钓装备怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢钓鱼。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢钓鱼。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-01-1",
+      "seed": "holdout-synonym-01",
+      "category": "synonym",
+      "query": "fishing怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢钓鱼。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢钓鱼。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-02-0",
+      "seed": "holdout-synonym-02",
+      "category": "synonym",
+      "query": "歌唱怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢唱歌。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢唱歌。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-02-1",
+      "seed": "holdout-synonym-02",
+      "category": "synonym",
+      "query": "singing怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢唱歌。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢唱歌。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-03-0",
+      "seed": "holdout-synonym-03",
+      "category": "synonym",
+      "query": "crafting怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢手工。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢手工。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-03-1",
+      "seed": "holdout-synonym-03",
+      "category": "synonym",
+      "query": "手作活动怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢手工。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢手工。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-04-0",
+      "seed": "holdout-synonym-04",
+      "category": "synonym",
+      "query": "motorcycling怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢骑摩托车。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢骑摩托车。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-synonym-04-1",
+      "seed": "holdout-synonym-04",
+      "category": "synonym",
+      "query": "摩托骑行怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢骑摩托车。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢骑摩托车。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-00-0",
+      "seed": "holdout-hierarchy-00",
+      "category": "hierarchy",
+      "query": "宠物怎么喂？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我养兔子。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我养兔子。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-00-1",
+      "seed": "holdout-hierarchy-00",
+      "category": "hierarchy",
+      "query": "pet用品怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我养兔子。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我养兔子。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-01-0",
+      "seed": "holdout-hierarchy-01",
+      "category": "hierarchy",
+      "query": "中餐怎么点？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢闽菜。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢闽菜。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-01-1",
+      "seed": "holdout-hierarchy-01",
+      "category": "hierarchy",
+      "query": "中国菜怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢闽菜。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢闽菜。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-02-0",
+      "seed": "holdout-hierarchy-02",
+      "category": "hierarchy",
+      "query": "水果怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢芒果。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢芒果。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-02-1",
+      "seed": "holdout-hierarchy-02",
+      "category": "hierarchy",
+      "query": "fruit怎么点？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢芒果。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢芒果。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-03-0",
+      "seed": "holdout-hierarchy-03",
+      "category": "hierarchy",
+      "query": "乐器怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我弹钢琴。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我弹钢琴。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-03-1",
+      "seed": "holdout-hierarchy-03",
+      "category": "hierarchy",
+      "query": "instrument怎么练？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我弹钢琴。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我弹钢琴。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-04-0",
+      "seed": "holdout-hierarchy-04",
+      "category": "hierarchy",
+      "query": "花卉怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢牡丹。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢牡丹。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-hierarchy-04-1",
+      "seed": "holdout-hierarchy-04",
+      "category": "hierarchy",
+      "query": "鲜花怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢牡丹。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢牡丹。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-00-0",
+      "seed": "holdout-bilingual-00",
+      "category": "bilingual",
+      "query": "video call怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯视频通话。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我习惯视频通话。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-00-1",
+      "seed": "holdout-bilingual-00",
+      "category": "bilingual",
+      "query": "VC怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我习惯视频通话。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我习惯视频通话。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-01-0",
+      "seed": "holdout-bilingual-01",
+      "category": "bilingual",
+      "query": "deadline怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我需要截止日期提醒。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我需要截止日期提醒。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-01-1",
+      "seed": "holdout-bilingual-01",
+      "category": "bilingual",
+      "query": "DDL怎么提醒？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我需要截止日期提醒。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我需要截止日期提醒。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-02-0",
+      "seed": "holdout-bilingual-02",
+      "category": "bilingual",
+      "query": "2FA怎么设置？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我使用双因素认证。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我使用双因素认证。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-02-1",
+      "seed": "holdout-bilingual-02",
+      "category": "bilingual",
+      "query": "two factor authentication怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我使用双因素认证。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我使用双因素认证。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-03-0",
+      "seed": "holdout-bilingual-03",
+      "category": "bilingual",
+      "query": "brainstorm怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我常做头脑风暴。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我常做头脑风暴。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-03-1",
+      "seed": "holdout-bilingual-03",
+      "category": "bilingual",
+      "query": "brainstorming怎么准备？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我常做头脑风暴。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我常做头脑风暴。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-04-0",
+      "seed": "holdout-bilingual-04",
+      "category": "bilingual",
+      "query": "podcast怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢播客。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢播客。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-bilingual-04-1",
+      "seed": "holdout-bilingual-04",
+      "category": "bilingual",
+      "query": "PODCAST怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢播客。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢播客。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-00-0",
+      "seed": "holdout-colloquial-00",
+      "category": "colloquial",
+      "query": "看不清远处怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我患有近视。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我患有近视。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-00-1",
+      "seed": "holdout-colloquial-00",
+      "category": "colloquial",
+      "query": "myopia怎么选眼镜？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我患有近视。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我患有近视。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-01-0",
+      "seed": "holdout-colloquial-01",
+      "category": "colloquial",
+      "query": "心里发慌怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我容易紧张。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我容易紧张。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-01-1",
+      "seed": "holdout-colloquial-01",
+      "category": "colloquial",
+      "query": "nervous怎么应对？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我容易紧张。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我容易紧张。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-02-0",
+      "seed": "holdout-colloquial-02",
+      "category": "colloquial",
+      "query": "别睡太晚怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我避免熬夜。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我避免熬夜。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-02-1",
+      "seed": "holdout-colloquial-02",
+      "category": "colloquial",
+      "query": "早些睡怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我避免熬夜。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我避免熬夜。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-03-0",
+      "seed": "holdout-colloquial-03",
+      "category": "colloquial",
+      "query": "人多一点怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢热闹。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢热闹。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-03-1",
+      "seed": "holdout-colloquial-03",
+      "category": "colloquial",
+      "query": "lively活动怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢热闹。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢热闹。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-04-0",
+      "seed": "holdout-colloquial-04",
+      "category": "colloquial",
+      "query": "预算以内怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我倾向量入为出。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我倾向量入为出。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-colloquial-04-1",
+      "seed": "holdout-colloquial-04",
+      "category": "colloquial",
+      "query": "不超支怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我倾向量入为出。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我倾向量入为出。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-00-0",
+      "seed": "holdout-abbreviation-00",
+      "category": "abbreviation",
+      "query": "LLM怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我研究大型语言模型。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我研究大型语言模型。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-00-1",
+      "seed": "holdout-abbreviation-00",
+      "category": "abbreviation",
+      "query": "large language model怎么研究？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我研究大型语言模型。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我研究大型语言模型。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-01-0",
+      "seed": "holdout-abbreviation-01",
+      "category": "abbreviation",
+      "query": "RPG怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢角色扮演游戏。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢角色扮演游戏。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-01-1",
+      "seed": "holdout-abbreviation-01",
+      "category": "abbreviation",
+      "query": "role playing game怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢角色扮演游戏。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢角色扮演游戏。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-02-0",
+      "seed": "holdout-abbreviation-02",
+      "category": "abbreviation",
+      "query": "PDF怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我用便携式文档格式。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我用便携式文档格式。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-02-1",
+      "seed": "holdout-abbreviation-02",
+      "category": "abbreviation",
+      "query": "portable document format怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我用便携式文档格式。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我用便携式文档格式。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-03-0",
+      "seed": "holdout-abbreviation-03",
+      "category": "abbreviation",
+      "query": "SQL怎么练？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我学习结构化查询语言。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我学习结构化查询语言。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-03-1",
+      "seed": "holdout-abbreviation-03",
+      "category": "abbreviation",
+      "query": "structured query language怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我学习结构化查询语言。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我学习结构化查询语言。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-04-0",
+      "seed": "holdout-abbreviation-04",
+      "category": "abbreviation",
+      "query": "API怎么设计？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我关注应用程序接口。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我关注应用程序接口。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-abbreviation-04-1",
+      "seed": "holdout-abbreviation-04",
+      "category": "abbreviation",
+      "query": "application programming interface怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我关注应用程序接口。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我关注应用程序接口。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-00-0",
+      "seed": "holdout-typo-00",
+      "category": "typo",
+      "query": "麵條怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢面条。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢面条。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-00-1",
+      "seed": "holdout-typo-00",
+      "category": "typo",
+      "query": "miantiao怎么点？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢面条。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢面条。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-01-0",
+      "seed": "holdout-typo-01",
+      "category": "typo",
+      "query": "筆記怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我常写笔记。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我常写笔记。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-01-1",
+      "seed": "holdout-typo-01",
+      "category": "typo",
+      "query": "biji怎么写？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我常写笔记。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我常写笔记。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-02-0",
+      "seed": "holdout-typo-02",
+      "category": "typo",
+      "query": "pǎobù怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周跑步。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每周跑步。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-02-1",
+      "seed": "holdout-typo-02",
+      "category": "typo",
+      "query": "跑歩怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周跑步。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每周跑步。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-03-0",
+      "seed": "holdout-typo-03",
+      "category": "typo",
+      "query": "預約怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我需要预约。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我需要预约。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-03-1",
+      "seed": "holdout-typo-03",
+      "category": "typo",
+      "query": "yuyue怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我需要预约。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我需要预约。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-04-0",
+      "seed": "holdout-typo-04",
+      "category": "typo",
+      "query": "攝影怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周摄影。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每周摄影。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-typo-04-1",
+      "seed": "holdout-typo-04",
+      "category": "typo",
+      "query": "sheying怎么准备？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周摄影。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每周摄影。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-00-0",
+      "seed": "holdout-indirect-00",
+      "category": "indirect",
+      "query": "芝麻酱拌面怎么点？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对芝麻过敏。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我对芝麻过敏。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-00-1",
+      "seed": "holdout-indirect-00",
+      "category": "indirect",
+      "query": "sesame dressing怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对芝麻过敏。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我对芝麻过敏。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-01-0",
+      "seed": "holdout-indirect-01",
+      "category": "indirect",
+      "query": "腌菜怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我需要少盐。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我需要少盐。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-01-1",
+      "seed": "holdout-indirect-01",
+      "category": "indirect",
+      "query": "咸味零食怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我需要少盐。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我需要少盐。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-02-0",
+      "seed": "holdout-indirect-02",
+      "category": "indirect",
+      "query": "鸡尾酒怎么点？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我避免酒精。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我避免酒精。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-02-1",
+      "seed": "holdout-indirect-02",
+      "category": "indirect",
+      "query": "cocktail怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我避免酒精。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我避免酒精。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-03-0",
+      "seed": "holdout-indirect-03",
+      "category": "indirect",
+      "query": "蛋糕怎么点？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对鸡蛋过敏。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我对鸡蛋过敏。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-03-1",
+      "seed": "holdout-indirect-03",
+      "category": "indirect",
+      "query": "omelette怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我对鸡蛋过敏。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我对鸡蛋过敏。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-04-0",
+      "seed": "holdout-indirect-04",
+      "category": "indirect",
+      "query": "高空观景怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我有恐高问题。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我有恐高问题。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-indirect-04-1",
+      "seed": "holdout-indirect-04",
+      "category": "indirect",
+      "query": "摩天轮怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我有恐高问题。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我有恐高问题。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-00-0",
+      "seed": "holdout-time-00",
+      "category": "time",
+      "query": "Tuesday电脑整理怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周二清理电脑。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每周二清理电脑。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-00-1",
+      "seed": "holdout-time-00",
+      "category": "time",
+      "query": "星期二电脑清理怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周二清理电脑。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每周二清理电脑。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-01-0",
+      "seed": "holdout-time-01",
+      "category": "time",
+      "query": "Thursday乐器练习怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周四练琴。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每周四练琴。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-01-1",
+      "seed": "holdout-time-01",
+      "category": "time",
+      "query": "礼拜四练琴怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每周四练琴。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每周四练琴。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-02-0",
+      "seed": "holdout-time-02",
+      "category": "time",
+      "query": "季度末衣柜怎么整理？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每季末整理衣柜。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每季末整理衣柜。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-02-1",
+      "seed": "holdout-time-02",
+      "category": "time",
+      "query": "quarter end衣柜怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每季末整理衣柜。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每季末整理衣柜。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-03-0",
+      "seed": "holdout-time-03",
+      "category": "time",
+      "query": "weekday afternoon散步怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每个工作日午后散步。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每个工作日午后散步。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-03-1",
+      "seed": "holdout-time-03",
+      "category": "time",
+      "query": "平日下午步行怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每个工作日午后散步。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每个工作日午后散步。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-04-0",
+      "seed": "holdout-time-04",
+      "category": "time",
+      "query": "early morning补水怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每天清晨喝水。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每天清晨喝水。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-time-04-1",
+      "seed": "holdout-time-04",
+      "category": "time",
+      "query": "早上饮水怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每天清晨喝水。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每天清晨喝水。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-00-0",
+      "seed": "holdout-correction-00",
+      "category": "correction",
+      "query": "skiing坡度怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我滑雪喜欢陡坡。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在只选缓坡。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我滑雪喜欢陡坡。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-00-1",
+      "seed": "holdout-correction-00",
+      "category": "correction",
+      "query": "滑雪路线怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我滑雪喜欢陡坡。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在只选缓坡。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我滑雪喜欢陡坡。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-01-0",
+      "seed": "holdout-correction-01",
+      "category": "correction",
+      "query": "fishing时长怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我钓鱼每次三小时。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在只用一小时。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我钓鱼每次三小时。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-01-1",
+      "seed": "holdout-correction-01",
+      "category": "correction",
+      "query": "垂钓多久合适？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我钓鱼每次三小时。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在只用一小时。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我钓鱼每次三小时。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-02-0",
+      "seed": "holdout-correction-02",
+      "category": "correction",
+      "query": "piano选哪天？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我周二练钢琴。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在改周四。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周二练钢琴。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-02-1",
+      "seed": "holdout-correction-02",
+      "category": "correction",
+      "query": "钢琴练习怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我周二练钢琴。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在改周四。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周二练钢琴。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-03-0",
+      "seed": "holdout-correction-03",
+      "category": "correction",
+      "query": "backup时间怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每月初备份。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在改月末。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每月初备份。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-03-1",
+      "seed": "holdout-correction-03",
+      "category": "correction",
+      "query": "备份选什么时候？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我每月初备份。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在改月末。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我每月初备份。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-04-0",
+      "seed": "holdout-correction-04",
+      "category": "correction",
+      "query": "milk tea温度怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢冰奶茶。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在只喝热的。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢冰奶茶。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-correction-04-1",
+      "seed": "holdout-correction-04",
+      "category": "correction",
+      "query": "奶茶该点什么温度？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢冰奶茶。",
+          "state": "invalid"
+        },
+        {
+          "id": "current",
+          "content": "更正，现在只喝热的。",
+          "predecessor": "target"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢冰奶茶。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "current"
+      ],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-00-0",
+      "seed": "holdout-nearby-00",
+      "category": "nearby",
+      "query": "滑雪坡度怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我滑雪只走缓坡。"
+        },
+        {
+          "id": "near",
+          "content": "我的滑雪手套是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的滑雪手套是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的滑雪手套是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的滑雪手套是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的滑雪手套是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的滑雪手套是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的滑雪手套是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我滑雪只走缓坡。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-00-1",
+      "seed": "holdout-nearby-00",
+      "category": "nearby",
+      "query": "skiing路线怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我滑雪只走缓坡。"
+        },
+        {
+          "id": "near",
+          "content": "我的滑雪手套是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的滑雪手套是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的滑雪手套是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的滑雪手套是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的滑雪手套是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的滑雪手套是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的滑雪手套是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我滑雪只走缓坡。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-01-0",
+      "seed": "holdout-nearby-01",
+      "category": "nearby",
+      "query": "钓鱼水域怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我钓鱼只去淡水。"
+        },
+        {
+          "id": "near",
+          "content": "我的钓鱼帽是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的钓鱼帽是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的钓鱼帽是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的钓鱼帽是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的钓鱼帽是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的钓鱼帽是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的钓鱼帽是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我钓鱼只去淡水。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-01-1",
+      "seed": "holdout-nearby-01",
+      "category": "nearby",
+      "query": "fishing地点怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我钓鱼只去淡水。"
+        },
+        {
+          "id": "near",
+          "content": "我的钓鱼帽是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的钓鱼帽是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的钓鱼帽是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的钓鱼帽是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的钓鱼帽是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的钓鱼帽是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的钓鱼帽是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我钓鱼只去淡水。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-02-0",
+      "seed": "holdout-nearby-02",
+      "category": "nearby",
+      "query": "钢琴时间怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我钢琴只在晚上练。"
+        },
+        {
+          "id": "near",
+          "content": "我的钢琴凳是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的钢琴凳是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的钢琴凳是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的钢琴凳是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的钢琴凳是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的钢琴凳是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的钢琴凳是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我钢琴只在晚上练。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-02-1",
+      "seed": "holdout-nearby-02",
+      "category": "nearby",
+      "query": "piano时段怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我钢琴只在晚上练。"
+        },
+        {
+          "id": "near",
+          "content": "我的钢琴凳是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的钢琴凳是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的钢琴凳是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的钢琴凳是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的钢琴凳是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的钢琴凳是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的钢琴凳是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我钢琴只在晚上练。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-03-0",
+      "seed": "holdout-nearby-03",
+      "category": "nearby",
+      "query": "备份安全怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我备份必须加密。"
+        },
+        {
+          "id": "near",
+          "content": "我的备份硬盘是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的备份硬盘是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的备份硬盘是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的备份硬盘是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的备份硬盘是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的备份硬盘是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的备份硬盘是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我备份必须加密。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-03-1",
+      "seed": "holdout-nearby-03",
+      "category": "nearby",
+      "query": "backup加密怎么设置？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我备份必须加密。"
+        },
+        {
+          "id": "near",
+          "content": "我的备份硬盘是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的备份硬盘是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的备份硬盘是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的备份硬盘是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的备份硬盘是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的备份硬盘是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的备份硬盘是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我备份必须加密。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-04-0",
+      "seed": "holdout-nearby-04",
+      "category": "nearby",
+      "query": "奶茶温度怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的奶茶必须热的。"
+        },
+        {
+          "id": "near",
+          "content": "我的奶茶杯是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的奶茶杯是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的奶茶杯是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的奶茶杯是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的奶茶杯是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的奶茶杯是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的奶茶杯是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我的奶茶必须热的。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-nearby-04-1",
+      "seed": "holdout-nearby-04",
+      "category": "nearby",
+      "query": "milk tea冷热怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我的奶茶必须热的。"
+        },
+        {
+          "id": "near",
+          "content": "我的奶茶杯是绿色。"
+        },
+        {
+          "id": "noise-0",
+          "content": "我的奶茶杯是紫色。"
+        },
+        {
+          "id": "noise-1",
+          "content": "我的奶茶杯是橙色。"
+        },
+        {
+          "id": "noise-2",
+          "content": "我的奶茶杯是白色。"
+        },
+        {
+          "id": "noise-3",
+          "content": "我的奶茶杯是黑色。"
+        },
+        {
+          "id": "noise-4",
+          "content": "我的奶茶杯是灰色。"
+        },
+        {
+          "id": "noise-5",
+          "content": "我的奶茶杯是红色。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我的奶茶必须热的。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "forbid": [
+        "near",
+        "noise-0",
+        "noise-1",
+        "noise-2",
+        "noise-3",
+        "noise-4",
+        "noise-5",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-00-0",
+      "seed": "holdout-polysemy-00",
+      "category": "polysemy",
+      "query": "橙色油漆怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢吃橙子。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢吃橙子。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-00-1",
+      "seed": "holdout-polysemy-00",
+      "category": "polysemy",
+      "query": "orange paint怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢吃橙子。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢吃橙子。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-01-0",
+      "seed": "holdout-polysemy-01",
+      "category": "polysemy",
+      "query": "网络球形拓扑怎么设置？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢打网球。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢打网球。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-01-1",
+      "seed": "holdout-polysemy-01",
+      "category": "polysemy",
+      "query": "网络怎么连接？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢打网球。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢打网球。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-02-0",
+      "seed": "holdout-polysemy-02",
+      "category": "polysemy",
+      "query": "铁锈怎么去除？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我学过Rust编程。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我学过Rust编程。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-02-1",
+      "seed": "holdout-polysemy-02",
+      "category": "polysemy",
+      "query": "rust removal怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我学过Rust编程。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我学过Rust编程。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-03-0",
+      "seed": "holdout-polysemy-03",
+      "category": "polysemy",
+      "query": "火龙游戏怎么设置？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢吃火龙果。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢吃火龙果。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-03-1",
+      "seed": "holdout-polysemy-03",
+      "category": "polysemy",
+      "query": "火龙显卡怎么选？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢吃火龙果。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢吃火龙果。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-04-0",
+      "seed": "holdout-polysemy-04",
+      "category": "polysemy",
+      "query": "海鲜市场软件怎么安装？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢海鲜。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢海鲜。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-polysemy-04-1",
+      "seed": "holdout-polysemy-04",
+      "category": "polysemy",
+      "query": "软件海鲜市场怎么设置？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "target",
+          "content": "我喜欢海鲜。"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我喜欢海鲜。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "target",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-00-0",
+      "seed": "holdout-lifecycle-00",
+      "category": "lifecycle",
+      "query": "skiing怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "forgotten"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-00-1",
+      "seed": "holdout-lifecycle-00",
+      "category": "lifecycle",
+      "query": "请问，skiing怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "forgotten"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-01-0",
+      "seed": "holdout-lifecycle-01",
+      "category": "lifecycle",
+      "query": "滑雪怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "expired"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-01-1",
+      "seed": "holdout-lifecycle-01",
+      "category": "lifecycle",
+      "query": "请问，滑雪怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "expired"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-02-0",
+      "seed": "holdout-lifecycle-02",
+      "category": "lifecycle",
+      "query": "滑雪怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-02-1",
+      "seed": "holdout-lifecycle-02",
+      "category": "lifecycle",
+      "query": "请问，滑雪怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-03-0",
+      "seed": "holdout-lifecycle-03",
+      "category": "lifecycle",
+      "query": "滑雪怎么安排？",
+      "tier": "cloud",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "cloud_denied"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-03-1",
+      "seed": "holdout-lifecycle-03",
+      "category": "lifecycle",
+      "query": "请问，滑雪怎么安排？",
+      "tier": "cloud",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "cloud_denied"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-04-0",
+      "seed": "holdout-lifecycle-04",
+      "category": "lifecycle",
+      "query": "滑雪怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "cross_evidence"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    },
+    {
+      "id": "holdout-lifecycle-04-1",
+      "seed": "holdout-lifecycle-04",
+      "category": "lifecycle",
+      "query": "请问，滑雪怎么安排？",
+      "tier": "local",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "我周末滑雪。",
+          "state": "cross_evidence"
+        },
+        {
+          "id": "unrelated",
+          "content": "我收藏虚构的星形邮票。"
+        },
+        {
+          "id": "other",
+          "content": "我周末滑雪。",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "forbid": [
+        "blocked",
+        "unrelated",
+        "other"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5355 @@
+{
+  "version": 1,
+  "commit": "233cc2f0b27a921a699a9c4c43b1a612375970f8",
+  "schema_version": 21,
+  "fixture_hashes": {
+    "dev": "67a9b11e82e4f0a7ee892140fdcf1fb3af2ddaa7e17d2f3909120c7c59304fe0"
+  },
+  "measurement": "Trust QueryService.preview_recall, median of interleaved warm calls per query; includes connection, currentness, recent evidence, pending corrections and rendering",
+  "repeats": 7,
+  "padding": 0,
+  "splits": {
+    "dev": {
+      "overall": {
+        "n": 360,
+        "positive_n": 300,
+        "hit1": 0.83,
+        "hit3": 0.83,
+        "hit5": 0.83,
+        "mrr5": 0.83,
+        "negative_false_recall_rate": 0.12222222222222222,
+        "negative_returned_count": 161,
+        "latency_ms": {
+          "p50": 2.889700001105666,
+          "p95": 5.656900000758469
+        },
+        "returned_mean": 1.1388888888888888,
+        "returned_p95": 5,
+        "miss_causes": {
+          "candidate": 24,
+          "rank_cutoff": 27
+        }
+      },
+      "categories": {
+        "abbreviation": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.6676999987103045,
+            "p95": 4.599100037012249
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "bilingual": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 3.085699980147183,
+            "p95": 6.034299964085221
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "colloquial": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.653300005476922,
+            "p95": 3.9423999842256308
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "correction": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 3.198399965185672,
+            "p95": 6.282299989834428
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "hierarchy": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.634200034663081,
+            "p95": 4.131999972742051
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "indirect": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.23333333333333334,
+          "hit3": 0.23333333333333334,
+          "hit5": 0.23333333333333334,
+          "mrr5": 0.23333333333333334,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 3.3845999860204756,
+            "p95": 5.945799988694489
+          },
+          "returned_mean": 0.23333333333333334,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 23
+          }
+        },
+        "lifecycle": {
+          "n": 30,
+          "positive_n": 0,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.1557000000029802,
+            "p95": 3.1894000130705535
+          },
+          "returned_mean": 0.0,
+          "returned_p95": 0,
+          "miss_causes": {}
+        },
+        "nearby": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.1,
+          "hit3": 0.1,
+          "hit5": 0.1,
+          "mrr5": 0.1,
+          "negative_false_recall_rate": 1.0,
+          "negative_returned_count": 147,
+          "latency_ms": {
+            "p50": 4.850099969189614,
+            "p95": 9.001699974760413
+          },
+          "returned_mean": 5.0,
+          "returned_p95": 5,
+          "miss_causes": {
+            "rank_cutoff": 27
+          }
+        },
+        "polysemy": {
+          "n": 30,
+          "positive_n": 0,
+          "hit1": 0,
+          "hit3": 0,
+          "hit5": 0,
+          "mrr5": 0,
+          "negative_false_recall_rate": 0.4666666666666667,
+          "negative_returned_count": 14,
+          "latency_ms": {
+            "p50": 2.8535000164993107,
+            "p95": 3.8796000299043953
+          },
+          "returned_mean": 0.4666666666666667,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "synonym": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.5610000011511147,
+            "p95": 4.01809997856617
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        },
+        "time": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 0.9666666666666667,
+          "hit3": 0.9666666666666667,
+          "hit5": 0.9666666666666667,
+          "mrr5": 0.9666666666666667,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 2.62529996689409,
+            "p95": 5.503499996848404
+          },
+          "returned_mean": 0.9666666666666667,
+          "returned_p95": 1,
+          "miss_causes": {
+            "candidate": 1
+          }
+        },
+        "typo": {
+          "n": 30,
+          "positive_n": 30,
+          "hit1": 1.0,
+          "hit3": 1.0,
+          "hit5": 1.0,
+          "mrr5": 1.0,
+          "negative_false_recall_rate": 0.0,
+          "negative_returned_count": 0,
+          "latency_ms": {
+            "p50": 3.341799951158464,
+            "p95": 5.320900003425777
+          },
+          "returned_mean": 1.0,
+          "returned_p95": 1,
+          "miss_causes": {}
+        }
+      },
+      "results": [
+        {
+          "id": "dev-synonym-00-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.469700004439801
+        },
+        {
+          "id": "dev-synonym-00-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.457800019532442
+        },
+        {
+          "id": "dev-synonym-00-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.918299986049533
+        },
+        {
+          "id": "dev-synonym-01-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3105000145733356
+        },
+        {
+          "id": "dev-synonym-01-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.670599973294884
+        },
+        {
+          "id": "dev-synonym-01-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.325899957213551
+        },
+        {
+          "id": "dev-synonym-02-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.234299958217889
+        },
+        {
+          "id": "dev-synonym-02-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8628999716602266
+        },
+        {
+          "id": "dev-synonym-02-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.649500034749508
+        },
+        {
+          "id": "dev-synonym-03-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.4699000059626997
+        },
+        {
+          "id": "dev-synonym-03-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.6689999978989363
+        },
+        {
+          "id": "dev-synonym-03-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.155099974013865
+        },
+        {
+          "id": "dev-synonym-04-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.2030999534763396
+        },
+        {
+          "id": "dev-synonym-04-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.25939997471869
+        },
+        {
+          "id": "dev-synonym-04-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8898000018671155
+        },
+        {
+          "id": "dev-synonym-05-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5610000011511147
+        },
+        {
+          "id": "dev-synonym-05-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.6925000022165477
+        },
+        {
+          "id": "dev-synonym-05-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8792000375688076
+        },
+        {
+          "id": "dev-synonym-06-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5503000360913575
+        },
+        {
+          "id": "dev-synonym-06-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.01809997856617
+        },
+        {
+          "id": "dev-synonym-06-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.7487999759614468
+        },
+        {
+          "id": "dev-synonym-07-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.0715999891981483
+        },
+        {
+          "id": "dev-synonym-07-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3456000383011997
+        },
+        {
+          "id": "dev-synonym-07-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.6789000257849693
+        },
+        {
+          "id": "dev-synonym-08-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.122200035955757
+        },
+        {
+          "id": "dev-synonym-08-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.803699997253716
+        },
+        {
+          "id": "dev-synonym-08-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.0989000224508345
+        },
+        {
+          "id": "dev-synonym-09-0",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9777999841608107
+        },
+        {
+          "id": "dev-synonym-09-1",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.043600019533187
+        },
+        {
+          "id": "dev-synonym-09-2",
+          "category": "synonym",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3167000035755336
+        },
+        {
+          "id": "dev-hierarchy-00-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.689699991606176
+        },
+        {
+          "id": "dev-hierarchy-00-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.634200034663081
+        },
+        {
+          "id": "dev-hierarchy-00-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.4421999589540064
+        },
+        {
+          "id": "dev-hierarchy-01-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.896000001579523
+        },
+        {
+          "id": "dev-hierarchy-01-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.067799970973283
+        },
+        {
+          "id": "dev-hierarchy-01-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.708100015297532
+        },
+        {
+          "id": "dev-hierarchy-02-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8566999933682382
+        },
+        {
+          "id": "dev-hierarchy-02-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.838000025600195
+        },
+        {
+          "id": "dev-hierarchy-02-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.265899966005236
+        },
+        {
+          "id": "dev-hierarchy-03-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.2795999539084733
+        },
+        {
+          "id": "dev-hierarchy-03-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9107999978587031
+        },
+        {
+          "id": "dev-hierarchy-03-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.388900018762797
+        },
+        {
+          "id": "dev-hierarchy-04-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.0058999652974308
+        },
+        {
+          "id": "dev-hierarchy-04-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5420000310987234
+        },
+        {
+          "id": "dev-hierarchy-04-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.189100021496415
+        },
+        {
+          "id": "dev-hierarchy-05-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.131999972742051
+        },
+        {
+          "id": "dev-hierarchy-05-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3747000377625227
+        },
+        {
+          "id": "dev-hierarchy-05-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.019800002221018
+        },
+        {
+          "id": "dev-hierarchy-06-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.9035000479780138
+        },
+        {
+          "id": "dev-hierarchy-06-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5652999756857753
+        },
+        {
+          "id": "dev-hierarchy-06-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.9755000141449273
+        },
+        {
+          "id": "dev-hierarchy-07-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.223399970214814
+        },
+        {
+          "id": "dev-hierarchy-07-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.928700007032603
+        },
+        {
+          "id": "dev-hierarchy-07-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.6727000367827713
+        },
+        {
+          "id": "dev-hierarchy-08-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.757799986284226
+        },
+        {
+          "id": "dev-hierarchy-08-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.6664999895729125
+        },
+        {
+          "id": "dev-hierarchy-08-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.16469999961555
+        },
+        {
+          "id": "dev-hierarchy-09-0",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.728099982254207
+        },
+        {
+          "id": "dev-hierarchy-09-1",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.439900010358542
+        },
+        {
+          "id": "dev-hierarchy-09-2",
+          "category": "hierarchy",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.611899981275201
+        },
+        {
+          "id": "dev-bilingual-00-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.839200034737587
+        },
+        {
+          "id": "dev-bilingual-00-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3684000372886658
+        },
+        {
+          "id": "dev-bilingual-00-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8427999932318926
+        },
+        {
+          "id": "dev-bilingual-01-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.110300029627979
+        },
+        {
+          "id": "dev-bilingual-01-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 6.034299964085221
+        },
+        {
+          "id": "dev-bilingual-01-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.8619000115431845
+        },
+        {
+          "id": "dev-bilingual-02-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.736699989531189
+        },
+        {
+          "id": "dev-bilingual-02-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.480100004002452
+        },
+        {
+          "id": "dev-bilingual-02-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5044999783858657
+        },
+        {
+          "id": "dev-bilingual-03-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5670999893918633
+        },
+        {
+          "id": "dev-bilingual-03-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.39719997625798
+        },
+        {
+          "id": "dev-bilingual-03-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.1651000026613474
+        },
+        {
+          "id": "dev-bilingual-04-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.036099999211729
+        },
+        {
+          "id": "dev-bilingual-04-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.939599973615259
+        },
+        {
+          "id": "dev-bilingual-04-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.7468000082299113
+        },
+        {
+          "id": "dev-bilingual-05-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.5522999824024737
+        },
+        {
+          "id": "dev-bilingual-05-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.11140000121668
+        },
+        {
+          "id": "dev-bilingual-05-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 6.286200019530952
+        },
+        {
+          "id": "dev-bilingual-06-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.865699992980808
+        },
+        {
+          "id": "dev-bilingual-06-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5465000071562827
+        },
+        {
+          "id": "dev-bilingual-06-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.4206999805755913
+        },
+        {
+          "id": "dev-bilingual-07-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.8252000231295824
+        },
+        {
+          "id": "dev-bilingual-07-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.085699980147183
+        },
+        {
+          "id": "dev-bilingual-07-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.672599977813661
+        },
+        {
+          "id": "dev-bilingual-08-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.083900024648756
+        },
+        {
+          "id": "dev-bilingual-08-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.9767999658361077
+        },
+        {
+          "id": "dev-bilingual-08-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.1130999559536576
+        },
+        {
+          "id": "dev-bilingual-09-0",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8639999800361693
+        },
+        {
+          "id": "dev-bilingual-09-1",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.765899979043752
+        },
+        {
+          "id": "dev-bilingual-09-2",
+          "category": "bilingual",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8356999973766506
+        },
+        {
+          "id": "dev-colloquial-00-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.9423999842256308
+        },
+        {
+          "id": "dev-colloquial-00-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.156500006094575
+        },
+        {
+          "id": "dev-colloquial-00-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.811599988490343
+        },
+        {
+          "id": "dev-colloquial-01-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.02239996381104
+        },
+        {
+          "id": "dev-colloquial-01-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.167199971154332
+        },
+        {
+          "id": "dev-colloquial-01-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9206000142730772
+        },
+        {
+          "id": "dev-colloquial-02-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3209999673999846
+        },
+        {
+          "id": "dev-colloquial-02-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.434700018260628
+        },
+        {
+          "id": "dev-colloquial-02-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.7810999783687294
+        },
+        {
+          "id": "dev-colloquial-03-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.822200010996312
+        },
+        {
+          "id": "dev-colloquial-03-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3891000309959054
+        },
+        {
+          "id": "dev-colloquial-03-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9996000337414443
+        },
+        {
+          "id": "dev-colloquial-04-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.666299988050014
+        },
+        {
+          "id": "dev-colloquial-04-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9857999868690968
+        },
+        {
+          "id": "dev-colloquial-04-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.015200036112219
+        },
+        {
+          "id": "dev-colloquial-05-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8130000098608434
+        },
+        {
+          "id": "dev-colloquial-05-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3392000002786517
+        },
+        {
+          "id": "dev-colloquial-05-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.2417000038549304
+        },
+        {
+          "id": "dev-colloquial-06-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.653300005476922
+        },
+        {
+          "id": "dev-colloquial-06-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5840000016614795
+        },
+        {
+          "id": "dev-colloquial-06-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.5883000236935914
+        },
+        {
+          "id": "dev-colloquial-07-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.0818000086583197
+        },
+        {
+          "id": "dev-colloquial-07-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.4571000142022967
+        },
+        {
+          "id": "dev-colloquial-07-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.599799947347492
+        },
+        {
+          "id": "dev-colloquial-08-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.882000000681728
+        },
+        {
+          "id": "dev-colloquial-08-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.1837999811396003
+        },
+        {
+          "id": "dev-colloquial-08-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.1031000069342554
+        },
+        {
+          "id": "dev-colloquial-09-0",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.555199983064085
+        },
+        {
+          "id": "dev-colloquial-09-1",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.001700039021671
+        },
+        {
+          "id": "dev-colloquial-09-2",
+          "category": "colloquial",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.435099973808974
+        },
+        {
+          "id": "dev-abbreviation-00-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8040999895893037
+        },
+        {
+          "id": "dev-abbreviation-00-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.458500035572797
+        },
+        {
+          "id": "dev-abbreviation-00-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.599100037012249
+        },
+        {
+          "id": "dev-abbreviation-01-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.309099945705384
+        },
+        {
+          "id": "dev-abbreviation-01-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.339799946639687
+        },
+        {
+          "id": "dev-abbreviation-01-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.1222999677993357
+        },
+        {
+          "id": "dev-abbreviation-02-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.1136000179685652
+        },
+        {
+          "id": "dev-abbreviation-02-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.816000021994114
+        },
+        {
+          "id": "dev-abbreviation-02-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3162999898195267
+        },
+        {
+          "id": "dev-abbreviation-03-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.924199972767383
+        },
+        {
+          "id": "dev-abbreviation-03-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.0217999699525535
+        },
+        {
+          "id": "dev-abbreviation-03-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.285499998833984
+        },
+        {
+          "id": "dev-abbreviation-04-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.85210000583902
+        },
+        {
+          "id": "dev-abbreviation-04-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.8078000070527196
+        },
+        {
+          "id": "dev-abbreviation-04-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.649200011044741
+        },
+        {
+          "id": "dev-abbreviation-05-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.5404000082053244
+        },
+        {
+          "id": "dev-abbreviation-05-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.6676999987103045
+        },
+        {
+          "id": "dev-abbreviation-05-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.971299982164055
+        },
+        {
+          "id": "dev-abbreviation-06-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.490699989721179
+        },
+        {
+          "id": "dev-abbreviation-06-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.456099959090352
+        },
+        {
+          "id": "dev-abbreviation-06-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.126299950759858
+        },
+        {
+          "id": "dev-abbreviation-07-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.861100026872009
+        },
+        {
+          "id": "dev-abbreviation-07-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.788599998690188
+        },
+        {
+          "id": "dev-abbreviation-07-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8463999731466174
+        },
+        {
+          "id": "dev-abbreviation-08-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.962799986358732
+        },
+        {
+          "id": "dev-abbreviation-08-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.517600019928068
+        },
+        {
+          "id": "dev-abbreviation-08-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.4473000084981322
+        },
+        {
+          "id": "dev-abbreviation-09-0",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.376699984073639
+        },
+        {
+          "id": "dev-abbreviation-09-1",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.87279998883605
+        },
+        {
+          "id": "dev-abbreviation-09-2",
+          "category": "abbreviation",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.6290999851189554
+        },
+        {
+          "id": "dev-typo-00-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.716600021813065
+        },
+        {
+          "id": "dev-typo-00-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.824300026986748
+        },
+        {
+          "id": "dev-typo-00-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5817000423558056
+        },
+        {
+          "id": "dev-typo-01-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.950299996882677
+        },
+        {
+          "id": "dev-typo-01-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.0949999927543104
+        },
+        {
+          "id": "dev-typo-01-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9598000217229128
+        },
+        {
+          "id": "dev-typo-02-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.6834000018425286
+        },
+        {
+          "id": "dev-typo-02-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.2367000239901245
+        },
+        {
+          "id": "dev-typo-02-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.2395999878644943
+        },
+        {
+          "id": "dev-typo-03-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.971200028900057
+        },
+        {
+          "id": "dev-typo-03-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.622900006826967
+        },
+        {
+          "id": "dev-typo-03-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.794699976220727
+        },
+        {
+          "id": "dev-typo-04-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.6238000029698014
+        },
+        {
+          "id": "dev-typo-04-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.468099970836192
+        },
+        {
+          "id": "dev-typo-04-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.4710000036284328
+        },
+        {
+          "id": "dev-typo-05-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.57070000609383
+        },
+        {
+          "id": "dev-typo-05-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8081999626010656
+        },
+        {
+          "id": "dev-typo-05-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.7359000416472554
+        },
+        {
+          "id": "dev-typo-06-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.994300030171871
+        },
+        {
+          "id": "dev-typo-06-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.4534999867901206
+        },
+        {
+          "id": "dev-typo-06-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.341799951158464
+        },
+        {
+          "id": "dev-typo-07-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.3886000057682395
+        },
+        {
+          "id": "dev-typo-07-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3908000332303345
+        },
+        {
+          "id": "dev-typo-07-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.320900003425777
+        },
+        {
+          "id": "dev-typo-08-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.7539000040851533
+        },
+        {
+          "id": "dev-typo-08-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.919999988283962
+        },
+        {
+          "id": "dev-typo-08-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.266400017309934
+        },
+        {
+          "id": "dev-typo-09-0",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.505799966864288
+        },
+        {
+          "id": "dev-typo-09-1",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.458999981172383
+        },
+        {
+          "id": "dev-typo-09-2",
+          "category": "typo",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.829799978528172
+        },
+        {
+          "id": "dev-indirect-00-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.9867000305093825
+        },
+        {
+          "id": "dev-indirect-00-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.9226000080816448
+        },
+        {
+          "id": "dev-indirect-00-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 5.510899994987994
+        },
+        {
+          "id": "dev-indirect-01-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 4.076400015037507
+        },
+        {
+          "id": "dev-indirect-01-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.8050999864935875
+        },
+        {
+          "id": "dev-indirect-01-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.485100005287677
+        },
+        {
+          "id": "dev-indirect-02-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.3834999883547425
+        },
+        {
+          "id": "dev-indirect-02-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.15579999005422
+        },
+        {
+          "id": "dev-indirect-02-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.124799986835569
+        },
+        {
+          "id": "dev-indirect-03-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.743400040548295
+        },
+        {
+          "id": "dev-indirect-03-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3845999860204756
+        },
+        {
+          "id": "dev-indirect-03-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.4472999977879226
+        },
+        {
+          "id": "dev-indirect-04-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 4.62099997093901
+        },
+        {
+          "id": "dev-indirect-04-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 4.114999959710985
+        },
+        {
+          "id": "dev-indirect-04-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.604099969379604
+        },
+        {
+          "id": "dev-indirect-05-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.7332999743521214
+        },
+        {
+          "id": "dev-indirect-05-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5711999624036252
+        },
+        {
+          "id": "dev-indirect-05-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.160900028888136
+        },
+        {
+          "id": "dev-indirect-06-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 5.945799988694489
+        },
+        {
+          "id": "dev-indirect-06-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.334199962206185
+        },
+        {
+          "id": "dev-indirect-06-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.8567999727092683
+        },
+        {
+          "id": "dev-indirect-07-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.948800043668598
+        },
+        {
+          "id": "dev-indirect-07-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 4.857399966567755
+        },
+        {
+          "id": "dev-indirect-07-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.989600005093962
+        },
+        {
+          "id": "dev-indirect-08-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 6.672100047580898
+        },
+        {
+          "id": "dev-indirect-08-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.2283000289462507
+        },
+        {
+          "id": "dev-indirect-08-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 3.414899983908981
+        },
+        {
+          "id": "dev-indirect-09-0",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.359300026204437
+        },
+        {
+          "id": "dev-indirect-09-1",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3230999833904207
+        },
+        {
+          "id": "dev-indirect-09-2",
+          "category": "indirect",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.125699993688613
+        },
+        {
+          "id": "dev-time-00-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.631200011819601
+        },
+        {
+          "id": "dev-time-00-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.503499996848404
+        },
+        {
+          "id": "dev-time-00-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.4444000339135528
+        },
+        {
+          "id": "dev-time-01-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.7142000035382807
+        },
+        {
+          "id": "dev-time-01-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.9176000389270484
+        },
+        {
+          "id": "dev-time-01-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.540399960707873
+        },
+        {
+          "id": "dev-time-02-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3439000360667706
+        },
+        {
+          "id": "dev-time-02-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.6447999882511795
+        },
+        {
+          "id": "dev-time-02-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.0654000001959503
+        },
+        {
+          "id": "dev-time-03-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.802799990400672
+        },
+        {
+          "id": "dev-time-03-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7479000380262733
+        },
+        {
+          "id": "dev-time-03-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8800999969244003
+        },
+        {
+          "id": "dev-time-04-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.2286999630741775
+        },
+        {
+          "id": "dev-time-04-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.159999974537641
+        },
+        {
+          "id": "dev-time-04-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.023300028871745
+        },
+        {
+          "id": "dev-time-05-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5415000272914767
+        },
+        {
+          "id": "dev-time-05-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.841000005602837
+        },
+        {
+          "id": "dev-time-05-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.4400000111199915
+        },
+        {
+          "id": "dev-time-06-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.800000005867332
+        },
+        {
+          "id": "dev-time-06-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.143400012049824
+        },
+        {
+          "id": "dev-time-06-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.2993000242859125
+        },
+        {
+          "id": "dev-time-07-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.7446000021882355
+        },
+        {
+          "id": "dev-time-07-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.1303000394254923
+        },
+        {
+          "id": "dev-time-07-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.5394000113010406
+        },
+        {
+          "id": "dev-time-08-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.4421000271104276
+        },
+        {
+          "id": "dev-time-08-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.9675999647006392
+        },
+        {
+          "id": "dev-time-08-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.654199954122305
+        },
+        {
+          "id": "dev-time-09-0",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": "candidate",
+          "latency_ms": 2.341100014746189
+        },
+        {
+          "id": "dev-time-09-1",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.62529996689409
+        },
+        {
+          "id": "dev-time-09-2",
+          "category": "time",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3574000224471092
+        },
+        {
+          "id": "dev-correction-00-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.309700008481741
+        },
+        {
+          "id": "dev-correction-00-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3213999811559916
+        },
+        {
+          "id": "dev-correction-00-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.2344000171869993
+        },
+        {
+          "id": "dev-correction-01-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 7.3447999893687665
+        },
+        {
+          "id": "dev-correction-01-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.985100018326193
+        },
+        {
+          "id": "dev-correction-01-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 6.282299989834428
+        },
+        {
+          "id": "dev-correction-02-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.044700053986162
+        },
+        {
+          "id": "dev-correction-02-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.6345000048168
+        },
+        {
+          "id": "dev-correction-02-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.404199949931353
+        },
+        {
+          "id": "dev-correction-03-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 5.656900000758469
+        },
+        {
+          "id": "dev-correction-03-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.4574000164866447
+        },
+        {
+          "id": "dev-correction-03-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.368500038050115
+        },
+        {
+          "id": "dev-correction-04-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.57230000756681
+        },
+        {
+          "id": "dev-correction-04-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.688599983230233
+        },
+        {
+          "id": "dev-correction-04-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.6166000170633197
+        },
+        {
+          "id": "dev-correction-05-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.6291999858804047
+        },
+        {
+          "id": "dev-correction-05-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.667099972721189
+        },
+        {
+          "id": "dev-correction-05-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.397099964786321
+        },
+        {
+          "id": "dev-correction-06-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.9612999642267823
+        },
+        {
+          "id": "dev-correction-06-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.4683999945409596
+        },
+        {
+          "id": "dev-correction-06-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3577000247314572
+        },
+        {
+          "id": "dev-correction-07-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.247299998998642
+        },
+        {
+          "id": "dev-correction-07-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.293199999257922
+        },
+        {
+          "id": "dev-correction-07-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 4.019399988465011
+        },
+        {
+          "id": "dev-correction-08-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.1287999590858817
+        },
+        {
+          "id": "dev-correction-08-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 6.124400009866804
+        },
+        {
+          "id": "dev-correction-08-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.198399965185672
+        },
+        {
+          "id": "dev-correction-09-0",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.162899985909462
+        },
+        {
+          "id": "dev-correction-09-1",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.10850003734231
+        },
+        {
+          "id": "dev-correction-09-2",
+          "category": "correction",
+          "expect": [
+            "current"
+          ],
+          "selected": [
+            "current"
+          ],
+          "rank": 1,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.427399973385036
+        },
+        {
+          "id": "dev-nearby-00-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target",
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2"
+          ],
+          "rank": 1,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2"
+          ],
+          "miss_cause": null,
+          "latency_ms": 3.910900035407394
+        },
+        {
+          "id": "dev-nearby-00-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target",
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2"
+          ],
+          "rank": 1,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2"
+          ],
+          "miss_cause": null,
+          "latency_ms": 3.366899967659265
+        },
+        {
+          "id": "dev-nearby-00-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 3.15730000147596
+        },
+        {
+          "id": "dev-nearby-01-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 6.568700016941875
+        },
+        {
+          "id": "dev-nearby-01-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 7.932199980132282
+        },
+        {
+          "id": "dev-nearby-01-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 5.698200024198741
+        },
+        {
+          "id": "dev-nearby-02-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 7.281100028194487
+        },
+        {
+          "id": "dev-nearby-02-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 9.001699974760413
+        },
+        {
+          "id": "dev-nearby-02-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 5.846400046721101
+        },
+        {
+          "id": "dev-nearby-03-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 5.248700035735965
+        },
+        {
+          "id": "dev-nearby-03-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 5.540399986784905
+        },
+        {
+          "id": "dev-nearby-03-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 5.25079999351874
+        },
+        {
+          "id": "dev-nearby-04-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 6.435299990698695
+        },
+        {
+          "id": "dev-nearby-04-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 5.185100017115474
+        },
+        {
+          "id": "dev-nearby-04-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 5.343500000890344
+        },
+        {
+          "id": "dev-nearby-05-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "target",
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2"
+          ],
+          "rank": 1,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2"
+          ],
+          "miss_cause": null,
+          "latency_ms": 15.245100017637014
+        },
+        {
+          "id": "dev-nearby-05-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 4.944599990267307
+        },
+        {
+          "id": "dev-nearby-05-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 8.977300021797419
+        },
+        {
+          "id": "dev-nearby-06-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 3.3914000377990305
+        },
+        {
+          "id": "dev-nearby-06-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 4.074600001331419
+        },
+        {
+          "id": "dev-nearby-06-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 4.725500009953976
+        },
+        {
+          "id": "dev-nearby-07-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 3.479599952697754
+        },
+        {
+          "id": "dev-nearby-07-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 3.977899963501841
+        },
+        {
+          "id": "dev-nearby-07-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 3.362799994647503
+        },
+        {
+          "id": "dev-nearby-08-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 3.5143999848514795
+        },
+        {
+          "id": "dev-nearby-08-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 4.387299995869398
+        },
+        {
+          "id": "dev-nearby-08-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 3.938600013498217
+        },
+        {
+          "id": "dev-nearby-09-0",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 4.843599977903068
+        },
+        {
+          "id": "dev-nearby-09-1",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 4.850099969189614
+        },
+        {
+          "id": "dev-nearby-09-2",
+          "category": "nearby",
+          "expect": [
+            "target"
+          ],
+          "selected": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "rank": 0,
+          "wrong": [
+            "near",
+            "noise-0",
+            "noise-1",
+            "noise-2",
+            "noise-3"
+          ],
+          "miss_cause": "rank_cutoff",
+          "latency_ms": 4.272499994840473
+        },
+        {
+          "id": "dev-polysemy-00-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.861800021491945
+        },
+        {
+          "id": "dev-polysemy-00-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.853900019545108
+        },
+        {
+          "id": "dev-polysemy-00-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.81660002656281
+        },
+        {
+          "id": "dev-polysemy-01-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.498399990145117
+        },
+        {
+          "id": "dev-polysemy-01-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.8535000164993107
+        },
+        {
+          "id": "dev-polysemy-01-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.123600035905838
+        },
+        {
+          "id": "dev-polysemy-02-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 4.842800030019134
+        },
+        {
+          "id": "dev-polysemy-02-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.1493000094778836
+        },
+        {
+          "id": "dev-polysemy-02-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.2955000060610473
+        },
+        {
+          "id": "dev-polysemy-03-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.118400007020682
+        },
+        {
+          "id": "dev-polysemy-03-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.500500006135553
+        },
+        {
+          "id": "dev-polysemy-03-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.8765000170096755
+        },
+        {
+          "id": "dev-polysemy-04-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.016300033777952
+        },
+        {
+          "id": "dev-polysemy-04-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.978899981826544
+        },
+        {
+          "id": "dev-polysemy-04-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.3325999975204468
+        },
+        {
+          "id": "dev-polysemy-05-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.814700001385063
+        },
+        {
+          "id": "dev-polysemy-05-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.3799000191502273
+        },
+        {
+          "id": "dev-polysemy-05-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.7379999994300306
+        },
+        {
+          "id": "dev-polysemy-06-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.774900000076741
+        },
+        {
+          "id": "dev-polysemy-06-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.9208000050857663
+        },
+        {
+          "id": "dev-polysemy-06-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.419999975245446
+        },
+        {
+          "id": "dev-polysemy-07-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.781299979891628
+        },
+        {
+          "id": "dev-polysemy-07-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.303800021763891
+        },
+        {
+          "id": "dev-polysemy-07-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.543400041759014
+        },
+        {
+          "id": "dev-polysemy-08-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.224199997726828
+        },
+        {
+          "id": "dev-polysemy-08-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.8796000299043953
+        },
+        {
+          "id": "dev-polysemy-08-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.889700001105666
+        },
+        {
+          "id": "dev-polysemy-09-0",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.669000008609146
+        },
+        {
+          "id": "dev-polysemy-09-1",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.384499995969236
+        },
+        {
+          "id": "dev-polysemy-09-2",
+          "category": "polysemy",
+          "expect": [],
+          "selected": [
+            "target"
+          ],
+          "rank": 0,
+          "wrong": [
+            "target"
+          ],
+          "miss_cause": null,
+          "latency_ms": 2.4493999662809074
+        },
+        {
+          "id": "dev-lifecycle-00-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.7822999875061214
+        },
+        {
+          "id": "dev-lifecycle-00-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.436300041154027
+        },
+        {
+          "id": "dev-lifecycle-00-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.74389999685809
+        },
+        {
+          "id": "dev-lifecycle-01-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.7889999910257757
+        },
+        {
+          "id": "dev-lifecycle-01-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.883800014387816
+        },
+        {
+          "id": "dev-lifecycle-01-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.745100005995482
+        },
+        {
+          "id": "dev-lifecycle-02-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.1557000000029802
+        },
+        {
+          "id": "dev-lifecycle-02-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.0813000155612826
+        },
+        {
+          "id": "dev-lifecycle-02-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.454000001307577
+        },
+        {
+          "id": "dev-lifecycle-03-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.2416000138036907
+        },
+        {
+          "id": "dev-lifecycle-03-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3031000164337456
+        },
+        {
+          "id": "dev-lifecycle-03-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.1898000268265605
+        },
+        {
+          "id": "dev-lifecycle-04-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.217500004917383
+        },
+        {
+          "id": "dev-lifecycle-04-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7624999745748937
+        },
+        {
+          "id": "dev-lifecycle-04-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6402999754063785
+        },
+        {
+          "id": "dev-lifecycle-05-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.2335000103339553
+        },
+        {
+          "id": "dev-lifecycle-05-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.1462999866344035
+        },
+        {
+          "id": "dev-lifecycle-05-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.059199963696301
+        },
+        {
+          "id": "dev-lifecycle-06-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 3.1894000130705535
+        },
+        {
+          "id": "dev-lifecycle-06-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.3596000391989946
+        },
+        {
+          "id": "dev-lifecycle-06-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 2.6480999658815563
+        },
+        {
+          "id": "dev-lifecycle-07-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7632999806664884
+        },
+        {
+          "id": "dev-lifecycle-07-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.5450000064447522
+        },
+        {
+          "id": "dev-lifecycle-07-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6518000047653913
+        },
+        {
+          "id": "dev-lifecycle-08-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.608200022019446
+        },
+        {
+          "id": "dev-lifecycle-08-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7040999955497682
+        },
+        {
+          "id": "dev-lifecycle-08-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.6673000063747168
+        },
+        {
+          "id": "dev-lifecycle-09-0",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.794499985408038
+        },
+        {
+          "id": "dev-lifecycle-09-1",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.7837000195868313
+        },
+        {
+          "id": "dev-lifecycle-09-2",
+          "category": "lifecycle",
+          "expect": [],
+          "selected": [],
+          "rank": 0,
+          "wrong": [],
+          "miss_cause": null,
+          "latency_ms": 1.8988000229001045
+        }
+      ]
+    }
+  },
+  "arm": "topics"
+}

@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Recall recognizes bounded Chinese/English topic equivalents, common spelling variants and relevant personal constraints on legacy memories, with domain/detail guards against unrelated matches. Add a 480-query synthetic paraphrase quality gate with a frozen baseline and held-out split. No model calls, new dependencies or storage migration.
+
 ## 2.0.0 — 2026-10-09
 
 ### Added

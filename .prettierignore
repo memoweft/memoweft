@@ -6,6 +6,9 @@ py/src/memoweft/_shared_data/**/*.json
 bench/consolidation-baseline.md
 bench/consolidation-baseline.json
 
+# Frozen synthetic recall fixtures and machine-generated benchmark evidence.
+bench/recall-quality/*.json
+
 # Frozen byte-level fixtures whose SHA-256 values are part of their contracts.
 py/tests/fixtures/next/gate2-entity-continuity/corpus.json
 py/tests/fixtures/next/golden-001-nanjing/expected-predicates.json
