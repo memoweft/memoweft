@@ -54,12 +54,19 @@ def store_correction_source(db: sqlite3.Connection, source: CorrectionSource, *,
                             host_id: str, clock: Clock, permissions: Mapping[str, bool]) -> str:
     if db.execute('SELECT 1 FROM hard_deleted_origin WHERE origin_hash=?', (sha256(source.origin_id.encode()).hexdigest(),)).fetchone():
         raise TrustCommandError('hard_deleted_source')
-    row = db.execute('SELECT id,subject_id,source_kind,host_id,raw_content,occurred_at,preceding_ai_context,deleted_at,corrects_evidence_id '
+    row = db.execute('SELECT id,subject_id,source_kind,host_id,raw_content,occurred_at,preceding_ai_context,deleted_at,corrects_evidence_id,'
+                     'allow_local_read,allow_cloud_read,allow_inference '
                      'FROM evidence WHERE origin_id=?', (source.origin_id,)).fetchone()
     if row is not None:
         if (row[1] != subject_id or row[2] != 'spoken' or row[3] != host_id or row[4] != source.content or row[7] is not None or row[8] is not None
                 or source.occurred_at is not None and row[5] != source.occurred_at or row[6] != source.preceding_ai_context):
             raise TrustCommandError('correction_source_conflict')
+        # The same real message must keep the stricter permissions regardless
+        # of which path accepted it first. Correction defaults never widen it.
+        SqliteEvidenceStore(db, clock=clock).update(str(row[0]),
+            allow_local_read=row[9] == 1 and permissions['allow_local_read'],
+            allow_cloud_read=row[10] == 1 and permissions['allow_cloud_read'],
+            allow_inference=row[11] == 1 and permissions['allow_inference'])
         return str(row[0])
     evidence_id = SqliteEvidenceStore(db, clock=clock).put(EvidenceInput(subject_id=subject_id, source_kind='spoken',
         host_id=host_id, origin_id=source.origin_id, occurred_at=source.occurred_at, raw_content=source.content,

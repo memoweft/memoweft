@@ -137,3 +137,100 @@ def test_correction_source_does_not_write_into_another_world(tmp_path: Path) -> 
     with _open(path) as db:
         assert list(db.execute('SELECT * FROM cognition')) == before
         assert db.execute("SELECT COUNT(*) FROM evidence WHERE raw_content LIKE '%绿茶%'").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('outcome', ['revision_conflict', 'rejected', 'invalid_source'])
+@pytest.mark.parametrize('late', [False, True])
+def test_failed_or_late_corrections_cannot_keep_or_reintroduce_forgotten_source_bodies(
+    tmp_path: Path, outcome: str, late: bool,
+) -> None:
+    path = tmp_path / 'source-erasure.sqlite3'
+    service = _prepare(path)
+    with _open(path) as db:
+        _seed_cognition(db, 'independent', 'independent-source', '独立保留的生日')
+    raw, previous = '我其实更喜欢绿茶。SOURCE_PRIVATE_RAW。', 'SOURCE_PRIVATE_CONTEXT'
+    source = {**_source(raw), 'preceding_ai_context': previous}
+    assert service.submit_command(_proposal(source))['result_state'] == 'applied'
+    with _open(path) as db:
+        current = str(db.execute("SELECT id FROM cognition WHERE content='用户其实更喜欢绿茶。'").fetchone()[0])
+    def erase() -> None:
+        revision = int(service.get_capabilities()['world_revision'])
+        assert service.submit_command(_command('erase-real-source', revision, 'delete_world_item', 'cognition', current))['result_state'] == 'applied'
+    if late:
+        erase()
+    command = _proposal(source, command_id='unbound-source-attempt')
+    command['target_id'] = 'missing' if outcome == 'rejected' else 'independent'
+    command['expected_world_revision'] = 0 if outcome == 'revision_conflict' else service.get_capabilities()['world_revision']
+    if outcome == 'invalid_source':
+        command['payload']['source'] = {**source, 'quote': '不存在的错误片段'}
+        with pytest.raises(TrustCommandError):
+            service.submit_command(command)
+    else:
+        receipt = service.submit_command(command)
+        assert receipt['result_state'] == outcome
+        assert service.submit_command(command) == receipt, 'redaction must preserve full-request hash replay'
+    if not late:
+        erase()
+    with _open(path) as db:
+        stored = '\n'.join(db.iterdump())
+        assert 'SOURCE_PRIVATE_RAW' not in stored and previous not in stored, 'failed requests have no source binding for erasure to discover'
+        assert db.execute("SELECT content FROM cognition WHERE id='independent'").fetchone()[0] == '独立保留的生日'
+
+
+@pytest.mark.parametrize('source_first', [False, True])
+@pytest.mark.parametrize('permission', ['allow_local_read', 'allow_cloud_read', 'allow_inference'])
+def test_source_permissions_are_identical_in_both_arrival_orders(tmp_path: Path, source_first: bool, permission: str) -> None:
+    from memoweft.integrations.hermes.recall import recall_world_snapshot
+    path = tmp_path / 'source-permissions.sqlite3'
+    service = _prepare(path)
+    source = _source()
+    candidates = _candidates([{'role': 'user', 'content': source['content'], 'message_id': source['message_id']}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='permission-turn')
+    boundary = _boundary(*candidates, event_id='permission-turn',
+        target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST))
+    if source_first:
+        with _open(path) as db:
+            HermesBoundaryStore(db, clock=_clock).accept(boundary)
+    command = _proposal(source); command['payload'][permission] = False
+    state = service.submit_command(command)['result_state']
+    assert state == ('applied' if permission == 'allow_cloud_read' else 'rejected'), 'unreadable/non-inferable source cannot be formally applied'
+    with _open(path) as db:
+        HermesBoundaryStore(db, clock=_clock).accept(boundary)
+        if state == 'applied':
+            assert db.execute(f'SELECT {permission} FROM evidence WHERE origin_id=?', (candidates[0].origin_id,)).fetchone()[0] == 0
+        else:
+            assert db.execute("SELECT COUNT(*) FROM cognition WHERE invalid_at IS NULL AND content LIKE '%绿茶%'").fetchone()[0] == 0
+        recall = recall_world_snapshot(db, _SUBJECT, '绿茶', model_tier='cloud')
+        assert recall is None or '绿茶' not in recall.rendered_recall
+
+
+def test_correction_defaults_cannot_widen_an_existing_private_source(tmp_path: Path) -> None:
+    path = tmp_path / 'private-source.sqlite3'
+    service = _prepare(path)
+    source = _source()
+    candidates = _candidates([{'role': 'user', 'content': source['content'], 'message_id': source['message_id']}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='private-turn')
+    with _open(path) as db:
+        HermesBoundaryStore(db, clock=_clock).accept(_boundary(*candidates, event_id='private-turn',
+            target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST)))
+        db.execute('UPDATE evidence SET allow_local_read=0,allow_cloud_read=0,allow_inference=0 WHERE origin_id=?', (candidates[0].origin_id,))
+    assert service.submit_command(_proposal(source))['result_state'] == 'rejected'
+    with _open(path) as db:
+        assert tuple(db.execute('SELECT allow_local_read,allow_cloud_read,allow_inference FROM evidence WHERE origin_id=?',
+            (candidates[0].origin_id,)).fetchone()) == (0, 0, 0)
+
+
+def test_successful_source_then_direct_evidence_erasure_scrubs_all_command_copies_and_replay(tmp_path: Path) -> None:
+    path = tmp_path / 'direct-source-erasure.sqlite3'
+    service = _prepare(path)
+    source = {**_source('我其实更喜欢绿茶。DIRECT_SOURCE_PRIVATE_RAW。'), 'preceding_ai_context': 'DIRECT_SOURCE_PRIVATE_CONTEXT'}
+    command = _proposal(source)
+    receipt = service.submit_command(command)
+    assert receipt['result_state'] == 'applied'
+    with _open(path) as db:
+        evidence = str(db.execute("SELECT id FROM evidence WHERE raw_content LIKE '%DIRECT_SOURCE_PRIVATE_RAW%'").fetchone()[0])
+    assert service.submit_command(_command('direct-erasure', 2, 'delete_evidence', 'evidence', evidence))['result_state'] == 'applied'
+    assert service.submit_command(command) == receipt
+    with _open(path) as db:
+        stored = '\n'.join(db.iterdump())
+        assert 'DIRECT_SOURCE_PRIVATE_RAW' not in stored and 'DIRECT_SOURCE_PRIVATE_CONTEXT' not in stored
