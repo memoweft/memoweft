@@ -491,11 +491,17 @@ class HermesBoundaryStore:
         candidate: HermesBoundaryEvidenceCandidate,
         target: HermesBoundaryFormalTarget,
     ) -> str:
+        from ..trust.correction_source import pending_correction_source_metadata, complete_correction_source_metadata
+
         evidence_id = row["id"]
+        pending = pending_correction_source_metadata(self._db, str(evidence_id))
         occurred_at_matches = (
             candidate.occurred_at is None
             or row["occurred_at"] == candidate.occurred_at
+            or 'timestamp' in pending
         )
+        context_matches = (row['preceding_ai_context'] == candidate.preceding_ai_context
+                           or row['preceding_ai_context'] is None or candidate.preceding_ai_context is None)
         if (
             not isinstance(evidence_id, str)
             or not evidence_id
@@ -505,13 +511,15 @@ class HermesBoundaryStore:
             or row["origin_id"] != candidate.origin_id
             or row["raw_content"] != candidate.raw_content
             or not occurred_at_matches
-            or row["preceding_ai_context"] != candidate.preceding_ai_context
+            or not context_matches
             or row["corrects_evidence_id"] is not None
             or row["deleted_at"] is not None
         ):
             raise BoundaryEvidenceConflictError(
                 "Hermes Evidence origin conflicts with stored content or metadata"
             )
+        complete_correction_source_metadata(self._db, evidence_id, occurred_at=candidate.occurred_at,
+                                            preceding_ai_context=candidate.preceding_ai_context)
         return evidence_id
 
     def _build_delivery_receipt(

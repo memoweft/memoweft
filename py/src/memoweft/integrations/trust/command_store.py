@@ -105,7 +105,10 @@ class CommandStore:
                 db.execute("ROLLBACK")
                 return receipt
 
-            payload_json = command_canonical_json(command["payload"])
+            # Correction bodies belong only to Evidence. A rejected/stale
+            # command may never bind its source, and can arrive after erasure.
+            # Replay uses the full request_hash above, never this stored body.
+            payload_json = command_canonical_json({} if command["operation"] == "correct_world_item" else command["payload"])
             db.execute(
                 "INSERT INTO trust_command (command_id, schema_version, subject_id, "
                 "actor, expected_world_revision, operation, target_kind, target_id, "
