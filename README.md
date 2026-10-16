@@ -21,6 +21,11 @@ The repository candidate may be newer than the latest published package. A succe
 MemoWeft keeps these boundaries explicit:
 
 - Raw user content remains exact Evidence with provenance and permissions.
+- A source-bound correction counts as fulfilled after a later `no_change` only
+  when its applied receipt, current replacement, exact support range and stated
+  projection agree. Other corrections, remember requests and unknown uncovered
+  facts in that same message remain unfinished; a shared source alone is not
+  proof of completion.
 - Stated formation propositions selected by segment or quote are derived from
   verbatim Evidence, preserving names, forms of address, numbers and dates.
   Formation payloads offer intact `sentences` alongside existing fine `segments`.

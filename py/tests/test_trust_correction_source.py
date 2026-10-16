@@ -234,3 +234,71 @@ def test_successful_source_then_direct_evidence_erasure_scrubs_all_command_copie
     with _open(path) as db:
         stored = '\n'.join(db.iterdump())
         assert 'DIRECT_SOURCE_PRIVATE_RAW' not in stored and 'DIRECT_SOURCE_PRIVATE_CONTEXT' not in stored
+
+
+@pytest.mark.parametrize('scope,expected_intent', [
+    ('complete', None), ('second_correction', 'correction'), ('remember', 'remember'),
+    ('both_complete', None), ('arbitrary_current', 'correction'), ('unknown_remainder', 'remember'),
+    ('missing_transition', 'correction'), ('missing_span', 'correction'), ('wrong_hash', 'correction'),
+    ('wrong_projection', 'correction'), ('not_current', None), ('not_applied', 'correction'),
+    ('control_with_fact', 'correction'),
+])
+def test_no_change_status_requires_the_exact_completed_correction_scope(
+    tmp_path: Path, scope: str, expected_intent: str | None,
+) -> None:
+    from memoweft.integrations.dsh_bridge.formation_status import formation_requests
+    path = tmp_path / 'source-no-change.sqlite3'
+    service = _prepare(path)
+    quote = '我其实更喜欢绿茶。'
+    controls = '请调用记忆纠正工具更新已有条目后再回答，不能只承诺稍后整理。'
+    second = '咖啡偏好改为拿铁。'
+    remainder = second if scope in ('second_correction', 'both_complete') else (
+        '另外记住我的生日是五月一日。' if scope == 'remember' else '我住在合成路八号。' if scope == 'unknown_remainder'
+        else '请调用记忆纠正工具更新已有条目后再回答我住在合成路八号。' if scope == 'control_with_fact' else '')
+    raw = quote + controls + remainder
+    source = _source(raw)
+    with _open(path) as db:
+        _seed_cognition(db, 'old-coffee', 'coffee-source', '用户喜欢美式咖啡。')
+    if scope != 'arbitrary_current':
+        assert service.submit_command(_proposal(source))['result_state'] == 'applied'
+    if scope == 'both_complete':
+        command = _proposal({**source, 'quote': second}, command_id='second-correction')
+        command.update(target_id='old-coffee', expected_world_revision=2)
+        assert service.submit_command(command)['result_state'] == 'applied'
+    candidates = _candidates([{'role': 'user', 'content': raw, 'message_id': source['message_id']}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='no-change-turn')
+    with _open(path) as db:
+        HermesBoundaryStore(db, clock=_clock).accept(_boundary(*candidates, event_id='no-change-turn',
+            target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST)))
+        evidence_id = str(db.execute('SELECT id FROM evidence WHERE origin_id=?', (candidates[0].origin_id,)).fetchone()[0])
+        if scope == 'arbitrary_current':
+            columns = [str(row[1]) for row in db.execute('PRAGMA table_info(cognition)')]
+            select = ["'unrelated-current'" if name == 'id' else "'用户其实更喜欢绿茶。'" if name == 'content' else name for name in columns]
+            db.execute(f"INSERT INTO cognition ({','.join(columns)}) SELECT {','.join(select)} FROM cognition WHERE id='old-tea'")
+            db.execute('INSERT INTO cognition_evidence VALUES (?,?,?)', ('unrelated-current', evidence_id, 'support'))
+        if scope == 'missing_transition':
+            db.execute('DELETE FROM cognition_transitions')
+        elif scope in ('missing_span', 'wrong_hash'):
+            db.execute('UPDATE evidence_ledger SET payload_json=? WHERE json_extract(content,\'$.evidence_id\')=?',
+                       (json.dumps({} if scope == 'missing_span' else {'start': 0, 'end': len(quote), 'span_hash': 'wrong'}), evidence_id))
+        elif scope == 'wrong_projection':
+            db.execute("UPDATE cognition SET content='用户改写出来的绿茶偏好。' WHERE content='用户其实更喜欢绿茶。'")
+        elif scope == 'not_current':
+            db.execute("UPDATE cognition SET invalid_at=? WHERE content='用户其实更喜欢绿茶。'", (_T0,))
+        elif scope == 'not_applied':
+            db.execute("UPDATE trust_command_receipt SET result_state='rejected' WHERE command_id='correct-source'")
+    processor = HermesBatchAdapterProcessor(str(path), _route([_model({'schema_version': 8, 'result': 'no_change'})] * 2), clock=_clock)
+    assert WorldJobWorker(path, processor=processor, policy=_policy(), clock=_clock).run_until_quiescent() == 1
+    with _open(path) as db:
+        if scope == 'not_current':
+            from memoweft.integrations.dsh_bridge.formation_status import _completed_correction_scope
+            # The existing eligibility gate hides stale source jobs, without
+            # treating their invalid replacement as proof of fulfillment.
+            assert _completed_correction_scope(db, _SUBJECT, evidence_id, raw) == (True, set())
+        requests = formation_requests(db, _SUBJECT)
+        if expected_intent is None:
+            assert requests == [], 'only the actually fulfilled correction scope may disappear'
+        else:
+            assert len(requests) == 1
+            assert requests[0]['intent'] == expected_intent
+        assert db.execute('SELECT raw_content FROM evidence WHERE id=?', (evidence_id,)).fetchone()[0] == raw
