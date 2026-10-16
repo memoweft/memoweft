@@ -1,11 +1,9 @@
-# Scheduled live-model verification. Deterministic checks remain in ci.yml;
+# Manual live-model verification. Deterministic checks remain in ci.yml;
 # this workflow exercises the configured model and optional embedding endpoints.
 
 name: Nightly Live
 
 on:
-  schedule:
-    - cron: '0 18 * * *' # Daily at 18:00 UTC.
   workflow_dispatch:
 
 permissions:
