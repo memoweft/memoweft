@@ -1,6 +1,7 @@
 """FG-1: source erasure reaches identities/aliases and on-disk/portable copies."""
 import json
 import pytest
+from typing import Any
 from pathlib import Path
 
 from memoweft.portable.builder import build_bundle
@@ -96,6 +97,47 @@ def test_forget_follows_existing_ledger_revision_links_across_world_kinds(
         assert db.execute(f'SELECT 1 FROM {table} WHERE id=?', ('old-chain',)).fetchone() is None
         assert db.execute('SELECT content FROM cognition WHERE id=?', ('cog-coffee',)).fetchone()[0] == '用户喜欢喝咖啡'
         assert 'LedgerRevisionSecret' not in json.dumps(build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0))
+
+
+@pytest.mark.parametrize('case', ['relationship', 'name-cognition'])
+@pytest.mark.parametrize('side', ['prior', 'replacement'])
+def test_forget_traverses_the_reasons_written_by_the_actual_formation_adapter(
+    tmp_path: Path, case: str, side: str,
+) -> None:
+    from test_person_understanding_loop import seed, correct
+    from test_formation_accuracy import _item
+    from memoweft.integrations.trust.forget_preview import preview_forget
+    path = tmp_path / f'production-{case}-{side}.sqlite3'
+    ids = seed(path)
+    if case == 'relationship':
+        kind, table = 'relationship', 'relationship'
+        item: dict[str, Any] = dict(_item('ignored'), action='form', statement_kind='relationship', relation_type='teacher',
+            target_entity={'canonical_name': '林遥', 'kind': 'person'}, supersedes_relationship_id=ids['relationship'])
+        raw = '更正：林遥是我的老师，不是朋友。'
+    else:
+        kind, table = 'cognition', 'cognition'
+        item = dict(_item('ignored'), action='correct', statement_kind='alias',
+            entity={'canonical_name': '林澜', 'kind': 'person'}, alias_of={'canonical_name': '林遥', 'kind': 'person'})
+        raw = '更正：林遥的名字我说错了，其实叫林澜。'
+    assert correct(path, raw, item)['state'] == 'applied'
+    with _open(path) as db:
+        replacement = str(db.execute(f'SELECT id FROM {table} WHERE id<>? AND invalid_at IS NULL', (ids[kind],)).fetchone()[0])
+        reason = db.execute(f'SELECT reason FROM {kind}_transitions WHERE prior_{kind}_id=?', (ids[kind],)).fetchone()[0]
+        assert reason == ('superseded' if case == 'relationship' else 'name_corrected')
+        revision = int(db.execute('SELECT revision FROM memory_state').fetchone()[0])
+    target = ids[kind] if side == 'prior' else replacement
+    preview = preview_forget(str(path), _SUBJECT, target_kind=kind, target_id=target)
+    evidence_ids = preview['evidence_ids']
+    assert isinstance(evidence_ids, list)
+    assert {'evidence-1', 'evidence-2'} <= set(evidence_ids)
+    receipt = _service(path).submit_command(_command('production-chain', revision, 'delete_world_item', kind, target))
+    assert receipt['result_state'] == 'applied'
+    with _open(path) as db:
+        for evidence in ('evidence-1', 'evidence-2'):
+            assert db.execute('SELECT raw_content FROM evidence WHERE id=?', (evidence,)).fetchone()[0] == ''
+        exported = json.dumps(build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0), ensure_ascii=False)
+        assert raw not in exported
+        assert '林遥修乐器很熟练' not in exported
 
 
 def test_forget_preserves_unrelated_preceding_context_and_clears_source_or_id(tmp_path: Path) -> None:

@@ -265,8 +265,7 @@ def _revision_chain(db: sqlite3.Connection, subject_id: str, kind: str, item_id:
         table = f"{kind}_transitions"
         if db.execute("SELECT 1 FROM sqlite_master WHERE name=?", (table,)).fetchone():
             links.extend((str(row[0]), str(row[1])) for row in db.execute(
-                f"SELECT prior_{kind}_id, replacement_{kind}_id FROM {table} "
-                "WHERE reason IN ('corrects', 'supersedes')"))
+                f"SELECT prior_{kind}_id, replacement_{kind}_id FROM {table}"))
     if kind in {"entity", "relationship", "event"}:
         for content, in db.execute("SELECT content FROM evidence_ledger"):
             try:
