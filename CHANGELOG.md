@@ -4,6 +4,7 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Python correction commands can bind to the actual message and a verbatim fact quote, preserving the complete original wording and reusing it when that turn is later ingested. Correcting and forming the same preference no longer create separate records from a model paraphrase and the real source.
 - Forgetting a World item atomically removes its complete correction and replacement chain, including sources of older revisions. The existing confirmation preview lists the same cascade; independent memories stay available.
 - Python memory recall can supplement existing literal matches with up to three local CPU semantic candidates; original ordering and permission/lifecycle gates stay authoritative, and the feature can be switched off. See [configuration and derived-data lifecycle](docs/semantic-recall.md).
 - Add synthetic recall quality evaluations, frozen baselines and independent review regression probes; this change does not alter recall behavior.

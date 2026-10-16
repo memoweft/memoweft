@@ -16,6 +16,7 @@ from .command_store import (
     command_canonical_json,
 )
 from .currentness import linked_evidence, world_item_lifecycle
+from .correction_source import CorrectionSource, parse_correction_source, store_correction_source
 from .model import (
     CommandEnvelopeV1,
     CommandReceiptV1,
@@ -172,6 +173,7 @@ class CommandService:
             "expected_revision_fence": True,
             "durable_receipts": True,
             "mutation_surface": True,
+            "correction_source": True,
         }
 
     def execute_provider_tool(
@@ -487,6 +489,7 @@ class CommandService:
         command: CommandEnvelopeV1,
         text: str,
         completed_at: str,
+        source: CorrectionSource | None = None,
     ) -> str:
         evidence_id = "evidence-trust-command-" + sha256(
             command_canonical_json(
@@ -505,6 +508,9 @@ class CommandService:
         }
         if any(not isinstance(value, bool) for value in permissions.values()):
             raise TrustCommandError("invalid_permission_value")
+        if source is not None:
+            return store_correction_source(db, source, subject_id=self._subject_id, host_id=self._host_id,
+                clock=self._clock, permissions=cast(Mapping[str, bool], permissions))
         db.execute(
             "INSERT INTO evidence (id, subject_id, source_kind, host_id, origin_id, "
             "occurred_at, recorded_at, raw_content, summary, allow_local_read, "
@@ -593,6 +599,7 @@ class CommandService:
         allowed = frozenset(
             {
                 "correction_text",
+                "source",
                 "allow_local_read",
                 "allow_cloud_read",
                 "allow_inference",
@@ -613,14 +620,16 @@ class CommandService:
             raise TrustCommandError("invalid_correction_text")
         if not self._target_is_current(db, kind, command["target_id"]):
             return CommandMutation("rejected")
+        message_source = parse_correction_source(payload['source'], subject_id=self._subject_id, host_id=self._host_id) if 'source' in payload else None
         from ..hermes.batch_adapter import BatchItem, TrustCommandApplyError
+        from ..hermes.batch_adapter import _stated_normalize, _stated_normalize_no_subject_prepend
 
         db.execute("SAVEPOINT trust_command_formal_apply")
         try:
             evidence_id = self._insert_correction_evidence(
-                db, command, text, completed_at
+                db, command, text, completed_at, message_source
             )
-            support = ((evidence_id, 0, len(text), text),)
+            support = ((evidence_id, message_source.start, message_source.end, message_source.quote),) if message_source else ((evidence_id, 0, len(text), text),)
             row = self._world_row(db, kind, command["target_id"])
             assert row is not None
             if kind == "cognition":
@@ -631,6 +640,8 @@ class CommandService:
                     "ON pe.id = ct.perspective_entity_id WHERE ct.cognition_id = ?",
                     (command["target_id"],),
                 ).fetchone()
+                if message_source:
+                    text = (_stated_normalize if target is None or target[1] == 'topic' else _stated_normalize_no_subject_prepend)(message_source.quote)
                 item = BatchItem(
                     action="correct",
                     proposition=text,
@@ -666,6 +677,8 @@ class CommandService:
                     db.execute("ROLLBACK TO trust_command_formal_apply")
                     db.execute("RELEASE trust_command_formal_apply")
                     return CommandMutation("rejected")
+                if message_source:
+                    text = (_stated_normalize if source_id == owner_entity_id_for(self._subject_id) else _stated_normalize_no_subject_prepend)(message_source.quote)
                 item = BatchItem(
                     action="correct",
                     proposition=text,
@@ -684,6 +697,8 @@ class CommandService:
                     db.execute("RELEASE trust_command_formal_apply")
                     return CommandMutation("rejected")
             else:
+                if message_source:
+                    text = _stated_normalize_no_subject_prepend(message_source.quote)
                 def event_members(raw: object) -> tuple[tuple[str, str], ...] | None:
                     try:
                         ids = json.loads(str(raw) or "[]")
