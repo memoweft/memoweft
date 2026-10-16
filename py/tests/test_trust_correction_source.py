@@ -302,3 +302,50 @@ def test_no_change_status_requires_the_exact_completed_correction_scope(
             assert len(requests) == 1
             assert requests[0]['intent'] == expected_intent
         assert db.execute('SELECT raw_content FROM evidence WHERE id=?', (evidence_id,)).fetchone()[0] == raw
+
+
+@pytest.mark.parametrize('legacy_content,raw_json_only', [
+    ('I like tea.', False), ('{"relation":"support","note":"literal user JSON"}', False), ('I like tea.', True),
+])
+def test_source_status_accepts_memory_loop_verbatim_ledger_rows(tmp_path: Path, legacy_content: str, raw_json_only: bool) -> None:
+    from memoweft.integrations.dsh_bridge.formation_status import formation_requests
+    from memoweft.world.loop import EvidenceRecord, MemoryLoop
+    from test_memory_loop import _graph, _delta
+
+    path = tmp_path / 'mixed-ledger.sqlite3'
+    with MemoryLoop(path, _graph()) as loop:
+        pending = loop.stage_addition(_delta(), (EvidenceRecord('e:tea', legacy_content),))
+        assert loop.decide(pending.id, pending.result_hash, 'accept').revision == 1
+    with _open(path) as db:
+        _seed_cognition(db, 'old-tea', 'old-source', '用户喜欢红茶。')
+    service = _service(path)
+    source = _source('我其实更喜欢绿茶。请调用记忆纠正工具更新已有条目后再回答，不能只承诺稍后整理。')
+    assert service.submit_command(_proposal(source))['result_state'] == 'applied'
+    candidates = _candidates([{'role': 'user', 'content': source['content'], 'message_id': source['message_id']}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='mixed-ledger-turn')
+    with _open(path) as db:
+        HermesBoundaryStore(db, clock=_clock).accept(_boundary(*candidates, event_id='mixed-ledger-turn',
+            target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST)))
+        original = tuple(db.execute("SELECT content,payload_json FROM evidence_ledger WHERE id='e:tea'").fetchone())
+    processor = HermesBatchAdapterProcessor(str(path), _route([_model({'schema_version': 8, 'result': 'no_change'})] * 2), clock=_clock)
+    assert WorldJobWorker(path, processor=processor, policy=_policy(), clock=_clock).run_until_quiescent() == 1
+    with _open(path) as db:
+        if raw_json_only:
+            support = next(row for row in db.execute("SELECT * FROM evidence_ledger WHERE id LIKE 'evidence-ledger-%'")
+                           if 'span_hash' in json.loads(row['payload_json']))
+            # A real MemoryLoop EvidenceRecord may contain that exact JSON as
+            # user text, even with support-shaped metadata and a matching ID.
+            with MemoryLoop(tmp_path / 'json-original.sqlite3', _graph()) as loop:
+                pending = loop.stage_addition(_delta(evidence_id=support['id']),
+                    (EvidenceRecord(support['id'], support['content'], metadata=json.loads(support['payload_json'])),))
+                loop.decide(pending.id, pending.result_hash, 'accept')
+                original_json = tuple(loop.connection.execute('SELECT id,content,payload_json FROM evidence_ledger WHERE id=?',
+                                                              (support['id'],)).fetchone())
+            db.execute('DELETE FROM evidence_ledger WHERE id=?', (support['id'],))
+            db.execute('INSERT INTO evidence_ledger (id,content,payload_json) VALUES (?,?,?)', original_json)
+        requests = formation_requests(db, _SUBJECT)
+        if raw_json_only:
+            assert len(requests) == 1 and requests[0]['intent'] == 'correction'
+        else:
+            assert requests == []
+        assert tuple(db.execute("SELECT content,payload_json FROM evidence_ledger WHERE id='e:tea'").fetchone()) == original

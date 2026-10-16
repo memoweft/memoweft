@@ -25,7 +25,9 @@ MemoWeft keeps these boundaries explicit:
   when its applied receipt, current replacement, exact support range and stated
   projection agree. Other corrections, remember requests and unknown uncovered
   facts in that same message remain unfinished; a shared source alone is not
-  proof of completion.
+  proof of completion. The shared ledger also accepts verbatim MemoryLoop
+  Evidence records; their prose or JSON content is never a formation-support
+  record or proof that a correction completed.
 - Stated formation propositions selected by segment or quote are derived from
   verbatim Evidence, preserving names, forms of address, numbers and dates.
   Formation payloads offer intact `sentences` alongside existing fine `segments`.

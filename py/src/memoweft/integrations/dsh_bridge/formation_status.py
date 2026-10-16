@@ -25,7 +25,7 @@ _CORRECTION_CONTROL = re.compile(
 
 def _completed_correction_scope(db: sqlite3.Connection, subject_id: str, evidence_id: str,
                                 text: str) -> tuple[bool, set[tuple[int, int]]]:
-    from ..hermes.batch_adapter import _stated_normalize, _stated_normalize_no_subject_prepend
+    from ..hermes.batch_adapter import _canonical, _hash_text, _stated_normalize, _stated_normalize_no_subject_prepend
 
     receipts = db.execute(
         "SELECT c.target_id,r.affected_ids_json FROM trust_command c "
@@ -37,11 +37,10 @@ def _completed_correction_scope(db: sqlite3.Connection, subject_id: str, evidenc
     for receipt in receipts:
         affected = json.loads(receipt['affected_ids_json'])
         rows = db.execute(
-            "SELECT c.id,c.content,l.payload_json,te.kind AS target_kind FROM cognition c "
+            "SELECT c.id,c.content,l.id AS ledger_id,l.content AS link_content,l.payload_json,te.kind AS target_kind FROM cognition c "
             "JOIN cognition_transitions t ON t.replacement_cognition_id=c.id AND t.prior_cognition_id=? "
             "JOIN cognition_evidence ce ON ce.cognition_id=c.id AND ce.evidence_id=? AND ce.relation='support' "
-            "JOIN evidence_ledger l ON json_extract(l.content,'$.cognition_id')=c.id "
-            "AND json_extract(l.content,'$.evidence_id')=ce.evidence_id AND json_extract(l.content,'$.relation')='support' "
+            "JOIN evidence_ledger l ON l.id LIKE 'evidence-ledger-%' "
             "LEFT JOIN cognition_target ct ON ct.cognition_id=c.id LEFT JOIN entity te ON te.id=ct.target_entity_id "
             "LEFT JOIN world_item_lifecycle w ON w.subject_id=c.subject_id AND w.object_kind='cognition' AND w.item_id=c.id "
             "WHERE c.subject_id=? AND c.invalid_at IS NULL AND c.archived_at IS NULL AND c.muted_at IS NULL "
@@ -50,10 +49,25 @@ def _completed_correction_scope(db: sqlite3.Connection, subject_id: str, evidenc
         for row in rows:
             if row['id'] not in affected:
                 continue
-            support = json.loads(row['payload_json'])
+            # MemoryLoop also stores verbatim EvidenceRecord rows here. Their
+            # content may be prose or user JSON, never a formation support link.
+            try:
+                support = json.loads(row['payload_json'])
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(support, dict) or type(support.get('schema_version')) is not int or support['schema_version'] != 1:
+                continue
             start, end = support.get('start'), support.get('end')
             if (type(start) is not int or type(end) is not int or not 0 <= start < end <= len(text)
                     or support.get('span_hash') != sha256(text[start:end].encode()).hexdigest()):
+                continue
+            if row['ledger_id'] != 'evidence-ledger-' + _hash_text(_canonical(['formation', row['id'], evidence_id, start, end])):
+                continue
+            try:
+                link = json.loads(row['link_content'])
+            except (TypeError, ValueError):
+                continue
+            if link != {'cognition_id': row['id'], 'evidence_id': evidence_id, 'relation': 'support'}:
                 continue
             normalize = _stated_normalize if row['target_kind'] in (None, 'topic') else _stated_normalize_no_subject_prepend
             if row['content'] == normalize(text[start:end]):
