@@ -63,7 +63,8 @@ def _owner(path: Path, language: str) -> tuple[str, str, str]:
     return query, birthday_id, birth_proposition
 
 
-def _alias_world(path: Path, language: str, neutral_first: bool, *, self_naming: bool = True) -> tuple[str, str, str, str]:
+def _alias_world(path: Path, language: str, neutral_first: bool, *, self_naming: bool = True,
+                 self_declaration: str | None = None) -> tuple[str, str, str, str]:
     name, alias, neutral, declaration, birth, merge, name_query, alias_query = (
         "Martin Mark", "Marty", "Named Marty.", "My name is Martin Mark.",
         "I was born on 1996-08-02.", "Marty is Martin Mark.",
@@ -72,6 +73,8 @@ def _alias_world(path: Path, language: str, neutral_first: bool, *, self_naming:
         "林晓", "小晓", "取名叫小晓。", "我叫林晓。", "我出生于1996年8月2日。",
         "小晓就是林晓。", "林晓的出生日期是什么？", "小晓的出生日期是什么？",
     )
+    if self_declaration is not None:
+        declaration = self_declaration
     if not self_naming:
         declaration = "Her name is Martin Mark." if language == "en" else "她叫林晓。"
     name_prop = "用户" + declaration[1:] if language == "zh" and self_naming else declaration
@@ -117,6 +120,102 @@ def _command(path: Path, operation: str, kind: str, item_id: str, payload: dict[
         "payload": payload or {}, "submitted_at": "2026-10-16T00:00:00.000Z",
     })
     assert receipt["result_state"] == "applied", receipt
+
+
+def _copular_world(path: Path, language: str, declaration: str, *, allow_inquiry: bool = False) -> tuple[str, str, str, str]:
+    name = 'Martin Mark' if language == 'en' else '林晓'
+    proposition = '用户' + declaration[1:] if declaration.startswith('我') else declaration
+    item = _naming(proposition, name, (0, len(declaration)), evidence_id='name')
+    if allow_inquiry:
+        neutral = 'Named Martin Mark.' if language == 'en' else '取名叫林晓。'
+        _apply(path, neutral, _naming(neutral, name, (0, len(neutral)), evidence_id='neutral'), 'neutral')
+        _run(path, MutableClock(), [_model(_batch(item))], ('name',),
+             lambda p: _set_evidence(p, 'name', declaration), job_id='name')
+        result = _job(path, 'name')
+        assert result['state'] == 'applied' or (
+            result['state'] == 'no_change' and 'pure_inquiry_no_declarative_facts' in str(result['world_result_json']))
+    else:
+        _apply(path, declaration, item, 'name')
+    birth = 'I was born on 1996-08-02.' if language == 'en' else '我出生于1996年8月2日。'
+    preference = 'I prefer jasmine tea.' if language == 'en' else '我喜欢茉莉花茶。'
+    birthday_id = _apply(path, birth, _form(birth if language == 'en' else '用户' + birth[1:],
+        (0, len(birth)), kind='attribute', evidence_id='birthday'), 'birthday')
+    preference_id = _apply(path, preference, _form(preference if language == 'en' else '用户' + preference[1:],
+        (0, len(preference)), kind='preference', evidence_id='preference'), 'preference')
+    birth_query = "What is Martin Mark's birth date?" if language == 'en' else '林晓的出生日期是什么？'
+    preference_query = 'What does Martin Mark prefer?' if language == 'en' else '林晓喜欢什么？'
+    return birth_query, preference_query, birthday_id, preference_id
+
+
+@pytest.mark.parametrize('language,declaration', [
+    ('en', 'I am Martin Mark.'), ('en', "I'm Martin Mark."), ('zh', '我是林晓。'),
+])
+def test_copular_self_name_reaches_birthday_and_preference_without_writes(tmp_path: Path, language: str, declaration: str) -> None:
+    path = tmp_path / 'copular.sqlite3'
+    birth_query, preference_query, birthday_id, preference_id = _copular_world(path, language, declaration)
+    with closing(sqlite3.connect(path)) as db:
+        original = list(db.iterdump())
+    assert _selected(path, birth_query, birthday_id)
+    assert _selected(path, preference_query, preference_id)
+    with closing(sqlite3.connect(path)) as db:
+        assert list(db.iterdump()) == original
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='name'").fetchone()[0] == declaration
+
+
+@pytest.mark.parametrize('language,declaration', [
+    ('en', "I am Martin Mark's friend."), ('en', "I'm Martin Mark's colleague."),
+    ('zh', '我是林晓的朋友。'), ('zh', '我是林晓的同事。'),
+    ('en', 'He is Martin Mark.'), ('zh', '她是林晓。'),
+    ('en', 'I am not Martin Mark.'), ('zh', '我不是林晓。'),
+    ('en', 'I am Martin Mark?'), ('en', 'I am Martin Mark, right?'),
+    ('zh', '我是林晓？'), ('zh', '我是林晓吗？'),
+    ('en', '"I am Martin Mark."'), ('zh', '“我是林晓。”'),
+    ('en', 'She said I am Martin Mark.'), ('zh', '她说我是林晓。'),
+])
+def test_copular_non_self_claim_never_links_owner_facts(tmp_path: Path, language: str, declaration: str) -> None:
+    path = tmp_path / 'not-self.sqlite3'
+    birth_query, preference_query, birthday_id, preference_id = _copular_world(path, language, declaration, allow_inquiry=True)
+    assert not _selected(path, birth_query, birthday_id)
+    assert not _selected(path, preference_query, preference_id)
+
+
+@pytest.mark.parametrize('language,declaration', [
+    ('en', 'I am Martin Mark.'), ('en', "I'm Martin Mark."), ('zh', '我是林晓。'),
+])
+@pytest.mark.parametrize('neutral_first', [False, True])
+def test_copular_self_name_keeps_alias_order_and_same_name_ambiguity(
+    tmp_path: Path, language: str, declaration: str, neutral_first: bool,
+) -> None:
+    path = tmp_path / 'copular-alias.sqlite3'
+    name_query, alias_query, birthday_id, _ = _alias_world(path, language, neutral_first, self_declaration=declaration)
+    assert _selected(path, name_query, birthday_id)
+    assert _selected(path, alias_query, birthday_id)
+    name = ('Marty' if neutral_first else 'Martin Mark') if language == 'en' else ('小晓' if neutral_first else '林晓')
+    raw = f"{name} is my colleague." if language == 'en' else f'{name}是我的同事。'
+    _apply(path, raw, _relationship(raw if language == 'en' else '用户' + raw, name, 'colleague',
+        (0, len(raw)), evidence_id='colleague'), 'colleague')
+    assert not _selected(path, name_query, birthday_id)
+    assert not _selected(path, alias_query, birthday_id)
+
+
+@pytest.mark.parametrize('language,declaration', [
+    ('en', 'I am Martin Mark.'), ('en', "I'm Martin Mark."), ('zh', '我是林晓。'),
+])
+@pytest.mark.parametrize('tier', ['local', 'cloud'])
+@pytest.mark.parametrize('source', ['name', 'birthday', 'preference'])
+def test_copular_self_name_keeps_each_source_destination_permission(
+    tmp_path: Path, language: str, declaration: str, tier: Literal['local', 'cloud'], source: str,
+) -> None:
+    path = tmp_path / 'copular-permission.sqlite3'
+    birth_query, preference_query, birthday_id, preference_id = _copular_world(path, language, declaration)
+    assert _selected(path, birth_query, birthday_id, tier)
+    assert _selected(path, preference_query, preference_id, tier)
+    _command(path, 'update_evidence_permissions', 'evidence', source, {'allow_' + tier + '_read': False})
+    assert _selected(path, birth_query, birthday_id, tier) == (source == 'preference')
+    assert _selected(path, preference_query, preference_id, tier) == (source == 'birthday')
+    other: Literal['local', 'cloud'] = 'cloud' if tier == 'local' else 'local'
+    assert _selected(path, birth_query, birthday_id, other)
+    assert _selected(path, preference_query, preference_id, other)
 
 
 @pytest.mark.parametrize("language", ["en", "zh"])

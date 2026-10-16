@@ -59,6 +59,9 @@ MemoWeft keeps these boundaries explicit:
   Python links current, sourced self-naming claims and accepted aliases to
   the same person even when an earlier neutral name remains canonical;
   only current, destination-readable alias provenance can establish this link.
+  Complete affirmative self introductions such as `I am Martin Mark.`,
+  `I'm Martin Mark.` and `我是林晓。` qualify too; questions, negations,
+  quoted statements and being the named person's friend or colleague do not.
   It associates directly sourced first-person birth/preference clauses during recall;
   missing targets, topic labels and the owner's viewpoint alone never prove
   the fact is about the owner. Other wording keeps its existing recall paths

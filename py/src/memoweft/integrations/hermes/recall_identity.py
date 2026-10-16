@@ -45,6 +45,13 @@ def _direct_self_fact(db: sqlite3.Connection, subject_id: str, cognition_id: str
 
 def _names_self(content: str, name: str) -> bool:
     quoted_name = r'[“"\']?' + re.escape(name) + r'[”"\']?'
+    # A complete affirmative copula is a self introduction. Do not accept a
+    # question, a named person's friend/colleague, or a quoted/reported clause.
+    if not re.search(r'[?？]', content) and re.fullmatch(
+        r"(?:i(?:\s+am|['’]m)\s+" + quoted_name
+        + r"|(?:用户|我)是" + quoted_name + r")[.!。！]?", content.strip(), re.IGNORECASE,
+    ):
+        return True
     return bool(re.match(
         r"^(?:(?:my name is|i am called|i['’]m called|call me)\s+" + quoted_name
         + r"(?=\s*(?:[,;.!?]|$)|\s+and\b)"
