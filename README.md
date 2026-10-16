@@ -87,6 +87,7 @@ MemoWeft keeps these boundaries explicit:
   History provenance includes `successor_provenance` to explain the correcting
   source from either predecessor; model provenance is unchanged.
 - Correction, retract, forget, archive, mute, and permission changes produce durable receipts.
+- Python World-item forgetting follows the complete `corrects` / `supersedes` revision chain in the existing command transaction, erasing historical sources and derived copies. The read-only forget preview uses the same erasure path and lists the complete cascade before confirmation. Hosts retain original chat messages by default.
 - Shared assistant interactions retain their original history and explicit memory dependencies. Model projection excludes unresolved or no-longer-current dependencies, including transitive reuse; history projection remains subject to source permissions.
 - Portable bundles are versioned, validated, planned before apply, and conflict checked.
 - Hermes host events and user presentation remain distinct from Core business terminals.

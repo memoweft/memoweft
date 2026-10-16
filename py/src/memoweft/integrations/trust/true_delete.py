@@ -258,32 +258,37 @@ def delete_evidence(
     return CommandMutation("applied", tuple(sorted(affected_ids)))
 
 
-def delete_world_item(
-    db: sqlite3.Connection,
-    command: CommandEnvelopeV1,
-    completed_at: str,
-    subject_id: str,
-) -> CommandMutation:
-    payload = command["payload"]
-    if set(payload) - {"delete_conversation_snippets"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
-        raise TrustCommandError("invalid_trust_command_payload")
-    kind = command["target_kind"]
-    item_id = command["target_id"]
-    table_and_owner = {
-        "entity": ("entity", "world_id"),
-        "relationship": ("relationship", "world_id"),
-        "event": ("world_event", "world_id"),
-        "cognition": ("cognition", "subject_id"),
-    }
-    if kind not in table_and_owner:
-        return CommandMutation("rejected", rejection_code="invalid_world_target")
-    table, owner = table_and_owner[kind]
-    if db.execute(
-        f"SELECT 1 FROM {table} WHERE id = ? AND {owner} = ?",
-        (item_id, subject_id),
-    ).fetchone() is None:
-        return CommandMutation("rejected", rejection_code="world_item_not_found")
+def _revision_chain(db: sqlite3.Connection, subject_id: str, kind: str, item_id: str) -> set[str]:
+    """Resolve existing correction links before any source deletion removes them."""
+    links: list[tuple[str, str]] = []
+    if kind in {"cognition", "relationship"}:
+        table = f"{kind}_transitions"
+        if db.execute("SELECT 1 FROM sqlite_master WHERE name=?", (table,)).fetchone():
+            links.extend((str(row[0]), str(row[1])) for row in db.execute(
+                f"SELECT prior_{kind}_id, replacement_{kind}_id FROM {table} "
+                "WHERE reason IN ('corrects', 'supersedes')"))
+    if kind in {"entity", "relationship", "event"}:
+        for content, in db.execute("SELECT content FROM evidence_ledger"):
+            try:
+                value = json.loads(str(content))
+            except (TypeError, ValueError):
+                continue
+            if isinstance(value, dict) and value.get("relation") in {"corrects", "supersedes"}:
+                prior, replacement = value.get(f"prior_{kind}_id"), value.get(f"replacement_{kind}_id")
+                if isinstance(prior, str) and isinstance(replacement, str):
+                    links.append((prior, replacement))
+    table, owner = {"cognition": ("cognition", "subject_id"), "entity": ("entity", "world_id"),
+                    "relationship": ("relationship", "world_id"), "event": ("world_event", "world_id")}[kind]
+    owned = {str(row[0]) for row in db.execute(f"SELECT id FROM {table} WHERE {owner}=?", (subject_id,))}
+    chain = {item_id}
+    while True:
+        additions = {value for pair in links if chain.intersection(pair) for value in pair if value in owned} - chain
+        if not additions:
+            return chain
+        chain.update(additions)
 
+
+def _world_item_sources(db: sqlite3.Connection, kind: str, item_id: str) -> set[str]:
     sources: set[str] = set()
     if kind == "entity":
         for content, in db.execute("SELECT content FROM evidence_ledger"):
@@ -313,6 +318,42 @@ def delete_world_item(
             sources.update(str(row[0]) for row in db.execute(
                 f"SELECT l.evidence_id FROM {link} l JOIN {target} t ON l.{parent} = t.{key} WHERE {where}",
                 (item_id, item_id)))
+    return sources
+
+
+def delete_world_item(
+    db: sqlite3.Connection,
+    command: CommandEnvelopeV1,
+    completed_at: str,
+    subject_id: str,
+) -> CommandMutation:
+    payload = command["payload"]
+    if set(payload) - {"delete_conversation_snippets"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
+        raise TrustCommandError("invalid_trust_command_payload")
+    kind = command["target_kind"]
+    item_id = command["target_id"]
+    table_and_owner = {
+        "entity": ("entity", "world_id"),
+        "relationship": ("relationship", "world_id"),
+        "event": ("world_event", "world_id"),
+        "cognition": ("cognition", "subject_id"),
+    }
+    if kind not in table_and_owner:
+        return CommandMutation("rejected", rejection_code="invalid_world_target")
+    table, owner = table_and_owner[kind]
+    if db.execute(
+        f"SELECT 1 FROM {table} WHERE id = ? AND {owner} = ?",
+        (item_id, subject_id),
+    ).fetchone() is None:
+        return CommandMutation("rejected", rejection_code="world_item_not_found")
+
+    chain = _revision_chain(db, subject_id, kind, item_id)
+    sources: set[str] = set()
+    for linked_id in chain:
+        linked_sources = _world_item_sources(db, kind, linked_id)
+        if not linked_sources:
+            return CommandMutation("rejected", rejection_code="source_provenance_missing")
+        sources.update(linked_sources)
     if not sources:
         return CommandMutation("rejected", rejection_code="source_provenance_missing")
     # Forgetting an item erases its sources and all source-derived objects.
@@ -328,12 +369,12 @@ def delete_world_item(
     # any source rejects, including one after earlier sources were removed.
     db.execute("SAVEPOINT delete_world_item_sources")
     try:
-        db.execute(
+        db.executemany(
             "INSERT OR IGNORE INTO world_delete_marker "
             "(subject_id, object_kind, item_id, deleted_at) VALUES (?, ?, ?, ?)",
-            (subject_id, kind, item_id, completed_at),
+            [(subject_id, kind, linked_id, completed_at) for linked_id in sorted(chain)],
         )
-        affected = {item_id}
+        affected = set(chain)
         for evidence_id in sorted(sources):
             source_command = dict(command)
             source_command["target_kind"] = "evidence"
