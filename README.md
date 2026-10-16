@@ -21,6 +21,13 @@ The repository candidate may be newer than the latest published package. A succe
 MemoWeft keeps these boundaries explicit:
 
 - Raw user content remains exact Evidence with provenance and permissions.
+- A source-bound correction counts as fulfilled after a later `no_change` only
+  when its applied receipt, current replacement, exact support range and stated
+  projection agree. Other corrections, remember requests and unknown uncovered
+  facts in that same message remain unfinished; a shared source alone is not
+  proof of completion. The shared ledger also accepts verbatim MemoryLoop
+  Evidence records; their prose or JSON content is never a formation-support
+  record or proof that a correction completed.
 - Stated formation propositions selected by segment or quote are derived from
   verbatim Evidence, preserving names, forms of address, numbers and dates.
   Formation payloads offer intact `sentences` alongside existing fine `segments`.
@@ -90,6 +97,9 @@ MemoWeft keeps these boundaries explicit:
   History provenance includes `successor_provenance` to explain the correcting
   source from either predecessor; model provenance is unchanged.
 - Correction, retract, forget, archive, mute, and permission changes produce durable receipts.
+- Python `correct_world_item` advertises `correction_source: true` when it accepts optional `payload.source`: `message_id`, `session_id`, complete verbatim `content`, one unique verbatim clause/sentence `quote`, and optional `timestamp` / `preceding_ai_context`. Hosts supply the real message identity; models select only the quote. The correction and later DSH boundary reuse the same source origin, Evidence and stated-proposition normalization. Independent facts in the complete source remain available to normal formation. Calls without `source` retain the existing explicit-edit contract; hosts must check the capability before sending original-message provenance.
+  Correction request bodies are not copied into the command table; the complete request hash still owns replay/conflict checks, and actual wording belongs to erasable Evidence. Reusing a source keeps the stricter existing/requested permissions. An unreadable or non-inferable source is rejected by the existing formal Apply path.
+  Optional source metadata may be omitted or null without denying existing known values. A correction accepted before its real message keeps only the names of pending metadata fields in its existing support ledger payload; later ingestion binds the actual time/context atomically with the World Job. A recording-time fallback is not an explicit message-time claim. Once supplied, conflicting real timestamps or assistant context still reject; original content, message identity, permissions and command replay remain bound.
 - Python World-item forgetting follows the complete `corrects` / `supersedes` revision chain in the existing command transaction, erasing historical sources and derived copies. The read-only forget preview uses the same erasure path and lists the complete cascade before confirmation. Hosts retain original chat messages by default.
 - Shared assistant interactions retain their original history and explicit memory dependencies. Model projection excludes unresolved or no-longer-current dependencies, including transitive reuse; history projection remains subject to source permissions.
 - Portable bundles are versioned, validated, planned before apply, and conflict checked.
