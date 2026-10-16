@@ -49,6 +49,9 @@ MemoWeft keeps these boundaries explicit:
   An explicit user restatement stays verbatim and may retain a unique same-person
   preceding proposal as context. Assistant prose never becomes user Evidence.
 - Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
+  Python links current, sourced self-naming claims and accepted aliases to
+  owner facts during recall; ambiguous names stay unresolved, and source
+  permissions still apply separately to the name and the recalled fact.
   Python optionally supplements literal matches with up to three local CPU
   semantic candidates; loading/failure preserves literal recall. See
   [configuration and lifecycle](docs/semantic-recall.md).

@@ -21,6 +21,7 @@ model-free, and byte-stable.
 from __future__ import annotations
 
 from ..trust.confirmed_sources import assistant_sources
+from .recall_identity import associate_owner_names
 from ...semantic.runtime import CandidateProvider, SemanticCandidate, provider_for
 from ...semantic.store import content_hash
 
@@ -621,7 +622,7 @@ def _score_world_anchor_rows(
             (
                 len(anchor)
                 for anchor in anchors
-                if anchor and (_topic_cue_is_explicit(query, anchor) if topic else _anchor_is_explicit(query, anchor))
+                if anchor and (_topic_cue_is_explicit(query, anchor) if topic else _anchor_is_explicit(query.casefold(), anchor.casefold()))
             ),
             default=0,
         )
@@ -676,6 +677,9 @@ def _query_eligible_rows(query: str, rows: Iterable[Mapping[str, object]]) -> li
     rows_list = list(rows)
     raw_query = query
     query = _query_signal(query)
+    if any(_anchor_is_explicit(query.casefold(), str(anchor).casefold())
+           for row in rows_list for anchor in cast(Sequence[str], row.get("ambiguous_anchors", ()))):
+        return []
     is_historical = bool(_HISTORICAL_QUERY_PATTERN.search(raw_query))
     if not is_historical:
         # Naming a person in a current preference question does not make the
@@ -1053,7 +1057,7 @@ def _current_world_rows(
                     "predecessor_match_texts": predecessor_texts,
                 }
             )
-    return items
+    return associate_owner_names(db, subject_id, items, model_tier)
 
 
 def _predecessor_match_texts(

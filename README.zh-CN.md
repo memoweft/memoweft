@@ -23,6 +23,7 @@ MemoWeft 明确区分这些边界：
 - 用户原文保持为带来源和权限的 exact Evidence（精确证据）。
 - Entity、Relationship、Event、Cognition 和 Evaluation 是正式 World 对象。
 - 同一 revision 与查询输入得到 deterministic Recall（确定性召回），并且 Recall 不写 World。
+  Python 召回会用当前有来源的自我命名和已接受别名关联本人事实；同名歧义保持未解析，姓名来源和事实来源分别遵守读取权限。
 - correction、retract、forget、archive、mute 和 permission change 都产生 durable receipt（持久回执）。
 - Portable bundle（可迁移包）带版本，先校验和 dry-run plan（试运行计划），再做冲突检查与 apply。
 - Hermes host event（宿主事件）和用户界面呈现与 Core business terminal（核心业务终态）分别保存和核对。
