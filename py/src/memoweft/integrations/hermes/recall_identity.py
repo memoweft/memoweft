@@ -1,7 +1,7 @@
 """Read-only name associations from accepted, permission-eligible World facts.
 
-An explicit self-naming claim can link its existing person entity to the
-implicit owner of untargeted cognitions. This is retrieval metadata only: no
+An explicit self-naming claim can link its existing person entity to a
+directly sourced first-person fact. This is retrieval metadata only: no
 entity merge, new claim, Evidence search, or stored label is performed.
 """
 from __future__ import annotations
@@ -11,6 +11,36 @@ import sqlite3
 
 from ...types import ModelTier
 from ..trust.currentness import CurrentnessSurface, current_entity_aliases, linked_evidence, world_item_visible
+
+
+def _direct_self_fact(db: sqlite3.Connection, subject_id: str, cognition_id: str) -> bool:
+    """Recognize supported self descriptions, never the speaker's perspective.
+
+    Be conservative where the existing target is absent or only a topic. A
+    direct first-person birth/preference clause is sufficient; possession of a
+    relative, reported opinions and omitted subjects are not. Other wording
+    keeps its existing recall paths rather than guessing a new person link.
+    """
+    from .batch_adapter import _stated_normalize
+
+    for content, raw in db.execute(
+        "SELECT c.content, e.raw_content FROM cognition c "
+        "JOIN cognition_evidence ce ON ce.cognition_id=c.id AND ce.relation='support' "
+        "JOIN evidence e ON e.id=ce.evidence_id AND e.subject_id=c.subject_id "
+        "WHERE c.id=? AND c.subject_id=? AND e.source_kind='spoken'", (cognition_id, subject_id),
+    ).fetchall():
+        source = str(raw).strip()
+        direct = re.match(
+            r"^I\s+(?:(?:am|was)\s+born\b|(?:(?:really|usually|always)\s+)*"
+            r"(?:like|prefer|enjoy|dislike|love|hate)\b)"
+            r"|^(?:我|本人)(?:更|最|很|平时|通常|一直|也|不|特别)*"
+            r"(?:出生|喜欢(?!的)|偏好)", source, re.IGNORECASE,
+        )
+        # A self clause elsewhere in a shared source must not qualify a
+        # different claim. Compare only; never change Evidence or proposition.
+        if direct and _stated_normalize(source).startswith(str(content)):
+            return True
+    return False
 
 
 def _names_self(content: str, name: str) -> bool:
@@ -96,11 +126,12 @@ def associate_owner_names(
                 "FROM cognition_target ct LEFT JOIN entity e ON e.id=ct.target_entity_id "
                 "AND e.world_id=? WHERE ct.cognition_id=?", (subject_id, str(row["id"])),
             ).fetchone()
-            # Existing owner-topic labels retain owner perspective. A person
-            # target or another perspective must never inherit the owner's name.
-            if target is None or (
+            # Missing targets, topic labels and owner perspective alone do not
+            # establish the fact's subject. Require its own direct self source.
+            owner_target = target is None or (
                 target[1] is None and (str(target[0]) == owner_id or str(target[2]) == "topic")
-            ):
+            )
+            if owner_target and _direct_self_fact(db, subject_id, str(row["id"])):
                 anchors = row.get("anchors", ())
                 assert isinstance(anchors, tuple)
                 updated["anchors"] = tuple(dict.fromkeys((*anchors, *owner_names)))

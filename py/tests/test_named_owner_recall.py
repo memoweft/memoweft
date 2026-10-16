@@ -16,6 +16,7 @@ from test_hermes_batch_adapter_v2 import _form, _run, _set_evidence
 from test_hermes_batch_adapter_v3 import _naming
 from test_hermes_batch_adapter_v3 import _relationship
 from test_hermes_batch_adapter_v3c import _batch, _model, _v5_item
+from test_hermes_batch_adapter_v5 import _batch as _batch_v8, _model as _model_v8, _v8_item
 from test_hermes_world_worker import MutableClock, _job
 from test_semantic_recall import ForcedProvider
 
@@ -29,6 +30,16 @@ def _apply(path: Path, raw: str, item: dict[str, object], evidence_id: str) -> s
         row = db.execute("SELECT cognition_id FROM cognition_evidence WHERE evidence_id=?",
                          (evidence_id,)).fetchone()
         return str(row[0]) if row else ""
+
+
+def _apply_v8(path: Path, raw: str, item: dict[str, object], evidence_id: str) -> str:
+    _run(path, MutableClock(), [_model_v8(_batch_v8(item))], (evidence_id,),
+         lambda p: _set_evidence(p, evidence_id, raw), job_id=evidence_id)
+    result = _job(path, evidence_id)
+    assert result["state"] == "applied", result["world_result_json"]
+    with sqlite3.connect(path) as db:
+        return str(db.execute("SELECT cognition_id FROM cognition_evidence WHERE evidence_id=?",
+                              (evidence_id,)).fetchone()[0])
 
 
 def _owner(path: Path, language: str) -> tuple[str, str, str]:
@@ -205,3 +216,84 @@ def test_legacy_entity_without_naming_provenance_does_not_establish_owner_identi
         direct = recall_world_snapshot(db, "owner", "1996-08-02")
         assert direct is not None
         assert ("cognition", birthday_id) in direct.selected_item_ids
+
+
+@pytest.mark.parametrize("language", ["en", "zh"])
+@pytest.mark.parametrize("case", ["pronoun", "topic", "sister", "perspective", "possessive", "missing_subject"])
+def test_unresolved_fact_subject_never_inherits_owner_name(tmp_path: Path, language: str, case: str) -> None:
+    path = tmp_path / "world.sqlite3"
+    birthday_query, _, _ = _owner(path, language)
+    if language == "en":
+        raw = {
+            "pronoun": "They prefer jasmine tea.",
+            "topic": "They prefer jasmine tea.",
+            "sister": "My sister was born on 2001-01-01.",
+            "perspective": "I think they prefer jasmine tea.",
+            "possessive": "My favorite author prefers jasmine tea.",
+            "missing_subject": "Prefers jasmine tea.",
+        }[case]
+        proposition, name, topic = raw, "Martin Mark", "jasmine tea"
+        query = birthday_query if case == "sister" else f"What does {name} prefer?"
+    else:
+        raw = {
+            "pronoun": "他们更喜欢茉莉花茶。",
+            "topic": "他们更喜欢茉莉花茶。",
+            "sister": "我的妹妹出生于2001年1月1日。",
+            "perspective": "我觉得他们更喜欢茉莉花茶。",
+            "possessive": "我最喜欢的作家更喜欢茉莉花茶。",
+            "missing_subject": "更喜欢茉莉花茶。",
+        }[case]
+        proposition = "用户" + (raw[1:] if raw.startswith("我") else raw)
+        name, topic = "林晓", "茉莉花茶"
+        query = birthday_query if case == "sister" else f"{name}喜欢什么？"
+    item = _v8_item("attribute" if case == "sister" else "preference", proposition, (0, len(raw)),
+                    evidence_id="third-person",
+                    entity={"canonical_name": topic, "kind": "topic"} if case == "topic" else None)
+    other_id = _apply_v8(path, raw, item, "third-person")
+    with sqlite3.connect(path) as db:
+        original = db.execute("SELECT raw_content FROM evidence WHERE id='third-person'").fetchone()[0]
+        snapshot = recall_world_snapshot(db, "owner", query)
+        assert snapshot is not None
+        assert ("cognition", other_id) not in snapshot.selected_item_ids
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='third-person'").fetchone()[0] == original == raw
+        direct_query = ("2001-01-01" if language == "en" else "2001年1月1日") if case == "sister" else topic
+        direct = recall_world_snapshot(db, "owner", direct_query)
+        assert direct is not None and ("cognition", other_id) in direct.selected_item_ids
+
+
+@pytest.mark.parametrize("language", ["en", "zh"])
+@pytest.mark.parametrize("topic_target", [False, True])
+def test_explicit_first_person_preference_retains_owner_association(tmp_path: Path, language: str, topic_target: bool) -> None:
+    path = tmp_path / "world.sqlite3"
+    _owner(path, language)
+    raw, proposition, topic, query = ("I prefer jasmine tea.", "I prefer jasmine tea.", "jasmine tea", "What does Martin Mark prefer?") if language == "en" else (
+        "我更喜欢茉莉花茶。", "用户更喜欢茉莉花茶。", "茉莉花茶", "林晓喜欢什么？")
+    item = _v8_item("preference", proposition, (0, len(raw)), evidence_id="self-preference",
+                    entity={"canonical_name": topic, "kind": "topic"} if topic_target else None)
+    own_id = _apply_v8(path, raw, item, "self-preference")
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, "owner", query)
+        assert snapshot is not None and ("cognition", own_id) in snapshot.selected_item_ids
+
+
+@pytest.mark.parametrize("language", ["en", "zh"])
+def test_self_clause_in_shared_source_does_not_qualify_another_claim(tmp_path: Path, language: str) -> None:
+    path = tmp_path / "world.sqlite3"
+    _owner(path, language)
+    first, second, query = ("I prefer jasmine tea.", "They prefer green tea.", "What does Martin Mark prefer?") if language == "en" else (
+        "我喜欢茉莉花茶。", "他们喜欢绿茶。", "林晓喜欢什么？")
+    raw = first + second
+    own = first if language == "en" else "用户" + first[1:]
+    other = second if language == "en" else "用户" + second
+    items = (_v8_item("preference", own, (0, len(first)), evidence_id="shared"),
+             _v8_item("preference", other, (len(first), len(raw)), evidence_id="shared"))
+    _run(path, MutableClock(), [_model_v8(_batch_v8(*items))], ("shared",),
+         lambda p: _set_evidence(p, "shared", raw), job_id="shared")
+    assert _job(path, "shared")["state"] == "applied"
+    with sqlite3.connect(path) as db:
+        own_id = str(db.execute("SELECT id FROM cognition WHERE content=?", (own,)).fetchone()[0])
+        other_id = str(db.execute("SELECT id FROM cognition WHERE content=?", (other,)).fetchone()[0])
+        snapshot = recall_world_snapshot(db, "owner", query)
+        assert snapshot is not None and ("cognition", own_id) in snapshot.selected_item_ids
+        assert ("cognition", other_id) not in snapshot.selected_item_ids
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='shared'").fetchone()[0] == raw
