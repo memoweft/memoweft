@@ -16,7 +16,7 @@ from .command_store import (
     command_canonical_json,
 )
 from .currentness import linked_evidence, world_item_lifecycle
-from .correction_source import CorrectionSource, parse_correction_source, store_correction_source
+from .correction_source import CorrectionSource, parse_correction_source, store_correction_source, mark_pending_correction_source_metadata
 from .model import (
     CommandEnvelopeV1,
     CommandReceiptV1,
@@ -490,7 +490,7 @@ class CommandService:
         text: str,
         completed_at: str,
         source: CorrectionSource | None = None,
-    ) -> str:
+    ) -> tuple[str, set[str]]:
         evidence_id = "evidence-trust-command-" + sha256(
             command_canonical_json(
                 ["trust_command_correction_v1", self._subject_id, command["command_id"]]
@@ -539,7 +539,7 @@ class CommandService:
             "VALUES (?, ?)",
             (evidence_id, sha256(text.encode("utf-8")).hexdigest()),
         )
-        return evidence_id
+        return evidence_id, set()
 
     def _apply_job(self, command: CommandEnvelopeV1, evidence_ids: tuple[str, ...]) -> Any:
         from ..hermes.world_worker import ClaimedWorldJob
@@ -626,7 +626,7 @@ class CommandService:
 
         db.execute("SAVEPOINT trust_command_formal_apply")
         try:
-            evidence_id = self._insert_correction_evidence(
+            evidence_id, pending_metadata = self._insert_correction_evidence(
                 db, command, text, completed_at, message_source
             )
             support = ((evidence_id, message_source.start, message_source.end, message_source.quote),) if message_source else ((evidence_id, 0, len(text), text),)
@@ -759,6 +759,8 @@ class CommandService:
             )
             if not isinstance(replacement, str):
                 raise TrustCommandError("invalid_trust_command_apply_result")
+            if message_source is not None:
+                mark_pending_correction_source_metadata(db, message_source, evidence_id, kind, replacement, pending_metadata)
             db.execute("RELEASE trust_command_formal_apply")
             return CommandMutation(
                 "applied",

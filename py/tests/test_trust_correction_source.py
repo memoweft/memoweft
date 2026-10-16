@@ -349,3 +349,160 @@ def test_source_status_accepts_memory_loop_verbatim_ledger_rows(tmp_path: Path, 
         else:
             assert requests == []
         assert tuple(db.execute("SELECT content,payload_json FROM evidence_ledger WHERE id='e:tea'").fetchone()) == original
+
+
+@pytest.mark.parametrize('source_first,omitted', [
+    (True, 'context'), (True, 'timestamp'), (True, 'both'),
+    (False, 'context'), (False, 'timestamp'), (False, 'both'),
+])
+def test_optional_source_metadata_reuses_the_actual_message_in_both_orders(tmp_path: Path, source_first: bool, omitted: str) -> None:
+    path = tmp_path / 'optional-source.sqlite3'
+    service = _prepare(path)
+    actual_time = '2026-08-24T23:59:55Z'
+    source = _source()
+    source.update(timestamp=actual_time, preceding_ai_context='真实且保留的助手前文')
+    if omitted in ('context', 'both'):
+        source.pop('preceding_ai_context')
+    if omitted in ('timestamp', 'both'):
+        source.pop('timestamp')
+    candidates = _candidates([{'role': 'assistant', 'content': '真实且保留的助手前文'},
+        {'role': 'user', 'content': source['content'], 'message_id': source['message_id'], 'timestamp': actual_time}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='optional-turn')
+    boundary = _boundary(*candidates, event_id='optional-turn',
+        target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST))
+    if source_first:
+        with _open(path) as db:
+            HermesBoundaryStore(db, clock=_clock).accept(boundary)
+    command = _proposal(source); command['payload']['allow_cloud_read'] = False
+    receipt = service.submit_command(command)
+    assert receipt['result_state'] == 'applied'
+    with _open(path) as db:
+        store = HermesBoundaryStore(db, clock=_clock)
+        accepted = store.accept(boundary)
+        assert store.accept(boundary) == accepted
+    assert service.submit_command(command) == receipt
+    with _open(path) as db:
+        row = db.execute('SELECT * FROM evidence WHERE origin_id=?', (candidates[0].origin_id,)).fetchone()
+        assert row['occurred_at'] == actual_time
+        assert row['preceding_ai_context'] == '真实且保留的助手前文'
+        assert row['raw_content'] == source['content'] and row['allow_cloud_read'] == 0
+        assert db.execute('SELECT COUNT(*) FROM memory_world_job').fetchone()[0] == 1
+        assert db.execute('SELECT COUNT(*) FROM evidence WHERE origin_id=?', (candidates[0].origin_id,)).fetchone()[0] == 1
+
+
+@pytest.mark.parametrize('route', ['source', 'boundary'])
+@pytest.mark.parametrize('field', ['timestamp', 'preceding_ai_context'])
+def test_enriched_source_metadata_is_bound_and_explicit_conflicts_roll_back(tmp_path: Path, route: str, field: str) -> None:
+    from dataclasses import replace
+    from memoweft.integrations.hermes.boundary_store import BoundaryEvidenceConflictError
+    path = tmp_path / 'bound-source-metadata.sqlite3'
+    service = _prepare(path)
+    source = _source(); source.pop('preceding_ai_context')
+    first = _proposal(source)
+    receipt = service.submit_command(first)
+    assert receipt['result_state'] == 'applied'
+    current = receipt['affected_ids'][1]
+    actual_time, context = '2026-08-24T23:59:55Z', '真实助手前文'
+    candidate = _candidates([{'role': 'assistant', 'content': context},
+        {'role': 'user', 'content': source['content'], 'message_id': source['message_id'], 'timestamp': actual_time}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='bind-metadata')[0]
+    target = _target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST)
+    with _open(path) as db:
+        HermesBoundaryStore(db, clock=_clock).accept(_boundary(candidate, event_id='bind-metadata', target=target))
+        before = list(db.iterdump())
+    if route == 'source':
+        command = _proposal({**source, 'timestamp': actual_time, 'preceding_ai_context': context,
+            field: '2026-08-24T23:59:56Z' if field == 'timestamp' else '不同的助手前文'}, command_id='conflicting-metadata')
+        command.update(target_id=current, expected_world_revision=2)
+        with pytest.raises(TrustCommandError, match='correction_source_conflict'):
+            service.submit_command(command)
+    else:
+        changed = replace(candidate, **({'occurred_at': '2026-08-24T23:59:56Z'} if field == 'timestamp'
+                                         else {'preceding_ai_context': '不同的助手前文'}))
+        with _open(path) as db:
+            with pytest.raises(BoundaryEvidenceConflictError):
+                HermesBoundaryStore(db, clock=_clock).accept(_boundary(changed, event_id='conflicting-metadata', target=target))
+    assert service.submit_command(first) == receipt
+    with _open(path) as db:
+        assert list(db.iterdump()) == before
+
+
+@pytest.mark.parametrize('kind', ['relationship', 'event'])
+def test_optional_correction_metadata_uses_the_existing_support_ledger_for_all_kinds(tmp_path: Path, kind: str) -> None:
+    from memoweft.integrations.hermes.batch_adapter import owner_entity_id_for
+    from test_trust_command_service import _seed_four_kinds
+    path = tmp_path / f'optional-{kind}.sqlite3'
+    with _open(path) as db:
+        ids = _seed_four_kinds(db)
+        owner = owner_entity_id_for(_SUBJECT)
+        db.execute("INSERT INTO entity (id,world_id,kind,canonical_name,created_at,updated_at,aliases_json) VALUES (?,?,'person','用户',?,?,'[]')",
+                   (owner, _SUBJECT, _T0, _T0))
+        db.execute("UPDATE relationship SET source_entity_id=? WHERE id='rel-wang'", (owner,))
+        _seed_revision(db)
+    quote = '小王是我的同事。' if kind == 'relationship' else '我和小王去露营。'
+    source = {'message_id': 'actual-message', 'session_id': 'actual-session', 'content': quote, 'quote': quote}
+    command = _command('cross-kind-source', 1, 'correct_world_item', kind, ids[kind],
+        {'correction_text': quote, 'source': source, **({'relation_type': 'colleague'} if kind == 'relationship' else {})})
+    assert _service(path).submit_command(command)['result_state'] == 'applied'
+    actual = '2026-08-24T23:59:55Z'
+    candidates = _candidates([{'role': 'assistant', 'content': '实际助手前文'},
+        {'role': 'user', 'content': quote, 'message_id': 'actual-message', 'timestamp': actual}],
+        session_id='actual-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='cross-kind-boundary')
+    with _open(path) as db:
+        HermesBoundaryStore(db, clock=_clock).accept(_boundary(*candidates, event_id='cross-kind-boundary',
+            target=_target(parent_session_id='actual-session', result_session_id='actual-session', subject_id=_SUBJECT, host_id=_HOST)))
+        row = db.execute('SELECT occurred_at,preceding_ai_context FROM evidence WHERE origin_id=?', (candidates[0].origin_id,)).fetchone()
+        assert tuple(row) == (actual, '实际助手前文')
+
+
+@pytest.mark.parametrize('include_boundary_time', [False, True])
+def test_later_boundary_omission_preserves_known_source_metadata(tmp_path: Path, include_boundary_time: bool) -> None:
+    path = tmp_path / 'later-omission.sqlite3'
+    service = _prepare(path)
+    source = {**_source(), 'timestamp': '2026-08-24T23:59:55Z', 'preceding_ai_context': '已知真实前文'}
+    assert service.submit_command(_proposal(source))['result_state'] == 'applied'
+    message = {'role': 'user', 'content': source['content'], 'message_id': source['message_id'],
+               **({'timestamp': source['timestamp']} if include_boundary_time else {})}
+    candidates = _candidates([message], session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='later-omission')
+    with _open(path) as db:
+        HermesBoundaryStore(db, clock=_clock).accept(_boundary(*candidates, event_id='later-omission',
+            target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST)))
+        row = db.execute('SELECT occurred_at,preceding_ai_context FROM evidence WHERE origin_id=?', (candidates[0].origin_id,)).fetchone()
+        assert tuple(row) == (source['timestamp'], source['preceding_ai_context'])
+
+
+def test_explicit_source_time_at_the_command_clock_is_not_a_missing_time(tmp_path: Path) -> None:
+    from memoweft.integrations.hermes.boundary_store import BoundaryEvidenceConflictError
+    path = tmp_path / 'explicit-command-clock.sqlite3'
+    service = _prepare(path)
+    source = {**_source(), 'timestamp': _T0}
+    assert service.submit_command(_proposal(source))['result_state'] == 'applied'
+    candidates = _candidates([{'role': 'user', 'content': source['content'], 'message_id': source['message_id'],
+                              'timestamp': '2026-08-24T23:59:55Z'}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='conflicting-clock')
+    with _open(path) as db:
+        before = list(db.iterdump())
+        with pytest.raises(BoundaryEvidenceConflictError):
+            HermesBoundaryStore(db, clock=_clock).accept(_boundary(*candidates, event_id='conflicting-clock',
+                target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST)))
+        assert list(db.iterdump()) == before
+
+
+def test_boundary_metadata_enrichment_rolls_back_with_job_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / 'metadata-rollback.sqlite3'
+    service = _prepare(path)
+    source = _source(); source.pop('preceding_ai_context')
+    assert service.submit_command(_proposal(source))['result_state'] == 'applied'
+    candidates = _candidates([{'role': 'assistant', 'content': '真实助手前文'},
+        {'role': 'user', 'content': source['content'], 'message_id': source['message_id'], 'timestamp': '2026-08-24T23:59:55Z'}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='metadata-rollback')
+    def fail_job(**_kwargs: object) -> None:
+        raise RuntimeError('injected after metadata enrichment')
+    with _open(path) as db:
+        before = list(db.iterdump())
+        store = HermesBoundaryStore(db, clock=_clock)
+        monkeypatch.setattr(store, '_insert_job', fail_job)
+        with pytest.raises(RuntimeError, match='after metadata enrichment'):
+            store.accept(_boundary(*candidates, event_id='metadata-rollback',
+                target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST)))
+        assert list(db.iterdump()) == before
