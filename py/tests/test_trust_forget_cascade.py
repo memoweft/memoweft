@@ -1,9 +1,143 @@
 """FG-1: source erasure reaches identities/aliases and on-disk/portable copies."""
 import json
+import pytest
+from typing import Any
 from pathlib import Path
 
 from memoweft.portable.builder import build_bundle
 from test_trust_command_service import _open, _seed_evidence, _seed_revision, _service, _command, _SUBJECT, _HOST, _T0
+
+
+@pytest.mark.parametrize('target', ['old', 'middle', 'current'])
+def test_forget_whole_revision_chain_preview_history_export_and_replay(tmp_path: Path, target: str) -> None:
+    from memoweft.integrations.trust.forget_preview import preview_forget
+    from test_trust_command_service import _seed_cognition
+    path = tmp_path / 'revision-chain.sqlite3'
+    with _open(path) as db:
+        for item_id in ['old', 'middle', 'current']:
+            _seed_cognition(db, item_id, f'e-{item_id}', f'FGChainSecret-{item_id}')
+        _seed_cognition(db, 'independent', 'e-independent', 'IndependentBirthday')
+        db.execute("UPDATE cognition SET invalid_at=? WHERE id IN ('old','middle')", (_T0,))
+        db.executemany('INSERT INTO cognition_transitions VALUES (?,?,?,?,?)', [
+            ('first', 'old', 'middle', 'corrects', 1), ('second', 'middle', 'current', 'supersedes', 1)])
+        _seed_revision(db)
+        before = list(db.iterdump())
+    preview = preview_forget(str(path), _SUBJECT, target_kind='cognition', target_id=target)
+    items, evidence_ids = preview['items'], preview['evidence_ids']
+    assert isinstance(items, list) and isinstance(evidence_ids, list)
+    assert {row['item_id'] for row in items} == {'old', 'middle', 'current'}
+    assert set(evidence_ids) == {'e-old', 'e-middle', 'e-current'}
+    with _open(path) as db:
+        assert list(db.iterdump()) == before
+    command = _command('forget-chain', 1, 'delete_world_item', 'cognition', target)
+    service = _service(path)
+    receipt = service.submit_command(command)
+    assert receipt['result_state'] == 'applied'
+    assert receipt == service.submit_command(command), 'same command replays its original receipt'
+    assert {'old', 'middle', 'current', 'e-old', 'e-middle', 'e-current'} <= set(receipt['affected_ids'])
+    with _open(path) as db:
+        assert [row[0] for row in db.execute('SELECT id FROM cognition')] == ['independent']
+        assert not db.execute('SELECT 1 FROM cognition_transitions').fetchone()
+        assert db.execute('SELECT raw_content FROM evidence WHERE id=?', ('e-independent',)).fetchone()[0] == 'IndependentBirthday'
+        assert 'FGChainSecret' not in json.dumps(build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0))
+        assert db.execute('SELECT revision FROM memory_state').fetchone()[0] == 2
+
+
+def test_forget_revision_chain_rolls_back_when_a_later_historical_source_rejects(tmp_path: Path) -> None:
+    from test_trust_command_service import _seed_cognition
+    path = tmp_path / 'revision-rollback.sqlite3'
+    with _open(path) as db:
+        _seed_cognition(db, 'current', 'a-current', 'CurrentChainSecret')
+        _seed_cognition(db, 'old', 'z-old', 'HistoricalChainSecret')
+        db.execute('INSERT INTO cognition_transitions VALUES (?,?,?,?,?)', ('link', 'old', 'current', 'corrects', 1))
+        db.execute('UPDATE evidence SET deleted_at=? WHERE id=?', (_T0, 'z-old'))
+        _seed_revision(db)
+    receipt = _service(path).submit_command(_command('forget-rollback', 1, 'delete_world_item', 'cognition', 'current'))
+    assert receipt['result_state'] == 'rejected'
+    assert receipt['affected_ids'] == []
+    with _open(path) as db:
+        assert db.execute('SELECT COUNT(*) FROM cognition').fetchone()[0] == 2
+        assert db.execute('SELECT raw_content FROM evidence WHERE id=?', ('a-current',)).fetchone()[0] == 'CurrentChainSecret'
+        assert db.execute('SELECT COUNT(*) FROM cognition_transitions').fetchone()[0] == 1
+        assert db.execute('SELECT COUNT(*) FROM world_delete_marker').fetchone()[0] == 0
+        assert db.execute('SELECT revision FROM memory_state').fetchone()[0] == 1
+
+
+@pytest.mark.parametrize('kind,table,current,name_column,link,column', [
+    ('entity', 'entity', 'entity-wang', 'canonical_name', None, None),
+    ('relationship', 'relationship', 'rel-wang', 'content', 'relationship_evidence', 'relationship_id'),
+    ('event', 'world_event', 'event-hike', 'content', 'world_event_evidence', 'world_event_id'),
+])
+def test_forget_follows_existing_ledger_revision_links_across_world_kinds(
+    tmp_path: Path, kind: str, table: str, current: str, name_column: str, link: str | None, column: str | None,
+) -> None:
+    from memoweft.integrations.trust.forget_preview import preview_forget
+    from test_trust_command_service import _seed_four_kinds
+    path = tmp_path / f'{kind}-chain.sqlite3'
+    with _open(path) as db:
+        _seed_four_kinds(db)
+        _seed_evidence(db, 'e-old-chain', 'LedgerRevisionSecret')
+        columns = [str(row[1]) for row in db.execute(f'PRAGMA table_info({table})')]
+        selection = ["'old-chain'" if name == 'id' else "'LedgerRevisionSecret'" if name == name_column else name for name in columns]
+        db.execute(f"INSERT INTO {table} ({','.join(columns)}) SELECT {','.join(selection)} FROM {table} WHERE id=?", (current,))
+        if link is not None:
+            db.execute(f'INSERT INTO {link} ({column},evidence_id,relation) VALUES (?,?,?)', ('old-chain', 'e-old-chain', 'support'))
+        else:
+            db.execute('INSERT INTO evidence_ledger VALUES (?,?,?)', ('old-source', json.dumps({'entity_id': 'old-chain', 'evidence_id': 'e-old-chain'}), '{}'))
+        db.execute('INSERT INTO evidence_ledger VALUES (?,?,?)', ('correction', json.dumps({
+            'relation': 'corrects', f'prior_{kind}_id': 'old-chain', f'replacement_{kind}_id': current}), '{}'))
+        _seed_revision(db)
+    preview = preview_forget(str(path), _SUBJECT, target_kind=kind, target_id=current)
+    items = preview['items']
+    assert isinstance(items, list)
+    assert {'old-chain', current} <= {row['item_id'] for row in items}
+    receipt = _service(path).submit_command(_command('ledger-chain', 1, 'delete_world_item', kind, current))
+    assert receipt['result_state'] == 'applied'
+    with _open(path) as db:
+        assert db.execute(f'SELECT 1 FROM {table} WHERE id=?', ('old-chain',)).fetchone() is None
+        assert db.execute('SELECT content FROM cognition WHERE id=?', ('cog-coffee',)).fetchone()[0] == '用户喜欢喝咖啡'
+        assert 'LedgerRevisionSecret' not in json.dumps(build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0))
+
+
+@pytest.mark.parametrize('case', ['relationship', 'name-cognition'])
+@pytest.mark.parametrize('side', ['prior', 'replacement'])
+def test_forget_traverses_the_reasons_written_by_the_actual_formation_adapter(
+    tmp_path: Path, case: str, side: str,
+) -> None:
+    from test_person_understanding_loop import seed, correct
+    from test_formation_accuracy import _item
+    from memoweft.integrations.trust.forget_preview import preview_forget
+    path = tmp_path / f'production-{case}-{side}.sqlite3'
+    ids = seed(path)
+    if case == 'relationship':
+        kind, table = 'relationship', 'relationship'
+        item: dict[str, Any] = dict(_item('ignored'), action='form', statement_kind='relationship', relation_type='teacher',
+            target_entity={'canonical_name': '林遥', 'kind': 'person'}, supersedes_relationship_id=ids['relationship'])
+        raw = '更正：林遥是我的老师，不是朋友。'
+    else:
+        kind, table = 'cognition', 'cognition'
+        item = dict(_item('ignored'), action='correct', statement_kind='alias',
+            entity={'canonical_name': '林澜', 'kind': 'person'}, alias_of={'canonical_name': '林遥', 'kind': 'person'})
+        raw = '更正：林遥的名字我说错了，其实叫林澜。'
+    assert correct(path, raw, item)['state'] == 'applied'
+    with _open(path) as db:
+        replacement = str(db.execute(f'SELECT id FROM {table} WHERE id<>? AND invalid_at IS NULL', (ids[kind],)).fetchone()[0])
+        reason = db.execute(f'SELECT reason FROM {kind}_transitions WHERE prior_{kind}_id=?', (ids[kind],)).fetchone()[0]
+        assert reason == ('superseded' if case == 'relationship' else 'name_corrected')
+        revision = int(db.execute('SELECT revision FROM memory_state').fetchone()[0])
+    target = ids[kind] if side == 'prior' else replacement
+    preview = preview_forget(str(path), _SUBJECT, target_kind=kind, target_id=target)
+    evidence_ids = preview['evidence_ids']
+    assert isinstance(evidence_ids, list)
+    assert {'evidence-1', 'evidence-2'} <= set(evidence_ids)
+    receipt = _service(path).submit_command(_command('production-chain', revision, 'delete_world_item', kind, target))
+    assert receipt['result_state'] == 'applied'
+    with _open(path) as db:
+        for evidence in ('evidence-1', 'evidence-2'):
+            assert db.execute('SELECT raw_content FROM evidence WHERE id=?', (evidence,)).fetchone()[0] == ''
+        exported = json.dumps(build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0), ensure_ascii=False)
+        assert raw not in exported
+        assert '林遥修乐器很熟练' not in exported
 
 
 def test_forget_preserves_unrelated_preceding_context_and_clears_source_or_id(tmp_path: Path) -> None:
