@@ -6,12 +6,15 @@ tests run the real formation compiler with fixed responses, never a model.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
+from typing import Literal
 
 import pytest
 
 from memoweft.integrations.hermes.recall import recall_world_snapshot
+from memoweft.integrations.trust.command_service import CommandService
 from test_hermes_batch_adapter_v2 import _form, _run, _set_evidence
 from test_hermes_batch_adapter_v3 import _naming
 from test_hermes_batch_adapter_v3 import _relationship
@@ -58,6 +61,138 @@ def _owner(path: Path, language: str) -> tuple[str, str, str]:
     birthday_id = _apply(path, birthday, _form(birth_proposition, (0, len(birthday)),
                          kind="attribute", evidence_id="birthday"), "birthday")
     return query, birthday_id, birth_proposition
+
+
+def _alias_world(path: Path, language: str, neutral_first: bool, *, self_naming: bool = True) -> tuple[str, str, str, str]:
+    name, alias, neutral, declaration, birth, merge, name_query, alias_query = (
+        "Martin Mark", "Marty", "Named Marty.", "My name is Martin Mark.",
+        "I was born on 1996-08-02.", "Marty is Martin Mark.",
+        "What is Martin Mark's birth date?", "What is Marty's birth date?",
+    ) if language == "en" else (
+        "林晓", "小晓", "取名叫小晓。", "我叫林晓。", "我出生于1996年8月2日。",
+        "小晓就是林晓。", "林晓的出生日期是什么？", "小晓的出生日期是什么？",
+    )
+    if not self_naming:
+        declaration = "Her name is Martin Mark." if language == "en" else "她叫林晓。"
+    name_prop = "用户" + declaration[1:] if language == "zh" and self_naming else declaration
+    birth_prop = birth if language == "en" else "用户" + birth[1:]
+
+    def form_neutral() -> None:
+        _apply(path, neutral, _naming(neutral, alias, (0, len(neutral)), evidence_id="neutral"), "neutral")
+
+    if neutral_first:
+        form_neutral()
+    name_id = _apply(path, declaration, _naming(name_prop, name, (0, len(declaration)), evidence_id="name"), "name")
+    birthday_id = _apply(path, birth, _form(birth_prop, (0, len(birth)), kind="attribute", evidence_id="birthday"), "birthday")
+    if not neutral_first:
+        form_neutral()
+    with closing(sqlite3.connect(path)) as db:
+        before = recall_world_snapshot(db, "owner", name_query)
+        assert before is not None and (("cognition", birthday_id) in before.selected_item_ids) == self_naming
+    _apply(path, merge, _v5_item("alias", merge, (0, len(merge)), evidence_id="alias",
+           entity={"canonical_name": alias, "kind": "person"},
+           alias_of={"canonical_name": name, "kind": "person"}), "alias")
+    with closing(sqlite3.connect(path)) as db:
+        assert db.execute("SELECT id FROM entity WHERE canonical_name=? AND invalid_at IS NULL",
+                          (alias if neutral_first else name,)).fetchone() is not None
+    return name_query, alias_query, birthday_id, name_id
+
+
+def _selected(path: Path, query: str, item_id: str, tier: Literal["local", "cloud"] = "local") -> bool:
+    with closing(sqlite3.connect(path)) as db:
+        changes = db.total_changes
+        snapshot = recall_world_snapshot(db, "owner", query, model_tier=tier)
+        assert snapshot is not None and snapshot == recall_world_snapshot(db, "owner", query, model_tier=tier)
+        assert db.total_changes == changes
+        return ("cognition", item_id) in snapshot.selected_item_ids
+
+
+def _command(path: Path, operation: str, kind: str, item_id: str, payload: dict[str, object] | None = None) -> None:
+    with closing(sqlite3.connect(path)) as db:
+        revision = db.execute("SELECT revision FROM memory_state").fetchone()[0]
+    receipt = CommandService(path, subject_id="owner", host_id="hermes:test").submit_command({
+        "schema_version": 1, "command_id": "name-test-" + operation + "-" + item_id,
+        "subject_id": "owner", "actor": "owner", "expected_world_revision": revision,
+        "operation": operation, "target_kind": kind, "target_id": item_id,
+        "payload": payload or {}, "submitted_at": "2026-10-16T00:00:00.000Z",
+    })
+    assert receipt["result_state"] == "applied", receipt
+
+
+@pytest.mark.parametrize("language", ["en", "zh"])
+@pytest.mark.parametrize("neutral_first", [False, True])
+def test_alias_formation_order_preserves_sourced_self_name(tmp_path: Path, language: str, neutral_first: bool) -> None:
+    path = tmp_path / "world.sqlite3"
+    name_query, alias_query, birthday_id, _ = _alias_world(path, language, neutral_first)
+    assert _selected(path, name_query, birthday_id)
+    assert _selected(path, alias_query, birthday_id)
+
+
+@pytest.mark.parametrize("language", ["en", "zh"])
+@pytest.mark.parametrize("neutral_first", [False, True])
+@pytest.mark.parametrize("tier", ["local", "cloud"])
+@pytest.mark.parametrize("source", ["name", "alias", "birthday"])
+def test_alias_order_keeps_each_source_destination_permission(
+    tmp_path: Path, language: str, neutral_first: bool, tier: Literal["local", "cloud"], source: str,
+) -> None:
+    path = tmp_path / "world.sqlite3"
+    name_query, alias_query, birthday_id, _ = _alias_world(path, language, neutral_first)
+    assert _selected(path, name_query, birthday_id, tier)
+    assert _selected(path, alias_query, birthday_id, tier)
+    _command(path, "update_evidence_permissions", "evidence", source, {"allow_" + tier + "_read": False})
+    # With a self-name canonical, its direct identity does not depend on an
+    # independently revoked alias. The alias query always requires that link.
+    denied_query = alias_query if source == "alias" and not neutral_first else name_query
+    assert not _selected(path, denied_query, birthday_id, tier)
+    if source == "alias" and not neutral_first:
+        assert _selected(path, name_query, birthday_id, tier)
+    other: Literal["local", "cloud"] = "cloud" if tier == "local" else "local"
+    assert _selected(path, name_query, birthday_id, other)
+    assert _selected(path, alias_query, birthday_id, other)
+
+
+@pytest.mark.parametrize("language", ["en", "zh"])
+@pytest.mark.parametrize("neutral_first", [False, True])
+@pytest.mark.parametrize("operation,target", [
+    ("archive_world_item", "name-cognition"), ("mute_world_item", "name-cognition"),
+    ("retract_world_item", "name-cognition"), ("delete_world_item", "name-cognition"),
+    ("forget_evidence", "name"), ("delete_evidence", "name"),
+    ("forget_evidence", "alias"), ("delete_evidence", "alias"),
+])
+def test_alias_order_does_not_resurrect_withdrawn_identity_sources(
+    tmp_path: Path, language: str, neutral_first: bool, operation: str, target: str,
+) -> None:
+    path = tmp_path / "world.sqlite3"
+    name_query, alias_query, birthday_id, name_id = _alias_world(path, language, neutral_first)
+    assert _selected(path, name_query, birthday_id)
+    _command(path, operation, "cognition" if target == "name-cognition" else "evidence",
+             name_id if target == "name-cognition" else target)
+    denied_query = alias_query if target == "alias" and not neutral_first else name_query
+    for tier in ("local", "cloud"):
+        assert not _selected(path, denied_query, birthday_id, tier)
+        assert _selected(path, "1996-08-02" if language == "en" else "1996年8月2日", birthday_id, tier)
+
+
+@pytest.mark.parametrize("language", ["en", "zh"])
+@pytest.mark.parametrize("neutral_first", [False, True])
+def test_alias_order_never_promotes_third_party_naming(tmp_path: Path, language: str, neutral_first: bool) -> None:
+    path = tmp_path / "world.sqlite3"
+    name_query, alias_query, birthday_id, _ = _alias_world(path, language, neutral_first, self_naming=False)
+    assert not _selected(path, name_query, birthday_id)
+    assert not _selected(path, alias_query, birthday_id)
+
+
+@pytest.mark.parametrize("language", ["en", "zh"])
+@pytest.mark.parametrize("neutral_first", [False, True])
+def test_alias_order_retains_same_name_ambiguity(tmp_path: Path, language: str, neutral_first: bool) -> None:
+    path = tmp_path / "world.sqlite3"
+    name_query, alias_query, birthday_id, _ = _alias_world(path, language, neutral_first)
+    name = ("Marty" if neutral_first else "Martin Mark") if language == "en" else ("小晓" if neutral_first else "林晓")
+    raw = f"{name} is my colleague." if language == "en" else f"{name}是我的同事。"
+    proposition = raw if language == "en" else "用户" + raw
+    _apply(path, raw, _relationship(proposition, name, "colleague", (0, len(raw)), evidence_id="colleague"), "colleague")
+    assert not _selected(path, name_query, birthday_id)
+    assert not _selected(path, alias_query, birthday_id)
 
 
 @pytest.mark.parametrize("language", ["en", "zh"])

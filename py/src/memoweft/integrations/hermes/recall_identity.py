@@ -82,7 +82,9 @@ def associate_owner_names(
         entity_names[entity_id] = names
         if has_source and any(
             row.get("statement_kind") == "naming" and not row.get("is_superseded")
-            and _names_self(str(row["content"]), canonical_name)
+            # The accepted self-name may have become a permission-eligible
+            # alias when the earlier-formed neutral name stayed canonical.
+            and any(_names_self(str(row["content"]), name) for name in names)
             for row in rows
         ):
             self_ids.add(entity_id)
