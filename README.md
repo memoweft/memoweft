@@ -63,8 +63,15 @@ MemoWeft keeps these boundaries explicit:
   an omitted scope from a unique earlier user source in the same conversation,
   using existing jobs, interactions and live Evidence in its read transaction.
   This projection is never stored as scope or added as fact support, and disappears
-  when its original context or destination permission is unavailable. Person
-  labels use the existing real target entity. Labels participate in matching and
+  when its original context or destination permission is unavailable. Reference
+  resolution requires the whole user context to fit a single
+  introduction and supported anaphoric continuations; unknown clauses leave the
+  label empty, even when no competing entity has been created or nominated.
+  The same conservative rule applies to omitted topic scopes. When identical
+  bodies acquire differently scoped sources, each verified source scope remains
+  searchable, but no single scope is displayed as their common label. This is
+  computed from existing applied jobs and support links without rewriting scope.
+  Person labels use the existing real target entity. Labels participate in matching and
   render as `记忆：［标签：original phrase］original body`, within the existing
   character budget. They are context labels, not additional user claims.
   Legacy records without labels remain readable and writable. This does not add

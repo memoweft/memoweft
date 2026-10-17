@@ -47,7 +47,7 @@ from .world_worker import (
     WorldJobResult,
 )
 from .terminal_outcome import persist_terminal_outcome_in_transaction
-from .recall import _grounded_scope, _predecessor_match_texts
+from .recall import _supported_scope, _predecessor_match_texts
 
 logger = logging.getLogger(__name__)
 
@@ -3046,9 +3046,8 @@ class HermesBatchAdapterProcessor:
                 topic_canonical_name=topic_canonical_name,
                 topic_aliases=topic_aliases,
                 scope=(
-                    _grounded_scope(
-                        raw_item.get("scope", topic_canonical_name),
-                        [raw_by_id[eid][:end] for eid, _start, end, _text in parsed],
+                    _supported_scope(
+                        raw_item.get("scope", topic_canonical_name), parsed, raw_by_id,
                         (set(current_entity_mentions or {}) | (batch_entity_names or set())
                          | ({topic_canonical_name} if topic_canonical_name else set()))
                         - {"用户", "我", OWNER_ENTITY_NAME},

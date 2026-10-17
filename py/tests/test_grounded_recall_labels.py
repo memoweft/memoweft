@@ -449,3 +449,88 @@ def test_review_same_body_keeps_each_source_scope_searchable(tmp_path: Path, lan
             assert snapshot.rendered_recall == '记忆：' + body
             assert recall_world_snapshot(db, 'owner', query) == snapshot
         assert list(db.iterdump()) == before
+
+@pytest.mark.parametrize('language', ['en', 'zh'])
+def test_review_target_label_cannot_ignore_unmaterialized_person(tmp_path: Path, language: str) -> None:
+    from test_hermes_batch_adapter_v3 import _naming
+    path = tmp_path / 'memory.sqlite3'
+    name, declaration, prior, quote, mention = (
+        'Alice', 'Her name is Alice.', 'I met Alice. I also met Beth.', 'She likes tea.', 'She'
+    ) if language == 'en' else (
+        '小林', '她叫小林。', '我认识小林，也认识小周。', '她喜欢茶。', '她'
+    )
+    _apply_fact(path, declaration, None, item=_naming(declaration, name, (0, len(declaration)), evidence_id='seed'))
+    raw = prior + ' ' + quote
+    item = _form(quote, (len(prior) + 1, len(raw)), kind='attribute', evidence_id='person')
+    item['entity'] = {'canonical_name': name, 'kind': 'person'}
+    item['entity_reference'] = {'mention': mention}
+    cid = _apply_fact(path, raw, None, job='person', item=item)
+    with sqlite3.connect(path) as db:
+        before = list(db.iterdump())
+        result = recall_world_snapshot(db, 'owner', quote)
+        assert result is not None and ('cognition', cid) in result.selected_item_ids
+        assert '记忆：' + quote in result.rendered_recall
+        assert f'［标签：{name}］{quote}' not in result.rendered_recall
+        assert list(db.iterdump()) == before
+
+@pytest.mark.parametrize('extra', [
+    'It was thrilling and climbing is fun.',
+    'It was thrilling while climbing was exciting.',
+    'Climbing: another activity I enjoy.',
+    'As for climbing, that was fun too.',
+    'Beth enjoys climbing.',
+])
+def test_review_unparsed_continuation_is_not_uniqueness_proof(tmp_path: Path, extra: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    quote = 'I find these activities inspiring.'
+    turns = [
+        {'role': 'user', 'content': 'I enjoy diving. ' + extra, 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0},
+        {'role': 'user', 'content': quote, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1},
+    ]
+    _, body = _world(path, turns, quote, 'diving')
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
+
+@pytest.mark.parametrize('change,tier,remaining', [
+    ("UPDATE evidence SET allow_local_read=0 WHERE id='source-0'", 'local', False),
+    ("UPDATE evidence SET allow_cloud_read=0 WHERE id='source-1'", 'cloud', False),
+    ("DELETE FROM cognition_evidence WHERE evidence_id='source-0'", 'local', True),
+])
+def test_review_multiple_scopes_follow_live_support_gate(tmp_path: Path, change: str, tier: str, remaining: bool) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    quote = 'I find these activities inspiring.'
+    for index, word in enumerate(('diving', 'climbing')):
+        raw = f'I enjoy {word}. ' + quote
+        item = _form(quote, (raw.index(quote), len(raw)), evidence_id=f'source-{index}')
+        _apply_fact(path, raw, word, job=f'source-{index}', item=item)
+    with sqlite3.connect(path) as db:
+        db.execute(change)
+        db.commit()
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', 'climbing', model_tier=tier)  # type: ignore[arg-type]
+        assert snapshot is not None
+        if remaining:
+            assert snapshot.count == 1 and snapshot.rendered_recall == '记忆：［标签：climbing］' + quote
+            assert db.execute('SELECT scope FROM cognition').fetchone()[0] == 'diving'
+            old = recall_world_snapshot(db, 'owner', 'diving')
+            assert old is not None and old.count == 0
+        else:
+            assert snapshot.count == 0 and snapshot.rendered_recall == ''
+        assert list(db.iterdump()) == before
+
+@pytest.mark.parametrize('prior', [
+    "I enjoy diving. Yeah, the climbing trip was something I didn't expect to enjoy so much.",
+    'I recently had an interesting experience at a climbing event where I tried diving.',
+])
+def test_review_new_topic_cannot_hide_in_nominal_context(tmp_path: Path, prior: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    quote = 'I find these activities inspiring.'
+    turns = [
+        {'role': 'user', 'content': prior, 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0},
+        {'role': 'user', 'content': quote, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1},
+    ]
+    _, body = _world(path, turns, quote, 'diving')
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body

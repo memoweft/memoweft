@@ -1000,6 +1000,78 @@ def _grounded_scope(value: object, texts: Sequence[str], competitors: Iterable[s
     return value
 
 
+
+def _reference_context_unique(word: str, texts: Sequence[str]) -> bool:
+    """Positive, deliberately narrow proof of a single discourse referent.
+
+    Finding the nominated substring (or failing to find a known competitor) is
+    NOT proof of uniqueness. Every sentence must be either the sole introduction
+    or an explicitly anaphoric continuation. Unrecognized independent clauses,
+    including unseen people/topics, make the entire projection unavailable.
+    This is not a general natural-language entity extractor.
+    """
+    introductions = 0
+    for text in texts:
+        sentences = [part.strip() for part in re.split(r'[.!?。！？;；\n]+', text) if part.strip()]
+        for sentence in sentences:
+            sentence = re.sub(r'^(?:Hey|Yeah|Yes|Exactly),?\s*', '', sentence)
+            if _grounded_scope(word, [sentence]):
+                # Full-match the introduction; no unexplained trailing object
+                # or second clause is silently treated as a unique antecedent.
+                noun = re.escape(word)
+                simple = (r"(?:I (?:recently )?(?:enjoy|like|love|prefer|met|know|tried)|"
+                          r"(?:Her|His|Their) name is) " + noun + r"(?: companionship)?")
+                situated = (r"I recently (?:spent some time at a friend's (?:house|home) "
+                            r"and interacted with their|had an? (?:interesting|new|memorable) experience at a "
+                            r"(?:team-building|social|work|school|community) event where I tried) " + noun)
+                topic = (r"I've been thinking (?:a lot )?about my (?:travel|pet|sports|food|reading) preferences "
+                         r"(?:lately, )?especially " + noun)
+                chinese = (r"(?:[他她]叫|我(?:最近)?(?:在一个朋友家)?接触了|"
+                           r"我(?:最近)?(?:参加(?:团建|聚会|学校活动)时)?体验了|"
+                           r"我(?:最近)?(?:一直在)?(?:重新)?考虑|我(?:喜欢|认识))" + noun)
+                if not any(re.fullmatch(pattern, sentence) for pattern in (simple, situated, topic, chinese)):
+                    return False
+                introductions += 1
+                continue
+            # Anaphoric clauses may describe the already-introduced referent,
+            # but an independent subject/object introduction is not accepted.
+            clauses = re.split(r',\s*(?:and |but )?|\b(?:and|but) (?=(?:I|[A-Z]))', sentence)
+            for clause in clauses:
+                clause = clause.strip()
+                # Closed continuation shapes, not an open-ended "It ..."
+                # prefix: an anaphoric opening can still introduce a second
+                # topic later in the same sentence. Unparsed tails fail closed.
+                patterns = (
+                    r"(?:It|This|That) (?:was|is) (?:(?:quite|very|really) [a-z-]+|"
+                    r"such an? [a-z-]+ (?:creature|experience|activity))",
+                    r"I (?:found|find) (?:its|their) [a-z-]+(?:ity|ness|ance|ence) (?:(?:really|very) )?[a-z-]+",
+                    r"I used to love them for their [a-z-]+ on [a-z-]+(?: and [a-z-]+)*",
+                    r"it seems like many have (?:shifted|changed|moved) towards [a-z-]+ [a-z-]+",
+                    r"It's [a-z-]+ because it doesn't [a-z-]+ with my (?:[a-z-]+ ){0,3}[a-z-]+",
+                    r"It's (?:definitely|really) made me (?:more|less) [a-z-]+ to "
+                    r"(?:trying|exploring|experiencing) (?:new|different) (?:things|experiences|activities)",
+                    r"the (?:adrenaline rush|excitement|thrill|feeling) was something I didn't expect to (?:enjoy|like) so much",
+                )
+                if not any(re.fullmatch(pattern, clause) for pattern in patterns):
+                    return False
+    return introductions == 1
+
+
+def _supported_scope(
+    value: object, supports: Sequence[tuple[str, int, int, str]], raw: Mapping[str, str],
+    competitors: Iterable[str] = (),
+) -> str | None:
+    """Use selected words directly; resolving an omitted subject needs proof."""
+    if not isinstance(value, str):
+        return None
+    contexts = [raw[eid][:start] for eid, start, _end, _text in supports]
+    selected = [text for _eid, _start, _end, text in supports]
+    if not _grounded_scope(value, [raw[eid][:end] for eid, _start, end, _text in supports], competitors):
+        return None
+    if _grounded_scope(value, selected) or _reference_context_unique(value, contexts):
+        return value
+    return None
+
 def _label_source(
     db: sqlite3.Connection, subject_id: str, evidence_id: str, model_tier: ModelTier,
 ) -> tuple[str, str, str] | None:
@@ -1021,7 +1093,7 @@ def _label_jobs(
 ) -> list[tuple[Any, ...]]:
     # Existing job/support association only. No label relation is created.
     return db.execute(
-        "SELECT j.parent_session_id,j.host_id,j.evidence_ids_json,j.model_result_json "
+        "SELECT j.parent_session_id,j.host_id,j.evidence_ids_json,j.model_result_json,j.world_result_json "
         "FROM memory_world_job j WHERE j.subject_id=? AND j.state='applied' "
         "AND EXISTS (SELECT 1 FROM json_each(j.evidence_ids_json) e "
         "JOIN cognition_evidence ce ON ce.evidence_id=e.value WHERE ce.cognition_id=?) "
@@ -1032,6 +1104,7 @@ def _label_jobs(
 def _prior_label_word(
     db: sqlite3.Connection, subject_id: str, session_id: str, host_id: str,
     cutoff: str, nomination: str, model_tier: ModelTier,
+    current_context: Sequence[str] = (),
 ) -> str | None:
     """Recover one exact user word in the preceding four interactions.
 
@@ -1097,89 +1170,110 @@ def _prior_label_word(
             competitors.add(str(name))
     grounded = {word for word in competitors | {nomination} if _grounded_scope(word, texts)}
     matches = [text for text in texts if _grounded_scope(nomination, [text])]
-    return nomination if grounded == {nomination} and len(matches) == 1 else None
+    return nomination if (grounded == {nomination} and len(matches) == 1
+                          and _reference_context_unique(nomination, [*texts, *current_context])) else None
 
 
 def _cognition_label(
     db: sqlite3.Connection, subject_id: str, cognition_id: str, content: str,
     scope: object, model_tier: ModelTier,
-) -> str | None:
-    """Read-only presentation/matching label; never an additional fact support."""
-    # A malformed/missing legacy checkpoint only removes this optional label.
+) -> tuple[str | None, tuple[str, ...]]:
+    """Separate unanimous display attribution from per-source retrieval cues.
+
+    Same-ID reaffirmations do not write a new scope or a span ledger. Recover
+    their nominations using the existing applied job receipt, exact selected
+    user text and cognition_evidence link. Never let the first stored scope
+    stand for later, differently-scoped sources.
+    """
     try:
+        from .batch_adapter import _parse_supports, _stated_normalize, _stated_normalize_no_subject_prepend
         evidence_ids = [str(row[0]) for row in db.execute(
             "SELECT evidence_id FROM cognition_evidence WHERE cognition_id=? ORDER BY evidence_id",
             (cognition_id,),
         )]
-        sources = [_label_source(db, subject_id, eid, model_tier) for eid in evidence_ids]
-        if not sources or any(source is None for source in sources):
-            return None
-        texts = [source[0] for source in sources if source is not None]
+        sources = {eid: _label_source(db, subject_id, eid, model_tier) for eid in evidence_ids}
+        if not sources or any(source is None for source in sources.values()):
+            return None, ()
+        texts = [source[0] for source in sources.values() if source is not None]
         target = db.execute(
             "SELECT target_entity_id FROM cognition_target WHERE cognition_id=?", (cognition_id,),
         ).fetchone()
         names = _entity_names(db, subject_id, str(target[0]), model_tier) if target else ()
-        direct_names = {name for name in names if _grounded_scope(name, texts)}
         if target:
+            direct_names = {name for name in names if _grounded_scope(name, [content]) and _grounded_scope(name, texts)}
             if len(direct_names) == 1:
-                return next(iter(direct_names))
+                name = next(iter(direct_names))
+                return name, (name,)
             if len(direct_names) > 1 or not names:
-                return None
-        elif scope is not None:
-            # Old scope values are neither rewritten nor assumed to be quotes.
-            return _grounded_scope(scope, texts)
-        recovered: set[str] = set()
+                return None, ()
+        words_by_source: dict[str, set[str]] = {eid: set() for eid in evidence_ids}
+        if not target and _grounded_scope(scope, [content]):
+            # Old records remain useful without jobs. A stored scope is only a
+            # direct cue for the sources that actually contain that word.
+            for eid, source in sources.items():
+                if source is not None and _grounded_scope(scope, [source[0]]):
+                    words_by_source[eid].add(str(scope))
         jobs = _label_jobs(db, subject_id, cognition_id)
-        if len({(job[0], job[1]) for job in jobs}) != 1:
-            return None
-        for session_id, host_id, ids_json, model_json in jobs:
+        sessions_by_source = {eid: {(job[0], job[1]) for job in jobs if eid in json.loads(job[2])}
+                              for eid in evidence_ids}
+        for session_id, host_id, ids_json, model_json, world_json in jobs:
             ids = json.loads(ids_json)
-            if not isinstance(ids, list) or not set(evidence_ids).issubset(ids):
+            if not isinstance(ids, list):
                 continue
-            if any(source is None or source[2] != host_id for source in sources):
+            raw = {eid: source[0] for eid, source in sources.items()
+                   if eid in ids and source is not None and source[2] == host_id}
+            if not raw:
                 continue
-            nominations = set(names) if target else set()
-            if not target and model_json:
-                # Resolve by exact body AND the existing support spans, not by
-                # array position (the compiler can normalize/filter items).
-                from .batch_adapter import _parse_supports
-                payload = json.loads(model_json)
-                interpretation = json.loads(payload.get('content') or '{}')
-                for item in interpretation.get('cognitions', []):
-                    if (not isinstance(item, dict) or item.get('proposition') != content
-                            or item.get('action') != 'form' or item.get('formed_by', 'stated') != 'stated'
-                            or item.get('statement_kind') not in {'attribute', 'preference'}):
+            if not model_json or not world_json:
+                continue
+            outcome = json.loads(world_json)
+            if not any(isinstance(result, dict) and result.get('action') == 'form'
+                       and result.get('cognition_id') == cognition_id
+                       for result in outcome.get('cognitions', [])):
+                continue
+            interpretation = json.loads(json.loads(model_json).get('content') or '{}')
+            for item in interpretation.get('cognitions', []):
+                if (not isinstance(item, dict) or item.get('proposition') != content
+                        or item.get('action') != 'form' or item.get('formed_by', 'stated') != 'stated'
+                        or item.get('statement_kind') not in {'attribute', 'preference'}):
+                    continue
+                supports, _ = _parse_supports(item.get('supports'), set(raw), raw)
+                normalize = _stated_normalize_no_subject_prepend if target else _stated_normalize
+                if not supports or any(normalize(text) != content for _eid, _start, _end, text in supports):
+                    continue
+                topic = item.get('entity')
+                scope_word = item.get('scope', topic.get('canonical_name') if isinstance(topic, dict)
+                                      and topic.get('kind') == 'topic' else None)
+                nominations = names if target else (scope_word,)
+                for word in nominations:
+                    if not isinstance(word, str) or not _grounded_scope(word, [word]):
                         continue
-                    word = item.get('scope')
-                    if _grounded_scope(word, [str(word)]) is None:
+                    if not target and db.execute(
+                        "SELECT 1 FROM entity WHERE world_id=? AND kind='person' AND canonical_name=?",
+                        (subject_id, word),
+                    ).fetchone():
                         continue
-                    if db.execute("SELECT 1 FROM entity WHERE world_id=? AND kind='person' AND canonical_name=?",
-                                  (subject_id, word)).fetchone():
-                        continue
-                    raw = {eid: source[0] for eid in ids
-                           if (source := _label_source(db, subject_id, str(eid), model_tier)) is not None}
-                    supports, _ = _parse_supports(item.get('supports'), set(raw), raw)
-                    if not supports or {part[0] for part in supports} != set(evidence_ids):
-                        continue
-                    verified = all(db.execute(
-                        "SELECT 1 FROM evidence_ledger WHERE json_valid(content) "
-                        "AND json_extract(content,'$.cognition_id')=? "
-                        "AND json_extract(content,'$.evidence_id')=? "
-                        "AND json_extract(content,'$.relation')='support' "
-                        "AND json_extract(payload_json,'$.start')=? AND json_extract(payload_json,'$.end')=? "
-                        "AND json_extract(payload_json,'$.span_hash')=?",
-                        (cognition_id, eid, start, end, sha256(text.encode('utf-8')).hexdigest()),
-                    ).fetchone() for eid, start, end, text in supports)
-                    if verified:
-                        nominations.add(str(word))
-            cutoff = min(source[1] for source in sources if source is not None)
-            for word in nominations:
-                original = _prior_label_word(db, subject_id, str(session_id), str(host_id), cutoff, word, model_tier)
-                if original:
-                    recovered.add(original)
-        return next(iter(recovered)) if len(recovered) == 1 else None
+                    original = _supported_scope(word, supports, raw)
+                    if original is None:
+                        # Never escape a competing current context by finding
+                        # the same word in some older turn instead.
+                        if any(_grounded_scope(word, [raw[eid][:end]]) for eid, _start, end, _text in supports):
+                            continue
+                        if any(len(sessions_by_source[eid]) != 1 for eid, _s, _e, _t in supports):
+                            continue
+                        cutoff = min(source[1] for eid, _s, _e, _t in supports if (source := sources[eid]) is not None)
+                        original = _prior_label_word(
+                            db, subject_id, str(session_id), str(host_id), cutoff, word, model_tier,
+                            [raw[eid][:start] for eid, start, _end, _text in supports],
+                        )
+                    if original:
+                        for eid, _start, _end, _text in supports:
+                            words_by_source[eid].add(original)
+        cues = tuple(sorted(set().union(*words_by_source.values())))
+        label = cues[0] if len(cues) == 1 and all(words_by_source.values()) else None
+        return label, cues
     except (sqlite3.Error, TypeError, ValueError, KeyError, AttributeError):
-        return None
+        return None, ()
 
 
 def _current_world_rows(
@@ -1231,8 +1325,9 @@ def _current_world_rows(
             content = str(row[1])
             anchors = _graph_match_anchors(db, subject_id, current_kind, row_id, model_tier)
             label = None
+            label_cues: tuple[str, ...] = ()
             if kind == "cognition":
-                label = _cognition_label(db, subject_id, row_id, content, row[4], model_tier)
+                label, label_cues = _cognition_label(db, subject_id, row_id, content, row[4], model_tier)
                 if str(row[3]) == "naming":
                     anchors = tuple(dict.fromkeys(
                         name for entity in db.execute(
@@ -1257,10 +1352,10 @@ def _current_world_rows(
                     "statement_kind": str(row[3]) if kind == "cognition" else kind,
                     "match_text": _graph_match_text(
                         db, subject_id, current_kind, row_id,
-                        ' '.join(filter(None, (content, label))), model_tier
+                        ' '.join((content, *label_cues)), model_tier
                     ),
                     "anchors": anchors,
-                    "topic_cues": tuple(dict.fromkeys((label,) if label else ())) + tuple(dict.fromkeys(
+                    "topic_cues": label_cues + tuple(dict.fromkeys(
                         cue for text in (content, *predecessor_texts)
                         for cue in _graph_topic_cues(db, subject_id, text, model_tier)
                     )),
