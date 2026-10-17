@@ -64,12 +64,20 @@ MemoWeft keeps these boundaries explicit:
   using existing jobs, interactions and live Evidence in its read transaction.
   This projection is never stored as scope or added as fact support, and disappears
   when its original context or destination permission is unavailable. Label
-  acceptance has one entry, `_decide_grounded_label`: it collects all same-kind
-  candidates from the current support and readable same-conversation context
-  before deciding. Only a complete collection containing exactly the nominated
-  original word permits a label. Body hits, entity names, legacy scope values
-  and appended sources share this rule; unknown clauses leave the label empty,
-  even when no competing entity has been created or nominated. When identical
+  acceptance has one entry, `_decide_grounded_label`: all possible referents in
+  the current support and readable user context compete, regardless of class,
+  grammatical role or entity registration. Each formation item seeking a label
+  must also supply `label_candidates`, a nonempty list of verbatim user phrases
+  reporting every possible referent in that window. Rules and model reports are
+  unioned; only one object, exactly the nominated original word, permits a label.
+  Missing, empty, malformed or ungrounded reports and uncertain segmentation
+  leave it empty without discarding the fact. Only small grammatical frames and
+  known word boundaries are recognized; unregistered CJK runs and compound
+  phrases are deliberately uncertain. Properties and objects are not exempt.
+  Body hits, entity names, legacy scopes and appended sources share this rule.
+  Existing job model responses retain the reports; no new table or fact support
+  is created. An old scope without a retained report is not a display label.
+  When identical
   bodies acquire differently scoped sources, each verified source scope remains
   searchable, but no single scope is displayed as their common label. This is
   computed from existing applied jobs and support links without rewriting scope.

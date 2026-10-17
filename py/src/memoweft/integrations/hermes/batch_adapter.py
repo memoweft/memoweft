@@ -758,6 +758,7 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "每个希望加标签的条目必须附 label_candidates：非空字符串数组，逐字列出当前支持正文及可读同会话上文用户话中的所有可指代对象（人名、实体、主题、活动、地点、物品及名词性内容，不分类型、不论主语宾语），不能只列 scope 或 entity 提名的词，不能拿助手话补充；不确定或没列完整就不给标签，但事实仍按原合同形成。\n"
     "可选 scope 只表示适用范围，不是新事实：只提名一个用户逐字说过的范围词。可从同会话此前用户 conversation_context 消解省略的主题，不用助手原话。人物/主题竞争、找不到原词时 scope=null。不得为标签改命题、supports、真实实体归属或形成资格；缺标签仍按原合同形成合法事实。\n"
     "明确纠正人名（含省略主题的‘那个人名写错了’）用 action=correct、statement_kind=alias、entity=新姓名、alias_of=旧姓名；不是 correct+naming，也不附 corrects_cognition_id、corrects_relationship_id 或 corrects_event_id。两姓名必须都在当前纠正原话中。\n"
     "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed；两种确认决定都必须用 assistant_claim 逐字引用 context 中被确认的助手提议（保留人物姓名和适用情境），保存双方来源；stated 命题仍从用户原话派生。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
@@ -869,6 +870,7 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "Every item seeking a label must include label_candidates: a nonempty array of exact user phrases listing ALL possible referents in its current support and readable prior user turns. Include names, entities, topics, activities, places, objects and nominal content, regardless of class or subject/object role. Do not report only the nominated scope/entity or use assistant text. Uncertainty or an incomplete report means no label, never rejection of an otherwise legal fact.\n"
     "Optional scope is an applicability domain, not a new claim: nominate one exact user phrase only. "
     "It may resolve an omitted topic from prior user conversation_context, but never from assistant prose. "
     "Competing people/topics or missing original wording mean scope=null. Do not change the proposition, "
@@ -2147,7 +2149,7 @@ class HermesBatchAdapterProcessor:
                     current_texts = [raw_by_id[eid][:end] for eid, _start, end, _text in item.supports]
                     known_labels = [(str(entity['canonical_name']), str(entity['kind']))
                                     for entity in self._current_entities_payload(job, db)]
-                    decision = recall_labels._decide_grounded_label(scope_nomination, [(*label_context, *current_texts)], known=known_labels)
+                    decision = recall_labels._decide_grounded_label(scope_nomination, [(*label_context, *current_texts)], known=known_labels, reports=[raw_item.get('label_candidates')])
                     scope = decision.label
                     # This is a persistence restriction, not another acceptance
                     # route: cross-turn labels remain read-only projections.

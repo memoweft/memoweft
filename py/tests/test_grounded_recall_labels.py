@@ -38,11 +38,33 @@ CASES += [(name + '-zh-new', label,
           for name, label, prior, quote in CHINESE]
 
 
+# Full fixed self-reports for the frozen cases, not model calls. Chinese is
+# still newly authored. These are all now intentionally negative label cases.
+FROZEN_REPORTS = {
+    'session5/q2-en': ['friend', 'house', 'Golden Retriever', 'creature', 'adaptability', 'emotional support', 'companionship'],
+    'session9/q1-en': ['experience', 'team-building event', 'simulated skydiving', 'adrenaline rush', 'things', 'limits', 'activities'],
+    'session11/q0-en': ['travel preferences', 'wellness retreats', 'health', 'relaxation', 'luxury experiences', 'travel goals', 'alternatives', 'nature hikes', 'cultural tours'],
+    'session5/q1-en': ['friend', 'house', 'Golden Retriever'],
+    'session5/q2-zh-new': ['朋友', '家', '金毛寻回犬', '情感支持', '陪伴'],
+    'session9/q1-zh-new': ['团建', '模拟跳伞', '活动', '极限', '创造力'],
+    'session11/q0-zh-new': ['健康度假', '自然徒步', '文化游', '替代选择'],
+    'session5/q1-zh-new': ['朋友', '家', '金毛寻回犬'],
+}
+SINGLE_CONTEXT: dict[str, Any] = {
+    'scope': 'diving', 'quote': 'I like it.',
+    'turns': [
+        {'role': 'user', 'content': 'I enjoy diving.', 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0},
+        {'role': 'user', 'content': 'I like it.', 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1},
+    ],
+}
+
+
 def _iso(value: str) -> str:
     return datetime.strptime(value, '%b %d, %Y, %H:%M:%S').replace(tzinfo=timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
 
 _MODEL_UNSET = object()
+_MISSING_REPORT = object()
 
 
 def _world(path: Path, turns: list[dict[str, Any]], quote: str, scope: object,
@@ -56,7 +78,11 @@ def _world(path: Path, turns: list[dict[str, Any]], quote: str, scope: object,
     item = _form(proposition, (raw.index(quote), raw.index(quote) + len(quote)))
     if scope is not None:
         item['scope'] = scope
-    if reported is not _MODEL_UNSET:
+    # Default fixed response deliberately under-reports just the nomination;
+    # negative cases must still be caught by rule-side collection.
+    if reported is _MODEL_UNSET:
+        item['label_candidates'] = [scope] if isinstance(scope, str) and scope else []
+    elif reported is not _MISSING_REPORT:
         item['label_candidates'] = reported
 
     def setup(path: Path) -> None:
@@ -90,16 +116,17 @@ def _world(path: Path, turns: list[dict[str, Any]], quote: str, scope: object,
 def test_frozen_failures_keep_body_and_ground_labels(tmp_path: Path, name: str, label: str,
                                                     turns: list[dict[str, Any]], quote: str) -> None:
     path = tmp_path / 'memory.sqlite3'
-    cid, body = _world(path, turns, quote, label or 'ThomasSusan')
+    assert all(any(word in turn['content'] for turn in turns if turn['role'] == 'user') for word in FROZEN_REPORTS[name])
+    cid, body = _world(path, turns, quote, label or 'ThomasSusan', reported=FROZEN_REPORTS[name])
     with sqlite3.connect(path) as db:
         before = list(db.iterdump())
-        snapshot = recall_world_snapshot(db, 'owner', label or body)
+        snapshot = recall_world_snapshot(db, 'owner', body)
         assert snapshot is not None
         assert ('cognition', cid) in snapshot.selected_item_ids
-        expected = f'记忆：［标签：{label}］{body}' if label else f'记忆：{body}'
+        expected = f'记忆：{body}'  # Any extra referent/uncertainty now blocks all four cases.
         assert snapshot.rendered_recall == expected
         assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] is None
-        assert recall_world_snapshot(db, 'owner', label or body) == snapshot
+        assert recall_world_snapshot(db, 'owner', body) == snapshot
         assert list(db.iterdump()) == before
 
 @pytest.mark.parametrize('change,tier', [
@@ -119,20 +146,25 @@ def test_frozen_failures_keep_body_and_ground_labels(tmp_path: Path, name: str, 
     ("UPDATE memory_world_job SET model_result_json='{}' WHERE job_id='job-1'", 'local'),
     ("UPDATE memory_world_job SET model_result_json='broken' WHERE job_id='job-1'", 'local'),
 ])
-def test_missing_context_removes_only_label(tmp_path: Path, change: str, tier: str) -> None:
+@pytest.mark.parametrize('fixture', ['exam', 'single'])
+def test_missing_context_removes_only_label(tmp_path: Path, change: str, tier: str, fixture: str) -> None:
     path = tmp_path / 'memory.sqlite3'
-    case = ENGLISH[0]
+    case = ENGLISH[0] if fixture == 'exam' else SINGLE_CONTEXT
     cid, body = _world(path, case['turns'], case['quote'], case['scope'])
     with sqlite3.connect(path) as db:
         before = recall_world_snapshot(db, 'owner', body, model_tier=tier)  # type: ignore[arg-type]
-        assert before is not None and '［标签：Golden Retriever］' in before.rendered_recall
+        assert before is not None
+        assert ('［标签：' in before.rendered_recall) == (fixture == 'single')
         db.execute(change)
         db.commit()
         stable = list(db.iterdump())
         after = recall_world_snapshot(db, 'owner', body, model_tier=tier)  # type: ignore[arg-type]
         assert after is not None and after.selected_item_ids == (('cognition', cid),)
         assert after.rendered_recall == '记忆：' + body
-        assert after.recall_snapshot_token != before.recall_snapshot_token
+        if fixture == 'single':
+            assert after.recall_snapshot_token != before.recall_snapshot_token
+        else:
+            assert after.rendered_recall == before.rendered_recall
         assert after.world_revision == before.world_revision
         assert recall_world_snapshot(db, 'owner', body, model_tier=tier) == after  # type: ignore[arg-type]
         assert list(db.iterdump()) == stable
@@ -174,6 +206,9 @@ def _apply_fact(path: Path, raw: str, scope: object, *, job: str = 'seed',
     if item is None:
         item = _form(_stated_normalize(raw), (0, len(raw)), evidence_id=job)
     item['scope'] = scope
+    entity = item.get('entity')
+    item.setdefault('label_candidates', [scope] if isinstance(scope, str) and scope else
+                    [entity['canonical_name']] if isinstance(entity, dict) and 'canonical_name' in entity else [])
     batch = _batch(item)
     batch['schema_version'] = 8
     _run(path, MutableClock(), [_model(batch)], (job,),
@@ -191,13 +226,13 @@ def test_current_evidence_scope_is_durable_without_new_support(tmp_path: Path, r
     path = tmp_path / 'memory.sqlite3'
     cid = _apply_fact(path, raw, scope)
     with sqlite3.connect(path) as db:
-        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] == scope
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] is None
         assert db.execute('SELECT evidence_id FROM cognition_evidence').fetchall() == [('seed',)]
         assert db.execute('SELECT count(*) FROM cognition_target').fetchone()[0] == 0
         db.execute('DELETE FROM memory_world_job')
         db.commit()
         snapshot = recall_world_snapshot(db, 'owner', scope)
-        assert snapshot is not None and snapshot.rendered_recall == f'记忆：［标签：{scope}］{_stated_normalize(raw)}'
+        assert snapshot is not None and snapshot.rendered_recall == f'记忆：{_stated_normalize(raw)}'
         db.execute("UPDATE evidence SET allow_cloud_read=0 WHERE id='seed'")
         db.commit()
         hidden = recall_world_snapshot(db, 'owner', scope, model_tier='cloud')
@@ -253,6 +288,7 @@ def test_competing_known_topics_or_people_do_not_get_a_label(tmp_path: Path, nam
                        (json.dumps([{'role': 'user', 'content': turns[0]['content'], 'message_id': 'context-message'}]),))
     item = _form(raw, (0, len(raw)), evidence_id='current')
     item['scope'] = names[0]
+    item['label_candidates'] = [names[0]]
     _run(path, MutableClock(), [_model(_batch(item))], ('current',), setup, job_id='current')
     assert _job(path, 'current')['state'] == 'applied'
     with sqlite3.connect(path) as db:
@@ -285,7 +321,8 @@ def test_budget_counts_labels_and_preserves_chinese_item_prefix(tmp_path: Path) 
         snapshot = recall_world_snapshot(db, 'owner', 'bookbinding')
         assert snapshot is not None and snapshot.count == 5
         assert len(snapshot.rendered_recall) <= 600
-        assert snapshot.rendered_recall.startswith('记忆：［标签：bookbinding］')
+        assert snapshot.rendered_recall.startswith('记忆：')
+        assert '［标签：' not in snapshot.rendered_recall  # stitching/method words also compete.
         assert all(line.startswith('记忆：') for line in snapshot.rendered_recall.splitlines())
         assert snapshot.rendered_recall.endswith('…')
 
@@ -298,11 +335,11 @@ def test_scope_uses_current_support_evidence_only_before_claim(tmp_path: Path, l
     turns = [{'role': 'user', 'content': raw, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1}]
     cid, body = _world(path, turns, quote, label)
     with sqlite3.connect(path) as db:
-        expected = label if label_first else None
+        expected = None  # companionship is another nominal object even in the earlier clause.
         assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] == expected
         snapshot = recall_world_snapshot(db, 'owner', body)
         assert snapshot is not None
-        assert snapshot.rendered_recall == '记忆：' + (f'［标签：{label}］' if label_first else '') + body
+        assert snapshot.rendered_recall == '记忆：' + body
 
 
 @pytest.mark.parametrize('language', ['en', 'zh'])
@@ -317,6 +354,7 @@ def test_person_label_reuses_real_target_and_live_original(tmp_path: Path, langu
     item = _form(raw, (0, len(raw)), evidence_id='attribute', kind='attribute')
     item['entity'] = {'canonical_name': name, 'kind': 'person'}
     item['entity_reference'] = {'mention': mention}
+    item['label_candidates'] = [name]
     def setup(p: Path) -> None:
         _set_evidence(p, 'attribute', raw)
         with sqlite3.connect(p) as db:
@@ -333,7 +371,8 @@ def test_person_label_reuses_real_target_and_live_original(tmp_path: Path, langu
         assert db.execute('SELECT evidence_id FROM cognition_evidence WHERE cognition_id=?', (cid,)).fetchall() == [('attribute',)]
         before = list(db.iterdump())
         snapshot = recall_world_snapshot(db, 'owner', raw)
-        assert snapshot is not None and f'记忆：［标签：{name}］{raw}' in snapshot.rendered_recall
+        assert snapshot is not None and '记忆：' + raw in snapshot.rendered_recall
+        assert '［标签：' not in snapshot.rendered_recall  # person + tea are distinct objects.
         assert list(db.iterdump()) == before
         db.execute("UPDATE evidence SET allow_local_read=0 WHERE id='seed'")
         db.commit()
@@ -384,19 +423,19 @@ def test_context_window_does_not_recover_words_model_never_saw(tmp_path: Path) -
         assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
 
 
-def test_current_labels_do_not_change_identity_revision_or_support(tmp_path: Path) -> None:
-    raw = 'I enjoy Golden Retriever companionship.'
-    labeled, legacy = tmp_path / 'labeled.sqlite3', tmp_path / 'legacy.sqlite3'
-    label_id = _apply_fact(labeled, raw, 'Golden Retriever')
+@pytest.mark.parametrize('raw,scope,labeled', [('I enjoy Golden Retriever companionship.', 'Golden Retriever', False), ('I enjoy diving.', 'diving', True)])
+def test_current_labels_do_not_change_identity_revision_or_support(tmp_path: Path, raw: str, scope: str, labeled: bool) -> None:
+    labeled_path, legacy = tmp_path / 'labeled.sqlite3', tmp_path / 'legacy.sqlite3'
+    label_id = _apply_fact(labeled_path, raw, scope)
     assert _apply_fact(legacy, raw, None) == label_id
-    with sqlite3.connect(labeled) as left, sqlite3.connect(legacy) as right:
+    with sqlite3.connect(labeled_path) as left, sqlite3.connect(legacy) as right:
         for query in ('SELECT id,content,content_type,formed_by,confidence,created_at,updated_at FROM cognition',
                       'SELECT * FROM cognition_evidence', 'SELECT * FROM cognition_target',
                       'SELECT * FROM cognition_transitions', 'SELECT revision FROM memory_state',
                       'SELECT * FROM evidence'):
             assert left.execute(query).fetchall() == right.execute(query).fetchall()
-        snapshot = recall_world_snapshot(left, 'owner', 'Golden Retriever')
-        assert snapshot is not None and snapshot.rendered_recall == '记忆：［标签：Golden Retriever］' + raw
+        snapshot = recall_world_snapshot(left, 'owner', scope)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + (f'［标签：{scope}］' if labeled else '') + raw
         old_snapshot = recall_world_snapshot(right, 'owner', raw)
         assert old_snapshot is not None and old_snapshot.rendered_recall == '记忆：' + raw
 
@@ -469,6 +508,7 @@ def test_review_target_label_cannot_ignore_unmaterialized_person(tmp_path: Path,
     item = _form(quote, (len(prior) + 1, len(raw)), kind='attribute', evidence_id='person')
     item['entity'] = {'canonical_name': name, 'kind': 'person'}
     item['entity_reference'] = {'mention': mention}
+    item['label_candidates'] = [name]
     cid = _apply_fact(path, raw, None, job='person', item=item)
     with sqlite3.connect(path) as db:
         before = list(db.iterdump())
@@ -511,13 +551,14 @@ def test_review_multiple_scopes_follow_live_support_gate(tmp_path: Path, change:
         item = _form(quote, (raw.index(quote), len(raw)), evidence_id=f'source-{index}')
         _apply_fact(path, raw, word, job=f'source-{index}', item=item)
     with sqlite3.connect(path) as db:
+        db.execute("UPDATE cognition SET scope='diving'")  # Simulate a retained legacy domain.
         db.execute(change)
         db.commit()
         before = list(db.iterdump())
         snapshot = recall_world_snapshot(db, 'owner', 'climbing', model_tier=tier)  # type: ignore[arg-type]
         assert snapshot is not None
         if remaining:
-            assert snapshot.count == 1 and snapshot.rendered_recall == '记忆：［标签：climbing］' + quote
+            assert snapshot.count == 1 and snapshot.rendered_recall == '记忆：' + quote
             assert db.execute('SELECT scope FROM cognition').fetchone()[0] == 'diving'
             old = recall_world_snapshot(db, 'owner', 'diving')
             assert old is not None and old.count == 0
@@ -565,9 +606,9 @@ def test_single_gate_review_full_body_competition(tmp_path: Path, raw: str, labe
     ('I enjoy diving.', 'I enjoy climbing.', 'I enjoy climbing.', 'diving', None),
     ('我喜欢潜水。', '我喜欢登山。', '我喜欢登山。', '潜水', None),
     ('', 'I enjoy diving.', 'I enjoy diving.', 'diving', 'diving'),
-    ('I enjoy diving.', 'I find these activities inspiring.', 'I find these activities inspiring.', 'diving', 'diving'),
-    ('', '我喜欢潜水。', '我喜欢潜水。', '潜水', '潜水'),
-    ('我喜欢潜水。', '这些活动让我很有创造力。', '这些活动让我很有创造力。', '潜水', '潜水'),
+    ('I enjoy diving.', 'I find these activities inspiring.', 'I find these activities inspiring.', 'diving', None),
+    ('', '我喜欢潜水。', '我喜欢潜水。', '潜水', None),
+    ('我喜欢潜水。', '这些活动让我很有创造力。', '这些活动让我很有创造力。', '潜水', None),
 ])
 def test_single_gate_same_rule_for_body_and_context(tmp_path: Path, prior: str, current: str,
                                                    quote: str, label: str, expected: str | None) -> None:
@@ -626,7 +667,8 @@ def test_single_gate_rejection_reaches_every_recall_route(tmp_path: Path, monkey
             db.execute('DELETE FROM memory_world_job')
             db.commit()
         baseline = recall_world_snapshot(db, 'owner', body)
-        assert baseline is not None and '［标签：' in baseline.rendered_recall
+        assert baseline is not None
+        assert ('［标签：' in baseline.rendered_recall) == (route == 'body')
         before = list(db.iterdump())
         calls: list[object] = []
         def deny(*args: Any, **kwargs: Any) -> recall._LabelDecision:
@@ -665,9 +707,10 @@ def test_single_gate_rejection_does_not_discard_formation(tmp_path: Path, monkey
 def test_single_gate_collection_is_independent_of_nomination(texts: list[str], kind: str, expected: set[str]) -> None:
     from memoweft.integrations.hermes.recall import _collect_label_candidates, _decide_grounded_label
     candidates, complete = _collect_label_candidates(texts, [])
-    assert complete and candidates[kind] == expected
+    assert expected <= candidates
+    assert not complete or len(candidates) > 1
     for nomination in expected:
-        assert _decide_grounded_label(nomination, [texts], kind=kind).label is None
+        assert _decide_grounded_label(nomination, [texts], kind=kind, reports=[[nomination]]).label is None
 
 @pytest.mark.parametrize('language', ['en', 'zh'])
 def test_single_gate_appended_source_with_readable_prior_turn(tmp_path: Path, language: str) -> None:
@@ -687,6 +730,7 @@ def test_single_gate_appended_source_with_readable_prior_turn(tmp_path: Path, la
                        (json.dumps([{'role': 'user', 'content': first, 'message_id': 'first-message'}]),))
     item = _form(proposition, (second.index(body), len(second)), evidence_id='second')
     item['scope'] = climbing
+    item['label_candidates'] = [diving, climbing]
     _run(path, clock, [_model(_batch(item))], ('second',), setup, job_id='second')
     assert _job(path, 'second')['state'] == 'applied'
     with sqlite3.connect(path) as db:
@@ -717,3 +761,126 @@ def test_strict_review_any_referent_competes(tmp_path: Path, prior: str, label: 
         snapshot = recall_world_snapshot(db, 'owner', body)
         assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
         assert list(db.iterdump()) == before
+
+
+@pytest.mark.parametrize('raw,label,entity', [
+    ('Alice likes climbing. I enjoy diving.', 'diving', None),
+    ('She likes climbing. I enjoy diving.', 'diving', None),
+    ('I like Paris. I like cups.', 'Paris', None),
+    ('Cedar likes coffee.', 'Cedar', 'Cedar'),
+    ('Alice likes climbing.', 'Alice', 'Alice'),
+    ('我喜欢北京，也喜欢杯子。', '北京', None),
+    ('小林喜欢茶。', '小林', '小林'),
+    ('I enjoy coffee brewing.', 'coffee brewing', None),
+    ('Nova admires glorp.', 'Nova', 'Nova'),
+    ('We enjoy diving.', 'diving', None),
+    ('我们喜欢潜水。', '潜水', None),
+    ('I likes diving.', 'diving', None),
+])
+def test_strict_cross_class_objects_and_uncertainty(tmp_path: Path, raw: str, label: str, entity: str | None) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    proposition = raw if entity else _stated_normalize(raw)
+    item = _form(proposition, (0, len(raw)), kind='attribute' if entity else 'preference', evidence_id='seed')
+    item['label_candidates'] = [label]  # Model omission never overrides the rule.
+    if entity:
+        item['entity'] = {'canonical_name': entity, 'kind': 'person'}
+    cid = _apply_fact(path, raw, label if not entity else None, item=item)
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] is None
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', proposition)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + proposition
+        assert list(db.iterdump()) == before
+
+
+@pytest.mark.parametrize('report,accepted', [
+    (_MISSING_REPORT, False), (None, False), ([], False), ('diving', False), ({}, False),
+    ({'objects': ['diving']}, False), ([1], False), (['diving', None], False),
+    ([''], False), ([' diving '], False), (['diving', 'I'], False),
+    (['diving', 'phantom'], False), (['Diving'], False),
+    (['diving'], True), (['diving', 'diving'], True),
+], ids=['missing','null','empty','string','object','nested','number','null-entry',
+        'empty-entry','whitespace','extra-referent','invented','wrong-case','single','same-object-repeated'])
+def test_strict_model_report_is_mandatory_and_unioned(tmp_path: Path, report: object, accepted: bool) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    raw = 'I enjoy diving.'
+    turns = [{'role': 'user', 'content': raw, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1}]
+    cid, body = _world(path, turns, raw, 'diving', reported=report)
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] == ('diving' if accepted else None)
+        assert db.execute('SELECT count(*) FROM cognition_evidence').fetchone()[0] == 1
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + ('［标签：diving］' if accepted else '') + body
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='evidence-1'").fetchone()[0] == raw
+
+
+@pytest.mark.parametrize('route', ['current', 'prior', 'entity', 'known_cjk', 'append'])
+def test_strict_single_object_positive_routes_still_use_gate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, route: str) -> None:
+    from memoweft.integrations.hermes import recall
+    path = tmp_path / 'memory.sqlite3'
+    if route == 'prior':
+        cid, body = _world(path, SINGLE_CONTEXT['turns'], SINGLE_CONTEXT['quote'], 'diving', reported=['diving'])
+    elif route == 'entity':
+        raw = 'Alice is Alice.'
+        item = _form(raw, (0, len(raw)), kind='attribute', evidence_id='seed')
+        item.update(entity={'canonical_name': 'Alice', 'kind': 'person'}, label_candidates=['Alice'])
+        cid = _apply_fact(path, raw, None, item=item)
+        body = raw
+    elif route == 'known_cjk':
+        raw = '我喜欢潜水。'
+        item = _form(_stated_normalize(raw), (0, len(raw)), evidence_id='seed')
+        item.update(entity={'canonical_name': '潜水', 'kind': 'topic', 'aliases': []}, label_candidates=['潜水'])
+        cid = _apply_fact(path, raw, '潜水', item=item)
+        body = _stated_normalize(raw)
+    elif route == 'append':
+        body = 'I like it.'
+        for index in range(2):
+            raw = 'I enjoy diving. ' + body
+            item = _form(body, (raw.index(body), len(raw)), evidence_id=f'append-{index}')
+            item['label_candidates'] = ['diving']
+            cid = _apply_fact(path, raw, 'diving', job=f'append-{index}', item=item)
+    else:
+        body = 'I enjoy diving.'
+        cid = _apply_fact(path, body, 'diving')
+    with sqlite3.connect(path) as db:
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.selected_item_ids == (('cognition', cid),)
+        assert '［标签：' in snapshot.rendered_recall
+        assert list(db.iterdump()) == before
+        calls: list[object] = []
+        def deny(*args: Any, **kwargs: Any) -> recall._LabelDecision:
+            calls.append((args, kwargs))
+            return recall._LabelDecision()
+        monkeypatch.setattr(recall, '_decide_grounded_label', deny)
+        denied = recall_world_snapshot(db, 'owner', body)
+        assert calls and denied is not None and denied.rendered_recall == '记忆：' + body
+        assert list(db.iterdump()) == before
+
+
+def test_strict_missing_legacy_report_does_not_rewrite_stored_scope(tmp_path: Path) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    cid = _apply_fact(path, 'I enjoy diving.', 'diving')
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] == 'diving'
+        db.execute('DELETE FROM memory_world_job')
+        db.commit()
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', 'diving')
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：I enjoy diving.'
+        assert list(db.iterdump()) == before
+
+
+def test_strict_valid_labels_still_count_in_budget(tmp_path: Path) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    for index in range(6):
+        # Same single object, enough exact user text to exercise truncation;
+        # the older method/stitching fixture remains a negative label case.
+        raw = ('I enjoy diving. ' * (12 + index)).strip()
+        _apply_fact(path, raw, 'diving', job=f'long-{index}')
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', 'diving')
+        assert snapshot is not None and snapshot.count == 5
+        assert snapshot.rendered_recall.startswith('记忆：［标签：diving］')
+        assert len(snapshot.rendered_recall) <= 600 and snapshot.rendered_recall.endswith('…')
+        assert all(line.startswith('记忆：') for line in snapshot.rendered_recall.splitlines())
