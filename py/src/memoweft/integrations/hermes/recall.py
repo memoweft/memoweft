@@ -38,6 +38,7 @@ from typing import Any, Callable, Iterable, Literal, Mapping, Sequence, TypeVar,
 from ..trust.currentness import (
     current_entity_aliases,
     CurrentnessSurface,
+    evidence_state,
     subject_currentness_facts,
     world_item_evidence_visible,
     world_item_lifecycle,
@@ -776,10 +777,12 @@ def format_recall(items: Sequence[Mapping[str, object]]) -> str:
     lines = []
     for item in items:
         prefix = f"{_PREFIX}（过往）" if (item.get("is_superseded") or int(cast(Any, item.get("confidence", 600))) < 300) else _PREFIX
-        lines.append(f"{prefix}：{item['content']}")
+        label = item.get("grounded_label")
+        heading = f"［标签：{label}］" if label else ""
+        lines.append(f"{prefix}：{heading}{item['content']}")
     text = "\n".join(lines)
     if len(text) > MAX_OUTPUT_CHARS:
-        text = text[:MAX_OUTPUT_CHARS].rstrip() + "…"
+        text = text[:MAX_OUTPUT_CHARS - 1].rstrip() + "…"
     return text
 
 
@@ -969,6 +972,216 @@ def _graph_topic_cues(
     ))
 
 
+def _grounded_scope(value: object, texts: Sequence[str], competitors: Iterable[str] = ()) -> str | None:
+    """A nomination is not evidence. Keep only a complete, verbatim phrase.
+
+    This validator is also used before formation persists scope. Invalid or
+    ambiguous optional labels never invalidate an otherwise legal fact.
+    """
+    if (not isinstance(value, str) or not value.strip() or value != value.strip()
+            or value == "unscoped" or any(c in value for c in '\r\n［］[]')):
+        return None
+    # ASCII word boundaries prevent e.g. 'Ann' being recovered from 'Joanne'.
+    pattern = (r"(?<![A-Za-z0-9_])" if value[0].isascii() and value[0].isalnum() else "")
+    pattern += re.escape(value)
+    if value[-1].isascii() and value[-1].isalnum():
+        pattern += r"(?![A-Za-z0-9_])"
+    occurrences = [(text, match) for text in texts for match in re.finditer(pattern, text)]
+    if not occurrences:
+        return None
+    # An explicit coordinated alternative is ambiguous even before either name
+    # has a World entity. Reject the label, never guess which side was intended.
+    if any(re.search(r'(?:\b(?:and|or)\s+|[和与及或、])$', text[:match.start()], re.I)
+           or re.match(r'(?:\s+(?:and|or)\b|[和与及或、])', text[match.end():], re.I)
+           for text, match in occurrences):
+        return None
+    if any(word != value and _grounded_scope(word, texts) for word in competitors):
+        return None
+    return value
+
+
+def _label_source(
+    db: sqlite3.Connection, subject_id: str, evidence_id: str, model_tier: ModelTier,
+) -> tuple[str, str, str] | None:
+    row = db.execute(
+        "SELECT raw_content, recorded_at, host_id, deleted_at, allow_local_read, "
+        "allow_cloud_read, allow_inference FROM evidence "
+        "WHERE id=? AND subject_id=? AND source_kind='spoken'", (evidence_id, subject_id),
+    ).fetchone()
+    if row is None or evidence_state(
+        dict(zip(('deleted_at', 'allow_local_read', 'allow_cloud_read', 'allow_inference'), row[3:])),
+        surface="model_cloud" if model_tier == "cloud" else "recall",
+    ) is not None:
+        return None
+    return str(row[0]), str(row[1]), str(row[2])
+
+
+def _label_jobs(
+    db: sqlite3.Connection, subject_id: str, cognition_id: str,
+) -> list[tuple[Any, ...]]:
+    # Existing job/support association only. No label relation is created.
+    return db.execute(
+        "SELECT j.parent_session_id,j.host_id,j.evidence_ids_json,j.model_result_json "
+        "FROM memory_world_job j WHERE j.subject_id=? AND j.state='applied' "
+        "AND EXISTS (SELECT 1 FROM json_each(j.evidence_ids_json) e "
+        "JOIN cognition_evidence ce ON ce.evidence_id=e.value WHERE ce.cognition_id=?) "
+        "ORDER BY j.job_id", (subject_id, cognition_id),
+    ).fetchall()
+
+
+def _prior_label_word(
+    db: sqlite3.Connection, subject_id: str, session_id: str, host_id: str,
+    cutoff: str, nomination: str, model_tier: ModelTier,
+) -> str | None:
+    """Recover one exact user word in the preceding four interactions.
+
+    Interaction copies alone are not authority: the matching job, account,
+    conversation, destination permission and live Evidence must all survive.
+    Multiple original sources or competing known names/scopes fail closed.
+    """
+    if not session_id:
+        return None
+    originals: dict[str, str] = {}
+    eligible_turns: list[tuple[dict[str, Any], dict[str, tuple[str, str, str] | None]]] = []
+    competitors: set[str] = set()
+    contexts = db.execute(
+        "SELECT episode_id,context_json FROM interaction_context WHERE subject_id=? "
+        "AND conversation_id=? AND created_at<? ORDER BY created_at DESC,rowid DESC LIMIT 4",
+        (subject_id, session_id, cutoff),
+    ).fetchall()
+    for episode_id, context_json in reversed(contexts):
+        jobs = db.execute(
+            "SELECT evidence_ids_json,model_result_json FROM memory_world_job "
+            "WHERE boundary_event_id=? AND subject_id=? AND parent_session_id=? "
+            "AND host_id=? AND created_at<?", (episode_id, subject_id, session_id, host_id, cutoff),
+        ).fetchall()
+        if len(jobs) != 1:
+            continue
+        ids = json.loads(jobs[0][0])
+        turns = json.loads(context_json)
+        if not isinstance(ids, list) or not ids or not isinstance(turns, list):
+            continue
+        sources = {str(eid): _label_source(db, subject_id, str(eid), model_tier) for eid in ids}
+        if any(source is None or source[2] != host_id or source[1] >= cutoff for source in sources.values()):
+            continue
+        eligible_turns.extend((turn, sources) for turn in turns
+                              if isinstance(turn, dict) and turn.get('role') in {'user', 'assistant'}
+                              and isinstance(turn.get('content'), str))
+        # Known competing topic/person nominations cannot be resolved by the
+        # recall query. They are useful only when found in the actual originals.
+        if jobs[0][1]:
+            payload = json.loads(jobs[0][1])
+            interpretation = json.loads(payload.get('content') or '{}')
+            for item in interpretation.get('cognitions', []):
+                if not isinstance(item, dict):
+                    continue
+                candidate = item.get('scope')
+                if isinstance(candidate, str):
+                    competitors.add(candidate)
+                entity = item.get('entity')
+                if isinstance(entity, dict) and isinstance(entity.get('canonical_name'), str):
+                    competitors.add(entity['canonical_name'])
+    # Same eight-turn window as the existing formation context. A word outside
+    # the model's original context cannot become a derived label afterwards.
+    for turn, sources in eligible_turns[-8:]:
+        if turn.get('role') == 'user' and turn.get('message_id'):
+            for eid, source in sources.items():
+                if source is not None and source[0] == turn['content']:
+                    originals[eid] = source[0]
+    texts = list(originals.values())
+    for entity_id, name in db.execute(
+        "SELECT id,canonical_name FROM entity WHERE world_id=? AND invalid_at IS NULL",
+        (subject_id,),
+    ):
+        if _grounded_scope(str(name), texts) and _entity_names(db, subject_id, str(entity_id), model_tier):
+            competitors.add(str(name))
+    grounded = {word for word in competitors | {nomination} if _grounded_scope(word, texts)}
+    matches = [text for text in texts if _grounded_scope(nomination, [text])]
+    return nomination if grounded == {nomination} and len(matches) == 1 else None
+
+
+def _cognition_label(
+    db: sqlite3.Connection, subject_id: str, cognition_id: str, content: str,
+    scope: object, model_tier: ModelTier,
+) -> str | None:
+    """Read-only presentation/matching label; never an additional fact support."""
+    # A malformed/missing legacy checkpoint only removes this optional label.
+    try:
+        evidence_ids = [str(row[0]) for row in db.execute(
+            "SELECT evidence_id FROM cognition_evidence WHERE cognition_id=? ORDER BY evidence_id",
+            (cognition_id,),
+        )]
+        sources = [_label_source(db, subject_id, eid, model_tier) for eid in evidence_ids]
+        if not sources or any(source is None for source in sources):
+            return None
+        texts = [source[0] for source in sources if source is not None]
+        target = db.execute(
+            "SELECT target_entity_id FROM cognition_target WHERE cognition_id=?", (cognition_id,),
+        ).fetchone()
+        names = _entity_names(db, subject_id, str(target[0]), model_tier) if target else ()
+        direct_names = {name for name in names if _grounded_scope(name, texts)}
+        if target:
+            if len(direct_names) == 1:
+                return next(iter(direct_names))
+            if len(direct_names) > 1 or not names:
+                return None
+        elif scope is not None:
+            # Old scope values are neither rewritten nor assumed to be quotes.
+            return _grounded_scope(scope, texts)
+        recovered: set[str] = set()
+        jobs = _label_jobs(db, subject_id, cognition_id)
+        if len({(job[0], job[1]) for job in jobs}) != 1:
+            return None
+        for session_id, host_id, ids_json, model_json in jobs:
+            ids = json.loads(ids_json)
+            if not isinstance(ids, list) or not set(evidence_ids).issubset(ids):
+                continue
+            if any(source is None or source[2] != host_id for source in sources):
+                continue
+            nominations = set(names) if target else set()
+            if not target and model_json:
+                # Resolve by exact body AND the existing support spans, not by
+                # array position (the compiler can normalize/filter items).
+                from .batch_adapter import _parse_supports
+                payload = json.loads(model_json)
+                interpretation = json.loads(payload.get('content') or '{}')
+                for item in interpretation.get('cognitions', []):
+                    if (not isinstance(item, dict) or item.get('proposition') != content
+                            or item.get('action') != 'form' or item.get('formed_by', 'stated') != 'stated'
+                            or item.get('statement_kind') not in {'attribute', 'preference'}):
+                        continue
+                    word = item.get('scope')
+                    if _grounded_scope(word, [str(word)]) is None:
+                        continue
+                    if db.execute("SELECT 1 FROM entity WHERE world_id=? AND kind='person' AND canonical_name=?",
+                                  (subject_id, word)).fetchone():
+                        continue
+                    raw = {eid: source[0] for eid in ids
+                           if (source := _label_source(db, subject_id, str(eid), model_tier)) is not None}
+                    supports, _ = _parse_supports(item.get('supports'), set(raw), raw)
+                    if not supports or {part[0] for part in supports} != set(evidence_ids):
+                        continue
+                    verified = all(db.execute(
+                        "SELECT 1 FROM evidence_ledger WHERE json_valid(content) "
+                        "AND json_extract(content,'$.cognition_id')=? "
+                        "AND json_extract(content,'$.evidence_id')=? "
+                        "AND json_extract(content,'$.relation')='support' "
+                        "AND json_extract(payload_json,'$.start')=? AND json_extract(payload_json,'$.end')=? "
+                        "AND json_extract(payload_json,'$.span_hash')=?",
+                        (cognition_id, eid, start, end, sha256(text.encode('utf-8')).hexdigest()),
+                    ).fetchone() for eid, start, end, text in supports)
+                    if verified:
+                        nominations.add(str(word))
+            cutoff = min(source[1] for source in sources if source is not None)
+            for word in nominations:
+                original = _prior_label_word(db, subject_id, str(session_id), str(host_id), cutoff, word, model_tier)
+                if original:
+                    recovered.add(original)
+        return next(iter(recovered)) if len(recovered) == 1 else None
+    except (sqlite3.Error, TypeError, ValueError, KeyError, AttributeError):
+        return None
+
+
 def _current_world_rows(
     db: sqlite3.Connection, subject_id: str, model_tier: ModelTier = "local"
 ) -> list[dict[str, object]]:
@@ -988,7 +1201,7 @@ def _current_world_rows(
     except Exception:
         pass
     cognitions = db.execute(
-        "SELECT id, content, confidence, content_type FROM cognition "
+        "SELECT id, content, confidence, content_type, scope FROM cognition "
         "WHERE subject_id = ? "
         "AND invalid_at IS NULL AND archived_at IS NULL AND muted_at IS NULL",
         (subject_id,),
@@ -1017,13 +1230,9 @@ def _current_world_rows(
                 continue
             content = str(row[1])
             anchors = _graph_match_anchors(db, subject_id, current_kind, row_id, model_tier)
+            label = None
             if kind == "cognition":
-                target = db.execute(
-                    "SELECT target_entity_id FROM cognition_target WHERE cognition_id = ?", (row_id,)
-                ).fetchone()
-                names = _entity_names(db, subject_id, str(target[0]), model_tier) if target else ()
-                if names and not any(name in content for name in names):
-                    content = f"{names[0]}：{content}"
+                label = _cognition_label(db, subject_id, row_id, content, row[4], model_tier)
                 if str(row[3]) == "naming":
                     anchors = tuple(dict.fromkeys(
                         name for entity in db.execute(
@@ -1043,13 +1252,15 @@ def _current_world_rows(
                     "kind": current_kind,
                     "id": row_id,
                     "content": content,
+                    "grounded_label": label,
                     "confidence": int(row[2]),
                     "statement_kind": str(row[3]) if kind == "cognition" else kind,
                     "match_text": _graph_match_text(
-                        db, subject_id, current_kind, row_id, content, model_tier
+                        db, subject_id, current_kind, row_id,
+                        ' '.join(filter(None, (content, label))), model_tier
                     ),
                     "anchors": anchors,
-                    "topic_cues": tuple(dict.fromkeys(
+                    "topic_cues": tuple(dict.fromkeys((label,) if label else ())) + tuple(dict.fromkeys(
                         cue for text in (content, *predecessor_texts)
                         for cue in _graph_topic_cues(db, subject_id, text, model_tier)
                     )),
@@ -1214,6 +1425,9 @@ def recall_world_snapshot(
         selected = [item for item in selected if world_item_visible(
             db, subject_id, cast(Any, str(item["kind"])), str(item["id"]),
             surface="model_cloud" if model_tier == "cloud" else "recall")]
+        labels = {(str(row['kind']), str(row['id'])): row.get('grounded_label') for row in rows}
+        selected = [{**item, 'grounded_label': labels.get((str(item['kind']), str(item['id'])))}
+                    for item in selected]
         selected_item_ids = tuple(
             (str(item["kind"]), str(item["id"])) for item in selected
         )

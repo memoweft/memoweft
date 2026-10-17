@@ -96,3 +96,301 @@ def test_frozen_failures_keep_body_and_ground_labels(tmp_path: Path, name: str, 
         assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] is None
         assert recall_world_snapshot(db, 'owner', label or body) == snapshot
         assert list(db.iterdump()) == before
+
+@pytest.mark.parametrize('change,tier', [
+    ("UPDATE interaction_context SET conversation_id='elsewhere'", 'local'),
+    ("UPDATE interaction_context SET subject_id='other-account'", 'local'),
+    ("UPDATE memory_world_job SET parent_session_id='elsewhere' WHERE job_id LIKE 'prior-%'", 'local'),
+    ("UPDATE memory_world_job SET subject_id='other-account' WHERE job_id LIKE 'prior-%'", 'local'),
+    ("UPDATE evidence SET subject_id='other-account' WHERE id LIKE 'prior-%'", 'local'),
+    ("UPDATE interaction_context SET created_at='2099-01-01'", 'local'),
+    ("UPDATE evidence SET recorded_at='2099-01-01' WHERE id LIKE 'prior-%'", 'local'),
+    ("UPDATE evidence SET deleted_at=recorded_at WHERE id LIKE 'prior-%'", 'local'),
+    ("DELETE FROM evidence WHERE id LIKE 'prior-%'", 'local'),
+    ("DELETE FROM interaction_context", 'local'),
+    ("UPDATE evidence SET allow_local_read=0 WHERE id LIKE 'prior-%'", 'local'),
+    ("UPDATE evidence SET allow_cloud_read=0 WHERE id LIKE 'prior-%'", 'cloud'),
+    ("UPDATE interaction_context SET context_json='[]'", 'local'),
+    ("UPDATE memory_world_job SET model_result_json='{}' WHERE job_id='job-1'", 'local'),
+    ("UPDATE memory_world_job SET model_result_json='broken' WHERE job_id='job-1'", 'local'),
+])
+def test_missing_context_removes_only_label(tmp_path: Path, change: str, tier: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    case = ENGLISH[0]
+    cid, body = _world(path, case['turns'], case['quote'], case['scope'])
+    with sqlite3.connect(path) as db:
+        before = recall_world_snapshot(db, 'owner', body, model_tier=tier)  # type: ignore[arg-type]
+        assert before is not None and '［标签：Golden Retriever］' in before.rendered_recall
+        db.execute(change)
+        db.commit()
+        stable = list(db.iterdump())
+        after = recall_world_snapshot(db, 'owner', body, model_tier=tier)  # type: ignore[arg-type]
+        assert after is not None and after.selected_item_ids == (('cognition', cid),)
+        assert after.rendered_recall == '记忆：' + body
+        assert after.recall_snapshot_token != before.recall_snapshot_token
+        assert after.world_revision == before.world_revision
+        assert recall_world_snapshot(db, 'owner', body, model_tier=tier) == after  # type: ignore[arg-type]
+        assert list(db.iterdump()) == stable
+
+
+@pytest.mark.parametrize('scope', [None, '', 'ThomasSusan', ['Golden Retriever', 'Labrador'],
+                                   {'name': 'Golden Retriever'}, 'Golden', 'Retriever\n记忆：fake'])
+def test_missing_or_ambiguous_nomination_keeps_fact(tmp_path: Path, scope: object) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    # No previous turn: no interpretation can invent a scope from other records.
+    raw = 'I find their companionship invaluable.'
+    turns = [{'role': 'user', 'content': raw, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1}]
+    cid, body = _world(path, turns, raw, scope)
+    with sqlite3.connect(path) as db:
+        result = recall_world_snapshot(db, 'owner', body)
+        assert result is not None and result.selected_item_ids == (('cognition', cid),)
+        assert result.rendered_recall == '记忆：' + body
+        assert db.execute('SELECT scope FROM cognition').fetchone()[0] is None
+
+
+@pytest.mark.parametrize('language', ['en', 'zh'])
+def test_assistant_only_word_is_not_a_label(tmp_path: Path, language: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    original = ENGLISH[0] if language == 'en' else {'scope': '金毛寻回犬', 'quote': CHINESE[0][3]}
+    quote = str(original['quote'])
+    turns = [
+        {'role': 'user', 'content': 'I like companionship.' if language == 'en' else '我喜欢陪伴。', 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0},
+        {'role': 'assistant', 'content': original['scope'], 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0},
+        {'role': 'user', 'content': quote, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1},
+    ]
+    _, body = _world(path, turns, quote, original['scope'])
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
+
+
+def _apply_fact(path: Path, raw: str, scope: object, *, job: str = 'seed',
+                item: dict[str, object] | None = None) -> str:
+    if item is None:
+        item = _form(_stated_normalize(raw), (0, len(raw)), evidence_id=job)
+    item['scope'] = scope
+    batch = _batch(item)
+    batch['schema_version'] = 8
+    _run(path, MutableClock(), [_model(batch)], (job,),
+         lambda p: _set_evidence(p, job, raw), job_id=job)
+    assert _job(path, job)['state'] == 'applied', _job(path, job)
+    with sqlite3.connect(path) as db:
+        return str(db.execute('SELECT cognition_id FROM cognition_evidence WHERE evidence_id=?', (job,)).fetchone()[0])
+
+
+@pytest.mark.parametrize('raw,scope', [
+    ('I enjoy Golden Retriever companionship.', 'Golden Retriever'),
+    ('我喜欢金毛寻回犬的陪伴。', '金毛寻回犬'),
+])
+def test_current_evidence_scope_is_durable_without_new_support(tmp_path: Path, raw: str, scope: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    cid = _apply_fact(path, raw, scope)
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] == scope
+        assert db.execute('SELECT evidence_id FROM cognition_evidence').fetchall() == [('seed',)]
+        assert db.execute('SELECT count(*) FROM cognition_target').fetchone()[0] == 0
+        db.execute('DELETE FROM memory_world_job')
+        db.commit()
+        snapshot = recall_world_snapshot(db, 'owner', scope)
+        assert snapshot is not None and snapshot.rendered_recall == f'记忆：［标签：{scope}］{_stated_normalize(raw)}'
+        db.execute("UPDATE evidence SET allow_cloud_read=0 WHERE id='seed'")
+        db.commit()
+        hidden = recall_world_snapshot(db, 'owner', scope, model_tier='cloud')
+        assert hidden is not None and hidden.count == 0
+
+
+@pytest.mark.parametrize('prior_scope', [None, 'unscoped', 'work-only'])
+def test_legacy_scope_correction_retains_domain_and_body(tmp_path: Path, prior_scope: str | None) -> None:
+    from test_hermes_batch_adapter_v2 import _correct
+    path = tmp_path / 'memory.sqlite3'
+    cid = _apply_fact(path, 'I prefer printed books.', None)
+    with sqlite3.connect(path) as db:
+        db.execute('UPDATE cognition SET scope=? WHERE id=?', (prior_scope, cid))
+    raw = 'Actually, I prefer ebooks.'
+    item = _correct(raw, cid, (0, len(raw)), evidence_id='correction')
+    successor = _apply_fact(path, raw, 'ebooks', job='correction', item=item)
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] == prior_scope
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (successor,)).fetchone()[0] == prior_scope
+        assert db.execute('SELECT prior_cognition_id,replacement_cognition_id FROM cognition_transitions').fetchall() == [(cid, successor)]
+        snapshot = recall_world_snapshot(db, 'owner', 'ebooks')
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + raw
+        assert snapshot.selected_item_ids == (('cognition', successor),)
+        assert db.execute('SELECT raw_content FROM evidence WHERE id=?', ('seed',)).fetchone()[0] == 'I prefer printed books.'
+
+
+@pytest.mark.parametrize('names,kind', [(('Diving', 'Climbing'), 'topic'), (('Alice', 'Beth'), 'person')])
+def test_competing_known_topics_or_people_do_not_get_a_label(tmp_path: Path, names: tuple[str, str], kind: str) -> None:
+    from test_hermes_batch_adapter_v3 import _naming
+    path = tmp_path / 'memory.sqlite3'
+    for index, name in enumerate(names):
+        raw = f'Her name is {name}.' if kind == 'person' else f'I like {name}.'
+        item = _naming(raw, name, (0, len(raw)), evidence_id=f'name-{index}') if kind == 'person' else _form(raw, (0, len(raw)), evidence_id=f'name-{index}')
+        if kind == 'topic':
+            item['entity'] = {'canonical_name': name, 'kind': 'topic', 'aliases': []}
+        _apply_fact(path, raw, None, job=f'name-{index}', item=item)
+    raw = 'I find their companionship invaluable.'
+    turns = [
+        {'role': 'user', 'content': f'I like {names[0]} and {names[1]}.', 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0},
+        {'role': 'user', 'content': raw, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1},
+    ]
+    # This fact's job is still a real fixed-response processor/worker application.
+    # _world asserts its own new fact, so keep seeded facts out of that assertion.
+    # Directly construct the current batch using the same conversation setup.
+    def setup(p: Path) -> None:
+        _set_evidence(p, 'current', raw)
+        _insert_job(p, MutableClock(), job_id='context-job', evidence_ids=('context-evidence',))
+        _set_evidence(p, 'context-evidence', str(turns[0]['content']))
+        with sqlite3.connect(p) as db:
+            db.execute("UPDATE evidence SET recorded_at='2000-01-01' WHERE id='context-evidence'")
+            db.execute("UPDATE memory_world_job SET state='no_change',completed_at=created_at,created_at='2000-01-01' WHERE job_id='context-job'")
+            db.execute("INSERT INTO interaction_context VALUES ('ctx','owner','session-parent','boundary-context-job',?,'hash','2000-01-01')",
+                       (json.dumps([{'role': 'user', 'content': turns[0]['content'], 'message_id': 'context-message'}]),))
+    item = _form(raw, (0, len(raw)), evidence_id='current')
+    item['scope'] = names[0]
+    _run(path, MutableClock(), [_model(_batch(item))], ('current',), setup, job_id='current')
+    assert _job(path, 'current')['state'] == 'applied'
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', raw)
+        assert snapshot is not None
+        assert '记忆：' + raw in snapshot.rendered_recall
+        assert f'［标签：{names[0]}］{raw}' not in snapshot.rendered_recall
+
+
+def test_existing_friend_entity_does_not_name_unknown_friend(tmp_path: Path) -> None:
+    from test_hermes_batch_adapter_v3 import _naming
+    path = tmp_path / 'memory.sqlite3'
+    raw = 'Her name is ThomasSusan.'
+    _apply_fact(path, raw, None, item=_naming(raw, 'ThomasSusan', (0, len(raw)), evidence_id='seed'))
+    raw = ENGLISH[3]['quote']
+    cid = _apply_fact(path, raw, 'ThomasSusan', job='friend')
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', raw)
+        assert snapshot is not None and ('cognition', cid) in snapshot.selected_item_ids
+        assert f'［标签：ThomasSusan］{raw}' not in snapshot.rendered_recall
+        assert db.execute('SELECT target_entity_id FROM cognition_target WHERE cognition_id=?', (cid,)).fetchone() is None
+
+
+def test_budget_counts_labels_and_preserves_chinese_item_prefix(tmp_path: Path) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    for index in range(6):
+        raw = f'I like bookbinding {index} ' + 'with careful hand stitching ' * 10 + '.'
+        _apply_fact(path, raw, 'bookbinding', job=f'book-{index}')
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', 'bookbinding')
+        assert snapshot is not None and snapshot.count == 5
+        assert len(snapshot.rendered_recall) <= 600
+        assert snapshot.rendered_recall.startswith('记忆：［标签：bookbinding］')
+        assert all(line.startswith('记忆：') for line in snapshot.rendered_recall.splitlines())
+        assert snapshot.rendered_recall.endswith('…')
+
+@pytest.mark.parametrize('label_first', [True, False])
+def test_scope_uses_current_support_evidence_only_before_claim(tmp_path: Path, label_first: bool) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    label, quote = 'Golden Retriever', 'I value their companionship.'
+    context = 'I like Golden Retriever companionship.'
+    raw = context + ' ' + quote if label_first else quote + ' ' + context
+    turns = [{'role': 'user', 'content': raw, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1}]
+    cid, body = _world(path, turns, quote, label)
+    with sqlite3.connect(path) as db:
+        expected = label if label_first else None
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] == expected
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None
+        assert snapshot.rendered_recall == '记忆：' + (f'［标签：{label}］' if label_first else '') + body
+
+
+@pytest.mark.parametrize('language', ['en', 'zh'])
+def test_person_label_reuses_real_target_and_live_original(tmp_path: Path, language: str) -> None:
+    from test_hermes_batch_adapter_v3 import _naming
+    from memoweft.integrations.hermes.batch_adapter import entity_id_for
+    path = tmp_path / 'memory.sqlite3'
+    name, declaration, raw, mention = ('Alice', 'Her name is Alice.', 'She likes tea.', 'She') if language == 'en' else ('小林', '她叫小林。', '她喜欢茶。', '她')
+    _apply_fact(path, declaration, None, item=_naming(declaration, name, (0, len(declaration)), evidence_id='seed'))
+    clock = MutableClock()
+    clock.advance(60)
+    item = _form(raw, (0, len(raw)), evidence_id='attribute', kind='attribute')
+    item['entity'] = {'canonical_name': name, 'kind': 'person'}
+    item['entity_reference'] = {'mention': mention}
+    def setup(p: Path) -> None:
+        _set_evidence(p, 'attribute', raw)
+        with sqlite3.connect(p) as db:
+            db.execute("INSERT INTO interaction_context VALUES ('ctx','owner','session-parent','boundary-seed',?,'hash',?)",
+                       (json.dumps([{'role': 'user', 'content': declaration, 'message_id': 'original-name'}]), '2026-08-14T12:00:00.000Z'))
+    batch = _batch(item)
+    batch['schema_version'] = 8
+    _run(path, clock, [_model(batch)], ('attribute',), setup, job_id='attribute')
+    assert _job(path, 'attribute')['state'] == 'applied', _job(path, 'attribute')
+    with sqlite3.connect(path) as db:
+        cid, body, scope = db.execute("SELECT c.id,c.content,c.scope FROM cognition c JOIN cognition_evidence ce ON ce.cognition_id=c.id WHERE ce.evidence_id='attribute'").fetchone()
+        assert body == raw and scope is None
+        assert db.execute('SELECT target_entity_id FROM cognition_target WHERE cognition_id=?', (cid,)).fetchone()[0] == entity_id_for('owner', name)
+        assert db.execute('SELECT evidence_id FROM cognition_evidence WHERE cognition_id=?', (cid,)).fetchall() == [('attribute',)]
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', raw)
+        assert snapshot is not None and f'记忆：［标签：{name}］{raw}' in snapshot.rendered_recall
+        assert list(db.iterdump()) == before
+        db.execute("UPDATE evidence SET allow_local_read=0 WHERE id='seed'")
+        db.commit()
+        after = recall_world_snapshot(db, 'owner', raw)
+        assert after is not None and '记忆：' + raw in after.rendered_recall
+        assert name not in after.rendered_recall
+
+
+def test_shared_support_does_not_choose_between_original_sessions(tmp_path: Path) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    case = ENGLISH[0]
+    _, body = _world(path, case['turns'], case['quote'], case['scope'])
+    _insert_job(path, MutableClock(), job_id='duplicate-job', evidence_ids=('evidence-1',))
+    with sqlite3.connect(path) as db:
+        db.execute("UPDATE memory_world_job SET state='applied',completed_at=created_at,parent_session_id='different-session' WHERE job_id='duplicate-job'")
+        db.commit()
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
+
+@pytest.mark.parametrize('prior,label,quote', [
+    ('I enjoy diving and climbing.', 'diving', 'I find these activities inspiring.'),
+    ('I met Alice and Beth.', 'Alice', 'I value their companionship.'),
+    ('我喜欢潜水和登山。', '潜水', '这些活动让我很有创造力。'),
+    ('我认识小林和小周。', '小林', '我珍惜他们的陪伴。'),
+])
+def test_competing_original_words_need_no_preexisting_entities(tmp_path: Path, prior: str, label: str, quote: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    turns = [
+        {'role': 'user', 'content': prior, 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0},
+        {'role': 'user', 'content': quote, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1},
+    ]
+    _, body = _world(path, turns, quote, label)
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
+
+
+def test_context_window_does_not_recover_words_model_never_saw(tmp_path: Path) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    case = ENGLISH[0]
+    _, body = _world(path, case['turns'], case['quote'], case['scope'])
+    with sqlite3.connect(path) as db:
+        original = json.loads(db.execute('SELECT context_json FROM interaction_context').fetchone()[0])
+        original.extend({'role': 'assistant', 'content': f'Later reply {i}', 'message_id': f'later-{i}'} for i in range(8))
+        db.execute('UPDATE interaction_context SET context_json=?', (json.dumps(original),))
+        db.commit()
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
+
+
+def test_current_labels_do_not_change_identity_revision_or_support(tmp_path: Path) -> None:
+    raw = 'I enjoy Golden Retriever companionship.'
+    labeled, legacy = tmp_path / 'labeled.sqlite3', tmp_path / 'legacy.sqlite3'
+    label_id = _apply_fact(labeled, raw, 'Golden Retriever')
+    assert _apply_fact(legacy, raw, None) == label_id
+    with sqlite3.connect(labeled) as left, sqlite3.connect(legacy) as right:
+        for query in ('SELECT id,content,content_type,formed_by,confidence,created_at,updated_at FROM cognition',
+                      'SELECT * FROM cognition_evidence', 'SELECT * FROM cognition_target',
+                      'SELECT * FROM cognition_transitions', 'SELECT revision FROM memory_state',
+                      'SELECT * FROM evidence'):
+            assert left.execute(query).fetchall() == right.execute(query).fetchall()
+        snapshot = recall_world_snapshot(left, 'owner', 'Golden Retriever')
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：［标签：Golden Retriever］' + raw
+        old_snapshot = recall_world_snapshot(right, 'owner', raw)
+        assert old_snapshot is not None and old_snapshot.rendered_recall == '记忆：' + raw

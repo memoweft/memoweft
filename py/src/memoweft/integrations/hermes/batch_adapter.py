@@ -47,7 +47,7 @@ from .world_worker import (
     WorldJobResult,
 )
 from .terminal_outcome import persist_terminal_outcome_in_transaction
-from .recall import _predecessor_match_texts
+from .recall import _grounded_scope, _predecessor_match_texts
 
 logger = logging.getLogger(__name__)
 
@@ -594,6 +594,9 @@ class BatchItem:
     # Retrieval labels never change owner claim identity or perspective.
     topic_canonical_name: Optional[str] = None
     topic_aliases: tuple[str, ...] = ()
+    # Applicability scope, never claim text or identity. Only selected user
+    # Evidence can supply a durable value; conversation context cannot.
+    scope: Optional[str] = None
     #: relationship items: relation type + target entity canonical name.
     relation_type: Optional[str] = None
     target_canonical_name: Optional[str] = None
@@ -754,6 +757,7 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "可选 scope 只表示适用范围，不是新事实：只提名一个用户逐字说过的范围词。可从同会话此前用户 conversation_context 消解省略的主题，不用助手原话。人物/主题竞争、找不到原词时 scope=null。不得为标签改命题、supports、真实实体归属或形成资格；缺标签仍按原合同形成合法事实。\n"
     "明确纠正人名（含省略主题的‘那个人名写错了’）用 action=correct、statement_kind=alias、entity=新姓名、alias_of=旧姓名；不是 correct+naming，也不附 corrects_cognition_id、corrects_relationship_id 或 corrects_event_id。两姓名必须都在当前纠正原话中。\n"
     "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed；两种确认决定都必须用 assistant_claim 逐字引用 context 中被确认的助手提议（保留人物姓名和适用情境），保存双方来源；stated 命题仍从用户原话派生。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
     "本人持续 attribute/preference 的所选原话明确命名了适用主题时，必须附主题检索线索：\"entity\":{\"canonical_name\":\"<原话主题词>\",\"kind\":\"topic\",\"aliases\":[\"<常见同义主题词>\"]}。这是第10条第三方 entity 之外的本人主题用法；不是改成第三方属性。给主题的常见等价叫法，便于以后换说法仍能检索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义时 aliases 留空。主题词必须在所选原话中；命题仍逐字来自所选原话。原话未命名主题或省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
@@ -864,6 +868,10 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "Optional scope is an applicability domain, not a new claim: nominate one exact user phrase only. "
+    "It may resolve an omitted topic from prior user conversation_context, but never from assistant prose. "
+    "Competing people/topics or missing original wording mean scope=null. Do not change the proposition, "
+    "supports, target entity or formation eligibility to obtain a label. Do not discard a valid fact without a label.\n"
     "For an explicit name correction, including an omitted-topic 'that name was wrong', use action=correct, statement_kind=alias, entity=new name and alias_of=old name. Do not use correct+naming or attach any corrects_cognition_id, corrects_relationship_id or corrects_event_id; both names must occur in the current correction evidence.\n"
     "Split independent person relationships, abilities/evaluations and enduring decisions into separate items, even within one sentence. A relationship never substitutes for an evaluation, or vice versa. Select the relationship clause alone; represent a user's evaluation as attribute + entity targeting the person, as the user's view rather than certified objective ability. Resolve a unique adjacent pronoun without folding the relationship into the evaluation. The compiler creates entities with source links; redundant naming is unnecessary. Explicitly confirmed future situational actions/reminders form a separate preference decision: stated for an explicit restatement, confirmed for short assent. In BOTH cases include assistant_claim quoting the confirmed proposal verbatim from context (retain the person name and situation), so both sources are preserved; stated propositions still derive from user text. Never form a decision from unconfirmed assistant advice, refusal or casual emotion. Correct evaluations with corrects_cognition_id and relationships with corrects_relationship_id. For an explicit name correction use action=correct, statement_kind=alias, entity=new name, alias_of=old name; both names must occur in the same correction evidence. Ordinary aliases still use form.\n"
     "For an ongoing owner attribute/preference whose selected source explicitly names its topic, "
@@ -2122,6 +2130,13 @@ class HermesBatchAdapterProcessor:
                     normalizations.append({"item_index": item_index, "rule": "excluded_task_scoped_instruction"})
                     continue
                 return None, reason
+            if item.scope and (item.entity_canonical_name or db.execute(
+                "SELECT 1 FROM entity WHERE world_id=? AND kind='person' AND canonical_name=?",
+                (job.subject_id, item.scope),
+            ).fetchone()):
+                # Person attribution belongs to the existing real target, not
+                # to the applicability scope. Only the optional label is lost.
+                item = replace(item, scope=None)
             if item.assistant_claim:
                 proposals = [turn for turn in prior_turns if turn["role"] == "assistant"
                              and item.assistant_claim in turn["content"] and turn["message_id"]]
@@ -3030,6 +3045,17 @@ class HermesBatchAdapterProcessor:
                 entity_kind=entity_kind,
                 topic_canonical_name=topic_canonical_name,
                 topic_aliases=topic_aliases,
+                scope=(
+                    _grounded_scope(
+                        raw_item.get("scope", topic_canonical_name),
+                        [raw_by_id[eid][:end] for eid, _start, end, _text in parsed],
+                        (set(current_entity_mentions or {}) | (batch_entity_names or set())
+                         | ({topic_canonical_name} if topic_canonical_name else set()))
+                        - {"用户", "我", OWNER_ENTITY_NAME},
+                    )
+                    if kind in ("attribute", "preference") and formed_by == "stated"
+                    and action == "form" else None
+                ),
                 relation_type=relation_type,
                 target_canonical_name=target_canonical_name,
                 target_entity_kind=target_entity_kind,
@@ -5379,7 +5405,7 @@ class HermesBatchAdapterProcessor:
                  id, subject_id, content, content_type, formed_by,
                  confidence, cred_status, scope, valid_at, invalid_at,
                  asked_at, archived_at, muted_at, created_at, updated_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL,
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL,
                          NULL, NULL, NULL, ?, ?)""",
             (
                 cognition_id,
@@ -5389,6 +5415,11 @@ class HermesBatchAdapterProcessor:
                 item.formed_by,
                 confidence,
                 item.cred_status_for(confidence),
+                # Corrections retain their existing applicability domain. A
+                # proposed label must never narrow/reassign a revision chain.
+                (db.execute("SELECT scope FROM cognition WHERE id=?",
+                            (item.corrects_cognition_id,)).fetchone()[0]
+                 if item.corrects_cognition_id else item.scope),
                 now_text,
                 now_text,
             ),

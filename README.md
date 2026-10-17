@@ -56,6 +56,19 @@ MemoWeft keeps these boundaries explicit:
   An explicit user restatement stays verbatim and may retain a unique same-person
   preceding proposal as context. Assistant prose never becomes user Evidence.
 - Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
+  Python formation optionally accepts `scope` as a verbatim applicability phrase.
+  Only a phrase in the supporting user Evidence at or before the selected claim
+  can become durable scope; missing or competing labels do not discard facts.
+  Existing scopes and correction domains retain their meaning. Recall can recover
+  an omitted scope from a unique earlier user source in the same conversation,
+  using existing jobs, interactions and live Evidence in its read transaction.
+  This projection is never stored as scope or added as fact support, and disappears
+  when its original context or destination permission is unavailable. Person
+  labels use the existing real target entity. Labels participate in matching and
+  render as `记忆：［标签：original phrase］original body`, within the existing
+  character budget. They are context labels, not additional user claims.
+  Legacy records without labels remain readable and writable. This does not add
+  dates, English entry prefixes, a new index, or persistent cross-turn tags.
   Python links current, sourced self-naming claims and accepted aliases to
   the same person even when an earlier neutral name remains canonical;
   only current, destination-readable alias provenance can establish this link.
