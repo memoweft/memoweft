@@ -44,6 +44,7 @@ from ..trust.currentness import evidence_state, linked_evidence, world_item_visi
 from ...store import open_db
 from ...store.interaction_context import SqliteInteractionContextStore
 from ...types import InteractionContextInput, VisibleTurn, Lang, ModelTier
+from ..recall_language import call_with_recall_language
 
 logger = logging.getLogger(__name__)
 
@@ -970,7 +971,7 @@ class DshMemoWeftRuntime:
         except sqlite3.Error:
             return {"text": "", "count": 0}
         try:
-            text, count = recall_world_text(db, self._ingestor.subject_id, query, model_tier=model_tier, lang=self._lang)
+            text, count = call_with_recall_language(recall_world_text, db, self._ingestor.subject_id, query, model_tier=model_tier, lang=self._lang)
             self._last_recall_count = count
             return {"text": text, "count": count}
         except sqlite3.Error:

@@ -28,6 +28,7 @@ from ...semantic.store import content_hash
 from dataclasses import dataclass
 from ...types import Lang, ModelTier
 from .recall_render import recall_date, render_english_entries
+from ..recall_language import call_with_recall_language
 from hashlib import sha256
 from itertools import islice
 import json
@@ -1273,7 +1274,7 @@ def recall_world_text(
     db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local", lang: Lang = 'zh',
 ) -> tuple[str, int]:
     """Compatibility wrapper for the S1 immutable Recall snapshot API."""
-    snapshot = recall_world_snapshot(db, subject_id, query, model_tier=model_tier, lang=lang)
+    snapshot = call_with_recall_language(recall_world_snapshot, db, subject_id, query, model_tier=model_tier, lang=lang)
     if snapshot is None:
         return "", 0
     return snapshot.rendered_recall, snapshot.count

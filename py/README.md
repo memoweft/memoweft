@@ -32,6 +32,13 @@ direct recall and RPC previews. Omitting it preserves the existing Chinese
 rendering byte for byte, including its existing truncation behavior; explicit
 Chinese keeps the same contract and does not add dates or escaping.
 
+Default and Chinese calls also retain their original argument shape: they do
+not send a `lang` keyword to existing readers or service constructors. English
+is passed only when the callable explicitly declares a keyword-capable `lang`
+parameter; legacy, opaque and `**kwargs`-only adapters safely use their original
+Chinese call instead. Signature inspection happens before invocation, and
+exceptions raised inside an implementation are neither hidden nor retried.
+
 New English recall uses the producer/consumer contract from
 [WeftMate #474](https://github.com/memoweft/weftmate/pull/474): `Memory:` or
 `Memory (past):`, LF entry separators, and one leading backslash added to body

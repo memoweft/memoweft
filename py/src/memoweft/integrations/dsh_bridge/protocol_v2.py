@@ -15,6 +15,7 @@ import json
 from typing import Any, Mapping, cast
 
 from . import DshBoundaryError, DshMemoWeftRuntime
+from ..recall_language import call_with_recall_language
 from ..hermes.boundary_store import BoundaryHardDeletedSourceError
 from .interactions import InteractionQueryError
 from .observed import ObservedError, ObservedService
@@ -285,7 +286,7 @@ class DshRpcV2Server:
         host_id = self._runtime.host_id
         if db_path is None or subject_id is None or host_id is None:
             raise DshRpcProtocolError("runtime_identity_unavailable")
-        self._query = QueryService(db_path, subject_id=subject_id, lang=self._runtime.lang)
+        self._query = call_with_recall_language(QueryService, db_path, subject_id=subject_id, lang=self._runtime.lang)
         self._command = CommandService(
             db_path, subject_id=subject_id, host_id=host_id
         )

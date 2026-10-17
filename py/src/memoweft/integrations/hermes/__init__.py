@@ -31,6 +31,7 @@ import sqlite3
 import threading
 from typing import Any, Mapping, Optional, Sequence, cast
 from ...types import Lang
+from ..recall_language import call_with_recall_language
 
 from .boundary_store import (
     HermesBoundaryEvidenceCandidate,
@@ -903,8 +904,8 @@ class HermesMemoWeftRuntime:
         except sqlite3.Error:
             return ""
         try:
-            text, count = recall_world_text(
-                db, self._ingestor.subject_id, query, lang=self._lang
+            text, count = call_with_recall_language(
+                recall_world_text, db, self._ingestor.subject_id, query, lang=self._lang
             )
             self._last_recall_count = count
             return text
@@ -936,7 +937,7 @@ class HermesMemoWeftRuntime:
         except sqlite3.Error:
             return None
         try:
-            snapshot = recall_world_snapshot(db, self._ingestor.subject_id, query, lang=self._lang)
+            snapshot = call_with_recall_language(recall_world_snapshot, db, self._ingestor.subject_id, query, lang=self._lang)
             if snapshot is None:
                 return None
             self._last_recall_count = snapshot.count
@@ -976,7 +977,7 @@ class HermesMemoWeftRuntime:
                 host_id=self._ingestor.host_id,
             )
             return command_service.execute_provider_tool(tool_name, args)
-        query_service = QueryService(
+        query_service = call_with_recall_language(QueryService,
             self._ingestor.db_path,
             subject_id=self._ingestor.subject_id,
             surface="trust_cloud",
