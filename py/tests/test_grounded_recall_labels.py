@@ -394,3 +394,58 @@ def test_current_labels_do_not_change_identity_revision_or_support(tmp_path: Pat
         assert snapshot is not None and snapshot.rendered_recall == '记忆：［标签：Golden Retriever］' + raw
         old_snapshot = recall_world_snapshot(right, 'owner', raw)
         assert old_snapshot is not None and old_snapshot.rendered_recall == '记忆：' + raw
+
+# Independent review of fef6743f: candidates need not be adjacent, named in
+# the model output, or materialized as entities.
+REVIEW_COMPETITORS = [
+    ('I enjoy diving. I also enjoy climbing.', 'diving', 'I find these activities inspiring.'),
+    ('I met Alice. I also met Beth.', 'Alice', 'I value their companionship.'),
+    ('我喜欢潜水，也喜欢登山。', '潜水', '这些活动让我很有创造力。'),
+    ('我认识小林，也认识小周。', '小林', '我珍惜他们的陪伴。'),
+    ('Climbing is exciting. I enjoy diving.', 'diving', 'I find these activities inspiring.'),
+    ('I enjoy diving. Beth recommends climbing.', 'diving', 'I find these activities inspiring.'),
+]
+
+
+@pytest.mark.parametrize('prior,label,quote', REVIEW_COMPETITORS)
+@pytest.mark.parametrize('same_evidence', [False, True])
+def test_review_competitors_across_clauses(tmp_path: Path, prior: str, label: str,
+                                          quote: str, same_evidence: bool) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    turns = ([{'role': 'user', 'content': prior, 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0}]
+             if not same_evidence else [])
+    turns.append({'role': 'user', 'content': prior + ' ' + quote if same_evidence else quote,
+                  'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1})
+    _, body = _world(path, turns, quote, label)
+    with sqlite3.connect(path) as db:
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
+        assert list(db.iterdump()) == before
+
+
+@pytest.mark.parametrize('language', ['en', 'zh'])
+@pytest.mark.parametrize('reverse', [False, True])
+def test_review_same_body_keeps_each_source_scope_searchable(tmp_path: Path, language: str, reverse: bool) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    words = ['diving', 'climbing'] if language == 'en' else ['潜水', '登山']
+    if reverse:
+        words.reverse()
+    quote = 'I find these activities inspiring.' if language == 'en' else '这些活动让我很有创造力。'
+    body = _stated_normalize(quote)
+    ids: list[str] = []
+    for index, word in enumerate(words):
+        raw = (f'I enjoy {word}. ' if language == 'en' else f'我喜欢{word}。') + quote
+        item = _form(body, (raw.index(quote), len(raw)), evidence_id=f'source-{index}')
+        ids.append(_apply_fact(path, raw, word, job=f'source-{index}', item=item))
+    assert ids[0] == ids[1]
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT count(*) FROM cognition').fetchone()[0] == 1
+        assert db.execute('SELECT count(*) FROM cognition_evidence').fetchone()[0] == 2
+        before = list(db.iterdump())
+        for query in [*words, body]:
+            snapshot = recall_world_snapshot(db, 'owner', query)
+            assert snapshot is not None and snapshot.selected_item_ids == (('cognition', ids[0]),)
+            assert snapshot.rendered_recall == '记忆：' + body
+            assert recall_world_snapshot(db, 'owner', query) == snapshot
+        assert list(db.iterdump()) == before
