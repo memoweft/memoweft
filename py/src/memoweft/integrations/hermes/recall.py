@@ -1020,6 +1020,7 @@ def _current_world_rows(
             ):
                 continue
             content = str(row[1])
+            english_content = content
             anchors = _graph_match_anchors(db, subject_id, current_kind, row_id, model_tier)
             if kind == "cognition":
                 target = db.execute(
@@ -1027,6 +1028,7 @@ def _current_world_rows(
                 ).fetchone()
                 names = _entity_names(db, subject_id, str(target[0]), model_tier) if target else ()
                 if names and not any(name in content for name in names):
+                    english_content = f"{names[0]}: {english_content}"
                     content = f"{names[0]}：{content}"
                 if str(row[3]) == "naming":
                     anchors = tuple(dict.fromkeys(
@@ -1040,13 +1042,16 @@ def _current_world_rows(
             if kind == "cognition":
                 proposal_sources = assistant_sources(db, subject_id, row_id)
                 if proposal_sources:
-                    content += "\n确认依据中的助手原话：" + "\n".join(source["content"] for source in proposal_sources)
+                    proposals = "\n".join(source["content"] for source in proposal_sources)
+                    english_content += "\nAssistant's words the user confirmed: " + proposals
+                    content += "\n确认依据中的助手原话：" + proposals
             predecessor_texts = _predecessor_match_texts(db, subject_id, row_id, model_tier, kind=kind) if kind in {'cognition', 'relationship'} else ()
             items.append(
                 {
                     "kind": current_kind,
                     "id": row_id,
                     "content": content,
+                    "english_content": english_content,
                     "confidence": int(row[2]),
                     "statement_kind": str(row[3]) if kind == "cognition" else kind,
                     "match_text": _graph_match_text(
@@ -1222,13 +1227,18 @@ def recall_world_snapshot(
             surface="model_cloud" if model_tier == "cloud" else "recall")]
         historical = bool(_HISTORICAL_QUERY_PATTERN.search(query) or re.search(r'为什么|为何|不算|失效|why|invalid', query, re.I))
         if lang == 'en':
+            # Matching keeps the original text, including its existing copy.
+            # Only the selected output projection uses localized generated copy;
+            # source text is never searched/replaced or translated in place.
+            english_content = {(str(row['kind']), str(row['id'])): row['english_content'] for row in rows}
             rendered_items = []
             for item in selected:
-                projection = {**item, 'recall_date': recall_date(db, subject_id, item, model_tier)}
+                projection = {**item, 'recall_date': recall_date(db, subject_id, item, model_tier),
+                              'content': english_content[(str(item['kind']), str(item['id']))]}
                 if historical:
                     explanation = _replacement_explanations(db, subject_id, [item], model_tier, lang=lang)
                     if explanation:
-                        projection['content'] = str(item['content']) + '\n' + explanation
+                        projection['content'] = str(projection['content']) + '\n' + explanation
                 rendered_items.append(projection)
             selected, rendered_recall = render_english_entries(rendered_items, max_items=MAX_ITEMS, max_chars=MAX_OUTPUT_CHARS)
         else:

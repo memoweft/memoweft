@@ -888,8 +888,8 @@ class DshMemoWeftRuntime:
     ) -> dict[str, object]:
         if not self._enabled or self._ingestor is None:
             raise DshBoundaryError("runtime is not initialized")
-        return query_interactions(
-            self._ingestor.db_path,
+        return call_with_recall_language(
+            query_interactions, self._ingestor.db_path,
             subject_id=self._ingestor.subject_id,
             query=query,
             session_id=session_id,
@@ -898,6 +898,7 @@ class DshMemoWeftRuntime:
             user_message_id=user_message_id,
             search_mode=search_mode,
             model_tier=model_tier,
+            lang=self._lang,
         )
 
     def query_interaction(

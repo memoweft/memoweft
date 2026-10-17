@@ -47,6 +47,15 @@ Body whitespace, line endings and source wording remain exact after decoding.
 The shared JSON in `tests/fixtures/recall-escape-contract.json` is copied from
 WeftMate commit `aa83af9a002ad4d2511e2d2fc3edded4ff55154d` and fixes the wire bytes.
 
+Generated confirmation explanations and target-name connectors use English in
+English recall; a separate rendering projection keeps the existing matching
+text, scores and candidate order unchanged. Original user and assistant wording
+is not translated or searched/replaced, even when it contains the same Chinese
+phrase as a generated explanation. DSH history context likewise uses the
+configured language for its review notice, roles, conversation labels and
+suggestion/commitment headings. Default and explicit Chinese keep their exact
+prior output; opaque older history renderers retain their old call shape.
+
 English entries show source dates without borrowing formation timestamps:
 spoken support Evidence uses `said at`, or `recorded at` when only recording
 time can be established; events use `event at` / `event time` from their own

@@ -180,3 +180,23 @@ def test_declared_english_implementation_errors_are_not_retried_or_hidden() -> N
     with pytest.raises(TypeError, match='inside implementation'):
         language.call_with_recall_language(broken, lang='en')
     assert calls == ['en']
+
+
+@pytest.mark.parametrize('configured', [None, 'zh', 'en'])
+def test_history_runtime_keeps_legacy_query_implementation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, configured: str | None,
+) -> None:
+    calls: list[dict[str, Any]] = []
+    def old_query(path: Path, **kwargs: Any) -> dict[str, object]:
+        del path
+        assert 'lang' not in kwargs
+        calls.append(kwargs)
+        return {'rendered_context': '旧历史原文'}
+    monkeypatch.setattr(dsh, 'query_interactions', old_query)
+    runtime = dsh.DshMemoWeftRuntime()
+    runtime.initialize('compat', dsh_home=str(tmp_path), subject_id=_OWNER, model_tier='local', auto_route=False, lang=configured)
+    try:
+        assert runtime.query_interactions('history') == {'rendered_context': '旧历史原文'}
+        assert len(calls) == 1
+    finally:
+        runtime.shutdown()
