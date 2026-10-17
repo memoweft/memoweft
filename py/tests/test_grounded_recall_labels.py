@@ -535,3 +535,45 @@ def test_review_new_topic_cannot_hide_in_nominal_context(tmp_path: Path, prior: 
     with sqlite3.connect(path) as db:
         snapshot = recall_world_snapshot(db, 'owner', body)
         assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
+
+@pytest.mark.parametrize('raw,label', [
+    ('I enjoy diving. I also enjoy climbing. I find these activities inspiring.', 'diving'),
+    ('我喜欢潜水，也喜欢登山。这些活动让我很有创造力。', '潜水'),
+])
+def test_single_gate_review_full_body_competition(tmp_path: Path, raw: str, label: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    turns = [{'role': 'user', 'content': raw, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1}]
+    _, body = _world(path, turns, raw, label)
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT scope FROM cognition').fetchone()[0] is None
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
+        assert list(db.iterdump()) == before
+
+
+@pytest.mark.parametrize('prior,current,quote,label,expected', [
+    ('', 'I enjoy diving. I also enjoy climbing.', 'I enjoy diving. I also enjoy climbing.', 'diving', None),
+    ('I enjoy diving. I also enjoy climbing.', 'I find these activities inspiring.', 'I find these activities inspiring.', 'diving', None),
+    ('I enjoy climbing.', 'I enjoy diving.', 'I enjoy diving.', 'diving', None),
+    ('我喜欢登山。', '我喜欢潜水。', '我喜欢潜水。', '潜水', None),
+    ('I enjoy diving.', 'I enjoy climbing.', 'I enjoy climbing.', 'diving', None),
+    ('我喜欢潜水。', '我喜欢登山。', '我喜欢登山。', '潜水', None),
+    ('', 'I enjoy diving.', 'I enjoy diving.', 'diving', 'diving'),
+    ('I enjoy diving.', 'I find these activities inspiring.', 'I find these activities inspiring.', 'diving', 'diving'),
+    ('', '我喜欢潜水。', '我喜欢潜水。', '潜水', '潜水'),
+    ('我喜欢潜水。', '这些活动让我很有创造力。', '这些活动让我很有创造力。', '潜水', '潜水'),
+])
+def test_single_gate_same_rule_for_body_and_context(tmp_path: Path, prior: str, current: str,
+                                                   quote: str, label: str, expected: str | None) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    turns = ([{'role': 'user', 'content': prior, 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0}]
+             if prior else [])
+    turns.append({'role': 'user', 'content': current, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1})
+    _, body = _world(path, turns, quote, label)
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None
+        assert snapshot.rendered_recall == '记忆：' + (f'［标签：{expected}］' if expected else '') + body
+        if not expected:
+            assert db.execute('SELECT scope FROM cognition').fetchone()[0] is None
