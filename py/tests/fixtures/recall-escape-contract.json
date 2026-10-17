@@ -1,0 +1,75 @@
+[
+  {
+    "name": "review reproduction with both quoted header languages",
+    "unescaped": "Memory: First body.\nMemory: Quoted heading belonging to first.\n记忆：Also quoted text belonging to first.\nMemory: Second body.",
+    "items": [
+      {
+        "kind": "cognition",
+        "id": "first",
+        "body": " First body.\nMemory: Quoted heading belonging to first.\n记忆：Also quoted text belonging to first."
+      },
+      {
+        "kind": "event",
+        "id": "second",
+        "body": " Second body."
+      }
+    ],
+    "rendered": "Memory: First body.\n\\Memory: Quoted heading belonging to first.\n\\记忆：Also quoted text belonging to first.\nMemory: Second body."
+  },
+  {
+    "name": "review reproduction with matching English count and a Chinese final line",
+    "unescaped": "Memory: First body.\nMemory: Quoted heading belonging to first.\n记忆：Second body.",
+    "items": [
+      {
+        "kind": "cognition",
+        "id": "first",
+        "body": " First body.\nMemory: Quoted heading belonging to first."
+      },
+      {
+        "kind": "event",
+        "id": "second",
+        "body": " Second body."
+      }
+    ],
+    "rendered": "Memory: First body.\n\\Memory: Quoted heading belonging to first.\nMemory: Second body."
+  },
+  {
+    "name": "all reserved line prefixes, backslashes, dates and multiline text",
+    "items": [
+      {
+        "kind": "cognition",
+        "id": "dated",
+        "body": "[2026-01-06] Original wording.\nMemory: quoted current\nMemory (past): quoted past\n记忆：引用的当前条目头\n记忆（过往）：引用的过往条目头\n\\original backslash\n\\\\two original backslashes\n\\Memory: already prefixed\n\\\n[January 6, 2026] A literal date line."
+      },
+      {
+        "kind": "event",
+        "id": "recorded",
+        "past": true,
+        "body": "[recorded at: 2026-10-16] A synthetic source.\n  Memory: indented text\nOrdinary inline 记忆： and Memory: text.\n"
+      },
+      {
+        "kind": "entity",
+        "id": "first-line-header",
+        "body": "Memory (past): the body itself starts with a reserved prefix.\nAnother line."
+      }
+    ],
+    "rendered": "Memory:[2026-01-06] Original wording.\n\\Memory: quoted current\n\\Memory (past): quoted past\n\\记忆：引用的当前条目头\n\\记忆（过往）：引用的过往条目头\n\\\\original backslash\n\\\\\\two original backslashes\n\\\\Memory: already prefixed\n\\\\\n[January 6, 2026] A literal date line.\nMemory (past):[recorded at: 2026-10-16] A synthetic source.\n  Memory: indented text\nOrdinary inline 记忆： and Memory: text.\n\nMemory:\\Memory (past): the body itself starts with a reserved prefix.\nAnother line."
+  },
+  {
+    "name": "exact whitespace and mixed body line endings",
+    "items": [
+      {
+        "kind": "cognition",
+        "id": "space",
+        "past": true,
+        "body": "  [2026-07-14] leading and trailing spaces  \r\n记忆：quoted CRLF line\r\n\\original CRLF backslash\r\n\n"
+      },
+      {
+        "kind": "relationship",
+        "id": "carriage-return",
+        "body": "A body ending in a carriage return.\r"
+      }
+    ],
+    "rendered": "Memory (past):  [2026-07-14] leading and trailing spaces  \r\n\\记忆：quoted CRLF line\r\n\\\\original CRLF backslash\r\n\n\nMemory:A body ending in a carriage return.\r"
+  }
+]
