@@ -577,3 +577,117 @@ def test_single_gate_same_rule_for_body_and_context(tmp_path: Path, prior: str, 
         assert snapshot.rendered_recall == '记忆：' + (f'［标签：{expected}］' if expected else '') + body
         if not expected:
             assert db.execute('SELECT scope FROM cognition').fetchone()[0] is None
+
+@pytest.mark.parametrize('raw,name', [
+    ('Alice likes tea. Beth likes coffee.', 'Alice'),
+    ('小林喜欢茶。小周喜欢咖啡。', '小林'),
+])
+def test_single_gate_real_entity_body_cannot_bypass(tmp_path: Path, raw: str, name: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    item = _form(raw, (0, len(raw)), kind='attribute', evidence_id='entity-body')
+    item['entity'] = {'canonical_name': name, 'kind': 'person'}
+    cid = _apply_fact(path, raw, None, job='entity-body', item=item)
+    with sqlite3.connect(path) as db:
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', raw)
+        assert snapshot is not None and ('cognition', cid) in snapshot.selected_item_ids
+        assert snapshot.rendered_recall == '记忆：' + raw
+        assert list(db.iterdump()) == before
+
+
+@pytest.mark.parametrize('route', ['body', 'prior', 'entity', 'legacy', 'append'])
+def test_single_gate_rejection_reaches_every_recall_route(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, route: str) -> None:
+    from memoweft.integrations.hermes import recall
+    path = tmp_path / 'memory.sqlite3'
+    body = 'I enjoy diving.'
+    if route == 'prior':
+        case = ENGLISH[0]
+        _, body = _world(path, case['turns'], case['quote'], case['scope'])
+    elif route == 'entity':
+        body = 'Alice likes tea.'
+        item = _form(body, (0, len(body)), kind='attribute', evidence_id='seed')
+        item['entity'] = {'canonical_name': 'Alice', 'kind': 'person'}
+        _apply_fact(path, body, None, item=item)
+    elif route == 'append':
+        body = 'I find these activities inspiring.'
+        for index in range(2):
+            raw = 'I enjoy diving. ' + body
+            item = _form(body, (raw.index(body), len(raw)), evidence_id=f'source-{index}')
+            _apply_fact(path, raw, 'diving', job=f'source-{index}', item=item)
+    else:
+        _apply_fact(path, body, 'diving')
+    with sqlite3.connect(path) as db:
+        if route == 'legacy':
+            db.execute('DELETE FROM memory_world_job')
+            db.commit()
+        baseline = recall_world_snapshot(db, 'owner', body)
+        assert baseline is not None and '［标签：' in baseline.rendered_recall
+        before = list(db.iterdump())
+        calls: list[object] = []
+        def deny(*args: Any, **kwargs: Any) -> recall._LabelDecision:
+            calls.append((args, kwargs))
+            return recall._LabelDecision()
+        monkeypatch.setattr(recall, '_decide_grounded_label', deny)
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert calls
+        assert snapshot is not None and snapshot.selected_item_ids == baseline.selected_item_ids
+        assert snapshot.rendered_recall == '记忆：' + body
+        assert list(db.iterdump()) == before
+
+
+def test_single_gate_rejection_does_not_discard_formation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from memoweft.integrations.hermes import recall
+    path = tmp_path / 'memory.sqlite3'
+    calls: list[object] = []
+    def deny(*args: Any, **kwargs: Any) -> recall._LabelDecision:
+        calls.append((args, kwargs))
+        return recall._LabelDecision()
+    monkeypatch.setattr(recall, '_decide_grounded_label', deny)
+    cid = _apply_fact(path, 'I enjoy diving.', 'diving')
+    assert calls
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT scope FROM cognition WHERE id=?', (cid,)).fetchone()[0] is None
+        snapshot = recall_world_snapshot(db, 'owner', 'diving')
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：I enjoy diving.'
+
+
+@pytest.mark.parametrize('texts,kind,expected', [
+    (['I enjoy diving. I also enjoy climbing. I find these activities inspiring.'], 'topic', {'diving', 'climbing'}),
+    (['我喜欢潜水，也喜欢登山。这些活动让我很有创造力。'], 'topic', {'潜水', '登山'}),
+    (['I met Alice.', 'I also met Beth.', 'I value their companionship.'], 'person', {'Alice', 'Beth'}),
+    (['我认识小林，也认识小周。', '我珍惜他们的陪伴。'], 'person', {'小林', '小周'}),
+])
+def test_single_gate_collection_is_independent_of_nomination(texts: list[str], kind: str, expected: set[str]) -> None:
+    from memoweft.integrations.hermes.recall import _collect_label_candidates, _decide_grounded_label
+    candidates, complete = _collect_label_candidates(texts, [])
+    assert complete and candidates[kind] == expected
+    for nomination in expected:
+        assert _decide_grounded_label(nomination, [texts], kind=kind).label is None
+
+@pytest.mark.parametrize('language', ['en', 'zh'])
+def test_single_gate_appended_source_with_readable_prior_turn(tmp_path: Path, language: str) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    diving, climbing, body = ('diving', 'climbing', 'I find these activities inspiring.') if language == 'en' else ('潜水', '登山', '这些活动让我很有创造力。')
+    first = (f'I enjoy {diving}. ' if language == 'en' else f'我喜欢{diving}。') + body
+    second = (f'I enjoy {climbing}. ' if language == 'en' else f'我喜欢{climbing}。') + body
+    proposition = _stated_normalize(body)
+    item = _form(proposition, (first.index(body), len(first)), evidence_id='first')
+    cid = _apply_fact(path, first, diving, job='first', item=item)
+    clock = MutableClock()
+    clock.advance(60)
+    def setup(p: Path) -> None:
+        _set_evidence(p, 'second', second)
+        with sqlite3.connect(p) as db:
+            db.execute("INSERT INTO interaction_context VALUES ('first-turn','owner','session-parent','boundary-first',?,'hash','2026-08-14T12:00:00.000Z')",
+                       (json.dumps([{'role': 'user', 'content': first, 'message_id': 'first-message'}]),))
+    item = _form(proposition, (second.index(body), len(second)), evidence_id='second')
+    item['scope'] = climbing
+    _run(path, clock, [_model(_batch(item))], ('second',), setup, job_id='second')
+    assert _job(path, 'second')['state'] == 'applied'
+    with sqlite3.connect(path) as db:
+        before = list(db.iterdump())
+        snapshots = [recall_world_snapshot(db, 'owner', query) for query in (diving, climbing, body)]
+        for snapshot in snapshots:
+            assert snapshot is not None and snapshot.selected_item_ids == (('cognition', cid),)
+            assert snapshot.rendered_recall == '记忆：' + proposition
+        assert list(db.iterdump()) == before

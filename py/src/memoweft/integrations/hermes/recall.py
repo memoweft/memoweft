@@ -972,112 +972,162 @@ def _graph_topic_cues(
     ))
 
 
-def _grounded_scope(value: object, texts: Sequence[str], competitors: Iterable[str] = ()) -> str | None:
-    """A nomination is not evidence. Keep only a complete, verbatim phrase.
-
-    This validator is also used before formation persists scope. Invalid or
-    ambiguous optional labels never invalidate an otherwise legal fact.
-    """
+def _label_word_present(value: object, texts: Sequence[str]) -> bool:
+    """Literal occurrence only. This helper never authorizes a label."""
     if (not isinstance(value, str) or not value.strip() or value != value.strip()
             or value == "unscoped" or any(c in value for c in '\r\n［］[]')):
-        return None
-    # ASCII word boundaries prevent e.g. 'Ann' being recovered from 'Joanne'.
+        return False
     pattern = (r"(?<![A-Za-z0-9_])" if value[0].isascii() and value[0].isalnum() else "")
     pattern += re.escape(value)
     if value[-1].isascii() and value[-1].isalnum():
         pattern += r"(?![A-Za-z0-9_])"
-    occurrences = [(text, match) for text in texts for match in re.finditer(pattern, text)]
-    if not occurrences:
-        return None
-    # An explicit coordinated alternative is ambiguous even before either name
-    # has a World entity. Reject the label, never guess which side was intended.
-    if any(re.search(r'(?:\b(?:and|or)\s+|[和与及或、])$', text[:match.start()], re.I)
-           or re.match(r'(?:\s+(?:and|or)\b|[和与及或、])', text[match.end():], re.I)
-           for text, match in occurrences):
-        return None
-    if any(word != value and _grounded_scope(word, texts) for word in competitors):
-        return None
-    return value
+    return any(re.search(pattern, text) for text in texts)
 
 
+def _candidate_values(value: str) -> tuple[set[str], bool]:
+    """Collect every coordinated noun, independently of the nomination.
 
-def _reference_context_unique(word: str, texts: Sequence[str]) -> bool:
-    """Positive, deliberately narrow proof of a single discourse referent.
-
-    Finding the nominated substring (or failing to find a known competitor) is
-    NOT proof of uniqueness. Every sentence must be either the sole introduction
-    or an explicitly anaphoric continuation. Unrecognized independent clauses,
-    including unseen people/topics, make the entire projection unavailable.
-    This is not a general natural-language entity extractor.
+    Only recognized property/method suffixes are removed. Unparsed material is
+    uncertainty, never evidence that the nominated noun is the only candidate.
     """
-    introductions = 0
-    for text in texts:
-        sentences = [part.strip() for part in re.split(r'[.!?。！？;；\n]+', text) if part.strip()]
-        for sentence in sentences:
-            sentence = re.sub(r'^(?:Hey|Yeah|Yes|Exactly),?\s*', '', sentence)
-            if _grounded_scope(word, [sentence]):
-                # Full-match the introduction; no unexplained trailing object
-                # or second clause is silently treated as a unique antecedent.
-                noun = re.escape(word)
-                simple = (r"(?:I (?:recently )?(?:enjoy|like|love|prefer|met|know|tried)|"
-                          r"(?:Her|His|Their) name is) " + noun + r"(?: companionship)?")
-                situated = (r"I recently (?:spent some time at a friend's (?:house|home) "
-                            r"and interacted with their|had an? (?:interesting|new|memorable) experience at a "
-                            r"(?:team-building|social|work|school|community) event where I tried) " + noun)
-                topic = (r"I've been thinking (?:a lot )?about my (?:travel|pet|sports|food|reading) preferences "
-                         r"(?:lately, )?especially " + noun)
-                chinese = (r"(?:[他她]叫|我(?:最近)?(?:在一个朋友家)?接触了|"
-                           r"我(?:最近)?(?:参加(?:团建|聚会|学校活动)时)?体验了|"
-                           r"我(?:最近)?(?:一直在)?(?:重新)?考虑|我(?:喜欢|认识))" + noun)
-                if not any(re.fullmatch(pattern, sentence) for pattern in (simple, situated, topic, chinese)):
-                    return False
-                introductions += 1
+    value = re.sub(r"(?: companionship|的陪伴)$", '', value)
+    value = re.sub(r"(?: \d+)?(?: with (?:careful )?hand stitching)+$", '', value)
+    parts = re.split(r'\s+(?:and|or)\s+|[,，、]|以及|和|与|或', value)
+    candidates: set[str] = set()
+    complete = True
+    for part in parts:
+        word = part.strip()
+        if (not word or not re.fullmatch(r"[A-Za-z\u3400-\u9fff][A-Za-z\u3400-\u9fff '-]*", word)
+                or re.search(r'\b(?:with|also|then|but|where|while|is|was|enjoy|like|met|know)\b|喜欢|认识|也|还', word)):
+            complete = False
+        else:
+            candidates.add(word)
+    return candidates, complete
+
+
+def _collect_label_candidates(
+    texts: Sequence[str], known: Sequence[tuple[str, str]],
+) -> tuple[dict[str, set[str]], bool]:
+    """Read the entire source window, collecting people and topic antecedents.
+
+    Introductions produce candidates even if there is no entity or nomination
+    for them. Values of a reference (e.g. alternatives *to* a topic) and explicit
+    anaphoric descriptions do not introduce a new antecedent. Unsupported
+    clauses make the collection incomplete; callers must not guess from it.
+    """
+    candidates: dict[str, set[str]] = {'topic': set(), 'person': set()}
+    complete = True
+    quality = r"(?:gentle|calm|friendly|thrilling|exciting|interesting|impressive|disappointing|comforting)"
+    property_word = r"(?:adaptability|calmness|friendliness|comfort|quality)"
+    wellbeing = r"(?:health|relaxation|well-being|comfort)"
+    descriptions = (
+        r"(?:It|This|That) (?:was|is) (?:(?:quite|very|really) " + quality
+        + r"|such an? " + quality + r" (?:creature|experience|activity))",
+        r"I (?:found|find) (?:its|their) " + property_word + r" (?:(?:really|very) )?" + quality,
+        r"I used to love them for their (?:focus|emphasis) on " + wellbeing + r"(?: and " + wellbeing + r")*",
+        r"it seems like many have (?:shifted|changed|moved) towards (?:luxury|relaxing|restful) (?:experiences|activities)",
+        r"It's " + quality + r" because it doesn't align with my (?:personal |health-focused |travel |humanitarian |well-being ){1,3}goals",
+        r"It's (?:definitely|really) made me (?:more|less) (?:open|comfortable|willing) to "
+        r"(?:trying|exploring|experiencing) (?:new|different) (?:things|experiences|activities)",
+        r"the (?:adrenaline rush|excitement|thrill|feeling) was something I didn't expect to (?:enjoy|like) so much",
+        r"(?:the emotional support and companionship they offer are invaluable|I (?:find|value) their companionship(?: invaluable)?)",
+        r"I find (?:these activities inspiring|that pushing my limits in these activities helps me think differently and more creatively)",
+        r"I am (?:actually )?looking into alternatives like [a-z-]+(?: [a-z-]+)*(?: and [a-z-]+(?: [a-z-]+)*)*",
+        r"(?:She|He|They) (?:likes?|prefers?) [a-z-]+(?: [a-z-]+)*",
+        r"(?:用户)?(?:它们提供的情感支持和陪伴很宝贵|在这些活动中挑战极限让我更有创造力|这些活动让我很有创造力)",
+        r"(?:我|用户)(?:珍惜他们的陪伴|正在考虑[^，。；]+这样的替代选择)",
+        r"(?:用户)?[他她]喜欢[^，。；]+",
+    )
+    introductions = (
+        ('topic', r"I (?:also |recently )?(?:enjoy|like|love|prefer|tried) (?P<value>.+)"),
+        ('person', r"(?:I (?:also |recently )?(?:met|know)|(?:Her|His|Their) name is) (?P<value>.+)"),
+        ('topic', r"I recently (?:spent some time at a friend's (?:house|home) and interacted with their|"
+         r"had an? (?:interesting|new|memorable) experience at a (?:team-building|social|work|school|community) event where I tried) (?P<value>.+)"),
+        ('topic', r"I've been thinking (?:a lot )?about my (?:travel|pet|sports|food|reading) preferences (?:lately, )?especially (?P<value>.+)"),
+        ('person', r"(?:[他她]叫|(?:我|用户)(?:也)?认识|也认识)(?P<value>.+)"),
+        ('topic', r"(?:(?:我|用户)(?:最近)?(?:在一个朋友家)?接触了|"
+         r"(?:我|用户)(?:最近)?(?:参加(?:团建|聚会|学校活动)时)?体验了|"
+         r"(?:我|用户)(?:最近)?(?:一直在)?(?:重新)?考虑|(?:我|用户)(?:也)?喜欢|也喜欢)(?P<value>.+)"),
+    )
+    for text in dict.fromkeys(texts):
+        for sentence in re.split(r'[.!?。！？;；\n]+', text):
+            sentence = re.sub(r'^(?:Hey|Yeah|Yes|Exactly),?\s*', '', sentence.strip())
+            if not sentence:
                 continue
-            # Anaphoric clauses may describe the already-introduced referent,
-            # but an independent subject/object introduction is not accepted.
-            clauses = re.split(r',\s*(?:and |but )?|\b(?:and|but) (?=(?:I|[A-Z]))', sentence)
+            clauses = re.split(r'[,，]\s*(?=(?:(?:and|but)\s+)?(?:I\b|it\b|我|用户|也|还))|\b(?:and|but)\s+(?=I\b)', sentence)
             for clause in clauses:
-                clause = clause.strip()
-                # Closed continuation shapes, not an open-ended "It ..."
-                # prefix: an anaphoric opening can still introduce a second
-                # topic later in the same sentence. Unparsed tails fail closed.
-                # Even nominal/adjective slots are closed: accepting an
-                # arbitrary noun here could hide a new activity/person inside
-                # an otherwise familiar continuation. Unsupported wording is
-                # intentionally unlabeled, not assumed to be another property.
-                quality = r"(?:gentle|calm|friendly|thrilling|exciting|interesting|impressive|disappointing|comforting)"
-                property_word = r"(?:adaptability|calmness|friendliness|comfort|quality)"
-                wellbeing = r"(?:health|relaxation|well-being|comfort)"
-                patterns = (
-                    r"(?:It|This|That) (?:was|is) (?:(?:quite|very|really) " + quality
-                    + r"|such an? " + quality + r" (?:creature|experience|activity))",
-                    r"I (?:found|find) (?:its|their) " + property_word + r" (?:(?:really|very) )?" + quality,
-                    r"I used to love them for their (?:focus|emphasis) on " + wellbeing + r"(?: and " + wellbeing + r")*",
-                    r"it seems like many have (?:shifted|changed|moved) towards (?:luxury|relaxing|restful) (?:experiences|activities)",
-                    r"It's " + quality + r" because it doesn't align with my (?:personal |health-focused |travel |humanitarian |well-being ){1,3}goals",
-                    r"It's (?:definitely|really) made me (?:more|less) (?:open|comfortable|willing) to "
-                    r"(?:trying|exploring|experiencing) (?:new|different) (?:things|experiences|activities)",
-                    r"the (?:adrenaline rush|excitement|thrill|feeling) was something I didn't expect to (?:enjoy|like) so much",
-                )
-                if not any(re.fullmatch(pattern, clause) for pattern in patterns):
-                    return False
-    return introductions == 1
+                clause = re.sub(r'^(?:and|but)\s+', '', clause.strip())
+                if not clause:
+                    continue
+                if any(re.fullmatch(pattern, clause) for pattern in descriptions):
+                    continue  # No new candidate, but all other clauses are still scanned.
+                for kind, pattern in introductions:
+                    match = re.fullmatch(pattern, clause)
+                    if match:
+                        values, parsed = _candidate_values(match['value'])
+                        candidates[kind].update(values)
+                        complete = complete and parsed
+                        break
+                else:
+                    # Named subjects can be candidates without a pre-existing
+                    # entity. Their stated attribute value is not a new topic.
+                    match = re.fullmatch(r"(?P<name>[A-Z][a-z]+(?: [A-Z][a-z]+)*) (?:likes|prefers) [a-z-]+", clause)
+                    if match:
+                        candidates['person'].add(match['name'])
+                    else:
+                        match = re.fullmatch(r"(?P<name>[\u3400-\u9fff]{2,4})(?:喜欢|偏爱)[\u3400-\u9fff]+", clause)
+                        if match:
+                            candidates['person'].add(match['name'])
+                        else:
+                            complete = False
+    # Existing names supplement collection, never replace parsing or establish
+    # uniqueness by themselves. Known person names cannot become topic slots.
+    for name, kind in known:
+        if kind in candidates and _label_word_present(name, texts):
+            candidates[kind].add(name)
+            if kind == 'person':
+                candidates['topic'].discard(name)
+    candidates['topic'].difference_update(candidates['person'])
+    return candidates, complete
 
 
-def _supported_scope(
-    value: object, supports: Sequence[tuple[str, int, int, str]], raw: Mapping[str, str],
-    competitors: Iterable[str] = (),
-) -> str | None:
-    """Use selected words directly; resolving an omitted subject needs proof."""
-    if not isinstance(value, str):
-        return None
-    contexts = [raw[eid][:start] for eid, start, _end, _text in supports]
-    selected = [text for _eid, _start, _end, text in supports]
-    if not _grounded_scope(value, [raw[eid][:end] for eid, _start, end, _text in supports], competitors):
-        return None
-    if _grounded_scope(value, selected) or _reference_context_unique(value, contexts):
-        return value
-    return None
+@dataclass(frozen=True)
+class _LabelDecision:
+    label: str | None = None
+    match_words: tuple[str, ...] = ()
+
+
+def _decide_grounded_label(
+    nomination: object, source_windows: Sequence[Sequence[str]], *,
+    kind: str = 'topic', known: Sequence[tuple[str, str]] = (),
+    support_texts: Sequence[str] = (),
+) -> _LabelDecision:
+    """The ONLY label acceptance gate: collect first, then decide exactly once.
+
+    Each window includes a fact's current support and its readable same-session
+    context. Formation, legacy/target recall, projections, appended supports and
+    the final combined display all pass here. A failed/unknown parse cannot
+    turn a literal hit into permission to label. Multiple same-kind candidates
+    (including candidates in the selected body) always leave the label empty.
+    """
+    all_candidates: set[str] = set()
+    complete = bool(source_windows)
+    for texts in source_windows:
+        candidates, parsed = _collect_label_candidates(texts, known)
+        same_kind = candidates.get(kind, set())
+        all_candidates.update(same_kind)
+        complete = complete and parsed and bool(same_kind)
+    grounded = (complete and isinstance(nomination, str)
+                and _label_word_present(nomination, [text for window in source_windows for text in window])
+                and nomination in all_candidates)
+    label = nomination if grounded and all_candidates == {nomination} else None
+    # P2: conflicting source scopes may still match their *own current user
+    # words*. That is not label acceptance, and cannot authorize a stored or
+    # displayed label. Context-only/target ambiguity never gains such a cue.
+    matches = ((str(nomination),) if grounded and
+               (label is not None or (kind == 'topic' and _label_word_present(nomination, support_texts))) else ())
+    return _LabelDecision(cast(str | None, label), matches)
+
 
 def _label_source(
     db: sqlite3.Connection, subject_id: str, evidence_id: str, model_tier: ModelTier,
@@ -1108,22 +1158,15 @@ def _label_jobs(
     ).fetchall()
 
 
-def _prior_label_word(
+def _label_context_sources(
     db: sqlite3.Connection, subject_id: str, session_id: str, host_id: str,
-    cutoff: str, nomination: str, model_tier: ModelTier,
-    current_context: Sequence[str] = (),
-) -> str | None:
-    """Recover one exact user word in the preceding four interactions.
-
-    Interaction copies alone are not authority: the matching job, account,
-    conversation, destination permission and live Evidence must all survive.
-    Multiple original sources or competing known names/scopes fail closed.
-    """
+    cutoff: str, model_tier: ModelTier,
+) -> tuple[str, ...]:
+    """Collect live, readable user context only; make no label decision."""
     if not session_id:
-        return None
+        return ()
     originals: dict[str, str] = {}
     eligible_turns: list[tuple[dict[str, Any], dict[str, tuple[str, str, str] | None]]] = []
-    competitors: set[str] = set()
     contexts = db.execute(
         "SELECT episode_id,context_json FROM interaction_context WHERE subject_id=? "
         "AND conversation_id=? AND created_at<? ORDER BY created_at DESC,rowid DESC LIMIT 4",
@@ -1147,20 +1190,6 @@ def _prior_label_word(
         eligible_turns.extend((turn, sources) for turn in turns
                               if isinstance(turn, dict) and turn.get('role') in {'user', 'assistant'}
                               and isinstance(turn.get('content'), str))
-        # Known competing topic/person nominations cannot be resolved by the
-        # recall query. They are useful only when found in the actual originals.
-        if jobs[0][1]:
-            payload = json.loads(jobs[0][1])
-            interpretation = json.loads(payload.get('content') or '{}')
-            for item in interpretation.get('cognitions', []):
-                if not isinstance(item, dict):
-                    continue
-                candidate = item.get('scope')
-                if isinstance(candidate, str):
-                    competitors.add(candidate)
-                entity = item.get('entity')
-                if isinstance(entity, dict) and isinstance(entity.get('canonical_name'), str):
-                    competitors.add(entity['canonical_name'])
     # Same eight-turn window as the existing formation context. A word outside
     # the model's original context cannot become a derived label afterwards.
     for turn, sources in eligible_turns[-8:]:
@@ -1168,29 +1197,18 @@ def _prior_label_word(
             for eid, source in sources.items():
                 if source is not None and source[0] == turn['content']:
                     originals[eid] = source[0]
-    texts = list(originals.values())
-    for entity_id, name in db.execute(
-        "SELECT id,canonical_name FROM entity WHERE world_id=? AND invalid_at IS NULL",
-        (subject_id,),
-    ):
-        if _grounded_scope(str(name), texts) and _entity_names(db, subject_id, str(entity_id), model_tier):
-            competitors.add(str(name))
-    grounded = {word for word in competitors | {nomination} if _grounded_scope(word, texts)}
-    matches = [text for text in texts if _grounded_scope(nomination, [text])]
-    return nomination if (grounded == {nomination} and len(matches) == 1
-                          and _reference_context_unique(nomination, [*texts, *current_context])) else None
+    return tuple(originals.values())
 
 
 def _cognition_label(
     db: sqlite3.Connection, subject_id: str, cognition_id: str, content: str,
     scope: object, model_tier: ModelTier,
 ) -> tuple[str | None, tuple[str, ...]]:
-    """Separate unanimous display attribution from per-source retrieval cues.
+    """Assemble source windows/nominations; delegate ALL acceptance to one gate.
 
-    Same-ID reaffirmations do not write a new scope or a span ledger. Recover
-    their nominations using the existing applied job receipt, exact selected
-    user text and cognition_evidence link. Never let the first stored scope
-    stand for later, differently-scoped sources.
+    Per-source decisions supply search cues. The combined decision supplies the
+    displayed label, so differently-scoped reaffirmations remain searchable
+    without the first stored scope monopolizing the body's attribution.
     """
     try:
         from .batch_adapter import _parse_supports, _stated_normalize, _stated_normalize_no_subject_prepend
@@ -1201,37 +1219,57 @@ def _cognition_label(
         sources = {eid: _label_source(db, subject_id, eid, model_tier) for eid in evidence_ids}
         if not sources or any(source is None for source in sources.values()):
             return None, ()
-        texts = [source[0] for source in sources.values() if source is not None]
         target = db.execute(
             "SELECT target_entity_id FROM cognition_target WHERE cognition_id=?", (cognition_id,),
         ).fetchone()
         names = _entity_names(db, subject_id, str(target[0]), model_tier) if target else ()
-        if target:
-            direct_names = {name for name in names if _grounded_scope(name, [content]) and _grounded_scope(name, texts)}
-            if len(direct_names) == 1:
-                name = next(iter(direct_names))
-                return name, (name,)
-            if len(direct_names) > 1 or not names:
-                return None, ()
-        words_by_source: dict[str, set[str]] = {eid: set() for eid in evidence_ids}
-        if not target and _grounded_scope(scope, [content]):
-            # Old records remain useful without jobs. A stored scope is only a
-            # direct cue for the sources that actually contain that word.
-            for eid, source in sources.items():
-                if source is not None and _grounded_scope(scope, [source[0]]):
-                    words_by_source[eid].add(str(scope))
+        kind = 'person' if target else 'topic'
+        normalize = _stated_normalize_no_subject_prepend if target else _stated_normalize
+        known = [(name, str(entity_kind)) for entity_id, entity_kind in db.execute(
+            "SELECT id,kind FROM entity WHERE world_id=? AND invalid_at IS NULL ORDER BY id", (subject_id,),
+        ) for name in _entity_names(db, subject_id, str(entity_id), model_tier)]
         jobs = _label_jobs(db, subject_id, cognition_id)
-        sessions_by_source = {eid: {(job[0], job[1]) for job in jobs if eid in json.loads(job[2])}
-                              for eid in evidence_ids}
-        for session_id, host_id, ids_json, model_json, world_json in jobs:
+        sessions = {eid: {(str(job[0]), str(job[1])) for job in jobs if eid in json.loads(job[2])}
+                    for eid in evidence_ids}
+        contexts: dict[str, tuple[str, ...] | None] = {}
+        for eid, source in sources.items():
+            if source is None or len(sessions[eid]) > 1:
+                contexts[eid] = None
+            elif sessions[eid]:
+                session_id, host_id = next(iter(sessions[eid]))
+                contexts[eid] = (_label_context_sources(db, subject_id, session_id, host_id, source[1], model_tier)
+                                 if host_id == source[2] else None)
+            else:
+                contexts[eid] = ()  # Legacy source with no retained job.
+        words_by_source: dict[str, set[str]] = {eid: set() for eid in evidence_ids}
+        windows_by_source: dict[str, list[tuple[str, ...]]] = {eid: [] for eid in evidence_ids}
+
+        def consider(nomination: object, current: Mapping[str, str]) -> None:
+            windows: list[tuple[str, ...]] = []
+            for eid, text in current.items():
+                preceding = contexts[eid]
+                window = (*preceding, text) if preceding is not None else ()
+                windows.append(window)
+                windows_by_source[eid].append(window)
+            decision = _decide_grounded_label(
+                nomination, windows, kind=kind, known=known, support_texts=tuple(current.values()),
+            )
+            for eid in current:
+                words_by_source[eid].update(decision.match_words)
+
+        # A legacy scope/real target is only a nomination too. Its body and
+        # context go through exactly the same collector, never a literal bypass.
+        for eid, source in sources.items():
+            if source is not None and normalize(source[0]) == content:
+                for nomination in (names if target else (scope,)):
+                    consider(nomination, {eid: source[0]})
+        for _session_id, host_id, ids_json, model_json, world_json in jobs:
             ids = json.loads(ids_json)
-            if not isinstance(ids, list):
+            if not isinstance(ids, list) or not model_json or not world_json:
                 continue
             raw = {eid: source[0] for eid, source in sources.items()
                    if eid in ids and source is not None and source[2] == host_id}
             if not raw:
-                continue
-            if not model_json or not world_json:
                 continue
             outcome = json.loads(world_json)
             if not any(isinstance(result, dict) and result.get('action') == 'form'
@@ -1245,40 +1283,20 @@ def _cognition_label(
                         or item.get('statement_kind') not in {'attribute', 'preference'}):
                     continue
                 supports, _ = _parse_supports(item.get('supports'), set(raw), raw)
-                normalize = _stated_normalize_no_subject_prepend if target else _stated_normalize
                 if not supports or any(normalize(text) != content for _eid, _start, _end, text in supports):
                     continue
                 topic = item.get('entity')
-                scope_word = item.get('scope', topic.get('canonical_name') if isinstance(topic, dict)
+                nomination = item.get('scope', topic.get('canonical_name') if isinstance(topic, dict)
                                       and topic.get('kind') == 'topic' else None)
-                nominations = names if target else (scope_word,)
-                for word in nominations:
-                    if not isinstance(word, str) or not _grounded_scope(word, [word]):
-                        continue
-                    if not target and db.execute(
-                        "SELECT 1 FROM entity WHERE world_id=? AND kind='person' AND canonical_name=?",
-                        (subject_id, word),
-                    ).fetchone():
-                        continue
-                    original = _supported_scope(word, supports, raw)
-                    if original is None:
-                        # Never escape a competing current context by finding
-                        # the same word in some older turn instead.
-                        if any(_grounded_scope(word, [raw[eid][:end]]) for eid, _start, end, _text in supports):
-                            continue
-                        if any(len(sessions_by_source[eid]) != 1 for eid, _s, _e, _t in supports):
-                            continue
-                        cutoff = min(source[1] for eid, _s, _e, _t in supports if (source := sources[eid]) is not None)
-                        original = _prior_label_word(
-                            db, subject_id, str(session_id), str(host_id), cutoff, word, model_tier,
-                            [raw[eid][:start] for eid, start, _end, _text in supports],
-                        )
-                    if original:
-                        for eid, _start, _end, _text in supports:
-                            words_by_source[eid].add(original)
+                current = {eid: raw[eid][:end] for eid, _start, end, _text in supports}
+                for word in (names if target else (nomination,)):
+                    consider(word, current)
         cues = tuple(sorted(set().union(*words_by_source.values())))
-        label = cues[0] if len(cues) == 1 and all(words_by_source.values()) else None
-        return label, cues
+        # Missing support windows are deliberately incomplete. The ONLY gate
+        # also decides unanimity across appended sources and source contexts.
+        combined = [window for eid in evidence_ids for window in (windows_by_source[eid] or [()])]
+        decision = _decide_grounded_label(cues[0] if cues else None, combined, kind=kind, known=known)
+        return decision.label, cues
     except (sqlite3.Error, TypeError, ValueError, KeyError, AttributeError):
         return None, ()
 

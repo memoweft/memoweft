@@ -47,7 +47,8 @@ from .world_worker import (
     WorldJobResult,
 )
 from .terminal_outcome import persist_terminal_outcome_in_transaction
-from .recall import _supported_scope, _predecessor_match_texts
+from . import recall as recall_labels
+from .recall import _label_context_sources, _label_word_present, _predecessor_match_texts
 
 logger = logging.getLogger(__name__)
 
@@ -2130,13 +2131,30 @@ class HermesBatchAdapterProcessor:
                     normalizations.append({"item_index": item_index, "rule": "excluded_task_scoped_instruction"})
                     continue
                 return None, reason
-            if item.scope and (item.entity_canonical_name or db.execute(
-                "SELECT 1 FROM entity WHERE world_id=? AND kind='person' AND canonical_name=?",
-                (job.subject_id, item.scope),
-            ).fetchone()):
-                # Person attribution belongs to the existing real target, not
-                # to the applicability scope. Only the optional label is lost.
-                item = replace(item, scope=None)
+            if (item.action == 'form' and item.formed_by == 'stated'
+                    and item.statement_kind in {'attribute', 'preference'}
+                    and item.entity_canonical_name is None and isinstance(raw_item, dict)):
+                # Optional scope has one acceptance gate shared with recall.
+                # Current support AND readable prior user turns are inspected
+                # even when the nominated word occurs in the selected body.
+                try:
+                    scope_nomination = raw_item.get('scope', item.topic_canonical_name)
+                    cutoff = min(str(db.execute("SELECT recorded_at FROM evidence WHERE id=?", (eid,)).fetchone()[0])
+                                 for eid, _s, _e, _t in item.supports)
+                    label_context = _label_context_sources(
+                        db, job.subject_id, job.parent_session_id, job.host_id, cutoff, self.model_tier,
+                    )
+                    current_texts = [raw_by_id[eid][:end] for eid, _start, end, _text in item.supports]
+                    known_labels = [(str(entity['canonical_name']), str(entity['kind']))
+                                    for entity in self._current_entities_payload(job, db)]
+                    decision = recall_labels._decide_grounded_label(scope_nomination, [(*label_context, *current_texts)], known=known_labels)
+                    scope = decision.label
+                    # This is a persistence restriction, not another acceptance
+                    # route: cross-turn labels remain read-only projections.
+                    if scope and _label_word_present(scope, current_texts):
+                        item = replace(item, scope=scope)
+                except (sqlite3.Error, TypeError, ValueError, KeyError, AttributeError):
+                    pass  # Missing optional label must never discard the fact.
             if item.assistant_claim:
                 proposals = [turn for turn in prior_turns if turn["role"] == "assistant"
                              and item.assistant_claim in turn["content"] and turn["message_id"]]
@@ -3045,16 +3063,6 @@ class HermesBatchAdapterProcessor:
                 entity_kind=entity_kind,
                 topic_canonical_name=topic_canonical_name,
                 topic_aliases=topic_aliases,
-                scope=(
-                    _supported_scope(
-                        raw_item.get("scope", topic_canonical_name), parsed, raw_by_id,
-                        (set(current_entity_mentions or {}) | (batch_entity_names or set())
-                         | ({topic_canonical_name} if topic_canonical_name else set()))
-                        - {"用户", "我", OWNER_ENTITY_NAME},
-                    )
-                    if kind in ("attribute", "preference") and formed_by == "stated"
-                    and action == "form" else None
-                ),
                 relation_type=relation_type,
                 target_canonical_name=target_canonical_name,
                 target_entity_kind=target_entity_kind,
