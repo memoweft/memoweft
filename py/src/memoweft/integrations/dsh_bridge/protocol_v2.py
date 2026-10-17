@@ -285,7 +285,7 @@ class DshRpcV2Server:
         host_id = self._runtime.host_id
         if db_path is None or subject_id is None or host_id is None:
             raise DshRpcProtocolError("runtime_identity_unavailable")
-        self._query = QueryService(db_path, subject_id=subject_id)
+        self._query = QueryService(db_path, subject_id=subject_id, lang=self._runtime.lang)
         self._command = CommandService(
             db_path, subject_id=subject_id, host_id=host_id
         )

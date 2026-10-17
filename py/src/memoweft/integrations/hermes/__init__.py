@@ -30,6 +30,7 @@ from pathlib import Path
 import sqlite3
 import threading
 from typing import Any, Mapping, Optional, Sequence, cast
+from ...types import Lang
 
 from .boundary_store import (
     HermesBoundaryEvidenceCandidate,
@@ -575,6 +576,7 @@ class HermesMemoWeftRuntime:
         self._world_worker: WorldJobWorker | None = None
         self._enabled = False
         self._last_recall_count = 0
+        self._lang: Lang = 'zh'
 
     @property
     def db_path(self) -> Path | None:
@@ -587,6 +589,7 @@ class HermesMemoWeftRuntime:
         self.shutdown()
         self._ingestor = None
         self._outcome_store = None
+        self._lang = cast(Lang, _optional_lang(kwargs.get('lang')) or 'zh')
         hermes_home = Path(str(kwargs.get("hermes_home") or "."))
         platform = str(kwargs.get("platform") or "unknown")
         agent_context = str(kwargs.get("agent_context") or "primary")
@@ -901,7 +904,7 @@ class HermesMemoWeftRuntime:
             return ""
         try:
             text, count = recall_world_text(
-                db, self._ingestor.subject_id, query
+                db, self._ingestor.subject_id, query, lang=self._lang
             )
             self._last_recall_count = count
             return text
@@ -933,7 +936,7 @@ class HermesMemoWeftRuntime:
         except sqlite3.Error:
             return None
         try:
-            snapshot = recall_world_snapshot(db, self._ingestor.subject_id, query)
+            snapshot = recall_world_snapshot(db, self._ingestor.subject_id, query, lang=self._lang)
             if snapshot is None:
                 return None
             self._last_recall_count = snapshot.count
@@ -977,6 +980,7 @@ class HermesMemoWeftRuntime:
             self._ingestor.db_path,
             subject_id=self._ingestor.subject_id,
             surface="trust_cloud",
+            lang=self._lang,
         )
         return query_service.execute_provider_tool(tool_name, args)
 

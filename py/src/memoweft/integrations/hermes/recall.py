@@ -26,7 +26,8 @@ from ...semantic.runtime import CandidateProvider, SemanticCandidate, provider_f
 from ...semantic.store import content_hash
 
 from dataclasses import dataclass
-from ...types import ModelTier
+from ...types import Lang, ModelTier
+from .recall_render import recall_date, render_english_entries
 from hashlib import sha256
 from itertools import islice
 import json
@@ -769,8 +770,10 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     return _score_world_anchor_rows(query, rows_list)
 
 
-def format_recall(items: Sequence[Mapping[str, object]]) -> str:
+def format_recall(items: Sequence[Mapping[str, object]], *, lang: Lang = 'zh') -> str:
     """Render the deterministic injected block (claims only, no internals)."""
+    if lang == 'en':
+        return render_english_entries([dict(item) for item in items], max_items=MAX_ITEMS, max_chars=MAX_OUTPUT_CHARS)[1]
     if not items:
         return ""
     lines = []
@@ -1108,7 +1111,7 @@ def _predecessor_match_texts(
 
 
 def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
-                             selected: Sequence[Mapping[str, object]], model_tier: ModelTier) -> str:
+                             selected: Sequence[Mapping[str, object]], model_tier: ModelTier, *, lang: Lang = 'zh') -> str:
     """Explain formal replacement chains only on explicit history questions."""
     lines: list[str] = []
     for item in selected:
@@ -1136,7 +1139,8 @@ def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
                 if not world_item_evidence_visible(db, subject_id, cast(Any, kind), str(prior),
                     surface='model_cloud' if model_tier == 'cloud' else 'recall', model_tier=model_tier):
                     continue
-                lines.append(f'取代原因（旧理解不再有效）：{content}；后经用户纠正取代（{reason}），以当前理解为准。')
+                lines.append(f'Replaced understanding (no longer current): {content}; corrected by the user ({reason}); use the current understanding.'
+                             if lang == 'en' else f'取代原因（旧理解不再有效）：{content}；后经用户纠正取代（{reason}），以当前理解为准。')
                 pending.append(str(prior))
     return '\n'.join(dict.fromkeys(lines))
 
@@ -1144,6 +1148,7 @@ def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
 def recall_world_snapshot(
     db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local",
     candidate_provider: CandidateProvider | None = None,
+    lang: Lang = 'zh',
 ) -> RecallSnapshotV1 | None:
     """Read one coherent, deterministic Recall snapshot without writes.
 
@@ -1154,7 +1159,7 @@ def recall_world_snapshot(
     """
     transaction_started = not db.in_transaction
     try:
-        if model_tier not in {"local", "cloud"}:
+        if model_tier not in {"local", "cloud"} or lang not in {'zh', 'en'}:
             return None
         if transaction_started:
             db.execute("BEGIN")
@@ -1214,13 +1219,25 @@ def recall_world_snapshot(
         selected = [item for item in selected if world_item_visible(
             db, subject_id, cast(Any, str(item["kind"])), str(item["id"]),
             surface="model_cloud" if model_tier == "cloud" else "recall")]
+        historical = bool(_HISTORICAL_QUERY_PATTERN.search(query) or re.search(r'为什么|为何|不算|失效|why|invalid', query, re.I))
+        if lang == 'en':
+            rendered_items = []
+            for item in selected:
+                projection = {**item, 'recall_date': recall_date(db, subject_id, item, model_tier)}
+                if historical:
+                    explanation = _replacement_explanations(db, subject_id, [item], model_tier, lang=lang)
+                    if explanation:
+                        projection['content'] = str(item['content']) + '\n' + explanation
+                rendered_items.append(projection)
+            selected, rendered_recall = render_english_entries(rendered_items, max_items=MAX_ITEMS, max_chars=MAX_OUTPUT_CHARS)
+        else:
+            rendered_recall = format_recall(selected)
+            if historical:
+                explanations = _replacement_explanations(db, subject_id, selected, model_tier)
+                rendered_recall = '\n'.join(filter(None, (rendered_recall, explanations)))[:MAX_OUTPUT_CHARS]
         selected_item_ids = tuple(
             (str(item["kind"]), str(item["id"])) for item in selected
         )
-        rendered_recall = format_recall(selected)
-        if _HISTORICAL_QUERY_PATTERN.search(query) or re.search(r'为什么|为何|不算|失效|why|invalid', query, re.I):
-            explanations = _replacement_explanations(db, subject_id, selected, model_tier)
-            rendered_recall = '\n'.join(filter(None, (rendered_recall, explanations)))[:MAX_OUTPUT_CHARS]
         recall_snapshot_token = _digest(
             {
                 "schema_version": 1,
@@ -1253,10 +1270,10 @@ def recall_world_snapshot(
 
 
 def recall_world_text(
-    db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local"
+    db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local", lang: Lang = 'zh',
 ) -> tuple[str, int]:
     """Compatibility wrapper for the S1 immutable Recall snapshot API."""
-    snapshot = recall_world_snapshot(db, subject_id, query, model_tier=model_tier)
+    snapshot = recall_world_snapshot(db, subject_id, query, model_tier=model_tier, lang=lang)
     if snapshot is None:
         return "", 0
     return snapshot.rendered_recall, snapshot.count

@@ -43,7 +43,7 @@ from .interactions import query_interaction, query_interactions
 from ..trust.currentness import evidence_state, linked_evidence, world_item_visible
 from ...store import open_db
 from ...store.interaction_context import SqliteInteractionContextStore
-from ...types import InteractionContextInput, VisibleTurn, ModelTier
+from ...types import InteractionContextInput, VisibleTurn, Lang, ModelTier
 
 logger = logging.getLogger(__name__)
 
@@ -717,6 +717,7 @@ class DshMemoWeftRuntime:
         self._enabled = False
         self._last_recall_count = 0
         self._model_tier: str | None = None
+        self._lang: Lang = 'zh'
         self._route_ready = False
         self._route_error: str | None = None
 
@@ -740,9 +741,17 @@ class DshMemoWeftRuntime:
     def last_recall_count(self) -> int:
         return self._last_recall_count
 
+    @property
+    def lang(self) -> Lang:
+        return self._lang
+
     def initialize(self, session_id: str, **kwargs: Any) -> dict[str, str]:
         self.shutdown()
         self._ingestor = None
+        lang = kwargs.get('lang')
+        if lang not in (None, 'zh', 'en'):
+            raise DshBoundaryError("lang must be None, 'zh' or 'en'")
+        self._lang = cast(Lang, lang or 'zh')
         dsh_home = Path(str(kwargs.get("dsh_home") or "."))
         platform = str(kwargs.get("platform") or "dsh")
         identity_source = str(kwargs.get("user_id") or kwargs.get("agent_identity") or "local-user")
@@ -785,9 +794,6 @@ class DshMemoWeftRuntime:
             )
         processor = None
         if callable(route):
-            lang = kwargs.get("lang")
-            if lang not in (None, "zh", "en"):
-                raise DshBoundaryError("lang must be None, 'zh' or 'en'")
             processor = HermesBatchAdapterProcessor(
                 str(db_path), route, lang=lang, model_tier=model_tier
             )
@@ -964,7 +970,7 @@ class DshMemoWeftRuntime:
         except sqlite3.Error:
             return {"text": "", "count": 0}
         try:
-            text, count = recall_world_text(db, self._ingestor.subject_id, query, model_tier=model_tier)
+            text, count = recall_world_text(db, self._ingestor.subject_id, query, model_tier=model_tier, lang=self._lang)
             self._last_recall_count = count
             return {"text": text, "count": count}
         except sqlite3.Error:
