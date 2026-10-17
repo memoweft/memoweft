@@ -42,8 +42,11 @@ def _iso(value: str) -> str:
     return datetime.strptime(value, '%b %d, %Y, %H:%M:%S').replace(tzinfo=timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
 
+_MODEL_UNSET = object()
+
+
 def _world(path: Path, turns: list[dict[str, Any]], quote: str, scope: object,
-           *, change: str = '') -> tuple[str, str]:
+           *, change: str = '', reported: object = _MODEL_UNSET) -> tuple[str, str]:
     users = [turn for turn in turns if turn['role'] == 'user']
     current = users[-1]
     clock = MutableClock()
@@ -53,6 +56,8 @@ def _world(path: Path, turns: list[dict[str, Any]], quote: str, scope: object,
     item = _form(proposition, (raw.index(quote), raw.index(quote) + len(quote)))
     if scope is not None:
         item['scope'] = scope
+    if reported is not _MODEL_UNSET:
+        item['label_candidates'] = reported
 
     def setup(path: Path) -> None:
         _set_evidence(path, 'evidence-1', raw)
@@ -690,4 +695,25 @@ def test_single_gate_appended_source_with_readable_prior_turn(tmp_path: Path, la
         for snapshot in snapshots:
             assert snapshot is not None and snapshot.selected_item_ids == (('cognition', cid),)
             assert snapshot.rendered_recall == '记忆：' + proposition
+        assert list(db.iterdump()) == before
+
+
+@pytest.mark.parametrize('prior,label,claim', [
+    ('Alice likes climbing. I enjoy diving.', 'diving', 'I find these activities inspiring.'),
+    ('She likes climbing. I enjoy diving.', 'diving', 'I find these activities inspiring.'),
+    ('小林喜欢登山。我喜欢潜水。', '潜水', '这些活动让我很有创造力。'),
+])
+@pytest.mark.parametrize('in_body', [False, True])
+def test_strict_review_any_referent_competes(tmp_path: Path, prior: str, label: str, claim: str, in_body: bool) -> None:
+    path = tmp_path / 'memory.sqlite3'
+    raw = prior + ' ' + claim if in_body else claim
+    turns = ([] if in_body else [{'role': 'user', 'content': prior, 'timestamp': 'Jan 06, 2026, 17:48:59', 'dialogue_turn': 0}])
+    turns.append({'role': 'user', 'content': raw, 'timestamp': 'Jan 06, 2026, 17:55:15', 'dialogue_turn': 1})
+    # Deliberately incomplete self-report must not silence rule-found objects.
+    _, body = _world(path, turns, raw, label, reported=[label])
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT scope FROM cognition').fetchone()[0] is None
+        before = list(db.iterdump())
+        snapshot = recall_world_snapshot(db, 'owner', body)
+        assert snapshot is not None and snapshot.rendered_recall == '记忆：' + body
         assert list(db.iterdump()) == before
