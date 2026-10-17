@@ -24,6 +24,56 @@ Configuration and `{input, expected}` fixtures live in [`../shared`](../shared).
 
 Parity helpers also reproduce JavaScript-specific behavior where it affects the contract, including `Math.round`, 32-bit `Math.imul`, and UTF-16 `charCodeAt` semantics.
 
+## Recall language and dates
+
+Python recall accepts an explicit `lang` (`zh` or `en`) on shared snapshots and
+Trust Query services. Hermes and DSH initialization pass that setting to both
+direct recall and RPC previews. Omitting it preserves the existing Chinese
+rendering byte for byte, including its existing truncation behavior; explicit
+Chinese keeps the same contract and does not add dates or escaping.
+
+Default and Chinese calls also retain their original argument shape: they do
+not send a `lang` keyword to existing readers or service constructors. English
+is passed only when the callable explicitly declares a keyword-capable `lang`
+parameter; legacy, opaque and `**kwargs`-only adapters safely use their original
+Chinese call instead. Signature inspection happens before invocation, and
+exceptions raised inside an implementation are neither hidden nor retried.
+
+New English recall uses the producer/consumer contract from
+[WeftMate #474](https://github.com/memoweft/weftmate/pull/474): `Memory:` or
+`Memory (past):`, LF entry separators, and one leading backslash added to body
+lines starting with either language's current/past header or a backslash.
+Body whitespace, line endings and source wording remain exact after decoding.
+The shared JSON in `tests/fixtures/recall-escape-contract.json` is copied from
+WeftMate commit `aa83af9a002ad4d2511e2d2fc3edded4ff55154d` and fixes the wire bytes.
+
+Generated confirmation explanations and target-name connectors use English in
+English recall; a separate rendering projection keeps the existing matching
+text, scores and candidate order unchanged. Original user and assistant wording
+is not translated or searched/replaced, even when it contains the same Chinese
+phrase as a generated explanation. DSH history context likewise uses the
+configured language for its review notice, roles, conversation labels and
+suggestion/commitment headings. Default and explicit Chinese keep their exact
+prior output; opaque older history renderers retain their old call shape.
+
+English entries show source dates without borrowing formation timestamps:
+spoken support Evidence uses `said at`, or `recorded at` when only recording
+time can be established; events use `event at` / `event time` from their own
+`occurred_at` / `time_expression`. Equal Evidence occurrence/recording values
+are conservatively labeled recording time because the existing store fills a
+missing occurrence time with that value; pending source timestamps also remain
+recording time. Missing or invalid calendar dates are not guessed, and relative
+event expressions stay literal. These labels describe provenance, not an
+inferred date for the claim itself; `cognition.created_at` is never a source date.
+
+English rendering keeps a prefix of the existing candidate order, at most five
+complete entries and 600 characters including headers, dates, escapes and LF
+separators. An entry that cannot fit is not truncated or assigned an ID; later
+candidates do not move ahead of it. Historical explanations share the same
+per-entry budget and escaping. The snapshot token commits to the complete
+actual rendered text. This changes no stored content, schema, formation rules,
+source permission gates or retrieval ranking.
+
 ## Development
 
 From this directory:

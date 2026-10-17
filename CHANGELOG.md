@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Python English recall now uses English memory headings and generated confirmation/history explanations, preserves multiline quotations with reversible escaping, and shows reliable source or event dates with recording-time fallbacks labeled explicitly; default Chinese output remains unchanged.
+
 - Python correction commands can bind to the actual message and a verbatim fact quote, preserving the complete original wording and reusing it when that turn is later ingested. Correcting and forming the same preference no longer create separate records from a model paraphrase and the real source.
 - A completed source-bound correction no longer appears failed when later formation returns no change. Unfinished corrections and other facts in the same message remain visible until their own scope is fulfilled.
 - Correction status supports databases containing ordinary MemoryLoop ledger records, preserving their original prose or JSON without treating it as a formal support link.

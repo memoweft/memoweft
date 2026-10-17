@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterable, Mapping, Sequence, cast
+from ...types import Lang
+from ..recall_language import call_with_recall_language
 
 from .currentness import (
     current_entity_aliases,
@@ -173,15 +175,19 @@ class QueryService:
         *,
         subject_id: str,
         surface: TrustSurface = "trust_local",
+        lang: Lang = 'zh',
     ) -> None:
         subject_id = subject_id.strip()
         if not subject_id:
             raise TrustQueryError("invalid_subject_id")
         if surface not in {"trust_local", "trust_cloud"}:
             raise TrustQueryError("invalid_trust_surface")
+        if lang not in {'zh', 'en'}:
+            raise TrustQueryError('invalid_lang')
         self._db_path = Path(db_path)
         self._subject_id = subject_id
         self._surface = surface
+        self._lang = lang
 
     def _base(self, revision: int) -> dict[str, object]:
         return {
@@ -479,7 +485,7 @@ class QueryService:
         with self._read() as read:
             result: list[dict[str, object]] = []
             for query in queries:
-                snapshot = recall_world_snapshot(read.db, self._subject_id, query, model_tier=cast(Any, model_tier))
+                snapshot = call_with_recall_language(recall_world_snapshot, read.db, self._subject_id, query, model_tier=cast(Any, model_tier), lang=self._lang)
                 if snapshot is None or snapshot.world_revision != read.world_revision:
                     raise TrustQueryError("recall_snapshot_unavailable")
                 result.append({
