@@ -1041,14 +1041,21 @@ def _reference_context_unique(word: str, texts: Sequence[str]) -> bool:
                 # Closed continuation shapes, not an open-ended "It ..."
                 # prefix: an anaphoric opening can still introduce a second
                 # topic later in the same sentence. Unparsed tails fail closed.
+                # Even nominal/adjective slots are closed: accepting an
+                # arbitrary noun here could hide a new activity/person inside
+                # an otherwise familiar continuation. Unsupported wording is
+                # intentionally unlabeled, not assumed to be another property.
+                quality = r"(?:gentle|calm|friendly|thrilling|exciting|interesting|impressive|disappointing|comforting)"
+                property_word = r"(?:adaptability|calmness|friendliness|comfort|quality)"
+                wellbeing = r"(?:health|relaxation|well-being|comfort)"
                 patterns = (
-                    r"(?:It|This|That) (?:was|is) (?:(?:quite|very|really) [a-z-]+|"
-                    r"such an? [a-z-]+ (?:creature|experience|activity))",
-                    r"I (?:found|find) (?:its|their) [a-z-]+(?:ity|ness|ance|ence) (?:(?:really|very) )?[a-z-]+",
-                    r"I used to love them for their [a-z-]+ on [a-z-]+(?: and [a-z-]+)*",
-                    r"it seems like many have (?:shifted|changed|moved) towards [a-z-]+ [a-z-]+",
-                    r"It's [a-z-]+ because it doesn't [a-z-]+ with my (?:[a-z-]+ ){0,3}[a-z-]+",
-                    r"It's (?:definitely|really) made me (?:more|less) [a-z-]+ to "
+                    r"(?:It|This|That) (?:was|is) (?:(?:quite|very|really) " + quality
+                    + r"|such an? " + quality + r" (?:creature|experience|activity))",
+                    r"I (?:found|find) (?:its|their) " + property_word + r" (?:(?:really|very) )?" + quality,
+                    r"I used to love them for their (?:focus|emphasis) on " + wellbeing + r"(?: and " + wellbeing + r")*",
+                    r"it seems like many have (?:shifted|changed|moved) towards (?:luxury|relaxing|restful) (?:experiences|activities)",
+                    r"It's " + quality + r" because it doesn't align with my (?:personal |health-focused |travel |humanitarian |well-being ){1,3}goals",
+                    r"It's (?:definitely|really) made me (?:more|less) (?:open|comfortable|willing) to "
                     r"(?:trying|exploring|experiencing) (?:new|different) (?:things|experiences|activities)",
                     r"the (?:adrenaline rush|excitement|thrill|feeling) was something I didn't expect to (?:enjoy|like) so much",
                 )

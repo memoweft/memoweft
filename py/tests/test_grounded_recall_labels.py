@@ -479,6 +479,7 @@ def test_review_target_label_cannot_ignore_unmaterialized_person(tmp_path: Path,
     'Climbing: another activity I enjoy.',
     'As for climbing, that was fun too.',
     'Beth enjoys climbing.',
+    'I used to love them for their focus on climbing and hiking.',
 ])
 def test_review_unparsed_continuation_is_not_uniqueness_proof(tmp_path: Path, extra: str) -> None:
     path = tmp_path / 'memory.sqlite3'
