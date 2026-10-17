@@ -15,7 +15,7 @@ from hashlib import sha256
 import json
 from pathlib import Path
 import sqlite3
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import pytest
 
@@ -320,5 +320,87 @@ def test_date_metadata_obeys_the_existing_cloud_gate_and_never_changes_evidence(
         assert blocked is not None and blocked.selected_item_ids == () and blocked.rendered_recall == ''
         assert _snapshot(db).rendered_recall == local.rendered_recall
         assert tuple(db.execute('SELECT raw_content,occurred_at,recorded_at FROM evidence').fetchone()) == original
+    finally:
+        db.close()
+
+
+def _seed_batch_date_supports(db: sqlite3.Connection) -> None:
+    from memoweft.integrations.hermes.batch_adapter import _canonical, _hash_text
+
+    for index in range(2):
+        item_id = f'fact-{index}'
+        _seed(db, f'synthetic topic {index}.', item_id=item_id)
+        for extra in range(2):
+            eid = f'extra-{index}-{extra}'
+            db.execute("INSERT INTO evidence(id,subject_id,source_kind,host_id,occurred_at,recorded_at,raw_content,summary,"
+                       "allow_local_read,allow_cloud_read,allow_inference) VALUES(?,?,'spoken','synthetic',?,?,'synthetic topic.','synthetic topic.',1,1,1)",
+                       (eid, _OWNER, '2026-01-06T17:48:59', _RECORDED))
+            db.execute("INSERT INTO cognition_evidence(cognition_id,evidence_id,relation) VALUES(?,?,'support')", (item_id, eid))
+    for eid, fields, valid in [('source-fact-0', ['timestamp'], True),
+                                ('extra-0-0', ['preceding_ai_context'], True), ('extra-0-1', ['timestamp'], False)]:
+        ledger_id = 'evidence-ledger-' + _hash_text(_canonical(['formation', 'fact-0', eid, 0, 18]))
+        db.execute('INSERT INTO evidence_ledger(id,content,payload_json) VALUES(?,?,?)', (
+            ledger_id if valid else 'evidence-ledger-forged',
+            _canonical({'cognition_id': 'fact-0', 'evidence_id': eid, 'relation': 'support'}),
+            _canonical({'schema_version': 1, 'start': 0, 'end': 18, 'source_metadata_pending': fields}),
+        ))
+    db.commit()
+
+
+@pytest.mark.parametrize('lang', ['en', 'zh', None])
+def test_snapshot_batches_pending_metadata_scan_and_keeps_prefixed_snapshots_identical(tmp_path: Path, lang: Literal['en', 'zh'] | None) -> None:
+    # Frozen complete snapshots from b3d7988d, before batching; includes tokens,
+    # ID order, budgets, valid pending timestamps and a forged ledger annotation.
+    baseline = json.loads((_FIXTURES / 'recall-ledger-batch-before.json').read_text(encoding='utf-8'))
+    db = open_db(str(tmp_path / 'world.sqlite'))
+    try:
+        _seed_batch_date_supports(db)
+        for state in ['pending', 'completed']:
+            statements: list[str] = []
+            db.set_trace_callback(statements.append)
+            snapshot = (recall_world_snapshot(db, _OWNER, 'synthetic topic', lang=lang) if lang
+                        else recall_world_snapshot(db, _OWNER, 'synthetic topic'))
+            db.set_trace_callback(None)
+            assert snapshot is not None
+            assert json.loads(json.dumps(asdict(snapshot))) == baseline[lang or 'default'][state]
+            scans = [sql for sql in statements if 'FROM evidence_ledger' in sql and 'source_metadata_pending' in sql]
+            assert len(scans) <= (1 if lang == 'en' else 0), scans
+            # A later snapshot must observe metadata completion: no process or
+            # connection cache may keep the first snapshot's pending dates.
+            db.execute('DELETE FROM evidence_ledger')
+            db.commit()
+    finally:
+        db.close()
+
+
+@pytest.mark.parametrize('scenario', ['event', 'empty', 'mixed'])
+def test_pending_metadata_batch_is_shared_across_item_kinds_and_skips_unused_ledger(tmp_path: Path, scenario: str) -> None:
+    db = open_db(str(tmp_path / 'world.sqlite'))
+    try:
+        if scenario == 'mixed':
+            _seed_batch_date_supports(db)
+            db.execute("INSERT INTO entity(id,world_id,kind,canonical_name,created_at,updated_at,aliases_json) "
+                       "VALUES('named',?,'topic','Atlas','2026-01-01','2026-01-01','[]')", (_OWNER,))
+            db.execute("INSERT INTO relationship(id,world_id,source_entity_id,target_entity_id,relation_type,content,formed_by,confidence,cred_status,created_at,updated_at) "
+                       "VALUES('relation',?,'named','named','likes','synthetic topic.','stated',600,'limited','2026-01-01','2026-01-01')", (_OWNER,))
+            db.execute("INSERT INTO relationship_evidence(relationship_id,evidence_id,relation) VALUES('relation','source-fact-0','support')")
+        else:
+            _seed(db, 'synthetic topic.', kind='event', event_at='2026-07-14')
+            if scenario == 'empty':
+                db.execute('UPDATE evidence SET allow_local_read=0')
+        db.commit()
+        statements: list[str] = []
+        db.set_trace_callback(statements.append)
+        snapshot = _snapshot(db)
+        db.set_trace_callback(None)
+        scans = [sql for sql in statements if 'FROM evidence_ledger' in sql and 'source_metadata_pending' in sql]
+        assert len(scans) == (1 if scenario == 'mixed' else 0)
+        if scenario == 'mixed':
+            assert ('relationship', 'relation') in snapshot.selected_item_ids
+            assert f'Memory:[recorded at: {_RECORDED}] synthetic topic.' in snapshot.rendered_recall
+        elif scenario == 'empty':
+            assert snapshot.count == 0
+        else:
+            assert snapshot.rendered_recall == 'Memory:[event at: 2026-07-14] synthetic topic.'
     finally:
         db.close()

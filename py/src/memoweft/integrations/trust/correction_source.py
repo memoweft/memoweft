@@ -51,10 +51,12 @@ def parse_correction_source(value: object, *, subject_id: str, host_id: str) -> 
     return CorrectionSource(origin, content, quote, spans[0]['start'], spans[0]['end'], occurred, previous)
 
 
-def _pending_metadata_rows(db: sqlite3.Connection, evidence_id: str) -> list[tuple[str, dict[str, Any]]]:
+def _pending_metadata_rows_batch(db: sqlite3.Connection, evidence_ids: set[str]) -> dict[str, list[tuple[str, dict[str, Any]]]]:
     from ..hermes.batch_adapter import _canonical, _hash_text
 
-    rows = []
+    rows: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    if not evidence_ids:
+        return rows
     for ledger_id, content, raw in db.execute("SELECT id,content,payload_json FROM evidence_ledger WHERE id LIKE 'evidence-ledger-%' "
                                              "AND payload_json LIKE '%\"source_metadata_pending\"%'"):
         try:
@@ -62,16 +64,28 @@ def _pending_metadata_rows(db: sqlite3.Connection, evidence_id: str) -> list[tup
         except (TypeError, ValueError):
             continue
         if (not isinstance(payload, dict) or type(payload.get('schema_version')) is not int or payload['schema_version'] != 1
-                or not isinstance(link, dict) or link.get('evidence_id') != evidence_id or link.get('relation') != 'support'
+                or not isinstance(link, dict) or not isinstance(link.get('evidence_id'), str)
+                or link['evidence_id'] not in evidence_ids or link.get('relation') != 'support'
                 or not isinstance(payload.get('source_metadata_pending'), list)
                 or not all(isinstance(field, str) and field in ('timestamp', 'preceding_ai_context') for field in payload['source_metadata_pending'])):
             continue
+        evidence_id = link['evidence_id']
         for key, kind in [('cognition_id', 'formation'), ('relationship_id', 'relationship_formation'), ('world_event_id', 'world_event')]:
             if (isinstance(link.get(key), str) and type(payload.get('start')) is int and type(payload.get('end')) is int
                     and ledger_id == 'evidence-ledger-' + _hash_text(_canonical([kind, link[key], evidence_id, payload['start'], payload['end']]))):
-                rows.append((str(ledger_id), payload))
+                rows.setdefault(evidence_id, []).append((str(ledger_id), payload))
                 break
     return rows
+
+
+def _pending_metadata_rows(db: sqlite3.Connection, evidence_id: str) -> list[tuple[str, dict[str, Any]]]:
+    return _pending_metadata_rows_batch(db, {evidence_id}).get(evidence_id, [])
+
+
+def pending_correction_source_metadata_batch(db: sqlite3.Connection, evidence_ids: set[str]) -> dict[str, set[str]]:
+    """Validate requested evidence annotations in one ledger scan, without caching."""
+    return {evidence_id: {field for _, payload in rows for field in payload['source_metadata_pending']}
+            for evidence_id, rows in _pending_metadata_rows_batch(db, evidence_ids).items()}
 
 
 def pending_correction_source_metadata(db: sqlite3.Connection, evidence_id: str) -> set[str]:

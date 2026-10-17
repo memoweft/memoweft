@@ -1,0 +1,80 @@
+{
+  "en": {
+    "pending": {
+      "subject_id": "synthetic-owner",
+      "world_revision": 9,
+      "selected_item_ids": [
+        ["cognition", "fact-0"],
+        ["cognition", "fact-1"]
+      ],
+      "currentness_digest": "4c076fabf09b140780df130e6a04d3e0a2fc41dd4313aa4d7ae2cd5e83b7ca0d",
+      "rendered_recall": "Memory:[said at: 2026-01-06T17:48:59; recorded at: 2030-01-01T00:00:00Z] synthetic topic 0.\nMemory:[said at: 2026-01-06T17:48:59] synthetic topic 1.",
+      "recall_snapshot_token": "8f6058da9146a0cb6564cb36b767c8995c8f7aed2e298b371032bfaafec8474f",
+      "count": 2
+    },
+    "completed": {
+      "subject_id": "synthetic-owner",
+      "world_revision": 9,
+      "selected_item_ids": [
+        ["cognition", "fact-0"],
+        ["cognition", "fact-1"]
+      ],
+      "currentness_digest": "4c076fabf09b140780df130e6a04d3e0a2fc41dd4313aa4d7ae2cd5e83b7ca0d",
+      "rendered_recall": "Memory:[said at: 2026-01-06T17:48:59] synthetic topic 0.\nMemory:[said at: 2026-01-06T17:48:59] synthetic topic 1.",
+      "recall_snapshot_token": "b13fdd6656790845b3ac5db2663b4efe35d04e928dea6dd3188f404428cdf8d6",
+      "count": 2
+    }
+  },
+  "zh": {
+    "pending": {
+      "subject_id": "synthetic-owner",
+      "world_revision": 9,
+      "selected_item_ids": [
+        ["cognition", "fact-0"],
+        ["cognition", "fact-1"]
+      ],
+      "currentness_digest": "4c076fabf09b140780df130e6a04d3e0a2fc41dd4313aa4d7ae2cd5e83b7ca0d",
+      "rendered_recall": "记忆：synthetic topic 0.\n记忆：synthetic topic 1.",
+      "recall_snapshot_token": "341539c9805a613644e9aa9d47bb8c6db9d690d83e7d32b3d89aa6c16936d1c4",
+      "count": 2
+    },
+    "completed": {
+      "subject_id": "synthetic-owner",
+      "world_revision": 9,
+      "selected_item_ids": [
+        ["cognition", "fact-0"],
+        ["cognition", "fact-1"]
+      ],
+      "currentness_digest": "4c076fabf09b140780df130e6a04d3e0a2fc41dd4313aa4d7ae2cd5e83b7ca0d",
+      "rendered_recall": "记忆：synthetic topic 0.\n记忆：synthetic topic 1.",
+      "recall_snapshot_token": "341539c9805a613644e9aa9d47bb8c6db9d690d83e7d32b3d89aa6c16936d1c4",
+      "count": 2
+    }
+  },
+  "default": {
+    "pending": {
+      "subject_id": "synthetic-owner",
+      "world_revision": 9,
+      "selected_item_ids": [
+        ["cognition", "fact-0"],
+        ["cognition", "fact-1"]
+      ],
+      "currentness_digest": "4c076fabf09b140780df130e6a04d3e0a2fc41dd4313aa4d7ae2cd5e83b7ca0d",
+      "rendered_recall": "记忆：synthetic topic 0.\n记忆：synthetic topic 1.",
+      "recall_snapshot_token": "341539c9805a613644e9aa9d47bb8c6db9d690d83e7d32b3d89aa6c16936d1c4",
+      "count": 2
+    },
+    "completed": {
+      "subject_id": "synthetic-owner",
+      "world_revision": 9,
+      "selected_item_ids": [
+        ["cognition", "fact-0"],
+        ["cognition", "fact-1"]
+      ],
+      "currentness_digest": "4c076fabf09b140780df130e6a04d3e0a2fc41dd4313aa4d7ae2cd5e83b7ca0d",
+      "rendered_recall": "记忆：synthetic topic 0.\n记忆：synthetic topic 1.",
+      "recall_snapshot_token": "341539c9805a613644e9aa9d47bb8c6db9d690d83e7d32b3d89aa6c16936d1c4",
+      "count": 2
+    }
+  }
+}

@@ -27,7 +27,7 @@ from ...semantic.store import content_hash
 
 from dataclasses import dataclass
 from ...types import Lang, ModelTier
-from .recall_render import recall_date, render_english_entries
+from .recall_render import recall_dates, render_english_entries
 from ..recall_language import call_with_recall_language
 from hashlib import sha256
 from itertools import islice
@@ -1231,9 +1231,10 @@ def recall_world_snapshot(
             # Only the selected output projection uses localized generated copy;
             # source text is never searched/replaced or translated in place.
             english_content = {(str(row['kind']), str(row['id'])): row['english_content'] for row in rows}
+            dates = recall_dates(db, subject_id, selected, model_tier)
             rendered_items = []
             for item in selected:
-                projection = {**item, 'recall_date': recall_date(db, subject_id, item, model_tier),
+                projection = {**item, 'recall_date': dates[(str(item['kind']), str(item['id']))],
                               'content': english_content[(str(item['kind']), str(item['id']))]}
                 if historical:
                     explanation = _replacement_explanations(db, subject_id, [item], model_tier, lang=lang)

@@ -10,7 +10,7 @@ import sqlite3
 from typing import Mapping, Sequence
 
 from ...types import ModelTier
-from ..trust.correction_source import pending_correction_source_metadata
+from ..trust.correction_source import pending_correction_source_metadata_batch
 from ..trust.currentness import evidence_state
 
 
@@ -58,7 +58,34 @@ def _date(value: object) -> str | None:
     return value
 
 
-def recall_date(db: sqlite3.Connection, subject_id: str, item: Mapping[str, object], model_tier: ModelTier) -> str:
+def _spoken_sources(db: sqlite3.Connection, subject_id: str, item: Mapping[str, object], model_tier: ModelTier) -> list[dict[str, object]]:
+    kind, item_id = str(item['kind']), str(item['id'])
+    if kind not in {'cognition', 'relationship'}:
+        return []
+    table, column = ('cognition_evidence', 'cognition_id') if kind == 'cognition' else ('relationship_evidence', 'relationship_id')
+    rows = db.execute(
+        f'SELECT e.id,e.occurred_at,e.recorded_at,e.deleted_at,e.allow_local_read,e.allow_cloud_read,e.allow_inference '
+        f'FROM evidence e JOIN {table} l ON e.id=l.evidence_id '
+        f"WHERE l.{column}=? AND l.relation='support' AND e.subject_id=? AND e.source_kind='spoken' "
+        'ORDER BY e.occurred_at,e.recorded_at,e.id', (item_id, subject_id),
+    )
+    columns = [column[0] for column in rows.description]
+    sources: list[dict[str, object]] = [dict(zip(columns, raw)) for raw in rows.fetchall()]
+    return [source for source in sources
+            if evidence_state(source, surface='model_cloud' if model_tier == 'cloud' else 'recall', model_tier=model_tier) is None]
+
+
+def recall_dates(db: sqlite3.Connection, subject_id: str, items: Sequence[dict[str, object]], model_tier: ModelTier) -> dict[tuple[str, str], str]:
+    # Snapshot-local, inside the caller's coherent read transaction. Gather only
+    # readable spoken supports, then validate their pending metadata once.
+    sources = {(str(item['kind']), str(item['id'])): _spoken_sources(db, subject_id, item, model_tier) for item in items}
+    pending = pending_correction_source_metadata_batch(db, {str(source['id']) for rows in sources.values() for source in rows})
+    return {(str(item['kind']), str(item['id'])): _recall_date(db, subject_id, item,
+            sources[(str(item['kind']), str(item['id']))], pending) for item in items}
+
+
+def _recall_date(db: sqlite3.Connection, subject_id: str, item: Mapping[str, object],
+                 sources: Sequence[Mapping[str, object]], pending: Mapping[str, set[str]]) -> str:
     kind, item_id = str(item['kind']), str(item['id'])
     labels: list[str] = []
     if kind == 'event':
@@ -70,24 +97,12 @@ def recall_date(db: sqlite3.Connection, subject_id: str, item: Mapping[str, obje
             if isinstance(row[1], str) and row[1].strip():
                 labels.append(f'event time: {row[1]}')
     elif kind in {'cognition', 'relationship'}:
-        table, column = ('cognition_evidence', 'cognition_id') if kind == 'cognition' else ('relationship_evidence', 'relationship_id')
-        rows = db.execute(
-            f'SELECT e.id,e.occurred_at,e.recorded_at,e.deleted_at,e.allow_local_read,e.allow_cloud_read,e.allow_inference '
-            f'FROM evidence e JOIN {table} l ON e.id=l.evidence_id '
-            f"WHERE l.{column}=? AND l.relation='support' AND e.subject_id=? AND e.source_kind='spoken' "
-            'ORDER BY e.occurred_at,e.recorded_at,e.id', (item_id, subject_id),
-        )
-        columns = [column[0] for column in rows.description]
-        for raw in rows.fetchall():
-            source = dict(zip(columns, raw))
-            if evidence_state(source, surface='model_cloud' if model_tier == 'cloud' else 'recall', model_tier=model_tier) is not None:
-                continue
+        for source in sources:
             occurred, recorded = _date(source['occurred_at']), _date(source['recorded_at'])
             # The existing store fills missing occurred_at with recorded_at.
             # Without proof of a distinct source time, label it recording time;
             # equality is deliberately conservative, never a spoken-time claim.
-            pending = pending_correction_source_metadata(db, str(source['id']))
-            if occurred and occurred != recorded and 'timestamp' not in pending:
+            if occurred and occurred != recorded and 'timestamp' not in pending.get(str(source['id']), set()):
                 labels.append(f'said at: {occurred}')
             elif recorded:
                 labels.append(f'recorded at: {recorded}')
