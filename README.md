@@ -74,6 +74,16 @@ MemoWeft keeps these boundaries explicit:
   permission-eligible predecessors. Only the current successor is rendered
   and selected; past preference values appear for historical questions or
   explicit retained-person identity lookups, labeled as past memory.
+- Python formation treats an explicit enduring goal or plan as a sourced
+  intention (`preference`), preserving its wording, motivation, conditions and
+  quantities. It does not assert that the plan happened. Reported completion,
+  abandonment or a changed state selects a current predecessor with
+  `supersedes_cognition_id` (or `supersedes_relationship_id`); an elapsed deadline
+  or silence cannot establish progress. Natural changes keep their history,
+  while explicit mistakes retain the correction path. Supersession rejects
+  missing, unreadable, foreign, already replaced or incompatible targets before
+  the atomic write. Formation offers only current targets, with permitted old
+  wording separately available as predecessor context.
 - DSH recall previews additionally expose `recent_evidence`: permission-filtered
   exact user quotes from unfinished formation, kept separate from formal World
   items. This read-only bridge uses the existing Evidence and conversation

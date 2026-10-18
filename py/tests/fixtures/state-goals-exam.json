@@ -1,0 +1,68 @@
+{
+  "source": "memoweft/memoweft-halumem-eval frozen synthetic HaluMem pilot; Chinese cases are new equivalents, not exam originals.",
+  "cases": [
+    {
+      "id": "health-goal",
+      "source": "stopped-pilot/session-1",
+      "en": "Specifically, Establish a global health initiative to improve access to healthcare for underserved communities. The motivation for this goal is Inspired by his family's medical background and a desire to promote well-being globally. I hope to Provide healthcare access to 1 million people in underserved areas.",
+      "original_model_output": {
+        "schema_version": 8,
+        "result": "no_change"
+      },
+      "expected": "Remember the initiative, motivation and 1 million target as an intention, not a completed event.",
+      "zh": "我的长期目标是建立全球健康项目，让服务不足地区的人更容易获得医疗服务。家人的医疗背景激励我促进全球健康。我希望让100万人获得医疗服务。"
+    },
+    {
+      "id": "travel-change",
+      "source": "stopped-pilot/session-11",
+      "en": "I've been thinking a lot about my travel preferences lately, especially wellness retreats. I used to love them for their focus on health and relaxation, but it seems like many have shifted towards luxury experiences. It's disappointing because it doesn't align with my health-focused travel goals.",
+      "original_model_output": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "I've been thinking a lot about my travel preferences lately, especially wellness retreats.",
+            "supports": [
+              {
+                "evidence_id": "4aff5f40-3c6f-4826-b5a5-7db41f6e4535",
+                "sentence_id": "t0"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": "Retain the complete change and reason; supersede the old wellness-retreat preference.",
+      "zh": "我最近一直在想自己的旅行偏好，尤其是健康度假。我以前喜欢它们带来的健康和放松，但现在很多变成了奢华体验。这让我失望，因为不符合我以健康为重的旅行目标。"
+    },
+    {
+      "id": "movie-change",
+      "source": "stopped-pilot/session-12",
+      "en": "I've been thinking a lot about my movie preferences lately. It seems I've been gravitating more towards fictional narratives that offer a mental escape, especially after a particularly stressful week. It's a shift from my usual documentary choices.",
+      "original_model_output": {
+        "schema_version": 8,
+        "result": "cognitions",
+        "cognitions": [
+          {
+            "action": "form",
+            "target": "owner_self",
+            "statement_kind": "preference",
+            "formed_by": "stated",
+            "proposition": "placeholder",
+            "supports": [
+              {
+                "evidence_id": "f73dfaff-a7a3-4a47-ad8a-69e2cf045f50",
+                "segment_id": "s0"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": "Retain the direction documentaries to fictional narratives and stressful-week reason; supersede the old preference.",
+      "zh": "我最近一直在想自己的电影偏好。我现在更倾向于能暂时放松大脑的虚构故事，尤其是在压力很大的一周之后。这与我以前通常选择纪录片不同。"
+    }
+  ]
+}

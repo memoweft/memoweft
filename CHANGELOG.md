@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Python remembers explicit long-term goals as intentions and distinguishes later completion, abandonment and other state changes from corrections. Current recall uses the latest state; historical questions retain past states without describing a natural change as a mistake.
+
 - Python DSH bridge: bound response replay retention so repeated source and memory reads do not accumulate full response copies for the process lifetime. Replay-window limits are exposed in capabilities; durable operation identities continue to govern retries after a cached response expires.
 
 - Python English recall now uses English memory headings and generated confirmation/history explanations, preserves multiline quotations with reversible escaping, and shows reliable source or event dates with recording-time fallbacks labeled explicitly; default Chinese output remains unchanged.
