@@ -71,9 +71,10 @@ MemoWeft keeps these boundaries explicit:
   semantic candidates; loading/failure preserves literal recall. See
   [configuration and lifecycle](docs/semantic-recall.md).
   English literal scoring ignores pronouns, auxiliaries and question carriers;
-  all informative words of an explicit `what` / `which` noun phrase must occur
-  together in one eligible claim or predecessor cue. It adds no stemming,
-  synonyms or inferred topics.
+  noun phrase coverage provides soft emphasis without requiring particular
+  words in an answer. Contractions are consumed whole. Limited plural/gerund
+  variants require a literal base and two corroborating topic tokens; no
+  synonyms or inferred topics are added.
   Short natural corrections can be retrieved through the topic of their
   permission-eligible predecessors. Only the current successor is rendered
   and selected; past preference values appear for historical questions or

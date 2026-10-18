@@ -8,6 +8,46 @@ All facts, accounts and hosts are fictional. The runner creates temporary SQLite
 
 ## Run and acceptance contract
 
+### English precision gate
+
+The original 638 queries all contain Chinese; their precision numbers cannot
+measure English retrieval. `english.json` adds 120 English-only queries: twenty
+fictional factual pools with three correlated phrasings each (60 positives),
+and 60 negatives covering question carriers, contraction fragments, unrelated
+topics, assistant context, unformed quotes, other accounts and source lifecycle.
+It includes the independent #124 review's passport date, dentist time, specific
+hiking boots, current address and `won't` examples. These are exposed synthetic
+regressions, not an independently authored blind quality estimate.
+
+`english-main-baseline.json` was recorded through production snapshots from
+unmodified main `fc79404ddb4de2be7b242b957a0e33dfc735ba24`, before the review
+fix. It freezes the fixture hash, reference source hash, every selection, and
+all 638 complete Chinese snapshot hashes. Do not regenerate this baseline or
+relabel cases to accommodate an implementation. The test compares every
+baseline positive and forbidden item as well as aggregate recall, precision and
+false-return counts; the four independent positive reviews must rank first
+without unrelated returns. Both straight and curly `won't` negatives must be empty.
+
+| English metric               | main baseline | Review fix |
+| ---------------------------- | ------------: | ---------: |
+| Positive queries recalled    |       60 / 60 |    60 / 60 |
+| Correct / all returned items |      60 / 102 |    60 / 65 |
+| Item precision               |        58.82% |     92.31% |
+| Forbidden returned items     |            42 |          5 |
+
+The remaining five forbidden items are reported, not relabeled. All 638 Chinese
+snapshots, including rendered text, IDs, currentness digest and snapshot token,
+remain byte-identical to main. Default pytest runs both gates without Git
+history, models or network access. For a three-repeat deterministic report:
+
+```sh
+cd py
+uv run python tests/support/english_recall_gate.py --repeats 3
+uv run pytest -q tests/test_english_recall_gate.py
+```
+
+### Original Chinese corpus
+
 ```sh
 npm run bench:recall-quality
 # Optional same-process paired latency report:

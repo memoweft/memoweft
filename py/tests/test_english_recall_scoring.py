@@ -100,6 +100,22 @@ def test_case_normalization_preserves_rank_and_score(case: tuple[str, ...]) -> N
     assert [(hit["id"], hit["score"]) for hit in changed] == [(hit["id"], hit["score"]) for hit in original]
 
 
+@pytest.mark.parametrize("query", ["Which running shoes do I use?", "Which running shoes have I used?"])
+def test_topic_nomination_cannot_bypass_english_topic_weights(query: str) -> None:
+    rows = [{"kind": "cognition", "id": "unrelated", "confidence": 600,
+             "content": "I use a database for running queries.", "topic_cues": ("running",)}]
+    assert _match_world_rows(query, rows) == []
+
+
+def test_partial_requested_phrase_can_recall_with_corroborating_topic_words() -> None:
+    rows = [{"kind": "cognition", "id": "target", "confidence": 600,
+             "content": "I wear hiking boots during winter."}]
+    # No 'comfortable', 'specific' or 'current' in the source. Neither an
+    # unrecognized modifier nor an auxiliary can become a mandatory word.
+    hits = _match_world_rows("Which specific comfortable winter hiking boots have I used?", rows)
+    assert hits and hits[0]["id"] == "target"
+
+
 @pytest.mark.parametrize("state", ["other_account", "cross_evidence", "forgotten", "local_denied", "cloud_denied"])
 @pytest.mark.parametrize("language", ["en", "zh"])
 def test_improved_match_cannot_bypass_source_gates(tmp_path: Path, state: str, language: str) -> None:

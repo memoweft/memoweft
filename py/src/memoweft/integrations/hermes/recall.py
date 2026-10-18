@@ -9,8 +9,8 @@ does not inject Evidence text, summaries, or internal IDs.
 
 Literal matching uses CJK character bigrams and lowercased Latin whole words,
 with deterministic overlap scoring computed entirely in memory. English-only
-queries exclude grammatical carriers from both sides and preserve a literal
-requested noun phrase instead of diluting it with surrounding question text.
+queries exclude grammatical carriers and use soft topic coverage weights.
+No requested noun or question word is a mandatory content filter.
 An optional local CPU provider nominates at most three
 supplementary items; all original gates remain authoritative. Loading or failure
 preserves literal recall. A small,
@@ -120,11 +120,12 @@ _ENGLISH_CARRIERS = _GENERIC_PREDICATE_BIGRAMS | frozenset("""
     what which who whom whose where when why how
     do does did have has had having can could would should will shall may might
     as from into about than then there here so also really actually very
-    m ll d ve re s t don isn aren wasn weren doesn didn use uses used
+    use uses used date time specific current version type kind sort
 """.split())
+_ENGLISH_WORD = re.compile(r"[a-zA-Z0-9_\-]+(?:['’][a-zA-Z]+)?")
 _ENGLISH_FOCUS = re.compile(
     r"^(?:what|which)\s+(?:(?:type|kind|sort)s?\s+of\s+)?"
-    r"([a-z][a-z -]*?)\s+(?:am|is|are|was|were|do|does|did|can|could|would|should|will)\b",
+    r"([a-z][a-z -]*?)\s+(?:am|is|are|was|were|do|does|did|have|has|had|can|could|would|should|will)\b",
     re.IGNORECASE,
 )
 _ENGLISH_POSSESSIVE_FOCUS = re.compile(
@@ -133,30 +134,70 @@ _ENGLISH_POSSESSIVE_FOCUS = re.compile(
 )
 
 
+def _english_tokens(text: str) -> set[str]:
+    """Consume contractions atomically; never emit truncated stems like won.
+
+    Negative auxiliary contractions carry no topic. Other grammatical suffixes
+    leave the base (including a person's possessive); non-grammatical names
+    such as O'Brien stay whole. Ordinary words such as won remain searchable.
+    """
+    tokens = set()
+    for raw in _ENGLISH_WORD.findall(text):
+        word = raw.casefold().replace('’', "'")
+        if word.endswith("n't"):
+            continue
+        base, separator, suffix = word.rpartition("'")
+        if separator and suffix in {"m", "re", "ve", "ll", "d", "s"}:
+            word = base
+        if word not in _ENGLISH_CARRIERS:
+            tokens.add(word)
+    return tokens
+
+
 def _english_focus(query: str) -> set[str]:
-    """A literal requested phrase, without inventing topics or synonyms."""
+    """Optional soft query emphasis; never an eligibility condition."""
     match = _ENGLISH_FOCUS.search(query) or _ENGLISH_POSSESSIVE_FOCUS.search(query)
-    return _bigrams(match.group(1)) - _ENGLISH_CARRIERS if match else set()
+    return _english_tokens(match.group(1)) if match else set()
+
+
+def _english_inflection(word: str, vocabulary: set[str]) -> str:
+    # A grammatical variant must have its complete base literally present on
+    # one side. Do not create guessed stems or equate arbitrary prefixes.
+    candidates = []
+    if word.endswith("s") and not word.endswith("ss"):
+        candidates.append(word[:-1])
+    if word.endswith("ing"):
+        candidates.extend((word[:-3], word[:-3] + "e"))
+    return next((base for base in candidates if len(base) >= 3 and base in vocabulary), word)
 
 
 def _lexical_score(query: str, text: str) -> float:
-    query_tokens, content_tokens = _bigrams(query), _bigrams(text)
     english = not _CJK_RUN.search(query)
+    query_tokens = _english_tokens(query) if english else _bigrams(query)
+    content_tokens = _english_tokens(text) if english else _bigrams(text)
+    vocabulary = query_tokens | content_tokens
     if english:
-        query_tokens -= _ENGLISH_CARRIERS
-        content_tokens -= _ENGLISH_CARRIERS
+        normalized_query = {_english_inflection(word, vocabulary) for word in query_tokens}
+        normalized_content = {_english_inflection(word, vocabulary) for word in content_tokens}
+        # One ambiguous inflected word cannot create a new match. Require two
+        # corroborating lexical tokens before accepting grammatical variants.
+        if len(normalized_query & normalized_content) >= 2:
+            query_tokens, content_tokens = normalized_query, normalized_content
     common = query_tokens & content_tokens
     if not common:
         return 0.0
     score = _compute_overlap_score(query_tokens, content_tokens, common)
     if english and (focus := _english_focus(query)):
-        # Surrounding context cannot answer a different requested phrase
-        # ("running shoes" vs "running queries"). Require the complete literal
-        # focus in this same eligible variant, then use the existing full
-        # coverage floor so dates and names cannot drown out that focus.
-        if not focus <= content_tokens:
-            return 0.0
-        score = max(score, MIN_SCORE + min(0.35, 0.10 * len(focus)))
+        if query_tokens == normalized_query and content_tokens == normalized_content:
+            focus = {_english_inflection(word, vocabulary) for word in focus}
+        # A lone polysemous word is weaker than corroborated topic overlap.
+        # Both weights are continuous: missing any requested word never vetoes
+        # a row. In particular date/time/specific/current are not topic tokens.
+        coverage = len(focus & content_tokens) / len(focus)
+        if len(common) == 1:
+            score *= (0.1 + 0.9 * coverage) ** 2
+        emphasis = (MIN_SCORE + min(0.35, 0.10 * len(focus))) * coverage ** 3
+        score = max(score, emphasis)
     return score
 
 
@@ -580,7 +621,7 @@ def match_cognitions(
     rows_list = list(rows)
     query = _query_signal(query)
     hits = _score_rows(query, rows_list)
-    if hits or (not _CJK_RUN.search(query) and _english_focus(query)):
+    if hits or not _CJK_RUN.search(query):
         return hits
     if not _is_inquiry(query) and len(query) > 12:
         return []
@@ -778,9 +819,16 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     ]
     topic_hits = _score_world_anchor_rows(query, topic_rows, topic=True)
     if topic_hits:
-        return topic_hits
+        if _CJK_RUN.search(query):
+            return topic_hits
+        # Topic nomination must use the same English score, including generic
+        # word and contraction handling; a cue cannot supply a score by itself.
+        nominated = {item["id"] for item in topic_hits}
+        hits = _score_world_rows(query, [row for row in rows_list if row["id"] in nominated])
+        if hits:
+            return hits
     hits = _score_world_rows(query, rows_list)
-    if hits or (not _CJK_RUN.search(query) and _english_focus(query)):
+    if hits or not _CJK_RUN.search(query):
         return hits
     if not _is_inquiry(query) and len(query) > 12:
         return []
