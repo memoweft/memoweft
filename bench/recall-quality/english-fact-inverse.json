@@ -1,0 +1,546 @@
+{
+  "version": 1,
+  "note": "Thirty new fact-first inversions, authored before the attribute scoring fix; attribute nouns generally absent from the factual text. Not a blind evaluation.",
+  "cases": [
+    {
+      "id": "tent",
+      "query": "What shape is my tent?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My tent is hexagonal."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "cello",
+      "query": "What weight is my cello?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My cello weighs 3.2 kilograms."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "thermos",
+      "query": "What capacity is my thermos?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My thermos holds 750 millilitres."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "ladder",
+      "query": "What height is my ladder?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My ladder reaches 4 metres."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "ribbon",
+      "query": "What length is my ribbon?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My ribbon is 2.5 metres long."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "curtains",
+      "query": "What color are my curtains?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My curtains are pale amber."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "gloves",
+      "query": "Which size are my gloves?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My gloves are size eight."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "scarf",
+      "query": "What material is my scarf?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My scarf is woven from alpaca wool."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "rucksack",
+      "query": "What brand is my rucksack?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My rucksack is made by Osprey."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "anniversary",
+      "query": "What date is my anniversary?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My anniversary falls on 2027-09-23."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "class",
+      "query": "What time is my ceramics class?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My ceramics class begins at 17:45."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "degree",
+      "query": "What year is my degree from?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My degree was awarded in 2018."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "pendant",
+      "query": "What shape is my pendant?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My pendant is an oval."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "helmet",
+      "query": "What size is my helmet?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My helmet is extra large."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "vest",
+      "query": "How many pockets does my vest have?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My vest has eight pockets."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "prints",
+      "query": "How much do my prints cost?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My prints cost thirty credits."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "cabinet",
+      "query": "What is the material of my cabinet?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My cabinet is solid walnut."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "bike",
+      "query": "What brand is my commuter bicycle?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My commuter bicycle is a Brompton."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "journal",
+      "query": "How many pages does my journal have?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My journal has 240 pages."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "suitcase-size",
+      "query": "What size is my travel suitcase?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My travel suitcase is 55 centimetres tall."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "suitcase-material",
+      "query": "What material is my cabin suitcase?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My cabin suitcase is polycarbonate."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "suitcase-brand",
+      "query": "What brand is my checked suitcase?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My checked suitcase is a Samsonite."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "suitcase-year",
+      "query": "What year is my blue suitcase from?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I purchased my blue suitcase in 2023."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "vase",
+      "query": "What is the color of my vase?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My vase is turquoise."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "shoes",
+      "query": "What size are my running shoes?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My running shoes are EU 42."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "bottle",
+      "query": "What is my bottle made of?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My bottle is stainless steel."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "monitor",
+      "query": "What resolution is my monitor?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My monitor supports 2560 by 1440 pixels."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "departure",
+      "query": "When is my ferry departure?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My ferry departure is at 11:20."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "membership",
+      "query": "When does my gym membership expire?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My gym membership expires on 2027-08-31."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "software",
+      "query": "What version does my photo editor run?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My photo editor runs version 6.2."
+        },
+        {
+          "id": "distractor",
+          "content": "My neighbor collects antique postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    }
+  ]
+}

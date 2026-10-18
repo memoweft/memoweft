@@ -1,0 +1,981 @@
+{
+  "version": 1,
+  "note": "The exact 15 Chinese/mixed queries and shared 14-fact pool from the independent review. Compare full snapshots, not semantic labels.",
+  "cases": [
+    {
+      "id": "mixed-00",
+      "query": "我叫什么",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-01",
+      "query": "林舟喜欢什么",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-02",
+      "query": "我的生日是哪天",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-03",
+      "query": "我的预约是2026年11月6日吗",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-04",
+      "query": "我喜欢什么水果",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-05",
+      "query": "我以前喜欢什么",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-06",
+      "query": "请告诉我我喜欢哪种饮料",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-07",
+      "query": "我的咖啡偏好",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-08",
+      "query": "林舟的工作是什么",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-09",
+      "query": "我的护照何时到期",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-10",
+      "query": "我用哪个database server",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-11",
+      "query": "我的hiking boots是什么",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-12",
+      "query": "我喜欢green tea吗",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-13",
+      "query": "我对piano有什么偏好",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    },
+    {
+      "id": "mixed-14",
+      "query": "我想问一下我所使用的软件 \"version\" 是什么？",
+      "memories": [
+        {
+          "id": "zh-00",
+          "content": "我叫林舟。"
+        },
+        {
+          "id": "zh-01",
+          "content": "林舟喜欢徒步。"
+        },
+        {
+          "id": "zh-02",
+          "content": "我的生日是1991年3月12日。"
+        },
+        {
+          "id": "zh-03",
+          "content": "我的预约是2026年11月6日。"
+        },
+        {
+          "id": "zh-04",
+          "content": "我喜欢荔枝。"
+        },
+        {
+          "id": "zh-05",
+          "content": "我喜欢茉莉花茶。"
+        },
+        {
+          "id": "zh-06",
+          "content": "我不喝咖啡。"
+        },
+        {
+          "id": "zh-07",
+          "content": "林舟的工作是建筑师。"
+        },
+        {
+          "id": "zh-08",
+          "content": "我的护照在2027年4月12日到期。"
+        },
+        {
+          "id": "zh-09",
+          "content": "我用database server运行分析。"
+        },
+        {
+          "id": "zh-10",
+          "content": "我的hiking boots是Salomon。"
+        },
+        {
+          "id": "zh-11",
+          "content": "我喜欢green tea。"
+        },
+        {
+          "id": "zh-12",
+          "content": "我练习piano。"
+        },
+        {
+          "id": "zh-13",
+          "content": "I use version 4.1 for the photo editor."
+        }
+      ],
+      "expect": [],
+      "via_trust": true,
+      "lang": "zh"
+    }
+  ]
+}

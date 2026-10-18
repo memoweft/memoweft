@@ -15,9 +15,11 @@ from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
 from typing import Any
+from unittest.mock import patch
 
 from memoweft.integrations.hermes import recall
 from memoweft.store import open_db
+from memoweft.integrations.trust.query_service import QueryService
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = ROOT / "bench/recall-quality"
@@ -31,8 +33,8 @@ def digest(raw: bytes) -> str:
     return sha256(raw.replace(b"\r\n", b"\n")).hexdigest()
 
 
-def cases() -> list[dict[str, Any]]:
-    return json.loads((HERE / "english.json").read_text(encoding="utf-8"))["cases"]  # type: ignore[no-any-return]
+def cases(suite: str = "english") -> list[dict[str, Any]]:
+    return json.loads((HERE / f"{suite}.json").read_text(encoding="utf-8"))["cases"]  # type: ignore[no-any-return]
 
 
 def seed(path: Path, case: dict[str, Any]) -> None:
@@ -51,15 +53,23 @@ def seed(path: Path, case: dict[str, Any]) -> None:
 
 
 def observe(module: Any, db: Any, case: dict[str, Any], *, lang: str = "en") -> dict[str, Any]:
-    snapshot = module.recall_world_snapshot(db, "fictional-owner", case["query"],
-                                          model_tier=case.get("tier", "local"), lang=lang)
-    assert snapshot is not None, case["id"]
-    selected = [pair[1] for pair in snapshot.selected_item_ids]
+    if case.get("via_trust"):
+        path = db.execute("PRAGMA database_list").fetchone()[2]
+        service = QueryService(path, subject_id="fictional-owner", lang=case.get("lang", lang))
+        with patch.object(recall, "recall_world_snapshot", module.recall_world_snapshot):
+            payload: Any = service.preview_recall(case["query"], model_tier=case.get("tier", "local"))["preview"]
+        selected = [pair[1] for pair in payload["selected_item_ids"]]
+    else:
+        snapshot = module.recall_world_snapshot(db, "fictional-owner", case["query"],
+                                              model_tier=case.get("tier", "local"), lang=lang)
+        assert snapshot is not None, case["id"]
+        payload = asdict(snapshot)
+        selected = [pair[1] for pair in snapshot.selected_item_ids]
     expected = set(case["expect"])
     return {"id": case["id"], "selected": selected,
             "rank": next((i + 1 for i, mid in enumerate(selected) if mid in expected), 0),
             "wrong": sorted(set(selected) - expected),
-            "snapshot_sha256": digest(json.dumps(asdict(snapshot), sort_keys=True, ensure_ascii=False).encode())}
+            "snapshot_sha256": digest(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode())}
 
 
 def run(items: list[dict[str, Any]], module: Any = recall, *, repeats: int = 1) -> list[dict[str, Any]]:
@@ -86,12 +96,12 @@ def metrics(items: list[dict[str, Any]], rows: list[dict[str, Any]]) -> dict[str
     returned = sum(len(row["selected"]) for row in rows)
     wrong = sum(len(row["wrong"]) for row in rows)
     return {"queries": len(rows), "positives": positive_n, "hits": hit_n,
-            "recall": hit_n / positive_n, "returned": returned, "wrong": wrong,
+            "recall": hit_n / positive_n if positive_n else 0.0, "returned": returned, "wrong": wrong,
             "precision": (returned - wrong) / returned if returned else 1.0}
 
 
-def check(items: list[dict[str, Any]], rows: list[dict[str, Any]], baseline: dict[str, Any]) -> None:
-    assert digest((HERE / "english.json").read_bytes()) == baseline["fixture_sha256"], "frozen English fixture changed"
+def check(items: list[dict[str, Any]], rows: list[dict[str, Any]], baseline: dict[str, Any], *, suite: str = "english") -> None:
+    assert digest((HERE / f"{suite}.json").read_bytes()) == baseline["fixture_sha256"], "frozen English fixture changed"
     assert [row["id"] for row in rows] == [row["id"] for row in baseline["results"]]
     for case, row, old in zip(items, rows, baseline["results"], strict=True):
         assert not old["rank"] or row["rank"], f'{case["id"]}: lost main positive'
@@ -124,27 +134,34 @@ def main() -> None:
     parser.add_argument("--record-main", help="Explicit immutable main reference for baseline creation")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--suite", default="english", choices=["english", "english-review-attributes", "english-fact-inverse", "recall-mixed-review"])
     args = parser.parse_args()
-    items = cases()
+    items = cases(args.suite)
     if args.record_main:
         assert args.out is not None
         ref = subprocess.check_output(["git", "rev-parse", args.record_main], cwd=ROOT, text=True).strip()
         with fixture.historical_module(ref) as module:
             rows = run(items, module, repeats=args.repeats)
-            frozen = {"reference": ref, "fixture_sha256": digest((HERE / "english.json").read_bytes()),
+            frozen = {"reference": ref, "fixture_sha256": digest((HERE / f"{args.suite}.json").read_bytes()),
                       "source_sha256": digest(subprocess.check_output(["git", "show", f"{ref}:py/src/memoweft/integrations/hermes/recall.py"], cwd=ROOT)),
-                      "metrics": metrics(items, rows), "results": rows, "chinese_snapshots": chinese(module)}
+                      "metrics": metrics(items, rows), "results": rows}
+            if args.suite == "english":
+                frozen["chinese_snapshots"] = chinese(module)
             args.out.write_text(json.dumps(frozen, indent=2) + "\n", encoding="utf-8")
             print(json.dumps(frozen["metrics"]))
     else:
-        baseline = json.loads((HERE / "english-main-baseline.json").read_text(encoding="utf-8"))
+        baseline = json.loads((HERE / f"{args.suite}-main-baseline.json").read_text(encoding="utf-8"))
         rows = run(items, repeats=args.repeats)
         report = {"metrics": metrics(items, rows), "results": rows}
         if args.out:
             args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(report["metrics"]))
-        check(items, rows, baseline)
-        assert chinese(recall) == baseline["chinese_snapshots"], "Chinese full snapshots changed"
+        if args.suite == "recall-mixed-review":
+            assert rows == baseline["results"], "Mixed full snapshots changed"
+        else:
+            check(items, rows, baseline, suite=args.suite)
+        if args.suite == "english":
+            assert chinese(recall) == baseline["chinese_snapshots"], "Chinese full snapshots changed"
 
 
 if __name__ == "__main__":

@@ -1,0 +1,357 @@
+{
+  "reference": "b6fc783de17ac57690f0946e7951b22406cefce5",
+  "fixture_sha256": "8f636dc3d1bf06f54cd733188848f0250aacac42af9b2cc4d55a663cdacd7887",
+  "source_sha256": "9df11fae0c0e77a20a941bb9a0bf29d1931ecf18fa647c6e065d6d90a8229f44",
+  "metrics": {
+    "queries": 31,
+    "positives": 21,
+    "hits": 21,
+    "recall": 1.0,
+    "returned": 46,
+    "wrong": 25,
+    "precision": 0.45652173913043476
+  },
+  "results": [
+    {
+      "id": "boots",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "a90a3d89f1d083f055b0ba5b2c7d75c87e2f6325ea337b45c63203105edc4f71"
+    },
+    {
+      "id": "camera",
+      "selected": [
+        "distractor",
+        "target"
+      ],
+      "rank": 2,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "b4ebe75af4749911e0e8460e5c5b8dd8483a54cac10dd2734da3cc6c2bcc46d9"
+    },
+    {
+      "id": "pottery",
+      "selected": [
+        "distractor",
+        "target"
+      ],
+      "rank": 2,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "602b362074fb352da93bc2e1f8fa257c726eb92b9448e18cdc19e99d7a669b24"
+    },
+    {
+      "id": "diet",
+      "selected": [
+        "distractor",
+        "target"
+      ],
+      "rank": 2,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "77b2b73ba59f64c6ebf3c37654c4a370b28343fb10cdb09421778219ca0f5594"
+    },
+    {
+      "id": "bikes",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "ede7089591fc60bbcdcb4294a201412a0f85a7c817fd8f4f078b34ebfbf00920"
+    },
+    {
+      "id": "tea",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "6a7bef5e035a3ddd4f9472f4446ab96bd2b914250a01ac25ed01507b54f73673"
+    },
+    {
+      "id": "passport-date",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "9d00ed496e38e63df9e2ff4831608649353dd084a758061d5c4e9a018e94bde2"
+    },
+    {
+      "id": "passport-date-trap",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "7576cb1f872484a657fddbc1a4ea4d4e9628f1ff7f0221ca2877dc57bdb20565"
+    },
+    {
+      "id": "appointment-time",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "96be87ccc3b7eca4d72a0245dee7419f2ca75df176192ab5f59ed34b325fc72b"
+    },
+    {
+      "id": "travel-day",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "4f5313f1b39dc5b31a85337312614c83224de94fd94444c56f35cbafdb9bd90a"
+    },
+    {
+      "id": "boots-specific",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "c6b05fe94543d34f48281f37f524cf8ba8f4d79b9605d4681f87e6b030046cb4"
+    },
+    {
+      "id": "address",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "1e513fcf37c71cd491ccabd2957cd28cfed9e6d4eb9626856c61fb066f602878"
+    },
+    {
+      "id": "job",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "a4f6f3e4330cbea0a9cb12b3d547174d46f4bbbdcfdc0341f426237b6b2732a2"
+    },
+    {
+      "id": "piano",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "48c3e7e6e29d7a95423f64f6fe9596222189768e2f74a8e4c5aa3f32564a68d1"
+    },
+    {
+      "id": "server",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "87239149b020d43654b4866aae9a7f3479cd443445ce724996040a45781a8583"
+    },
+    {
+      "id": "suitcase-color",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "c13b5c2bf4cdac1f0ce5903839531a82ce946e10557e427a10e968eb64806058"
+    },
+    {
+      "id": "jacket-size",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "b710c865b698e45733076a5f0f26adda6c58ce7f75b7f6411dedba5a35169ec1"
+    },
+    {
+      "id": "desk-material",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "d4c2780f8a267350cdb7207fff4545e0fdb529dc677e4cbb49ea22e7c8b42365"
+    },
+    {
+      "id": "headphones-brand",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "018df5f5857ab778664a031c8f5a568f7e6830218fd36a9d1c04b363247bb34b"
+    },
+    {
+      "id": "graduation-year",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "77dae0c03f7ce51da7dc6121112cb886ca390b9f39081123ff5b9e7f143a2653"
+    },
+    {
+      "id": "software-version",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "bda7379a931b0a560d7b7040db710c6c7bde961e9c2bfa4a7541d992dd6182f8"
+    },
+    {
+      "id": "negative-won-long",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "45003cc7114ef18e0ae635a7cb0b7fc8934c75904fbb22b9a2023734eddbf661"
+    },
+    {
+      "id": "negative-haven-long",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "2227f6b0a5dee0062f1710a42fb2dfd72f57e7fc8fc4f86acb2ea032913f1350"
+    },
+    {
+      "id": "negative-generic",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "2733034552c92576da7b80fa3321a0997381fdfefafde59c0d4fe84c23566c9a"
+    },
+    {
+      "id": "negative-generic-shared",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "4edc8c93f373c2e0d0c04bac27237f5100b78f395626f8127fe33200e4537875"
+    },
+    {
+      "id": "negative-name",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "285f15db0babbd9647f948715849716ce954406d17191f849643dba111e29766"
+    },
+    {
+      "id": "negative-not",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "2061eb84f93d2df00d1480b254ddca4835f06faa945da0042ffa84e04065deb1"
+    },
+    {
+      "id": "negative-won",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "f74a4b4bcd2565861f3cc7387437e48b608d4c7d1d423e06dd841c4b79ec508c"
+    },
+    {
+      "id": "negative-shouldn",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "58ed03d390b20843d5012ab742fbf573ce067f118893790cb706d1aa96eb0de5"
+    },
+    {
+      "id": "negative-haven",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "f9f35dfe9c81698b4516cebbc903ae390c98c4411ef8d2e663a5bf7451a59df5"
+    },
+    {
+      "id": "negative-generic-anything",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "fcb3e9c4487775125b24d760bde8f85de1c97dfafc1d7ed78fde441ffe2f51bd"
+    }
+  ]
+}

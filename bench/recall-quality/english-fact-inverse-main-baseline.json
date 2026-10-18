@@ -1,0 +1,376 @@
+{
+  "reference": "b6fc783de17ac57690f0946e7951b22406cefce5",
+  "fixture_sha256": "8b721335b4c0164bcb31bacafdd29b7f9f1e339f8d3459174673b3d3f3f10634",
+  "source_sha256": "9df11fae0c0e77a20a941bb9a0bf29d1931ecf18fa647c6e065d6d90a8229f44",
+  "metrics": {
+    "queries": 30,
+    "positives": 30,
+    "hits": 30,
+    "recall": 1.0,
+    "returned": 60,
+    "wrong": 30,
+    "precision": 0.5
+  },
+  "results": [
+    {
+      "id": "tent",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "f8eee2719d0dabac5aa245325d5e24adb47dbe0a858bb30b99fe118f774047d7"
+    },
+    {
+      "id": "cello",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "08cfe8ddb48183edc33d40ada237f030b94148eaa49e6cbc366d8371dbb7c3c4"
+    },
+    {
+      "id": "thermos",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "6ae7009d44f8d2a792914e8998ac571e09ee2042c3892c4bb95ed20f0958c484"
+    },
+    {
+      "id": "ladder",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "0df8e62f88069d1e361a3b91584961954bdcc5ed85fa45d0f14d22879805c863"
+    },
+    {
+      "id": "ribbon",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "134593d74c2d977f24b8508daf43fab071a70104bdff54630e35373e2cae2c14"
+    },
+    {
+      "id": "curtains",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "f47c988fa49e15f7ff8500715009591f15fccb37f187ab8dfab84b6cd7e1893a"
+    },
+    {
+      "id": "gloves",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "9aab00d326c9d10ea50eb51f36b3c529284f8580ba4f2551bffebd60090bbc17"
+    },
+    {
+      "id": "scarf",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "e7cf0ad1c0bc5308b3a56452478375f7a17b9593603c2660408410e7fa83aa27"
+    },
+    {
+      "id": "rucksack",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "25cde0f072af81d2d232e1f9017f9e82dea7517a4f4010dba8ce0da1c61e59ff"
+    },
+    {
+      "id": "anniversary",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "711992a718b83d003eb426dd7f25dec17164f9ec09bae5b6a76f5bdc71e5c2f0"
+    },
+    {
+      "id": "class",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "4700b04b8615ed0a25e9a360125b024703145dc25012c4d5715a6b0a00b4f119"
+    },
+    {
+      "id": "degree",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "2bee1e7d2f9bacf8be72109ca804b01dd10559b59fac8220bca2694bae29d2a3"
+    },
+    {
+      "id": "pendant",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "2a308c4272f2e8c4b4844c4a476ff91abf238352c8ab4f3af91822e98a2a1917"
+    },
+    {
+      "id": "helmet",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "15f42b6640402ea817c39e11ac0be7ef9f833a31df084dceb3ddd2524b6b7484"
+    },
+    {
+      "id": "vest",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "84f17244639b28ea3e3def08ced6e7b178679704ad027e2b182d8f52114db01d"
+    },
+    {
+      "id": "prints",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "0c4be6366b651a200427fb8c0c772a9cdda63d2a19f5e624f593f9962b12bc93"
+    },
+    {
+      "id": "cabinet",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "818efd86c2f78c6f6dc9216ebc6ba0b11cb1e2d334ce034c8d7e785c7c1b82f7"
+    },
+    {
+      "id": "bike",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "979d6cfcb6caa4b4dd85f335a73e9273521b2361ea5a2431b2815b33c59857b5"
+    },
+    {
+      "id": "journal",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "ac4cec2c8734daa1b30c5ee0486b2ac9302225d50b3e97fa0036760f92dc66ab"
+    },
+    {
+      "id": "suitcase-size",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "a7e3935ed34cbc1cf9235511523bd1ace0f6b1a190993e3676195ee2aee30be2"
+    },
+    {
+      "id": "suitcase-material",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "9f07b1e520469d9e2f7f29478d091a3329c5ffa93b77747141d65a8027e8b809"
+    },
+    {
+      "id": "suitcase-brand",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "726c94ffe9a80f70b7c963155118a5ae350cb5c355b0ee3b6f83146f8a36de8f"
+    },
+    {
+      "id": "suitcase-year",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "254dfb1079e4ea596503d67bb3d4e38756452ec733171d867a2d4a2646a28e24"
+    },
+    {
+      "id": "vase",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "0ce06e76c61006e88b981963282ad17769aded072f5843aea4b04ad271b0a598"
+    },
+    {
+      "id": "shoes",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "3cef972a2535dbf2455e5225d105a03c6ccd2d29c826a0ce9eb03f1df4ddc4f3"
+    },
+    {
+      "id": "bottle",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "c5fc6ae24f4b0184a85255ce793f08d6f992a569bbb1425159ed8fb8eb6daeec"
+    },
+    {
+      "id": "monitor",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "b6917fd20926bf0ac64ba5507963f1afb7d3bfde839116f4d6ad7722b0838101"
+    },
+    {
+      "id": "departure",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "574d1b752ffa9a937c3faf0b1b0e6b22b9e3ac12e4c8aabc721e6715c4270b76"
+    },
+    {
+      "id": "membership",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "51a98919a89e6265a4b4a07b90ccf12898ae24d4aa96125e36257cc27f18abf4"
+    },
+    {
+      "id": "software",
+      "selected": [
+        "target",
+        "distractor"
+      ],
+      "rank": 1,
+      "wrong": [
+        "distractor"
+      ],
+      "snapshot_sha256": "360ad28fefe389722bf6fc543708397f37fa2bf29f9edd8d675088dfb53c3f1f"
+    }
+  ]
+}
