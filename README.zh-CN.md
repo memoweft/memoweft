@@ -25,6 +25,8 @@ MemoWeft 明确区分这些边界：
   “好 / 就这么做 / Yes, do that / go ahead”这类动作确认只能确认选中的行动提议，不能确认旁边的事实猜测；确认说明只引用选中的提议，来源链仍保留完整助手原话。
   简短中文确认可带“刚才/之前你说的”指回前缀，但完整主题和动作须逐字匹配所选提议，完整回复的否定、问句与长度检查仍然生效；具体边界见上述规则。
 - 助手轮次通过现有 `model_context_dependencies` 或 `link_interaction_dependencies` 保存实际召回依赖。遗忘会传递清除相关交互上下文整段副本；缺少完整依赖的旧副本按同账户原话/规范事实匹配，列入同一次遗忘预览。保留无内容的上下文标识阻止重放与 Portable 恢复带回旧副本，导出时不擦词。原应用聊天不受影响；未收到删除状态的空库无法撤销独立保存的历史备份。
+- 遗忘预览返回 `forget_scope`，调用方必须随用户确认计划保留，并原样放进 `delete_evidence` / `delete_world_item` 的 `payload.forget_scope`。它绑定账户、目标、世界修订号和实际会改动的上下文/承诺 ID 与正文；无关新增不影响这次确认；事务内范围变化返回 `forget_scope_changed`，没有摘要但会改动上下文的旧调用回滚并返回 `forget_scope_required`。拒绝后须重新预览和确认，并使用新命令 ID，不能在执行时静默刷新摘要；能力字段为 `forget_scope_fence: 1`。
+- 旧上下文只按完整句/分句等价匹配，保留词和值边界；York 不会匹配 Yorkshire。Portable 的无正文删除标记带原副本指纹，同名会话/轮次下的不同 ID 只有指纹一致才能清空，并对全部匹配 ID 级联，避免跨库本地编号碰撞。
 - Entity、Relationship、Event、Cognition 和 Evaluation 是正式 World 对象。
 - 同一 revision 与查询输入得到 deterministic Recall（确定性召回），并且 Recall 不写 World。
   Python 召回会用当前有来源的自我命名和已接受别名，关联原文明确对齐的第一人称出生/偏好陈述；缺省目标、主题标签或本人视角本身不证明事实属于本人。其他表达沿既有召回路径，不猜新的身份关联；同名歧义保持未解析，姓名来源和事实来源分别遵守读取权限。

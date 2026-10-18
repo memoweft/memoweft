@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from hashlib import sha256
 from typing import Optional
 
 from ..clock import Clock, system_clock, to_iso_z
@@ -49,6 +50,21 @@ def _context_from_json(s: str) -> list[VisibleTurn]:
         )
         for t in json.loads(s)
     ]
+
+
+ERASED_HASH_REF = 'memoweft:erased-context-hash:'
+
+
+def erasure_fingerprint(turns: list[VisibleTurn]) -> str:
+    # Unlike the legacy rendering hash, identity comparison retains message IDs,
+    # timestamps and source refs. Same prose alone does not prove the same copy.
+    raw = json.dumps(_turns_to_payload(turns), sort_keys=True, ensure_ascii=True, separators=(',', ':'))
+    return sha256(raw.encode()).hexdigest()
+
+
+def erased_hashes(turns: list[VisibleTurn]) -> set[str]:
+    return {turn.source_ref.removeprefix(ERASED_HASH_REF) for turn in turns
+            if not turn.content and turn.source_ref and turn.source_ref.startswith(ERASED_HASH_REF)}
 
 
 def erased_context_json(raw: str) -> bool:
@@ -185,19 +201,25 @@ class SqliteInteractionContextStore:
     def insert(self, ctx: InteractionContext) -> None:
         # Empty contexts are durable content-free erasure markers. They win
         # over an older live copy in either import order, including after remap.
-        if erased_context(ctx.context):
-            from ..integrations.trust.true_delete import _redact_observed_dependencies
-            _redact_observed_dependencies(self._db, ctx.subject_id, {ctx.id})
-            cursor = self._db.execute(
-                "UPDATE interaction_context SET context_json=?,context_hash=? "
-                "WHERE subject_id=? AND (id=? OR (conversation_id=? AND episode_id=?))",
-                (_context_to_json(ctx.context), ctx.context_hash, ctx.subject_id, ctx.id, ctx.conversation_id, ctx.episode_id))
-            if cursor.rowcount:
-                return
-        elif any(erased_context_json(row['context_json']) for row in row_all(self._db,
-            "SELECT context_json FROM interaction_context WHERE subject_id=? "
+        candidates = [_from_row(row) for row in row_all(self._db,
+            "SELECT * FROM interaction_context WHERE subject_id=? "
             "AND (id=? OR (conversation_id=? AND episode_id=?))",
-            (ctx.subject_id, ctx.id, ctx.conversation_id, ctx.episode_id))):
+            (ctx.subject_id, ctx.id, ctx.conversation_id, ctx.episode_id))]
+        if erased_context(ctx.context):
+            fingerprints = erased_hashes(ctx.context)
+            matched = {row.id for row in candidates if row.id == ctx.id
+                       or erasure_fingerprint(row.context) in fingerprints
+                       or bool(erased_hashes(row.context) & fingerprints)}
+            from ..integrations.trust.true_delete import _redact_observed_dependencies
+            _redact_observed_dependencies(self._db, ctx.subject_id, matched | {ctx.id})
+            for item_id in matched:
+                self._db.execute(
+                    "UPDATE interaction_context SET context_json=?,context_hash=? WHERE subject_id=? AND id=?",
+                    (_context_to_json(ctx.context), ctx.context_hash, ctx.subject_id, item_id))
+            if ctx.id in matched:
+                return
+        elif any(erased_context(row.context) and (row.id == ctx.id or erasure_fingerprint(ctx.context) in erased_hashes(row.context))
+                 for row in candidates):
             return
         self._insert_row(ctx)
         self._erase_if_dependency_deleted(ctx)

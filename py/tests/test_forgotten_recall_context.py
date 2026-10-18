@@ -10,15 +10,21 @@ import pytest
 
 from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
 from memoweft.integrations.hermes.recall import recall_world_snapshot
+from memoweft.integrations.hermes.world_worker import WorldJobWorker
 from memoweft.integrations.trust.command_service import CommandService
 from memoweft.integrations.trust.forget_preview import preview_forget
 from memoweft.integrations.trust.portable_service import PortableService
+from memoweft.store.interaction_context import erased_context
 from test_dsh_interactions import _boundary
 from test_state_goals import form
 
 
 @pytest.mark.parametrize('dependency', [False, True])
-def test_forget_recalled_reply_erases_whole_copy_and_portable(tmp_path: Path, dependency: bool) -> None:
+def test_forget_recalled_reply_erases_whole_copy_and_portable(tmp_path: Path, dependency: bool, monkeypatch: pytest.MonkeyPatch) -> None:
+    # form() runs the real worker synchronously with a frozen interpretation.
+    # Do not let a second background worker race it for the same test job.
+    monkeypatch.setattr(WorldJobWorker, 'start', lambda self: None)
+    monkeypatch.setattr(WorldJobWorker, 'kick', lambda self: False)
     runtime = DshMemoWeftRuntime()
     runtime.initialize('s', dsh_home=str(tmp_path), subject_id='owner', auto_route=False, lang='zh')
     try:
@@ -54,7 +60,7 @@ def test_forget_recalled_reply_erases_whole_copy_and_portable(tmp_path: Path, de
         receipt = CommandService(path, subject_id='owner', host_id='host').submit_command({
             'schema_version': 1, 'command_id': 'forget', 'subject_id': 'owner', 'actor': 'owner',
             'expected_world_revision': preview['world_revision'], 'submitted_at': '2026-10-19T00:00:00.000Z',
-            'operation': 'delete_world_item', 'target_kind': 'cognition', 'target_id': prior, 'payload': {}})
+            'operation': 'delete_world_item', 'target_kind': 'cognition', 'target_id': prior, 'payload': {'forget_scope': preview['forget_scope']}})
         assert receipt['result_state'] == 'applied'
         exported = portable.export_bundle()
         assert '红茶' not in json.dumps(exported, ensure_ascii=False)
@@ -110,7 +116,7 @@ def test_legacy_match_uses_whole_owner_fact(tmp_path: Path, answer: str, matched
         erased = _redact_observed_dependencies(db, 'owner', {'old'}, source_texts=['我喜欢喝红茶。', '用户喜欢喝红茶。'])
         assert (row.id in erased) == matched
         current = store.get(row.id)
-        assert current is not None and bool(current.context) != matched
+        assert current is not None and erased_context(current.context) == matched
     finally:
         db.close()
 
@@ -163,7 +169,7 @@ def test_late_dependency_link_erases_copy_and_descendant(tmp_path: Path) -> None
         assert result[0] == 'applied'
         for item_id in (row.id, child.id):
             current = store.get(item_id)
-            assert current is not None and current.context == []
+            assert current is not None and erased_context(current.context)
     finally:
         db.close()
 

@@ -9,6 +9,7 @@ from ...store.interaction_context import erased_context_json
 from .command_store import TrustCommandError
 from .model import CommandEnvelopeV1
 from .revision import coherent_revision_read
+from .forget_scope import context_snapshot, affected_scope, scope_token
 from .true_delete import conversation_evidence_ids, delete_evidence, delete_world_item, erase_conversation_commitments, _redact_observed_dependencies
 
 
@@ -22,6 +23,7 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
             view.db.backup(copy)
             revision = view.world_revision
         copy.execute("PRAGMA foreign_keys = ON")
+        before_context = context_snapshot(copy, subject_id)
         tables = {"entity": ("entity", "world_id", "canonical_name"),
                   "relationship": ("relationship", "world_id", "content"),
                   "event": ("world_event", "world_id", "content"),
@@ -63,7 +65,10 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
                 display = '\n'.join(str(turn.get('content', '')) for turn in json.loads(name)) if kind == 'interaction_context' else name
                 items.append({"object_kind": kind, "item_id": item_id, "name": display, "item_type": item_type})
         evidence_ids = [str(row[0]) for row in copy.execute("SELECT id FROM evidence WHERE subject_id = ?", (subject_id,)) if str(row[0]) in affected]
-        return {"world_revision": revision, "items": items, "item_count": len(items),
+        digest, _ = affected_scope(before_context, context_snapshot(copy, subject_id))
+        token = scope_token(subject_id, revision, 'conversation' if conversation_id is not None else str(target_kind),
+                            conversation_id if conversation_id is not None else str(target_id), digest)
+        return {"world_revision": revision, "forget_scope": token, "items": items, "item_count": len(items),
                 "evidence_ids": sorted(evidence_ids), "evidence_count": len(evidence_ids)}
     finally:
         copy.close()

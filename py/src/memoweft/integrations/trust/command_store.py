@@ -135,7 +135,11 @@ class CommandStore:
                 mutation = CommandMutation("rejected")
                 after_revision = before_revision
             else:
-                mutation = mutate(db, command, completed_at)
+                if hard_delete:
+                    from .forget_scope import guarded_forget
+                    mutation = guarded_forget(db, command, completed_at, mutate)
+                else:
+                    mutation = mutate(db, command, completed_at)
                 state = mutation.result_state
                 accepted = state != "rejected"
                 after_revision = (

@@ -12,6 +12,7 @@ from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
 from memoweft.integrations.dsh_bridge.protocol_v2 import DshRpcV2Server
 from memoweft.integrations.trust.query_service import QueryService
 from memoweft.integrations.trust.command_service import CommandService
+from memoweft.integrations.trust.forget_preview import preview_forget
 from memoweft.integrations.trust.true_delete import erase_conversation_context
 from memoweft.integrations.hermes.batch_adapter import HermesBatchAdapterProcessor
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
@@ -207,10 +208,11 @@ def test_forgetting_correction_pair_removes_both_sources_from_recall_and_disk(tm
         service = CommandService(_db_path(runtime), subject_id=_subject(runtime), host_id=_host(runtime))
         for i, evidence_id in enumerate([pair["id"], pair["preceding_evidence_id"]]):
             revision = QueryService(_db_path(runtime), subject_id=_subject(runtime)).preview_recall("盆栽")["world_revision"]
+            preview = preview_forget(str(_db_path(runtime)), _subject(runtime), target_kind="evidence", target_id=str(evidence_id))
             receipt = service.submit_command({"schema_version": 1, "command_id": f"mf2-forget-{i}",
                 "subject_id": _subject(runtime), "actor": "owner", "expected_world_revision": revision,
                 "operation": "delete_evidence", "target_kind": "evidence", "target_id": evidence_id,
-                "payload": {}, "submitted_at": "2026-10-09T00:00:00.000Z"})
+                "payload": {"forget_scope": preview["forget_scope"]}, "submitted_at": "2026-10-09T00:00:00.000Z"})
             assert receipt["result_state"] == "applied"
         assert _recent(runtime, "盆栽毫升") == []
         for secret in ["MF2Secret", "397毫升", "163毫升"]:
@@ -255,10 +257,11 @@ def test_true_forget_unfinished_source_cleans_bridge_and_disk_without_erasing_un
         _ingest(runtime, "我喜欢花茶。", "b", "unrelated")
         evidence_id = _recent(runtime, secret)[0]["id"]
         service = CommandService(_db_path(runtime), subject_id=_subject(runtime), host_id=_host(runtime))
+        preview = preview_forget(str(_db_path(runtime)), _subject(runtime), target_kind="evidence", target_id=str(evidence_id))
         receipt = service.submit_command({"schema_version": 1, "command_id": "forget-pending",
             "subject_id": _subject(runtime), "actor": "owner", "expected_world_revision": 0,
             "operation": "delete_evidence", "target_kind": "evidence", "target_id": evidence_id,
-            "payload": {}, "submitted_at": "2026-10-09T00:00:00.000Z"})
+            "payload": {"forget_scope": preview["forget_scope"]}, "submitted_at": "2026-10-09T00:00:00.000Z"})
         assert receipt["result_state"] == "applied"
         assert _recent(runtime, secret) == []
         assert _recent(runtime, "花茶")
@@ -321,6 +324,7 @@ def test_rpc_replay_cannot_recover_a_forgotten_or_denied_quote(tmp_path: Path, o
         assert before["ok"] is True
         assert "MF1ReplaySecret" in json.dumps(before, ensure_ascii=False)
         evidence_id = _recent(runtime, "MF1ReplaySecret")[0]["id"]
+        preview = preview_forget(str(_db_path(runtime)), _subject(runtime), target_kind="evidence", target_id=str(evidence_id))
         if operation == "erase_conversation_context":
             mutation = server.handle(_request("mutation", operation, {"conversation_id": "source"}))
         else:
@@ -328,7 +332,7 @@ def test_rpc_replay_cannot_recover_a_forgotten_or_denied_quote(tmp_path: Path, o
                 "schema_version": 1, "command_id": "mf1-replay-mutation", "subject_id": _subject(runtime),
                 "actor": "owner", "expected_world_revision": 0, "operation": operation,
                 "target_kind": "evidence", "target_id": evidence_id,
-                "payload": {"allow_cloud_read": False} if operation == "update_evidence_permissions" else {},
+                "payload": {"allow_cloud_read": False} if operation == "update_evidence_permissions" else {"forget_scope": preview["forget_scope"]},
                 "submitted_at": "2026-10-09T00:00:00.000Z"}}))
         assert mutation["ok"] is True
         after = server.handle(request)

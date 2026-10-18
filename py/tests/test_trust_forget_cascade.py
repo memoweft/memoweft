@@ -5,6 +5,8 @@ from typing import Any
 from pathlib import Path
 
 from memoweft.portable.builder import build_bundle
+from memoweft.store.interaction_context import erased_context_json
+from memoweft.integrations.trust.forget_preview import preview_forget
 from test_trust_command_service import _open, _seed_evidence, _seed_revision, _service, _command, _SUBJECT, _HOST, _T0
 
 
@@ -261,7 +263,8 @@ def test_opt_in_removes_original_context_and_keeps_unrelated_ledger(tmp_path: Pa
                    (_SUBJECT, json.dumps([{"role":"user","content":"FGPrivateSource"},{"role":"user","content":"保留这句话"}]), _T0))
         _seed_revision(db)
     command = _command("forget-snippets", 1, "delete_evidence", "evidence", "e-snippet")
-    command["payload"] = {"delete_conversation_snippets": True}
+    preview = preview_forget(str(path), _SUBJECT, target_kind="evidence", target_id="e-snippet")
+    command["payload"] = {"delete_conversation_snippets": True, "forget_scope": preview["forget_scope"]}
     receipt = _service(path).submit_command(command)
     assert receipt["result_state"] == "applied"
     with _open(path) as db:
@@ -269,7 +272,7 @@ def test_opt_in_removes_original_context_and_keeps_unrelated_ledger(tmp_path: Pa
         context = db.execute("SELECT context_json FROM interaction_context WHERE id='interaction'").fetchone()[0]
         assert "FGPrivateSource" not in context
         # D33 deletes the whole derived copy; it does not retain a partial transcript.
-        assert json.loads(context) == []
+        assert erased_context_json(context)
 
 
 def test_deleted_conversation_erases_retained_original_context_from_sqlite_and_portable(tmp_path: Path) -> None:
@@ -299,11 +302,12 @@ def test_forgetting_erases_core_original_copy_without_deleting_host_chat(tmp_pat
         db.execute("INSERT INTO interaction_context (id,subject_id,conversation_id,episode_id,context_json,context_hash,created_at) VALUES ('copy', ?, 'session', 'episode', ?, 'old', ?)",
                    (_SUBJECT, json.dumps([{"role":"user","content":"FGSourceCopy"},{"role":"user","content":"unrelated"}]), _T0))
         _seed_revision(db)
-    receipt = _service(path).submit_command(_command("erase-copy", 1, "delete_evidence", "evidence", "e-copy"))
+    preview = preview_forget(str(path), _SUBJECT, target_kind="evidence", target_id="e-copy")
+    receipt = _service(path).submit_command(_command("erase-copy", 1, "delete_evidence", "evidence", "e-copy", {"forget_scope": preview["forget_scope"]}))
     assert receipt["result_state"] == "applied"
     with _open(path) as db:
         context = db.execute("SELECT context_json FROM interaction_context WHERE id='copy'").fetchone()[0]
-        assert json.loads(context) == []
+        assert erased_context_json(context)
     assert b"FGSourceCopy" not in path.read_bytes()
 
 
@@ -324,7 +328,8 @@ def test_conversation_erasure_recovers_sources_after_batch_job_has_disappeared(t
         db.execute("INSERT INTO interaction_context (id,subject_id,conversation_id,episode_id,context_json,context_hash,created_at) VALUES ('batch', ?, 'session-delete', 'episode', ?, 'old', ?)",
                    (_SUBJECT, json.dumps(turns), _T0))
         _seed_revision(db)
-    _service(path).submit_command(_command("erase-first", 1, "delete_evidence", "evidence", "e-0"))
+    preview = preview_forget(str(path), _SUBJECT, target_kind="evidence", target_id="e-0")
+    _service(path).submit_command(_command("erase-first", 1, "delete_evidence", "evidence", "e-0", {"forget_scope": preview["forget_scope"]}))
     result = erase_conversation_context(str(path), _SUBJECT, "session-delete")
     assert result["erased_evidence_count"] == 1
     affected = result["affected_ids"]

@@ -171,6 +171,7 @@ class CommandService:
                 "rejected",
             ],
             "expected_revision_fence": True,
+            "forget_scope_fence": 1,
             "durable_receipts": True,
             "mutation_surface": True,
             "correction_source": True,

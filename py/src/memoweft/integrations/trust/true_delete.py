@@ -58,7 +58,7 @@ def delete_evidence(
     subject_id: str,
 ) -> CommandMutation:
     payload = command["payload"]
-    if set(payload) - {"delete_conversation_snippets"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
+    if set(payload) - {"delete_conversation_snippets", "forget_scope"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
         raise TrustCommandError("invalid_trust_command_payload")
     if command["target_kind"] != "evidence":
         return CommandMutation("rejected")
@@ -337,7 +337,7 @@ def delete_world_item(
     subject_id: str,
 ) -> CommandMutation:
     payload = command["payload"]
-    if set(payload) - {"delete_conversation_snippets"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
+    if set(payload) - {"delete_conversation_snippets", "forget_scope"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
         raise TrustCommandError("invalid_trust_command_payload")
     kind = command["target_kind"]
     item_id = command["target_id"]
@@ -408,20 +408,27 @@ def delete_world_item(
 
 
 def _legacy_fact_text(text: str) -> str:
-    """Compare full facts with presentation/pronoun normalization, never values alone."""
+    """Normalize a complete clause without destroying word/value boundaries."""
     import re
-    import unicodedata
-    text = text.casefold().replace('**', '').replace('__', '')
-    text = re.sub(r'^(?:记住|请记住)', '', text.strip())
+    text = text.casefold().replace('**', '').replace('__', '').strip().rstrip('.。;；').rstrip()
+    text = re.sub(r'^(?:记住|请记住)', '', text)
     text = re.sub(r'^(?:用户|我|你|您)', 'owner ', text)
     text = re.sub(r'^(?:the user|i|you)\b', 'owner', text)
-    return ''.join(c for c in text if not c.isspace() and not unicodedata.category(c).startswith('P'))
+    return ' '.join(text.split())
+
+
+def _legacy_fact_clauses(text: str) -> set[str]:
+    import re
+    # Deliberately do not split commas/conjunctions or erase punctuation inside
+    # a clause. York/Yorkshire, New York/NewYork and qualified claims differ.
+    return {value for clause in re.split(r'[。;；\n]+|\.(?=\s|$)', text)
+            if (value := _legacy_fact_text(clause))}
 
 
 def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str,
                                   affected: set[str], source_text: str | None = None, *,
                                   source_texts: list[str] | None = None) -> set[str]:
-    from ...store.interaction_context import _context_from_json, hash_context, erased_context_json
+    from ...store.interaction_context import _context_from_json, hash_context, erased_context_json, ERASED_HASH_REF, erasure_fingerprint
     contexts = list(db.execute("SELECT id,context_json FROM interaction_context WHERE subject_id=?", (subject_id,)))
     facts = {_legacy_fact_text(text) for text in (source_texts or [source_text or '']) if text}
     facts.discard('')
@@ -434,7 +441,7 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str,
         except (ValueError, TypeError):
             return False
         return isinstance(turns, list) and any(isinstance(turn, dict)
-            and turn.get('role') == 'user' and source_text in str(turn.get('content', ''))
+            and turn.get('role') == 'user' and _legacy_fact_text(source_text) in _legacy_fact_clauses(str(turn.get('content', '')))
             for turn in turns)
 
     def legacy_match(raw: str) -> bool:
@@ -451,8 +458,7 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str,
             # Complete capture (including explicit empty) is authoritative.
             if turn.get('role') == 'assistant' and not (isinstance(dep, dict)
                     and dep.get('capture_status') in {'complete', 'complete_empty'}):
-                normalized = _legacy_fact_text(turn['content'])
-                if any(fact in normalized for fact in facts):
+                if facts & _legacy_fact_clauses(turn['content']):
                     return True
         return False
 
@@ -488,7 +494,8 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str,
         # Preserve only source identities for still-retained user Evidence. This
         # is existing origin metadata, not a text copy or a recovery log.
         marker = json.dumps([{'role': 'user', 'content': '', 'source_ref': 'memoweft:evidence:' + eid}
-                             for eid in sorted(sources)], separators=(',', ':'))
+                             for eid in sorted(sources)] + [{'role': 'assistant', 'content': '',
+                                'source_ref': ERASED_HASH_REF + erasure_fingerprint(_context_from_json(str(context_row[2])))}], separators=(',', ':'))
         db.execute("UPDATE interaction_context SET context_json=?,context_hash=? WHERE id=? AND subject_id=?",
                    (marker, hash_context(_context_from_json(marker)), item_id, subject_id))
     erased_commitments = {str(item_id) for item_id, _ in commitments if str(item_id) in tainted}
