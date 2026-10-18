@@ -8,81 +8,100 @@ All facts, accounts and hosts are fictional. The runner creates temporary SQLite
 
 ## Run and acceptance contract
 
-### English precision gate
+### English main-candidate invariant
 
-The original 638 queries all contain Chinese; their precision numbers cannot
-measure English retrieval. `english.json` adds 120 English-only queries: twenty
-fictional factual pools with three correlated phrasings each (60 positives),
-and 60 negatives covering question carriers, contraction fragments, unrelated
-topics, assistant context, unformed quotes, other accounts and source lifecycle.
-It includes the independent #124 review's passport date, dentist time, specific
-hiking boots, current address and `won't` examples. These are exposed synthetic
-regressions, not an independently authored blind quality estimate.
+English selection now runs the original main matcher, eligibility, optional
+semantic nomination and rendering path first. A main candidate may be removed
+only if every shared word, after complete contraction expansion, is in
+`recall_english_policy.FRAME_WORDS`. Any other shared word must survive regardless
+of supplementary scores or thresholds. This includes ordinary nouns such as
+`version`, `date` and `color`, and substantive verbs such as `use` and `think`.
 
-`english-main-baseline.json` was recorded through production snapshots from
-unmodified main `fc79404ddb4de2be7b242b957a0e33dfc735ba24`, before the review
-fix. It freezes the fixture hash, reference source hash, every selection, and
-all 638 complete Chinese snapshot hashes. Do not regenerate this baseline or
-relabel cases to accommodate an implementation. The test compares every
-baseline positive and forbidden item as well as aggregate recall, precision and
-false-return counts; the four independent positive reviews must rank first
-without unrelated returns. Both straight and curly `won't` negatives must be empty.
+The previous English nomination arm (`ebe07284`) is supplementary only. New
+admissions must be in that arm, and may use only slots left after retained main
+items. The three stopped-exam retrieval regressions remain covered. Nomination
+failure cannot invalidate main, and its new scores can be arbitrarily low
+without losing a substantive main hit. Original main ordering is a feasible
+fallback if reranking or supplementary text would consume a retained item's
+character budget. Optional semantic nomination is called once and reused in
+both arms, inside the same read transaction. Chinese/mixed matching stays on
+the original main path.
 
-| English metric               | main baseline | Review fix |
-| ---------------------------- | ------------: | ---------: |
-| Positive queries recalled    |       60 / 60 |    60 / 60 |
-| Correct / all returned items |      60 / 102 |    60 / 68 |
-| Item precision               |        58.82% |     88.24% |
-| Forbidden returned items     |            42 |          8 |
+The closed set has 110 grammar words/forms: interrogatives, auxiliaries,
+articles, conjunctions, prepositions, pronouns, explicit remember/tell/know
+request verbs, and legacy contraction fragments. No attribute or topic noun is
+included. Full contractions are expanded before comparison (`What's` →
+`what is`, `won't` → `will not`), including curly apostrophes. Ordinary action
+verbs and descriptive adjectives are conservatively retained rather than added
+to an ever-growing stop list. The exact set is in the source and PR description.
 
-The remaining eight forbidden items are reported, not relabeled. All 638 Chinese
-snapshots, including rendered text, IDs, currentness digest and snapshot token,
-remain byte-identical to main. Default pytest runs both gates without Git
-history, models or network access. For a three-repeat deterministic report:
+### Frozen collections and measured floors
+
+All collections are exposed synthetic regression data, not blind or general
+quality estimates. No labels or existing baseline outcomes were changed.
+
+- `english.json`: original 120 English queries, twenty factual pools with three
+  correlated phrasings each plus 60 negatives. Its baseline was recorded on
+  main `fc79404d`; the main recall implementation is unchanged at `b6fc783d`.
+- `english-review-attributes.json`: the independent review's exact 21 positive
+  and 10 negative tuples. `english-fact-inverse.json`: 30 fact-first inversions
+  authored separately before that fix. Their baselines were frozen on main
+  `b6fc783d`.
+- `english-review-long.json`: the third independent review's exact 30 new facts
+  and 30 corresponding no-answer controls, including long memories, tense,
+  quantities, negations and `What's`. Baseline main recalls all 30 positives
+  and returns 11 false items. Data were extracted as literals; no reviewer code
+  runs in the gate.
+- `recall-mixed-review.json`: the independent 15 Chinese/mixed queries and
+  shared 14-fact pool. This collection has no answer-quality labels; compare
+  complete previews byte-for-byte, including the mixed `version` lookup.
+
+| English collection  | Main / current correct-answer recall | Main / current false items | Main / current item precision |
+| ------------------- | -----------------------------------: | -------------------------: | ----------------------------: |
+| Original 120        |                        60/60 / 60/60 |                    42 / 18 |               58.82% / 76.92% |
+| Independent 21 + 10 |                        21/21 / 21/21 |                     25 / 6 |               45.65% / 77.78% |
+| Fact-first 30       |                        30/30 / 30/30 |                     30 / 0 |              50.00% / 100.00% |
+| Independent 30 + 30 |                        30/30 / 30/30 |                     11 / 0 |              73.17% / 100.00% |
+
+Each collection independently requires recall and precision at least main,
+false items at most main, no lost main positive and no newly forbidden item.
+Required positives still rank first. Under the new invariant, main false hits
+sharing substantive words such as `running`, `middle` or `specific` must remain;
+old zero-return expectations conflicted with this explicit new contract. Those
+examples and false-answer labels are retained, and assertions now enforce main
+preservation and no additional false returns. Remaining errors are reported,
+not relabeled or hidden by another collection's aggregate gains.
+
+All 638 original Chinese full snapshots and all 15 mixed full previews remain
+byte-identical to main. Repeated previews are deterministic; database dumps
+before and after recall remain identical. No models or network are used.
+
+### Property tests
+
+`english-invariant-random.json` records actual main and prior-head candidates
+for 1,152 seeded random scenarios: 1,024 question/memory pairs and 128 pools of
+2–8 memories. The stdlib random generator also runs at test time and must
+reproduce those inputs exactly. `english-invariant-labelled.json` records
+248 scenarios from every English collection, the three exam cases and the
+post-copular attribute/version cases. Both matchers must reproduce main's
+frozen candidates, preserve every substantive main candidate and admit only
+main or prior-head candidates: 2,800 scenario/entrypoint comparisons.
+
+`english-invariant-snapshots.json` adds 192 full snapshot cases (96 seeded
+pools in both rendering languages). They check the same membership boundaries,
+retained rendered bodies, count/character budgets and no writes. Additional
+checks cover contraction expansion, the closed vocabulary, arbitrary low new
+scores and improvement-arm exceptions. A manifest freezes all new inputs and
+reference outcomes. Normal pytest requires no Git history.
 
 ```sh
 cd py
 uv run python tests/support/english_recall_gate.py --repeats 3
-uv run pytest -q tests/test_english_recall_gate.py
-```
-
-### Independent attribute review and fact-first inversions
-
-The independent review's exact 21 positive and 10 negative tuples are preserved
-in `english-review-attributes.json`. Its 15 Chinese/mixed queries and shared
-14-fact pool are preserved in `recall-mixed-review.json`, including the English
-`version` source and mixed-language question. Only literal synthetic data were
-extracted; no reviewer code runs in this gate.
-
-`english-fact-inverse.json` adds 30 separately authored examples. Each starts
-with a complete concrete fact (value, object, unit or date), then reverses the
-value into an attribute/fact question; the attribute noun is generally absent
-from the fact. This differs from the original twenty-pool/three-phrasing method.
-All inputs were frozen and measured on unmodified main `b6fc783d` before the
-attribute fix. Their `*-main-baseline.json` files record per-case outcomes and
-canonical fixture/source hashes. They must not be regenerated to pass a fix.
-
-| English collection  | Main correct-answer recall | Current recall | Main false items | Current false items | Main / current item precision |
-| ------------------- | -------------------------: | -------------: | ---------------: | ------------------: | ----------------------------: |
-| Original 120        |                    60 / 60 |        60 / 60 |               42 |                   8 |               58.82% / 88.24% |
-| Independent 21 + 10 |                    21 / 21 |        21 / 21 |               25 |                   4 |               45.65% / 84.00% |
-| Fact-first 30       |                    30 / 30 |        30 / 30 |               30 |                   0 |              50.00% / 100.00% |
-
-Each collection independently requires recall and precision at least main and
-false returns at most main. Per-case gates additionally reject every lost main
-positive and newly forbidden item, preventing aggregate gains from hiding a
-regression. New collections exercise `QueryService.preview_recall`; repeated
-results are deterministic and database dumps remain identical. The mixed set
-has no answer labels or precision estimate: all 15 full previews must match
-main byte-for-byte. All 638 original Chinese snapshots must also remain equal.
-These are exposed regression collections, not a blind or general quality claim.
-
-```sh
-cd py
 uv run python tests/support/english_recall_gate.py --suite english-review-attributes --repeats 3
 uv run python tests/support/english_recall_gate.py --suite english-fact-inverse --repeats 3
+uv run python tests/support/english_recall_gate.py --suite english-review-long --repeats 3
 uv run python tests/support/english_recall_gate.py --suite recall-mixed-review --repeats 3
-uv run pytest -q tests/test_recall_attribute_questions.py
+uv run pytest -q tests/test_english_candidate_invariant.py
 ```
 
 ### Original Chinese corpus

@@ -70,13 +70,12 @@ MemoWeft keeps these boundaries explicit:
   Python optionally supplements literal matches with up to three local CPU
   semantic candidates; loading/failure preserves literal recall. See
   [configuration and lifecycle](docs/semantic-recall.md).
-  English literal scoring ignores grammatical carriers and separates an answer
-  slot from its explicit topic by question structure, without an attribute-word
-  list or a missing-word coverage penalty. Meaningful nouns such as `version`
-  remain searchable in source text and actual topic requests. Contractions are
-  consumed whole. Limited plural/gerund
-  variants require a literal base and two corroborating topic tokens; no
-  synonyms or inferred topics are added.
+  English recall preserves the original main candidate path. A candidate may be
+  removed only when every shared word, after contraction expansion, belongs to
+  the explicit 110-word grammar set. A substantive overlap always survives new
+  scores. Previous English improvements may fill remaining slots, while main
+  items retain priority under count/character budgets. See the
+  [candidate invariant and regression collections](bench/recall-quality/README.md).
   Short natural corrections can be retrieved through the topic of their
   permission-eligible predecessors. Only the current successor is rendered
   and selected; past preference values appear for historical questions or

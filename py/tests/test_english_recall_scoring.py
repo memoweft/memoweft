@@ -74,22 +74,25 @@ def test_production_snapshot_keeps_verbatim_body_and_is_read_only(
         assert list(db.iterdump()) == before
 
 
-@pytest.mark.parametrize("query,content", [
-    ("What alternatives are there to commuter trains?", "I think their adaptability is what drew me to them."),
-    ("What do I know?", "I know what I like and I think it is what they like."),
-    ("What telescope do I use?", "I use a microscope."),
-    ("Which cats do I like?", "I like catering."),
-    ("Which running shoes do I use?", "I use a database and enjoy running queries."),
-    ("What is my middle name?", "My gardening tools are in the middle drawer."),
-    ("I'm learning pottery, and I'm considering sculpture.", "I'm cataloguing nebulae."),
-    ("I'll study pottery, and I'll consider sculpture.", "I'll catalogue nebulae."),
-    ("I'd study pottery, and I'd consider sculpture.", "I'd catalogue nebulae."),
-    ("我的望远镜是什么？", "我喜欢显微镜。"),
+@pytest.mark.parametrize("query,content,retain_main", [
+    ("What alternatives are there to commuter trains?", "I think their adaptability is what drew me to them.", False),
+    ("What do I know?", "I know what I like and I think it is what they like.", False),
+    ("What telescope do I use?", "I use a microscope.", True),
+    ("Which cats do I like?", "I like catering.", True),
+    ("Which running shoes do I use?", "I use a database and enjoy running queries.", True),
+    ("What is my middle name?", "My gardening tools are in the middle drawer.", True),
+    ("I'm learning pottery, and I'm considering sculpture.", "I'm cataloguing nebulae.", False),
+    ("I'll study pottery, and I'll consider sculpture.", "I'll catalogue nebulae.", False),
+    ("I'd study pottery, and I'd consider sculpture.", "I'd catalogue nebulae.", False),
+    ("我的望远镜是什么？", "我喜欢显微镜。", False),
 ])
-def test_unrelated_and_partial_words_do_not_supply_an_answer(query: str, content: str) -> None:
+def test_only_function_word_main_hits_may_be_removed(query: str, content: str, retain_main: bool) -> None:
     rows = [{"kind": "cognition", "id": "unrelated", "content": content, "confidence": 600}]
-    assert _match_world_rows(query, rows) == []
-    assert match_cognitions(query, rows) == []
+    # These remain false-answer labels. The explicit new invariant requires
+    # retaining main's substantive 'use'/'like'/'running'/'middle' hits despite their known irrelevance.
+    expected = ["unrelated"] if retain_main else []
+    assert [row["id"] for row in _match_world_rows(query, rows)] == expected
+    assert [row["id"] for row in match_cognitions(query, rows)] == expected
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c[0])
@@ -101,10 +104,10 @@ def test_case_normalization_preserves_rank_and_score(case: tuple[str, ...]) -> N
 
 
 @pytest.mark.parametrize("query", ["Which running shoes do I use?", "Which running shoes have I used?"])
-def test_topic_nomination_cannot_bypass_english_topic_weights(query: str) -> None:
+def test_main_substantive_topic_nomination_must_survive(query: str) -> None:
     rows = [{"kind": "cognition", "id": "unrelated", "confidence": 600,
              "content": "I use a database for running queries.", "topic_cues": ("running",)}]
-    assert _match_world_rows(query, rows) == []
+    assert [row["id"] for row in _match_world_rows(query, rows)] == ["unrelated"]
 
 
 def test_partial_requested_phrase_can_recall_with_corroborating_topic_words() -> None:

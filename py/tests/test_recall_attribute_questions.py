@@ -6,7 +6,7 @@ import pytest
 from support.english_recall_gate import HERE, cases, check, digest, run
 
 
-@pytest.mark.parametrize("suite,count", [("english-review-attributes", 31), ("english-fact-inverse", 30)])
+@pytest.mark.parametrize("suite,count", [("english-review-attributes", 31), ("english-fact-inverse", 30), ("english-review-long", 60)])
 def test_attribute_question_recall_and_false_returns_do_not_regress_main(suite: str, count: int) -> None:
     items = cases(suite)
     assert len(items) == count
