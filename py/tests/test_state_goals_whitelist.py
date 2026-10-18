@@ -10,6 +10,7 @@ import pytest
 
 from memoweft.integrations.hermes.recall import recall_world_snapshot
 from test_hermes_world_worker import _initialize_database
+from test_state_goals import form
 from test_state_goals_revision import attempt
 
 
@@ -165,3 +166,21 @@ def test_direct_subject_and_negation_stop_at_goal_predicate(tmp_path: Path, raw:
     with sqlite3.connect(path) as db:
         assert db.execute('SELECT raw_content FROM evidence').fetchall() == [(raw,)]
         assert db.execute('SELECT count(*) FROM cognition').fetchone() == (int(expected == 'applied'),)
+
+
+@pytest.mark.parametrize('lang,initial,completed', [
+    ('en', 'My long-term plan is to build a community library.', 'I have completed my plan.'),
+    ('zh', '我的长期计划是建一座社区图书馆。', '我已经完成了计划。'),
+])
+def test_completed_plan_reference_is_a_state_update_not_a_goal_predicate(
+    tmp_path: Path, lang: Literal['en', 'zh'], initial: str, completed: str,
+) -> None:
+    path = tmp_path / 'world.sqlite'
+    _initialize_database(path)
+    prior = form(path, initial, 1)
+    current = form(path, completed, 2, prior=prior)
+    with sqlite3.connect(path) as db:
+        snapshot = recall_world_snapshot(db, 'owner', completed, lang=lang)
+        assert snapshot is not None and snapshot.selected_item_ids == (('cognition', current),)
+        assert db.execute('SELECT prior_cognition_id,replacement_cognition_id FROM cognition_transitions').fetchall() == [(prior, current)]
+        assert db.execute('SELECT raw_content FROM evidence ORDER BY id').fetchall() == [(initial,), (completed,)]

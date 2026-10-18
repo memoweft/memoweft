@@ -92,7 +92,10 @@ no person-name list or reporting-verb blacklist. A nested explicit owner (`I
 think I intend ...`) still passes. Goal content after the predicate, including
 say/tell and unrelated negative descriptions, is not scanned as the owner's
 subject or a pre-predicate negation. Recognition of affirmative adjuncts is
-finite; unrecognized forms remain a whitelist limitation.
+finite; unrecognized forms remain a whitelist limitation. Bare terminal 计划
+and English determiner + plan references are nouns, not goal predicates.
+Bilingual lifecycle tests verify that a completed-plan reference still
+supersedes the ongoing plan, without adding completion/activity keyword rules.
 
 ## 已知限制
 

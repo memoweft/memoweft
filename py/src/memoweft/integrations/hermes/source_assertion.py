@@ -22,10 +22,14 @@ import re
 # This is only a routing cue: goals share the existing preference/attribute
 # types. It is NOT an assertion that a goal is real. Every routed proposal
 # must pass the source whitelist; ordinary preferences/states keep their type.
+# A terminal 计划 or determiner + plan is a noun reference, not an intention
+# predicate. Preserve the ordinary state path without inferring completion or
+# abandonment from activity keywords. Possessive plan + copula still routes.
 _GOAL = re.compile(
-    r"目标(?=是|为|会|应|不)|计划|打算|准备|想|我希望|我要|把[^，,。;；]+作为(?:长期)?目标"
-    r"|\b(?:goals?\s+(?:is|isn't|are|was|were|would|should))\b"
-    r"|\b(?:plans?|planning|planned|intend(?:s|ed|ing)?|want(?:s|ed|ing)?|hope(?:s|d)?|pursue(?:s|d)?|aim(?:s|ed|ing)?|ambition)\b|\bgoing\s+to\b", re.I,
+    r"目标(?=是|为|会|应|不)|计划(?=[^，,。;；!?！？\s])|打算|准备|想|我希望|我要|把[^，,。;；]+作为(?:长期)?目标"
+    r"|\b(?:(?:goals?|plans?)\s+(?:is|isn't|are|was|were|would|should))\b"
+    r"|\b(?<!my )(?<!the )(?<!our )(?<!this )(?<!that )(?<!a )(?<!an )plans?\b"
+    r"|\b(?:planning|planned|intend(?:s|ed|ing)?|want(?:s|ed|ing)?|hope(?:s|d)?|pursue(?:s|d)?|aim(?:s|ed|ing)?|ambition)\b|\bgoing\s+to\b", re.I,
 )
 # Quotes are masked in validation context only. Apostrophes inside words are
 # possessives/contractions, not quote delimiters. Book titles are not clauses.
