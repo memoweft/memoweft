@@ -19,6 +19,7 @@ from ..recall_language import call_with_recall_language
 from ..hermes.boundary_store import BoundaryHardDeletedSourceError
 from .interactions import InteractionQueryError
 from .observed import ObservedError, ObservedService
+from .replay import REPLAY_MAX_BYTES, REPLAY_MAX_ENTRIES, ResponseReplay
 from ..trust import (
     CLARIFICATION_SCHEMA_VERSION,
     PORTABLE_CAPABILITIES_VERSION,
@@ -166,7 +167,7 @@ class DshRpcV2Server:
         self._clarification: ClarificationService | None = None
         self._portable: PortableService | None = None
         self._clarification_host_id: str | None = None
-        self._replay: dict[str, tuple[str, dict[str, object]]] = {}
+        self._replay = ResponseReplay()
         self._shutdown_requested = False
 
     @property
@@ -204,7 +205,7 @@ class DshRpcV2Server:
                 result_code=result_code,
                 result=result,
             )
-            self._replay[request_id] = (fingerprint, deepcopy(response))
+            self._replay.remember(request_id, fingerprint, response)
             return response
         except BaseException as exc:  # noqa: BLE001 - protocol must return one line
             response = self.error_response(
@@ -215,9 +216,9 @@ class DshRpcV2Server:
             if (
                 request_id is not None
                 and fingerprint is not None
-                and request_id not in self._replay
+                and self._replay.get(request_id) is None
             ):
-                self._replay[request_id] = (fingerprint, deepcopy(response))
+                self._replay.remember(request_id, fingerprint, response)
             return response
 
     def error_response(
@@ -748,9 +749,13 @@ class DshRpcV2Server:
             "schema_version": DSH_RPC_SCHEMA_VERSION,
             "capabilities_version": DSH_RPC_CAPABILITIES_VERSION,
             "methods": list(DSH_RPC_METHODS),
-            "request_id_replay": "same_process_exact_response",
+            "request_id_replay": "bounded_same_process_exact_response",
+            "request_id_replay_max_entries": REPLAY_MAX_ENTRIES,
+            "request_id_replay_max_bytes": REPLAY_MAX_BYTES,
+            "request_id_replay_miss": "core_durable_identity_or_fresh_query",
             "restart_replay": "core_durable_identity_or_same_revision_query",
             "request_id_conflict": "fail_closed",
+            "request_id_conflict_scope": "retained_replay_window",
             "legacy_unversioned_bridge": True,
             "interaction_dependency_projection": 1,
             "observed_evidence": 1,
