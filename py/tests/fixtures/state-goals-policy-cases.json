@@ -1,5 +1,5 @@
 {
-  "source": "Exact synthetic examples from four PR #125 independent reviews, plus ten new bilingual negation/subject variants; overlapping six false-rejection examples retained separately.",
+  "source": "Exact synthetic examples from five PR #125 independent reviews plus authored bilingual variants; overlapping review records remain separate.",
   "policy": "Clause whitelist plus exactly the manager-specified near-term and joking/retraction markers; block/allow/model are explicit review expectations, not model scores.",
   "cases": [
     {
@@ -1243,6 +1243,313 @@
       "expectation": "block",
       "known_limit": false,
       "reason": "规则必拦：多个修饰语不解除前置否定；宾语从句/转述后的目标动词直接主语必须是本人。"
+    },
+    {
+      "id": "review5-negative-en-0",
+      "batch": "review5-negative",
+      "lang": "en",
+      "raw": "I have never seriously and genuinely intended to establish a private airline.",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-en-1",
+      "batch": "review5-negative",
+      "lang": "en",
+      "raw": "I was told that my neighbours really plan to launch a vineyard.",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-en-2",
+      "batch": "review5-negative",
+      "lang": "en",
+      "raw": "My sisters' goal is to run a research institute.",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-en-3",
+      "batch": "review5-negative",
+      "lang": "en",
+      "raw": "Do I intend to become a geologist?",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-en-4",
+      "batch": "review5-negative",
+      "lang": "en",
+      "raw": "I plan to return a library book this evening.",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-en-5",
+      "batch": "review5-negative",
+      "lang": "en",
+      "raw": "My goal is to lead an expedition, kidding.",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-zh-0",
+      "batch": "review5-negative",
+      "lang": "zh",
+      "raw": "我从未在认真反复考虑之后真的打算经营航空公司。",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-zh-1",
+      "batch": "review5-negative",
+      "lang": "zh",
+      "raw": "我听说我的邻居们真的计划开一家葡萄酒庄。",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-zh-2",
+      "batch": "review5-negative",
+      "lang": "zh",
+      "raw": "我姐妹们的目标是运营一家研究所。",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-zh-3",
+      "batch": "review5-negative",
+      "lang": "zh",
+      "raw": "我打算成为地质学家吗？",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-zh-4",
+      "batch": "review5-negative",
+      "lang": "zh",
+      "raw": "我准备等会归还图书。",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-negative-zh-5",
+      "batch": "review5-negative",
+      "lang": "zh",
+      "raw": "我的目标是带队探险，开个玩笑。",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：否定、主语、问句及排除标记的既有检查保留。"
+    },
+    {
+      "id": "review5-positive-en-0",
+      "batch": "review5-positive",
+      "lang": "en",
+      "raw": "Within four years I intend to qualify as a marine engineer.",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-en-1",
+      "batch": "review5-positive",
+      "lang": "en",
+      "raw": "If the scholarship arrives, I plan to finish a degree in urban planning.",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-en-2",
+      "batch": "review5-positive",
+      "lang": "en",
+      "raw": "I don't know about others, but my goal is to become a meteorologist.",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-en-3",
+      "batch": "review5-positive",
+      "lang": "en",
+      "raw": "My goal is to learn to say difficult things clearly and tell stories with confidence.",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-en-4",
+      "batch": "review5-positive",
+      "lang": "en",
+      "raw": "My plan is to know enough botany to guide nature walks.",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-en-5",
+      "batch": "review5-positive",
+      "lang": "en",
+      "raw": "I want to make myself a more patient teacher over the next three years.",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-zh-0",
+      "batch": "review5-positive",
+      "lang": "zh",
+      "raw": "四年内我要取得轮机工程师资格。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-zh-1",
+      "batch": "review5-positive",
+      "lang": "zh",
+      "raw": "如果获得奖学金，我计划完成城市规划学位。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-zh-2",
+      "batch": "review5-positive",
+      "lang": "zh",
+      "raw": "我不知道别的，但我的目标是成为气象学家。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。",
+      "goal_quote": "我的目标是成为气象学家。"
+    },
+    {
+      "id": "review5-positive-zh-3",
+      "batch": "review5-positive",
+      "lang": "zh",
+      "raw": "我的目标是学会清楚地说出困难的事并自信地讲述故事。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-zh-4",
+      "batch": "review5-positive",
+      "lang": "zh",
+      "raw": "我的计划是掌握足够的植物知识来带领自然观察。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "review5-positive-zh-5",
+      "batch": "review5-positive",
+      "lang": "zh",
+      "raw": "我想让自己在三年内成为更有耐心的老师。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：检查只作用于支持目标的分句；前一分句否定不影响目标。"
+    },
+    {
+      "id": "variant5-zh-0",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我不知道别的，但我的目标是在三年内成为气象学家。",
+      "goal_quote": "我的目标是在三年内成为气象学家。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
+    },
+    {
+      "id": "variant5-zh-1",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我不知道别的，但是我的计划是开一间气象科普馆。",
+      "goal_quote": "我的计划是开一间气象科普馆。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
+    },
+    {
+      "id": "variant5-zh-2",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我不知道别的，然而我准备取得气象观测资格。",
+      "goal_quote": "我准备取得气象观测资格。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
+    },
+    {
+      "id": "variant5-zh-3",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我没想别的，可是我打算成为地质学家。",
+      "goal_quote": "我打算成为地质学家。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
+    },
+    {
+      "id": "variant5-zh-4",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我没想别的，只是我的目标是建立社区图书馆。",
+      "goal_quote": "我的目标是建立社区图书馆。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
+    },
+    {
+      "id": "variant5-zh-5",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我没想别的，而且我想取得救生员资格。",
+      "goal_quote": "我想取得救生员资格。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
+    },
+    {
+      "id": "variant5-zh-6",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我不确定，不过三年内我要取得会计资格证。",
+      "goal_quote": "三年内我要取得会计资格证。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
+    },
+    {
+      "id": "variant5-zh-7",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我不确定，而我的计划是完成工程学位。",
+      "goal_quote": "我的计划是完成工程学位。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
+    },
+    {
+      "id": "variant5-zh-8",
+      "batch": "variant5-positive",
+      "lang": "zh",
+      "raw": "我不确定，并且我计划未来五年开一间书店。",
+      "goal_quote": "我计划未来五年开一间书店。",
+      "expectation": "allow",
+      "known_limit": false,
+      "reason": "规则必放：中文转折/并列连接后是独立本人目标；同时测试整句和仅选目标分句。"
     }
   ]
 }

@@ -13,6 +13,7 @@ import re
 # 4. 「如果/if」条件不影响判断（条件目标仍是目标）；目标从句里的动词（say/tell 等）不能被当作转述他人的标记——只有分句**主语**是别人、或整句是引号引述时才算他人发言。
 # 5. 同一分句内，只要否定词（不/没/没有/从未/并不/不再/别、`not/n't/never/no longer`）出现在目标动词**之前**，不论中间隔了多少修饰语（真的/really/actually/特别…），都算否定。但否定若只修饰另一个分句（「我不打算中断训练，我的长期目标是…」）不影响后一个分句。
 # 6. 白名单要求**目标动词的直接主语**是「我/I」（或「我的目标/计划是…」这种本人所有格作主语）。如果在「我」之后、目标动词之前出现了另一个主语（他人所有格、称谓、人名、他/她/他们、`my parents / my friend / he / she / they / 人名`），例如「我知道我朋友想…」`I know my parents plan …`，目标动词的主语是那个人，不算本人目标。
+# 7. 中文「但、但是、可是、不过、然而、而、只是、而且、并且」在逗号后或句首引出分句，与英文 `but/however/though/and` 对称。否定、他人主语、问句和排除标记只检查与支持范围相交的目标分句，不扫描整条消息；别的分句既不能否决，也不能替被选分句提供目标。
 # 近期时间词：今晚、今天、明天、待会、等会、马上、这周末；`tonight`、`today`、`tomorrow`、`this afternoon`、`this evening`、`later today`、`right now`。
 # 明确玩笑/收回：开玩笑的、开个玩笑、说着玩的、逗你的；`just kidding`、`jk`、`kidding`。
 # 两组排除标记分句内出现就不算长期目标；不推断反讽、反事实或活动含义。
@@ -40,7 +41,15 @@ _SENTENCE = re.compile(r"[。.!?！？;；\n]+")
 _TIME_ZH = r"(?:(?:[一二三四五六七八九十百两\d]+年(?:内|后)|明年|今年|未来[一二三四五六七八九十百两\d]+年(?:内)?))"
 _TIME_EN = r"(?:(?:next|this)\s+year|today|tomorrow|in\s+\w+\s+years?|within\s+\w+\s+years?)"
 _SUBJECT = rf"(?:(?:{_TIME_ZH})?我|(?:{_TIME_EN}\s+)?(?:I\b|my\b)|he\b|she\b|they\b|他|她)"
-_COMMA = re.compile(rf"[，,]\s*(?=(?:(?:and|but|however)\s+)?{_SUBJECT})|\b(?:but|and|however)\s+(?={_SUBJECT})", re.I)
+_CONNECTOR_ZH = r"(?:但是|可是|不过|然而|只是|而且|并且|但|而)"
+_CONNECTOR_EN = r"(?:but|however|though|and)"
+# Connectors after commas start clauses even when the following subject is
+# another person. Keep non-clausal commas (e.g. ', just kidding') intact.
+_COMMA = re.compile(
+    rf"[，,]\s*(?:{_CONNECTOR_ZH}|{_CONNECTOR_EN}\b)\s*"
+    rf"|[，,]\s*(?={_SUBJECT})|\b{_CONNECTOR_EN}\s+(?={_SUBJECT})", re.I,
+)
+_CONNECTOR_PREFIX = re.compile(rf"^(?:{_CONNECTOR_ZH}|{_CONNECTOR_EN}\b)\s*", re.I)
 _OWNER = re.compile(
     rf"^(?:{_TIME_ZH})?我"
     rf"|^(?:{_TIME_EN}\s+)?(?:I\b|my\s+(?:(?:long[- ]term|life|future)\s+)?(?:[\w-]+\s+)?(?:goal|plan)\b)", re.I,
@@ -119,7 +128,12 @@ def _supported_owner_goal(clause: str) -> bool:
 
 
 def owner_assertion_error(raw: str, start: int, end: int, *, proposed_goal: bool = False) -> str | None:
-    """Check full clauses, retaining original offsets and speaker context."""
+    """Check intersecting goal clauses, retaining offsets and speaker context.
+
+    All four checks use that clause. The complete source remains validation
+    context only: an unselected neighbour cannot rescue an invalid support,
+    and a foreign quotation cannot lose its speaker by clipping its span.
+    """
     normalized = raw.replace('’', "'").replace('‘', "'")
     quotes = list(_QUOTE.finditer(normalized))
     # A clipped quoted goal cannot erase the foreign speaker or quotation.
@@ -139,7 +153,7 @@ def owner_assertion_error(raw: str, start: int, end: int, *, proposed_goal: bool
         for cut in [*_COMMA.finditer(sentence), None]:
             stop = cut.start() if cut else len(sentence)
             clause = sentence[offset:stop].strip().lstrip('，,;； ')
-            clause = re.sub(r'^(?:and|but|however)\s+', '', clause, flags=re.I)
+            clause = _CONNECTOR_PREFIX.sub('', clause, count=1)
             clause_left, clause_right = left + offset, left + stop
             offset = cut.end() if cut else len(sentence)
             if clause_right <= start or end <= clause_left:

@@ -52,6 +52,8 @@ rules, including the exact additional exclusion lists:
 5. 同一分句内，只要否定词（不/没/没有/从未/并不/不再/别、`not/n't/never/no longer`）出现在目标动词**之前**，不论中间隔了多少修饰语（真的/really/actually/特别…），都算否定。但否定若只修饰另一个分句（「我不打算中断训练，我的长期目标是…」）不影响后一个分句。
 6. 白名单要求**目标动词的直接主语**是「我/I」（或「我的目标/计划是…」这种本人所有格作主语）。如果在「我」之后、目标动词之前出现了另一个主语（他人所有格、称谓、人名、他/她/他们、`my parents / my friend / he / she / they / 人名`），例如「我知道我朋友想…」`I know my parents plan …`，目标动词的主语是那个人，不算本人目标。
 
+7. 中文分句切分补上转折/并列连接：「但、但是、可是、不过、然而、而、只是、而且、并且」（前面有逗号或句首时），与英文 `but/however/though/and` 对称。否定、他人主语、问句、排除标记的检查只针对支持该目标的那个分句，不扫整条消息。来源范围必须与该目标分句相交；无效的已选分句不能借邻句的有效目标通过。
+
 - 近期时间词：今晚、今天、明天、待会、等会、马上、这周末；`tonight`、`today`、`tomorrow`、`this afternoon`、`this evening`、`later today`、`right now`。
 - 明确玩笑/收回：开玩笑的、开个玩笑、说着玩的、逗你的；`just kidding`、`jk`、`kidding`。
 
@@ -63,18 +65,18 @@ rules, including the exact additional exclusion lists:
 ## Review corpus: three explicit expectations
 
 [`state-goals-policy-cases.json`](../py/tests/fixtures/state-goals-policy-cases.json)
-retains all **138** records: the previous **96** exact review records, all
-**32** fourth-review records (16 negatives and 16 positives), and **10** new
-negative variants (five in each language). The original overlapping six
-false-rejection records are still counted separately. No utterance is removed
-or rewritten. `old-en-task` and `old-zh-task` now belong to 规则必拦 because
-these task instructions have no owner whitelist subject.
+retains all **171** records: the previous **138** exact records, all **24**
+fifth-review records (12 negatives and 12 positives), and **9** Chinese
+positive variants. The variants cover three examples each of「我不知道别的，
+但…」「我没想别的，可是…」「我不确定，不过三年内我要…」. Original
+utterances and overlapping review records remain unchanged. `old-en-task` and
+`old-zh-task` remain 规则必拦.
 
-| Class    | Cases | Forced-form result                                                                                                                           |
-| -------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 规则必拦 |    69 | **0/69** owner goals formed; all Evidence survives. Before this repair **14/69** formed: four reviewer counterexamples and ten new variants. |
-| 规则必放 |    44 | **44/44** form and recall: the previous 28 plus all 16 new reviewer positives.                                                               |
-| 交给模型 |    25 | **17** semantic negatives and **8** positive known limitations. Actual forced `form` forms **10/25**; this is not a model correctness score. |
+| Class    | Cases | Forced-form result                                                                                                                                           |
+| -------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 规则必拦 |    81 | **0/81** owner goals formed, including the previous **69/69** rejections; all Evidence survives.                                                             |
+| 规则必放 |    65 | **65/65** form and recall, including the previous **44/44**, 12 new reviewer positives and nine Chinese variants. Before the clause repair **55/65** formed. |
+| 交给模型 |    25 | **17** semantic negatives and **8** positive known limitations. Actual forced `form` forms **10/25**; this is not a model correctness score.                 |
 
 Every case runs the real worker, compiler, SQLite and recall with forced
 `form + preference`. There is no scripted `no_change` substitute for kernel
@@ -96,6 +98,28 @@ finite; unrecognized forms remain a whitelist limitation. Bare terminal 计划
 and English determiner + plan references are nouns, not goal predicates.
 Bilingual lifecycle tests verify that a completed-plan reference still
 supersedes the ongoing plan, without adding completion/activity keyword rules.
+
+## Clause-local validation and support ranges
+
+The comma/connector boundary and clause-start prefix now share the Chinese
+and English connector lists. Longest Chinese connectors are matched first,
+so 但是/而且 are not partially consumed as 但/而. Non-clausal commas such as
+`, just kidding` stay with the goal. Quotes remain attribution context;
+clipping a foreign quotation cannot remove its speaker.
+
+Negation, direct subject, questions and literal exclusions use only an
+intersecting goal clause. A negative/question/third-party/near-term neighbour
+cannot veto a valid selected goal; a valid neighbouring goal cannot rescue
+an invalid selected clause. The compiler does not expand or rewrite stored
+support. Worker/SQLite/recall tests assert the exact selected content, original
+Evidence and provenance offsets for whole-source and goal-only selection.
+
+All nine Chinese connectors and but/however/though/and are tested at the
+start and after a comma, with both source selections. The review failure and
+nine variants also run with the goal annotation omitted. A further matrix
+checks all four guards with the invalid clause before/after the valid goal
+and whole/goal/invalid-only support. The measured reproduction is **84 red
+cases → 84 green cases**, all sharing the clause-boundary root cause.
 
 ## 已知限制
 
