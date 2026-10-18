@@ -1523,6 +1523,7 @@ def _append_semantic_candidates(
 def _render_snapshot_selection(
     db: sqlite3.Connection, subject_id: str, query: str, model_tier: ModelTier, lang: Lang,
     selected: list[dict[str, object]], rows: list[dict[str, object]],
+    dates: Mapping[tuple[str, str], str] | None = None,
 ) -> tuple[list[dict[str, object]], str]:
     historical = bool(_HISTORICAL_QUERY_PATTERN.search(query) or re.search(r'为什么|为何|不算|失效|why|invalid', query, re.I))
     if lang == 'en':
@@ -1530,7 +1531,8 @@ def _render_snapshot_selection(
         # Only the selected output projection uses localized generated copy;
         # source text is never searched/replaced or translated in place.
         english_content = {(str(row['kind']), str(row['id'])): row['english_content'] for row in rows}
-        dates = recall_dates(db, subject_id, selected, model_tier)
+        if dates is None:
+            dates = recall_dates(db, subject_id, selected, model_tier)
         rendered_items = []
         for item in selected:
             projection = {**item, 'recall_date': dates[(str(item['kind']), str(item['id']))],
@@ -1594,26 +1596,36 @@ def recall_world_snapshot(
         rows = _current_world_rows(db, subject_id, model_tier)
         # Run the original main candidate/semantic/render path first. Optional
         # nomination happens once above; both arms reuse that immutable result.
-        def arm(literal: list[dict[str, object]]) -> tuple[list[dict[str, object]], str]:
+        def arm(literal: list[dict[str, object]]) -> list[dict[str, object]]:
             items = _append_semantic_candidates(db, subject_id, query, model_tier, literal, rows, nominees, provider)
             items = [item for item in items if world_item_visible(
                 db, subject_id, cast(Any, str(item["kind"])), str(item["id"]),
                 surface="model_cloud" if model_tier == "cloud" else "recall")]
-            return _render_snapshot_selection(db, subject_id, query, model_tier, lang, items, rows)
+            return items
 
-        main, main_text = arm(_match_world_rows_main(query, rows))
+        main_items = arm(_match_world_rows_main(query, rows))
         if _CJK_RUN.search(query):
-            selected, rendered_recall = main, main_text
+            selected, rendered_recall = _render_snapshot_selection(
+                db, subject_id, query, model_tier, lang, main_items, rows)
         else:
             try:
-                prior, _ = arm(_match_world_rows_improved(query, rows))
+                prior_items = arm(_match_world_rows_improved(query, rows))
             except Exception:
                 # The optional improvement arm must never invalidate a main
                 # result. Main failures above retain their existing behavior.
+                prior_items = []
+            union = {english_candidate_key(item): item for item in [*main_items, *prior_items]}
+            # One batched metadata projection per snapshot, shared by both arms
+            # and any budget fallback. Never scan once per render or item.
+            dates = recall_dates(db, subject_id, list(union.values()), model_tier) if lang == 'en' else None
+            main, _ = _render_snapshot_selection(db, subject_id, query, model_tier, lang, main_items, rows, dates)
+            try:
+                prior, _ = _render_snapshot_selection(db, subject_id, query, model_tier, lang, prior_items, rows, dates)
+            except Exception:
                 prior = []
             combined = compose_english(query, rows, main, prior, max_items=max(MAX_ITEMS, len(main)))
             selected, rendered_recall = _render_snapshot_selection(
-                db, subject_id, query, model_tier, lang, combined, rows)
+                db, subject_id, query, model_tier, lang, combined, rows, dates)
             main_keys = {english_candidate_key(item) for item in main}
             required = {english_candidate_key(item) for item in combined if english_candidate_key(item) in main_keys}
             # Reordering and supplementary text must not consume a retained
@@ -1622,7 +1634,7 @@ def recall_world_snapshot(
             if (not required <= {english_candidate_key(item) for item in selected}
                     or (lang == 'zh' and len(rendered_recall) >= MAX_OUTPUT_CHARS)):
                 selected, rendered_recall = _render_snapshot_selection(
-                    db, subject_id, query, model_tier, lang, reserve_main_order(combined, main), rows)
+                    db, subject_id, query, model_tier, lang, reserve_main_order(combined, main), rows, dates)
         selected_item_ids = tuple(
             (str(item["kind"]), str(item["id"])) for item in selected
         )
