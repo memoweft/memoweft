@@ -64,6 +64,10 @@ MemoWeft keeps these boundaries explicit:
   claim itself to be an action proposal. A neighboring offer cannot confirm a
   factual guess; the confirmation explanation quotes only the selected claim,
   while provenance retains the complete original assistant turn.
+  A short Chinese reference to an earlier action can precede explicit assent;
+  its complete literal topic and action verb must match the selected proposal.
+  Whole-reply denial checks still apply; the finite grammar and limits are
+  documented in the [confirmation rules](docs/distraction-sources.md).
 - Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
   Python links current, sourced self-naming claims and accepted aliases to
   the same person even when an earlier neutral name remains canonical;

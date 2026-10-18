@@ -503,7 +503,7 @@ def _explicit_short_confirmation(span_text: str, assistant_claim: str) -> bool:
     # Action assent authorizes the selected action, not an adjacent factual
     # guess. Apply this before generic affirmatives (notably 好/就这么办), and
     # check assistant_claim itself rather than searching the complete context.
-    from .action_confirmation import is_action_assent, is_selected_action_proposal
+    from .action_confirmation import is_action_assent, is_referenced_action_assent, is_selected_action_proposal
     if is_action_assent(span_text):
         return is_selected_action_proposal(assistant_claim)
     if _AFFIRM_RE.fullmatch(stripped):
@@ -513,6 +513,8 @@ def _explicit_short_confirmation(span_text: str, assistant_claim: str) -> bool:
             or re.search(r"\b(?:no|not|never|nope|wrong|cannot)\b|n['’]t\b", cleaned, re.I)
             or re.search(r'[?？]', span_text)):
         return False
+    if is_referenced_action_assent(span_text, assistant_claim):
+        return True
     parts = re.split(r'[\s，。！？!?,.:;；、~～「」『』]+', span_text.strip(), maxsplit=1)
     if len(parts) != 2 or not _AFFIRM_RE.fullmatch(parts[0]):
         return False

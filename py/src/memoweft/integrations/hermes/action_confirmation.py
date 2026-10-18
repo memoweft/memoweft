@@ -14,7 +14,11 @@ _EN_HEAD = re.compile(
 )
 _ZH_HEAD = re.compile(
     r"(?:(?:我|我们|助手)(?:可以|能|会|来)?|请)?"
-    r"(?:提醒|保存|展示|显示|保持|点|给(?:你|您|用户)看)\S",
+    r"(?P<action>提醒|保存|展示|显示|保持|点|给(?:你|您|用户)看)\S",
+)
+_REFERENCED_ZH = re.compile(
+    r"(?:刚才|之前)你说的(?P<topic>[\u3400-\u9fff]{2,}?)(?P<action>提醒|保存|展示|显示|保持)"
+    r"[，,]\s*(?P<assent>[^。.!?！？;；\n]+)[。.!！]?",
 )
 _EN_CONDITION = re.compile(r"^(?:when|whenever|if|next time)\b[^,，.!?。！？;；\n]+[,，]\s*", re.I)
 _ZH_CONDITION = re.compile(r"^(?:以后|今后|下次|将来)[^，,。！？!?;；\n]+?时[，,]?\s*")
@@ -27,6 +31,25 @@ _QUOTE = re.compile(r'"[^"\n]*"|“[^”]*”|「[^」]*」|‘[^’]*’')
 def is_action_assent(text: str) -> bool:
     compact = re.sub(r'[\s，。！？!?,.:;；、~～「」『』]+', '', text)
     return _ACTION_ASSENT.fullmatch(compact) is not None
+
+
+def is_referenced_action_assent(text: str, claim: str) -> bool:
+    """Accept a closed reference prefix only for its selected literal action.
+
+    The complete topic must occur in the selected claim, and its action must
+    be that claim's actual verb head. A neighboring offer or a verb inside an
+    argument cannot satisfy the reference. Full-reply denial/length checks
+    remain the compiler's responsibility, for this span and its whole source.
+    """
+    reference = _REFERENCED_ZH.fullmatch(text.strip())
+    if (reference is None or not is_action_assent(reference['assent'])
+            or not is_selected_action_proposal(claim)):
+        return False
+    selected = _QUOTED_NOTE.split(claim.strip(), maxsplit=1)[0]
+    condition = _ZH_CONDITION.match(selected)
+    action = _ZH_HEAD.match(selected[condition.end():] if condition else selected)
+    return (action is not None and action['action'] == reference['action']
+            and reference['topic'] in selected)
 
 
 def is_selected_action_proposal(claim: str) -> bool:
