@@ -81,6 +81,9 @@ def test_production_snapshot_keeps_verbatim_body_and_is_read_only(
     ("Which cats do I like?", "I like catering."),
     ("Which running shoes do I use?", "I use a database and enjoy running queries."),
     ("What is my middle name?", "My gardening tools are in the middle drawer."),
+    ("I'm learning pottery, and I'm considering sculpture.", "I'm cataloguing nebulae."),
+    ("I'll study pottery, and I'll consider sculpture.", "I'll catalogue nebulae."),
+    ("I'd study pottery, and I'd consider sculpture.", "I'd catalogue nebulae."),
     ("我的望远镜是什么？", "我喜欢显微镜。"),
 ])
 def test_unrelated_and_partial_words_do_not_supply_an_answer(query: str, content: str) -> None:

@@ -120,7 +120,7 @@ _ENGLISH_CARRIERS = _GENERIC_PREDICATE_BIGRAMS | frozenset("""
     what which who whom whose where when why how
     do does did have has had having can could would should will shall may might
     as from into about than then there here so also really actually very
-    ve re s t don isn aren wasn weren doesn didn use uses used
+    m ll d ve re s t don isn aren wasn weren doesn didn use uses used
 """.split())
 _ENGLISH_FOCUS = re.compile(
     r"^(?:what|which)\s+(?:(?:type|kind|sort)s?\s+of\s+)?"
