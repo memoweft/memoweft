@@ -7,8 +7,11 @@ lifecycle-eligible, permission-allowed formal claims in a byte-stable order
 for the same World revision.  It deliberately does NOT search raw Evidence and
 does not inject Evidence text, summaries, or internal IDs.
 
-Literal matching is a deterministic character-bigram overlap score (Dice) computed
-entirely in memory. An optional local CPU provider nominates at most three
+Literal matching uses CJK character bigrams and lowercased Latin whole words,
+with deterministic overlap scoring computed entirely in memory. English-only
+queries exclude grammatical carriers from both sides and preserve a literal
+requested noun phrase instead of diluting it with surrounding question text.
+An optional local CPU provider nominates at most three
 supplementary items; all original gates remain authoritative. Loading or failure
 preserves literal recall. A small,
 owner-approved semantic category table closes the observed lexical gap
@@ -46,7 +49,7 @@ from ..trust.currentness import (
     world_item_visible,
 )
 
-#: Minimum Dice bigram-overlap score for a claim to be recalled.
+#: Minimum lexical overlap score for a claim to be recalled.
 MIN_SCORE = 0.15
 
 #: Hard caps for the injected block: item count and total characters.
@@ -109,6 +112,54 @@ _GENERIC_PREDICATE_BIGRAMS: frozenset[str] = frozenset({
 _HISTORICAL_QUERY_PATTERN: re.Pattern[str] = re.compile(
     r"(?:以前|曾经|过去|原先|之前|早先|从前|先前|那时候|旧的|以前的|谈过|聊过|提过|还记得.*吗|(?:喜欢|爱|爱过|交往|在一起|住|待|用|选)过)"
 )
+# English words, not letter bigrams. These carriers cannot prove a topic match.
+# CJK and mixed queries keep their existing scoring path.
+_ENGLISH_CARRIERS = _GENERIC_PREDICATE_BIGRAMS | frozenset("""
+    i me my mine we us our ours you your yours he him his she her hers
+    it its they them their theirs this that these those
+    what which who whom whose where when why how
+    do does did have has had having can could would should will shall may might
+    as from into about than then there here so also really actually very
+    ve re s t don isn aren wasn weren doesn didn use uses used
+""".split())
+_ENGLISH_FOCUS = re.compile(
+    r"^(?:what|which)\s+(?:(?:type|kind|sort)s?\s+of\s+)?"
+    r"([a-z][a-z -]*?)\s+(?:am|is|are|was|were|do|does|did|can|could|would|should|will)\b",
+    re.IGNORECASE,
+)
+_ENGLISH_POSSESSIVE_FOCUS = re.compile(
+    r"^(?:what|which)\s+(?:is|are)\s+(?:my|your|his|her|our|their)\s+([a-z][a-z -]*?)[?.!\s]*$",
+    re.IGNORECASE,
+)
+
+
+def _english_focus(query: str) -> set[str]:
+    """A literal requested phrase, without inventing topics or synonyms."""
+    match = _ENGLISH_FOCUS.search(query) or _ENGLISH_POSSESSIVE_FOCUS.search(query)
+    return _bigrams(match.group(1)) - _ENGLISH_CARRIERS if match else set()
+
+
+def _lexical_score(query: str, text: str) -> float:
+    query_tokens, content_tokens = _bigrams(query), _bigrams(text)
+    english = not _CJK_RUN.search(query)
+    if english:
+        query_tokens -= _ENGLISH_CARRIERS
+        content_tokens -= _ENGLISH_CARRIERS
+    common = query_tokens & content_tokens
+    if not common:
+        return 0.0
+    score = _compute_overlap_score(query_tokens, content_tokens, common)
+    if english and (focus := _english_focus(query)):
+        # Surrounding context cannot answer a different requested phrase
+        # ("running shoes" vs "running queries"). Require the complete literal
+        # focus in this same eligible variant, then use the existing full
+        # coverage floor so dates and names cannot drown out that focus.
+        if not focus <= content_tokens:
+            return 0.0
+        score = max(score, MIN_SCORE + min(0.35, 0.10 * len(focus)))
+    return score
+
+
 def _strip_question_particles(text: str) -> str:
     """Strip trailing question particles in linear time, preserving 什么/怎么.
 
@@ -466,13 +517,7 @@ def _score_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[Mappin
         # (content + entity names/aliases) while the output stays the
         # canonical content.
         match_text = _row_match_text(query, row)
-        content_bigrams = _bigrams(match_text)
-        if not content_bigrams:
-            continue
-        common_bigrams = query_bigrams & content_bigrams
-        if not common_bigrams:
-            continue
-        score = _compute_overlap_score(query_bigrams, content_bigrams, common_bigrams)
+        score = _lexical_score(query, match_text)
         if score < MIN_SCORE:
             continue
         scored.append(
@@ -535,7 +580,7 @@ def match_cognitions(
     rows_list = list(rows)
     query = _query_signal(query)
     hits = _score_rows(query, rows_list)
-    if hits:
+    if hits or (not _CJK_RUN.search(query) and _english_focus(query)):
         return hits
     if not _is_inquiry(query) and len(query) > 12:
         return []
@@ -574,11 +619,7 @@ def _score_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
         # Score retained, permission-checked predecessor cues independently;
         # neither their content nor their IDs become selected recall items.
         variants = _row_match_variants(query, row)
-        score = max((
-            _compute_overlap_score(query_bigrams, bigrams, query_bigrams & bigrams)
-            for text in variants if (bigrams := _bigrams(text))
-            and query_bigrams & bigrams
-        ), default=0.0)
+        score = max((_lexical_score(query, text) for text in variants), default=0.0)
         if score < MIN_SCORE:
             continue
         kind = str(row["kind"])
@@ -739,7 +780,7 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
     if topic_hits:
         return topic_hits
     hits = _score_world_rows(query, rows_list)
-    if hits:
+    if hits or (not _CJK_RUN.search(query) and _english_focus(query)):
         return hits
     if not _is_inquiry(query) and len(query) > 12:
         return []

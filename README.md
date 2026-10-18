@@ -70,6 +70,10 @@ MemoWeft keeps these boundaries explicit:
   Python optionally supplements literal matches with up to three local CPU
   semantic candidates; loading/failure preserves literal recall. See
   [configuration and lifecycle](docs/semantic-recall.md).
+  English literal scoring ignores pronouns, auxiliaries and question carriers;
+  all informative words of an explicit `what` / `which` noun phrase must occur
+  together in one eligible claim or predecessor cue. It adds no stemming,
+  synonyms or inferred topics.
   Short natural corrections can be retrieved through the topic of their
   permission-eligible predecessors. Only the current successor is rendered
   and selected; past preference values appear for historical questions or
