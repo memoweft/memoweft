@@ -134,7 +134,7 @@ def main() -> None:
     parser.add_argument("--record-main", help="Explicit immutable main reference for baseline creation")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--suite", default="english", choices=["english", "english-review-attributes", "english-fact-inverse", "recall-mixed-review"])
+    parser.add_argument("--suite", default="english", choices=["english", "english-review-attributes", "english-fact-inverse", "recall-mixed-review", "english-review-long"])
     args = parser.parse_args()
     items = cases(args.suite)
     if args.record_main:
