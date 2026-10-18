@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import sqlite3
+import json
+
+from ...store.interaction_context import erased_context_json
 
 from .command_store import TrustCommandError
 from .model import CommandEnvelopeV1
@@ -25,6 +28,7 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
                   "cognition": ("cognition", "subject_id", "content")}
         if copy.execute("SELECT 1 FROM sqlite_master WHERE name='interaction_commitment'").fetchone():
             tables["interaction_commitment"] = ("interaction_commitment", "subject_id", "content")
+        tables["interaction_context"] = ("interaction_context", "subject_id", "context_json")
         before = {(kind, str(row[0])): (str(row[1]), str(row[2])) for kind, (table, owner, name) in tables.items()
                   for row in copy.execute(f"SELECT id, {name}, " + ("kind" if kind in {"entity", "interaction_commitment"} else "content_type" if kind == "cognition" else f"'{kind}'") + f" FROM {table} WHERE {owner} = ?", (subject_id,))}
         if conversation_id is not None:
@@ -49,9 +53,15 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
             context_ids = {str(row[0]) for row in copy.execute(
                 "SELECT id FROM interaction_context WHERE subject_id=? AND conversation_id=?", (subject_id, conversation_id))}
             affected.update(_redact_observed_dependencies(copy, subject_id, affected | context_ids))
-        items = [{"object_kind": kind, "item_id": item_id, "name": name, "item_type": item_type}
-                 for (kind, item_id), (name, item_type) in sorted(before.items())
-                 if copy.execute(f"SELECT 1 FROM {tables[kind][0]} WHERE id = ?", (item_id,)).fetchone() is None]
+        items = []
+        for (kind, item_id), (name, item_type) in sorted(before.items()):
+            after = copy.execute(f"SELECT {tables[kind][2]} FROM {tables[kind][0]} WHERE id=?", (item_id,)).fetchone()
+            removed = after is None
+            if kind == 'interaction_context':
+                removed = not erased_context_json(name) and (after is None or erased_context_json(str(after[0])))
+            if removed:
+                display = '\n'.join(str(turn.get('content', '')) for turn in json.loads(name)) if kind == 'interaction_context' else name
+                items.append({"object_kind": kind, "item_id": item_id, "name": display, "item_type": item_type})
         evidence_ids = [str(row[0]) for row in copy.execute("SELECT id FROM evidence WHERE subject_id = ?", (subject_id,)) if str(row[0]) in affected]
         return {"world_revision": revision, "items": items, "item_count": len(items),
                 "evidence_ids": sorted(evidence_ids), "evidence_count": len(evidence_ids)}

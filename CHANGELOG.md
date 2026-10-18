@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Forgetting erases whole recall-dependent interaction copies and matching legacy copies in the same account. The preview includes those copies; content-free identities prevent replay and Portable restore from reviving them. Original application chats remain outside this deletion.
+
 - Action confirmations now bind to the selected action proposal rather than a nearby factual guess. Confirmation explanations quote that proposal while provenance keeps the complete original assistant turn.
 
 - Python no longer treats incidental overlap with an assistant suggestion as user confirmation. Explicit short confirmations remain supported, and selecting only “yes” cannot discard a denial in the same reply.

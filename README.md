@@ -68,6 +68,16 @@ MemoWeft keeps these boundaries explicit:
   its complete literal topic and action verb must match the selected proposal.
   Whole-reply denial checks still apply; the finite grammar and limits are
   documented in the [confirmation rules](docs/distraction-sources.md).
+- Hosts bind the actual recall dependencies to assistant turns through the existing
+  `model_context_dependencies` boundary field or `link_interaction_dependencies`.
+  Forgetting a fact erases whole dependent interaction-context copies, transitively,
+  without touching the original application chat. Legacy copies lacking complete
+  dependency capture are matched within the account against full original/canonical
+  facts (with presentation and owner-pronoun normalization), and appear in the same
+  forget preview. Content-free context identities and retained source IDs fence replay and survive Portable v4;
+  an erased copy wins over an older live copy in either restore order. Export does
+  no word scrubbing. This cannot revoke a standalone historical backup restored
+  into a database that has never received the deletion state.
 - Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
   Python links current, sourced self-naming claims and accepted aliases to
   the same person even when an earlier neutral name remains canonical;

@@ -63,7 +63,7 @@ def test_source_forget_erases_commitments_and_transitive_reuse_keeps_unrelated(
     preview = preview_forget(str(path), _SUBJECT, target_kind='evidence', target_id='source')
     items = preview['items']
     assert isinstance(items, list)
-    assert {item['item_id'] for item in items} == {original.id, reused.id}
+    assert {item['item_id'] for item in items} == {original.id, reused.id, 'episode-a', 'episode-b'}
     with _open(path) as db:
         assert list(db.iterdump()) == before
     receipt = _service(path).submit_command(_command('erase', 1, 'delete_evidence', 'evidence', 'source'))

@@ -205,7 +205,10 @@ def test_conversation_preview_recovers_pruned_job_and_keeps_all_tables(tmp_path:
         _seed_revision(db)
         before = list(db.iterdump())
     preview = preview_forget(str(path), _SUBJECT, conversation_id="session")
-    assert preview["evidence_ids"] == ["e"] and preview["item_count"] == 1
+    assert preview["evidence_ids"] == ["e"] and preview["item_count"] == 2
+    preview_items = preview["items"]
+    assert isinstance(preview_items, list)
+    assert {item["item_id"] for item in preview_items} == {"c", "i"}
     with _open(path) as db:
         assert list(db.iterdump()) == before
 
@@ -265,7 +268,8 @@ def test_opt_in_removes_original_context_and_keeps_unrelated_ledger(tmp_path: Pa
         assert db.execute("SELECT 1 FROM evidence_ledger WHERE id='unrelated'").fetchone()
         context = db.execute("SELECT context_json FROM interaction_context WHERE id='interaction'").fetchone()[0]
         assert "FGPrivateSource" not in context
-        assert "保留这句话" in context
+        # D33 deletes the whole derived copy; it does not retain a partial transcript.
+        assert json.loads(context) == []
 
 
 def test_deleted_conversation_erases_retained_original_context_from_sqlite_and_portable(tmp_path: Path) -> None:
@@ -299,7 +303,7 @@ def test_forgetting_erases_core_original_copy_without_deleting_host_chat(tmp_pat
     assert receipt["result_state"] == "applied"
     with _open(path) as db:
         context = db.execute("SELECT context_json FROM interaction_context WHERE id='copy'").fetchone()[0]
-        assert "FGSourceCopy" not in context and "unrelated" in context
+        assert json.loads(context) == []
     assert b"FGSourceCopy" not in path.read_bytes()
 
 

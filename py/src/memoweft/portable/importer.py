@@ -21,7 +21,7 @@ from ..config import resolve_lang
 from ..store.cognition import SqliteCognitionStore
 from ..store.event import SqliteEventStore
 from ..store.evidence import SqliteEvidenceStore
-from ..store.interaction_context import SqliteInteractionContextStore
+from ..store.interaction_context import SqliteInteractionContextStore, erased_context
 from ..store.semantic_resolution import SqliteSemanticResolutionStore
 from ..store.transaction import Transaction
 from ..store._tombstones import is_evidence_tombstoned
@@ -1126,7 +1126,9 @@ def import_bundle(
             evidence_to_insert.append(e)
 
     # 交互层:按 id 判重;向后兼容 v1 包(无这两段 → 空)。
-    new_interaction_contexts = [c for c in (data.get("interactionContexts") or []) if interaction_context_store.get(c["id"]) is None]
+    new_interaction_contexts = [c for c in (data.get("interactionContexts") or [])
+        if (existing_context := interaction_context_store.get(c["id"])) is None
+        or (erased_context(_to_interaction_context(c).context) and not erased_context(existing_context.context))]
     # 一证据一解析：目标库已有解析时保持既有结果；包内重复/孤儿在 validate_bundle 已致命拒绝。
     new_semantic_resolutions: list[dict[str, Any]] = []
     for r in data.get("semanticResolutions") or []:

@@ -51,6 +51,15 @@ def _context_from_json(s: str) -> list[VisibleTurn]:
     ]
 
 
+def erased_context_json(raw: str) -> bool:
+    turns = json.loads(raw)
+    return isinstance(turns, list) and all(isinstance(t, dict) and t.get('content') == '' for t in turns)
+
+
+def erased_context(turns: list[VisibleTurn]) -> bool:
+    return all(not turn.content for turn in turns)
+
+
 def _from_row(r: sqlite3.Row) -> InteractionContext:
     return InteractionContext(
         id=r["id"],
@@ -71,6 +80,12 @@ class SqliteInteractionContextStore:
         self._clock = clock
 
     def record(self, inp: InteractionContextInput) -> InteractionContext:
+        prior_rows = row_all(self._db,
+            "SELECT * FROM interaction_context WHERE subject_id=? AND conversation_id=? AND episode_id=?",
+            (inp.subject_id, inp.conversation_id, inp.episode_id))
+        for erased in prior_rows:
+            if erased_context_json(erased['context_json']):
+                return _from_row(erased)
         # 幂等：同 subject + conversation + episode 内按 context_hash 查重。相同文本可合法出现在
         # 不同用户、会话和 episode，不能跨归属返回别的上下文记录。
         ch = hash_context(inp.context)
@@ -81,7 +96,7 @@ class SqliteInteractionContextStore:
             (inp.subject_id, inp.conversation_id, inp.episode_id, ch),
         )
         if existing is not None:
-            return _from_row(existing)
+            return self._erase_if_dependency_deleted(_from_row(existing))
         # A legacy boundary can be replayed after its assistant turn has been
         # causally linked.  The link intentionally changes context_hash; do not
         # let the old unlinked replay create a second interaction row.
@@ -124,7 +139,7 @@ class SqliteInteractionContextStore:
             created_at=to_iso_z(self._clock()),
         )
         self._insert_row(ctx)
-        return ctx
+        return self._erase_if_dependency_deleted(ctx)
 
     def _insert_row(self, ctx: InteractionContext) -> None:
         self._db.execute(
@@ -168,7 +183,52 @@ class SqliteInteractionContextStore:
         return [_from_row(r) for r in rows]
 
     def insert(self, ctx: InteractionContext) -> None:
+        # Empty contexts are durable content-free erasure markers. They win
+        # over an older live copy in either import order, including after remap.
+        if erased_context(ctx.context):
+            from ..integrations.trust.true_delete import _redact_observed_dependencies
+            _redact_observed_dependencies(self._db, ctx.subject_id, {ctx.id})
+            cursor = self._db.execute(
+                "UPDATE interaction_context SET context_json=?,context_hash=? "
+                "WHERE subject_id=? AND (id=? OR (conversation_id=? AND episode_id=?))",
+                (_context_to_json(ctx.context), ctx.context_hash, ctx.subject_id, ctx.id, ctx.conversation_id, ctx.episode_id))
+            if cursor.rowcount:
+                return
+        elif any(erased_context_json(row['context_json']) for row in row_all(self._db,
+            "SELECT context_json FROM interaction_context WHERE subject_id=? "
+            "AND (id=? OR (conversation_id=? AND episode_id=?))",
+            (ctx.subject_id, ctx.id, ctx.conversation_id, ctx.episode_id))):
+            return
         self._insert_row(ctx)
+        self._erase_if_dependency_deleted(ctx)
+
+    def _erase_if_dependency_deleted(self, ctx: InteractionContext) -> InteractionContext:
+        if self._deleted_dependency(ctx.subject_id, ctx.context):
+            from ..integrations.trust.true_delete import _redact_observed_dependencies
+            _redact_observed_dependencies(self._db, ctx.subject_id, {ctx.id})
+            erased = self.get(ctx.id)
+            assert erased is not None
+            return erased
+        return ctx
+
+    def _deleted_dependency(self, subject_id: str, turns: list[VisibleTurn]) -> bool:
+        for turn in turns:
+            dep = turn.model_context_dependencies
+            if not isinstance(dep, dict):
+                continue
+            world_items = dep.get('world_items', [])
+            for item in world_items if isinstance(world_items, list) else []:
+                if isinstance(item, dict) and self._db.execute(
+                    "SELECT 1 FROM world_delete_marker WHERE subject_id=? AND object_kind=? AND item_id=?",
+                    (subject_id, item.get('object_kind'), item.get('item_id'))).fetchone():
+                    return True
+            interaction_ids = dep.get('interaction_ids', [])
+            for item_id in interaction_ids if isinstance(interaction_ids, list) else []:
+                row = self._db.execute("SELECT context_json FROM interaction_context WHERE subject_id=? AND id=?",
+                                       (subject_id, item_id)).fetchone()
+                if row and erased_context_json(str(row[0])):
+                    return True
+        return False
 
     def link_dependencies(
         self,
@@ -265,6 +325,11 @@ class SqliteInteractionContextStore:
             timestamp=prior.timestamp,
             model_context_dependencies=dependencies,
         )
+        if self._deleted_dependency(subject_id, turns):
+            from ..integrations.trust.true_delete import _redact_observed_dependencies
+            _redact_observed_dependencies(self._db, subject_id, {current.id})
+            return 'applied', current.id, current.context_hash, str(self._db.execute(
+                'SELECT context_hash FROM interaction_context WHERE id=?', (current.id,)).fetchone()[0])
         next_hash = hash_context(turns)
         cursor = self._db.execute(
             "UPDATE interaction_context SET context_json = ?, context_hash = ? "
