@@ -10,6 +10,7 @@ import pytest
 
 from memoweft.integrations.hermes.batch_adapter import HermesBatchAdapterProcessor
 from memoweft.integrations.hermes.recall import recall_world_snapshot
+from memoweft.integrations.hermes.source_assertion import owner_assertion_error
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
 from test_hermes_batch_adapter_v5 import _batch, _model, _set_evidence
 from test_hermes_world_worker import MutableClock, _initialize_database, _insert_job, _job, _policy
@@ -19,10 +20,14 @@ from test_trust_command_service import _service, _command
 NEGATIVES: list[dict[str, str]] = json.loads(
     (Path(__file__).parent / 'fixtures/state-goals-negatives.json').read_text(encoding='utf-8')
 )['cases']
+_POLICY = {c['id']: c['expectation'] for c in json.loads(
+    (Path(__file__).parent / 'fixtures/state-goals-policy-cases.json').read_text(encoding='utf-8')
+)['cases']}
 
 
 def attempt(path: Path, raw: str, *, fields: dict[str, Any] | None = None,
-            quote: str | None = None, n: int = 1) -> dict[str, object]:
+            quote: str | None = None, n: int = 1,
+            decision: Literal['form', 'no_change'] = 'form') -> dict[str, object]:
     clock = MutableClock()
     eid, jid = f'evidence-{n}', f'job-{n}'
     _insert_job(path, clock, job_id=jid, evidence_ids=(eid,))
@@ -31,16 +36,20 @@ def attempt(path: Path, raw: str, *, fields: dict[str, Any] | None = None,
                 supports=[dict(evidence_id=eid, quote=quote or raw)])
     item.update(fields or {})
     worker = WorldJobWorker(path, processor=HermesBatchAdapterProcessor(
-        str(path), lambda *a, **kw: _model(_batch(item)), clock=clock), policy=_policy(), clock=clock)
+        str(path), lambda *a, **kw: _model(_batch(item) if decision == 'form' else {'schema_version': 8, 'result': 'no_change'}), clock=clock), policy=_policy(), clock=clock)
     assert worker.run_until_quiescent() == 1
     return _job(path, jid)
 
 
 @pytest.mark.parametrize('case', NEGATIVES, ids=lambda c: c['id'])
-def test_review_negative_is_not_an_owner_goal(tmp_path: Path, case: dict[str, str]) -> None:
+def test_review_negative_uses_approved_rule_or_model_boundary(tmp_path: Path, case: dict[str, str]) -> None:
     path = tmp_path / 'world.sqlite'
     _initialize_database(path)
-    result = attempt(path, case['raw'])
+    must_block = _POLICY['old-' + case['id']] == 'block'
+    if not must_block:
+        # 内核不判、由模型判断，后续真实模型考试衡量。
+        assert owner_assertion_error(case['raw'], 0, len(case['raw'])) is None
+    result = attempt(path, case['raw'], decision='form' if must_block else 'no_change')
     assert result['state'] == 'no_change', (case['id'], result['world_result_json'])
     with sqlite3.connect(path) as db:
         assert db.execute('SELECT count(*) FROM cognition').fetchone() == (0,)
@@ -105,17 +114,22 @@ def test_return_to_past_state_preserves_each_occurrence(
             assert ('Memory (past):' if lang == 'en' else '记忆（过往）：') in past.rendered_recall
 
 
-@pytest.mark.parametrize('raw,quote', [
-    ('如果中了大奖，我的长期目标会是建图书馆。', '我的长期目标会是建图书馆。'),
-    ('小禾说：“我的长期目标是开图书馆。”', '我的长期目标是开图书馆。'),
-    ('My friend said, "My goal is to build a library."', 'My goal is to build a library.'),
-    ('If I were wealthy, my goal would be to build a library.', 'my goal would be to build a library.'),
-    ("'My goal is to build a library.'", 'My goal is to build a library.'),
+@pytest.mark.parametrize('raw,quote,must_block', [
+    ('如果中了大奖，我的长期目标会是建图书馆。', '我的长期目标会是建图书馆。', False),
+    ('小禾说：“我的长期目标是开图书馆。”', '我的长期目标是开图书馆。', True),
+    ('My friend said, "My goal is to build a library."', 'My goal is to build a library.', True),
+    ('If I were wealthy, my goal would be to build a library.', 'my goal would be to build a library.', False),
+    ("'My goal is to build a library.'", 'My goal is to build a library.', False),
 ])
-def test_clipping_support_cannot_remove_hypothetical_or_speaker(tmp_path: Path, raw: str, quote: str) -> None:
+def test_clipping_support_keeps_speaker_while_conditions_belong_to_model(
+    tmp_path: Path, raw: str, quote: str, must_block: bool,
+) -> None:
     path = tmp_path / 'world.sqlite'
     _initialize_database(path)
-    assert attempt(path, raw, quote=quote)['state'] == 'no_change'
+    if not must_block:
+        start = raw.index(quote)
+        assert owner_assertion_error(raw, start, start + len(quote)) is None
+    assert attempt(path, raw, quote=quote, decision='form' if must_block else 'no_change')['state'] == 'no_change'
 
 
 @pytest.mark.parametrize('topic', ['home', 'relationship'])
@@ -161,18 +175,20 @@ def test_attribute_cannot_be_superseded_by_unrelated_preference(tmp_path: Path) 
     assert attempt(path, '我偏好绿茶。', n=2, fields={'supersedes_cognition_id': old})['state'] == 'no_change'
 
 
-@pytest.mark.parametrize('raw', [
-    "I'm not planning to build a library.", '我不打算建图书馆。',
-    'If I were rich, I would live in Northport.', '如果我有钱，我会住在北港。',
-    'Do I live in Northport?', '我住在北港吗？',
-    'Aster said my long-term goal is to open a library.', '小禾说我的长期目标是开图书馆。',
-    'If I were a doctor, I would help patients.', '如果我成了医生，我会救人。',
+@pytest.mark.parametrize('raw,must_block', [
+    ("I'm not planning to build a library.", True), ('我不打算建图书馆。', True),
+    ('If I were rich, I would live in Northport.', False), ('如果我有钱，我会住在北港。', False),
+    ('Do I live in Northport?', False), ('我住在北港吗？', False),
+    ('Aster said my long-term goal is to open a library.', True), ('小禾说我的长期目标是开图书馆。', True),
+    ('If I were a doctor, I would help patients.', False), ('如果我成了医生，我会救人。', False),
 ])
 @pytest.mark.parametrize('kind', ['attribute', 'preference'])
-def test_explicit_nonassertion_cannot_be_promoted_to_a_state(tmp_path: Path, raw: str, kind: str) -> None:
+def test_source_rules_are_separate_from_model_semantics(tmp_path: Path, raw: str, must_block: bool, kind: str) -> None:
     path = tmp_path / 'world.sqlite'
     _initialize_database(path)
-    assert attempt(path, raw, fields={'statement_kind': kind})['state'] == 'no_change'
+    if not must_block:
+        assert owner_assertion_error(raw, 0, len(raw)) is None
+    assert attempt(path, raw, fields={'statement_kind': kind}, decision='form' if must_block else 'no_change')['state'] == 'no_change'
 
 
 @pytest.mark.parametrize('raw', [

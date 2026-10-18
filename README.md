@@ -86,9 +86,12 @@ MemoWeft keeps these boundaries explicit:
   wording separately available as predecessor context.
   Returning to a past value creates a sourced state occurrence, keeping a linear
   `A → B → A` history and the latest occurrence current. It never clones old
-  Evidence. Deterministic source checks reject questions, hypothetical or
-  negated intentions, quoted third-party goals and unaccepted suggestions as
-  new owner goals/states; genuine completion or abandonment stays supported.
+  Evidence. Deterministic checks cover source ownership, directly negated goal
+  verbs without another affirmative goal clause, and explicit third-party
+  possessive goal subjects. Conditions and start dates do not invalidate a
+  goal. Other semantic eligibility belongs to the interpretation model.
+  Rewording the same relationship supports its current occurrence using the
+  source person, target person and relationship type, preserving each quote.
 - DSH recall previews additionally expose `recent_evidence`: permission-filtered
   exact user quotes from unfinished formation, kept separate from formal World
   items. This read-only bridge uses the existing Evidence and conversation

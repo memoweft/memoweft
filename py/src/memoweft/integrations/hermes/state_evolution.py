@@ -39,10 +39,29 @@ def resolve_state_version(db: sqlite3.Connection, subject_id: str, item: BatchIt
         return item
     kind: Literal['cognition', 'relationship'] = 'relationship' if item.statement_kind == 'relationship' else 'cognition'
     base = item.apply_identity(subject_id)
+    prior = item.supersedes_relationship_id if kind == 'relationship' else item.supersedes_cognition_id
+    if kind == 'relationship' and prior is None:
+        # A relationship's identity is its endpoints and type, not its prose.
+        # Rewording after reconciliation must support the current occurrence.
+        from .batch_adapter import entity_id_for, owner_entity_id_for, _ZeroWriteError
+        source = entity_id_for(subject_id, item.source_canonical_name) if item.source_canonical_name else owner_entity_id_for(subject_id)
+        target = entity_id_for(subject_id, str(item.target_canonical_name))
+        matches = [str(row[0]) for row in db.execute(
+            'SELECT id FROM relationship WHERE world_id=? AND source_entity_id=? '
+            'AND target_entity_id=? AND relation_type=? AND invalid_at IS NULL',
+            (subject_id, source, target, item.relation_type),
+        ) if not is_superseded(db, kind, str(row[0]))
+            and world_item_visible(db, subject_id, kind, str(row[0]), surface='formation', model_tier=model_tier)]
+        if len(matches) > 1:
+            raise _ZeroWriteError('relationship_current_occurrence_ambiguous')
+        if matches:
+            return replace(item, state_version_id=matches[0])
+        if db.execute('SELECT 1 FROM relationship WHERE id=? AND world_id=?', (base, subject_id)).fetchone():
+            raise _ZeroWriteError('relationship_current_occurrence_not_available')
+        return item
     owner_column = 'world_id' if kind == 'relationship' else 'subject_id'
     if not db.execute(f'SELECT 1 FROM {kind} WHERE id=? AND {owner_column}=?', (base, subject_id)).fetchone():
         return item
-    prior = item.supersedes_relationship_id if kind == 'relationship' else item.supersedes_cognition_id
     if prior is not None:
         if base not in _ancestors(db, kind, prior):
             return item

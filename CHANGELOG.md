@@ -4,7 +4,7 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
-- Python temporal memory supports returning to a previous state while preserving each occurrence and its original source. Goal/state formation now checks the user's actual assertion independently of model classification, rejecting hypothetical, negated, quoted or question-only claims.
+- Python temporal memory supports returning to a previous state and attaches a reworded relationship restatement to the current occurrence. Goal safeguards cover clear source attribution, direct goal-verb negation without an affirmative goal clause, and explicit third-party goal subjects; conditional goals and long-term plans starting today remain eligible, while other semantics belong to the interpretation model.
 
 - Python remembers explicit long-term goals as intentions and distinguishes later completion, abandonment and other state changes from corrections. Current recall uses the latest state; historical questions retain past states without describing a natural change as a mistake.
 

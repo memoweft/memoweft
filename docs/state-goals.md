@@ -28,179 +28,115 @@ turn, preserving direction, reason and qualifications. The full goal turn also
 retains the family-background motivation. Question answers and judge results
 remain frozen; passing a compiler test does not rescore the historical exam.
 
-## Current baseline defects
+## Current formation boundary
 
-On `b6fc783`, the initial deterministic suite had **15 failures and 6 passes**.
-It runs the actual World worker, durable checkpoint, interpretation compiler,
-SQLite Apply and `recall_world_snapshot`; only model interpretation is scripted.
-Failures cover ten English/Chinese state/goal examples and five invalid
-supersession cases. The six complete-source formation cases already passed;
-they show the storage path can represent the intended claims, not that the old
-model selected them correctly.
+Explicit enduring goals remain sourced `preference` intentions, never invented
+completed events. Original Evidence, numbers, conditions and wording remain
+unchanged; the existing Chinese subject normalization is retained. Model
+interpretation owns semantic eligibility. The deterministic source guard is
+limited to the following high-confidence rules:
 
-Additional current-code findings:
+- 长期目标/状态只能来自用户本人的发言（不是助手、不是引用别人原话）。
+- 明确否定直接作用于目标动词（「我不打算/从未打算/不想 + 成为/做…」、
+  `I don't/never intend/plan/want to …`），且该句里没有另一个肯定目标从句时拦；
+  「我不打算中断训练，我的长期目标是成为护士」这种后半句有肯定目标的必须通过。
+- 明确的他人所有格作为目标主语（「我女儿的目标」「我朋友想」
+  `My daughter's goal`、`my friend wants`）不记成本人的目标；
+  本包对错误的 owner 解释零写入，保留 Evidence，不猜那个人的实体身份。
+- 删除「如果/要是/if」一律当假设的规则，带条件的目标仍是目标；
+  删除「今天开始…」判成一次性计划的规则；删除其他靠关键词猜语义的规则。
 
-- Chinese instructions both required corrections for state changes and required
-  temporal supersession. English instructions omitted the latter distinction.
-- The formation `current_*` lists included already superseded states, allowing a
-  later update to pick an obsolete predecessor.
-- Cognition supersession wrote `reason=corrects`; history called a natural change
-  a user correction. English historical questions were not recognized.
-- A model-selected missing, foreign, revoked, already replaced or self target
-  could still form a successor or modify the old state. Target validity was not
-  checked together with the atomic temporal write.
+Possessives must be goal subjects, not objects in a user's own goal such as
+“My goal is to support my daughter's goal”. Negative and affirmative clauses
+are checked separately, including semicolon-separated clauses. Source-range
+validation retains explicit speaker context when a model selects inside a
+foreign quotation; it never expands or rewrites the stored support. A book
+title ending in `?` does not prevent an explicit goal declaration from reaching
+interpretation. Existing typed Evidence, permission, confirmation, task-only
+eligibility and explicit correction/retraction paths remain separate.
 
-## Resulting contract
+## Review corpus: three explicit expectations
 
-An explicit enduring plan uses the existing `preference` representation for an
-intention. This adds no type, label, table, column or schema version. Keep exact
-English source wording and existing Chinese subject normalization. Numbers,
-dates, reasons and limits stay in the selected source; intentions do not become
-completed events. Vague wishes, questions, hypothetical plans and one-task
-instructions remain outside this scope.
+[`state-goals-policy-cases.json`](../py/tests/fixtures/state-goals-policy-cases.json)
+contains all 76 exact synthetic review examples: 30 old negatives, 20 new
+negatives, 20 new positives, and six previously false-rejected sources. The six
+overlapping positive examples remain separate records rather than being
+silently deduplicated. Every record names its source batch, language,
+expectation and rationale.
 
-A reported natural change selects a current predecessor through
-`supersedes_cognition_id` or `supersedes_relationship_id`. The fenced transaction
-checks target ownership, lifecycle, source permission, viewpoint/entity,
-identity collision and predecessor uniqueness. It preserves source evidence and
-old rows, records a deterministic `supersedes` transition and offers only the
-successor as a later formation target. Old source wording remains separate,
-permission-filtered predecessor context. Explicit errors keep `corrects`.
-Relationships retain their existing `superseded` reason spelling; their
-transition IDs are now deterministic and their revision is the committed World
-revision. Both temporal spellings render as a change, rather than a correction.
+| Class    | Cases | Deterministic expectation                                                                                                                                                                                                        |
+| -------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 规则必拦 |    14 | Explicit foreign/assistant speech, direct goal-verb negation without another affirmative goal clause, or an explicit third-party possessive goal subject: reject a forced owner `form + preference` with zero World writes.      |
+| 规则必放 |    26 | All 20 new positives and all six false-rejected cases: form with complete verbatim support, including conditional goals, start dates, and affirmative goals following negation.                                                  |
+| 交给模型 |    36 | 内核不判、由模型判断，后续真实模型考试衡量。The new source guard returns no semantic refusal; a scripted model `no_change` makes no World writes. Forced `form` results are reported separately, not scored as correct memories. |
 
-Completion, abandonment and rescheduling require an explicit user report.
-Ordinary recall returns the latest status, with its original tense and modality.
-Historical questions can return previous states marked as past. The change
-explanation distinguishes evolution from correction. A deadline passing or an
-unrelated later message cannot complete or abandon a goal.
+The retained original negative tests now use this approved classification
+instead of the superseded “all negatives must be rejected by keyword rules”
+assertion. No original utterance is removed or rewritten. Supplemental cases
+likewise retain all original inputs: hypothetical/question semantics belong to
+the model, while explicit source attribution and directly negated intentions
+stay deterministic. The original 35 state/goal cases remain required.
 
-## Validation boundaries
+Measured forced-output results on these 76 sources: rules reject **14/14**,
+rules allow **26/26**, and the new source guard abstains on **36/36** delegated
+examples. A scripted model `no_change` makes zero World writes for all 36.
+Forcing an erroneous `form` instead forms 28/36; eight retain the pre-existing
+task-only or pure-inquiry eligibility outcomes. This is deliberately not a
+36-case model accuracy or rejection-rate score. Actual semantic classification
+still needs the later real-model examination.
 
-The fixed tests cover Chinese/English job, residence, preference, relationship,
-goal completion and abandonment; complete exam claims; a three-state chain with
-an omitted topic; overdue goals remaining intentions; and permission revocation
-during interpretation. All source and World assertions inspect actual behavior.
-An additional red case reproduced a mixed batch that both superseded and
-corrected the same predecessor: one order incorrectly applied two successors.
-Both orders now reject the batch without World writes.
+## Current state, recurrence and P2 source repair
 
-The prompt anti-contamination test retains every assertion and uses short
-`zh`/`en` parameter IDs. Using entire expanded prompts as Windows test IDs
-overflowed the 32,767-character environment-variable limit during test setup.
+Natural changes retain the existing `supersedes_cognition_id` /
+`supersedes_relationship_id` transitions. First occurrences keep their identity;
+returning values use identities derived from the actual new support references
+and predecessor, preserving a linear `A → B → A` history without cloning old
+Evidence. `A → B → A → B` and `A → B → C → A` retain each original source and one
+current occurrence. Explicit topic and cognition-kind mismatches remain rejected.
 
-The Chinese frozen gate is run with the repository CI setting
-`MEMOWEFT_SEMANTIC_ENABLED=0`. From `py`, run
-`uv run python ../bench/recall-quality/evaluate.py --check --exact-baseline --reference-ref b6fc783 --exact-preview-reference --repeats 3`.
-All 638 cases must retain their selected IDs, hits and false recalls, and their
-complete previews, including rendered bytes, must equal the reference. The new
-optional evaluator assertion does not change fixtures, scores or the baseline.
-Existing Chinese wire-format fixtures are retained byte for byte. No scoring or label code is
-changed. Only historical queries over new `supersedes` chains intentionally gain
-the natural-change explanation; legacy `corrects` rendering is unchanged.
+The P2 reproduction is Aster → Clover → “Aster and I are partners again.” →
+“Aster is my partner.”, with the exact Chinese counterpart 小禾 → 小岚 →
+「我和小禾又成为伴侣了。」→「小禾是我的伴侣。」. On `45c66a0c`, both restatements
+returned the historical node and linked the new source there. Both are red
+before the repair.
 
-Deterministic compiler tests do not measure a live provider's extraction quality.
-This package does not rerun the exam, use a new answer/judge score or claim a live
-model accuracy improvement. The focused prompt changes still need separate live
-acceptance; they do not justify guessing missing facts or altering old results.
+The current relationship lookup uses the world, source entity, target entity,
+relationship type, currentness and permission eligibility. It does not use
+narrative equality to select a current relationship. A unique current occurrence
+receives the new support and exact provenance range; a historical occurrence is
+never the fallback. Ambiguous or unavailable current candidates fail closed.
+The existing current narrative is not overwritten. Source/provenance writes
+advance World revision, and each new utterance remains exact Evidence.
 
-Initial delivery validation (`50f65bec`): the initial 15 failures became green, and the
-additional mixed-operation red case became green in both orders. The final
-state/goal suite has 35 passing tests, repeated three times. Full Python has
-2,326 passes; Node has 636 passes. Strict mypy checks all 242 source/test files;
-format, lint, TypeScript typecheck, build, API snapshot and documentation links
-pass. All 638 frozen complete previews equal `b6fc783`, with unchanged hit and
-false-recall results. These are source-level results; CI and live-provider
-acceptance remain separate.
+The two repaired tests assert that source four supports only occurrence three,
+that all three relationship occurrences and both transitions remain, that the
+current narrative stays unchanged, and that current recall selects occurrence
+three. Whole-chain forgetting and the original recurrence tests remain covered.
 
-## Independent review follow-up
+## Verification scope
 
-The review reproduced a real `A → B → A` failure: a past value's deterministic
-identity collided with its retained row. Removing the collision check alone
-would produce a cycle and hide every state. The repair keeps the existing
-identity for first occurrences, and derives a new occurrence identity only when
-the value is already in this current predecessor's history. The derivation uses
-the prior identity and references to the actual new user Evidence. Existing
-sources are never cloned, rewritten or reassigned. State projections can repeat
-the same value because the user actually stated it again; their evidence and
-transition order remain distinct. `A → B → A → B` and `A → B → C → A` therefore
-remain linear, traceable histories with one current occurrence. A later plain
-restatement supports that current occurrence. Whole-chain forgetting follows
-the existing transition graph and clears every occurrence and source.
+All review-case tests run the actual worker, compiler, SQLite Apply and recall
+where applicable; only interpretation output is scripted. No paid calls or
+new full exam are run. The three classes are a deterministic boundary test,
+not a live-model extraction or hallucination score.
 
-The compiler also applies a small bilingual source guard independently of the
-model's classification. It validates the enclosing user-source sentence, not a
-model proposition. This validation context does not expand the stored support.
-Questions, explicit hypothetical states, negated intentions, quoted third-party
-claims, fictional context, unaccepted suggestions and explicitly one-off plans
-cannot become new owner goals/states. Selecting only a fragment cannot strip
-its question, conditional frame or speaker. Ordinary dislikes, reported goal
-completion/abandonment, and genuine writing/translation goals remain valid.
-Legacy single-item envelopes use the same check. Existing confirmation and
-explicit correction/retraction contracts remain distinct.
+Run Python checks from `py`, using the repository CI setting
+`MEMOWEFT_SEMANTIC_ENABLED=0`:
 
-[`state-goals-negatives.json`](../py/tests/fixtures/state-goals-negatives.json)
-preserves all 30 review utterances exactly: 15 Chinese and 15 English. On
-`50f65bec`, forcing `form + preference` accepted 24/30; the guarded compiler
-accepts 0/30. This is a deterministic adversarial-output measure, not a live
-model rejection-rate claim. All original 35 state/goal tests remain required.
-Explicit counterfactual grammar (`if I were`, `如果…会`) is checked even without
-goal, profession or location keywords; it cannot be promoted to either an
-attribute or a preference. ASCII single-quoted claims are checked too, while
-contractions such as `I'm` remain normal source text.
+```text
+uv run pytest -q
+uv run mypy --strict src tests
+uv run python ../bench/recall-quality/evaluate.py --check --exact-baseline --reference-ref b6fc783 --exact-preview-reference --repeats 3
+```
 
-The 24 recurrence reproductions (four topics × two languages × three sequences)
-were all red before the repair. They include the review's Northport/Southport
-and Aster/Clover cases, plus job and preference returns. They assert current
-recall, each transition, each original support, unchanged Evidence count/text,
-and retained past states. Additional tests cover source-fragment bypasses,
-both attribute/preference output kinds, genuine writing/translation goals,
-current-occurrence restatement and whole-chain erasure. Explicit topic and
-predecessor-kind mismatches are also rejected; an explicit new topic cannot be
-mistaken for an omitted topic.
+The frozen gate compares all 638 complete Chinese previews, including rendered
+bytes, selected identities, hits and false recalls. No frozen recall fixture, scoring function,
+label, schema, deadline, retry or waiting limit is changed. Source-level tests,
+CI and live-provider acceptance remain separate.
 
-Follow-up local validation: 24/24 recurrence cases pass after their red
-reproductions, and original review-negative acceptance is 24/30 → 0/30. All
-original 35 tests remain green; the combined focused suite has 123 passes.
-Full Python has 2,414 passes, Node has 636 passes, and strict mypy checks 244
-source/test files. Format, lint, typecheck, build, API snapshot and documentation
-links pass. The 638 complete Chinese previews remain byte-identical to
-`b6fc783`, with unchanged hits and false recalls. No live-provider score is
-claimed.
-
-Temporal explanations are emitted on the current occurrence, keeping the
-existing output budget available for past facts rather than repeating the same
-explanation on every past entry. The Chinese 638-case complete-preview gate is
-unchanged; no scoring function, label, schema, deadline, retry or wait changes.
-
-## Automated-review thread verification
-
-Both reported guards are already present in `38381703`; this follow-up adds
-behavioral evidence without changing product code. The new
-[`test_state_goals_review_threads.py`](../py/tests/test_state_goals_review_threads.py)
-runs the real worker/compiler, SQLite transaction and read-only recall. Only
-interpretations are fixed responses; legacy topic sidecars are seeded explicitly
-after real formation, without changing original Evidence or topic provenance.
-
-| Finding                                        | Historical reproduction                                                                                           | Current evidence                                                                                                                                                                                            |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Parsed topic was mistaken for an omitted topic | Four mismatched-topic cases were incorrectly applied by the `50f65bec` formation adapter and successor validator. | `38381703` rejects all four before World writes, for Chinese/English and both current topic cues and legacy topic targets; all eight same-topic/omitted-topic controls apply and recall only the successor. |
-| Predecessor cognition kind was not compared    | Four mismatches were incorrectly applied by the same historical adapter/validator.                                | `38381703` rejects attribute→preference and preference→attribute in both languages; all four matching-kind controls apply and recall only the successor.                                                    |
-
-The unchanged 20 tests produce **8 failures / 12 passes** with the frozen
-`50f65bec` formation adapter and successor validator, and **20/20 passes** with
-current product code. Rejected cases assert the exact reason, unchanged World
-rows, support/target/entity ledgers and revision, and identical current recall.
-Accepted controls assert the real replacement transition and current recall;
-every case also checks both verbatim input sources. The existing 123 focused
-tests stay required alongside these 20 tests, including the 30 rejected review
-negatives and the original 35 cases. Historical replay does not claim a complete
-historical-system or live-provider evaluation.
-
-Thread-follow-up verification: full Python **2,434/2,434**, focused
-**143/143** (the existing 123 plus 20 thread cases), mypy **245** files,
-format and lint pass. The 30 review negatives still accept zero, the original
-35 cases pass, and all 638 complete Chinese previews equal `b6fc783` byte for
-byte with unchanged hits and false recalls. Product code is unchanged from
-`38381703`.
+Final local validation for this boundary: **2,525** full Python tests,
+**234** focused tests, **246** mypy source/test files, and **636** Node tests
+pass. Format, lint, typecheck, build, API snapshot and documentation links pass.
+All 76 review utterances remain exact, all 26 positive/false-rejection cases
+form, both P2 reproductions are green, and the 638 complete Chinese previews
+remain byte-identical with unchanged hit and false-recall results.

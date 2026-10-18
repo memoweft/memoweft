@@ -273,6 +273,10 @@ _PURE_INQUIRY_PATTERNS = (
 )
 
 _DECLARATION_SIGNALS = (
+    # Explicit goal declarations can end with a book title such as Why Not?.
+    # Route the source to interpretation; punctuation does not decide its meaning.
+    re.compile(r"^(?:my|our)\s+(?:(?:long[- ]term|life)\s+)?(?:goal|plan|ambition)\s+(?:is|remains)\b", re.I),
+    re.compile(r"^(?:我|我们|本人)的(?:长期|人生)?(?:目标|计划)(?:是|为)"),
     re.compile(r"我叫[^\s?？，,。]+"),
     re.compile(r"叫我[^\s?？，,。]+"),
     re.compile(r"我的名字[是叫]"),
@@ -3100,8 +3104,7 @@ class HermesBatchAdapterProcessor:
         if not owner_claim:
             return None
         for eid, start, end, _text in item.supports:
-            error = owner_assertion_error(raw_by_id[eid], start, end,
-                                          transition=bool(item.supersedes_cognition_id or item.supersedes_relationship_id))
+            error = owner_assertion_error(raw_by_id[eid], start, end)
             if error:
                 return error
         return None
@@ -3919,17 +3922,18 @@ class HermesBatchAdapterProcessor:
                 self._reconcile_single_status_cognitions(db, job, item, now_text)
             return outcome, True
         if (
-            str(existing[0]) != item.proposition
+            (item.state_version_id is None and str(existing[0]) != item.proposition)
             or str(existing[1]) != item.relation_type
             or str(existing[2]) not in FORMED_BY_BASES
             or str(existing[4]) != source_id
         ):
             raise _ZeroWriteError("relationship_replay_mismatch")
-        added = 0
-        for evidence_id, _start, _end, _slice in item.supports:
-            added += _ensure_relationship_support_link(
+        support_changes_before = db.total_changes
+        for evidence_id, start, end, _slice in item.supports:
+            _ensure_relationship_support_link(
                 db, relationship_id, evidence_id
             )
+            self._write_relationship_ledger(db, relationship_id, evidence_id, start, end)
         linked = int(
             db.execute(
                 "SELECT COUNT(DISTINCT evidence_id) FROM relationship_evidence "
@@ -3951,7 +3955,7 @@ class HermesBatchAdapterProcessor:
             if new_confidence >= floor:
                 new_cred = label
                 break
-        if added or new_confidence != int(existing[3]):
+        if db.total_changes != support_changes_before or new_confidence != int(existing[3]):
             db.execute(
                 "UPDATE relationship SET confidence = ?, cred_status = ?, "
                 "updated_at = ? WHERE id = ?",

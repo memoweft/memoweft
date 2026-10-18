@@ -1,0 +1,614 @@
+{
+  "source": "Exact synthetic examples from both PR #125 independent reviews; overlapping false-rejection examples retained separately.",
+  "policy": "Only source ownership, direct goal-verb negation without an affirmative goal clause, and explicit third-party possessive goal subjects are deterministic guards. Other semantics belong to the model.",
+  "cases": [
+    {
+      "id": "old-en-one-off",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "I plan to buy bread tonight.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-one-off",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "我打算今晚买面包。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-task",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "Please draft a five-year library plan for me.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-task",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "请替我拟一个五年图书馆计划。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-hypothetical",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "If I won the lottery, my goal would be to build a library.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-hypothetical",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "如果中了彩票，我的目标会是建图书馆。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-counterfactual",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "If I had stayed in school, I would be aiming for a doctorate.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-counterfactual",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "要是我当年没退学，我现在就会以博士为目标。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-third-party",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "Aster plans to become a doctor over the next five years.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-third-party",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "小禾打算未来五年成为医生。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-third-party-quote",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "Aster said, \"My long-term goal is to open a library.\"",
+      "expectation": "block",
+      "reason": "Explicit foreign/assistant speech or directly negated planning."
+    },
+    {
+      "id": "old-zh-third-party-quote",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "小禾说：“我的长期目标是开图书馆。”",
+      "expectation": "block",
+      "reason": "Explicit foreign/assistant speech or directly negated planning."
+    },
+    {
+      "id": "old-en-advice",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "The assistant suggested I aim for a doctorate; I have not agreed.",
+      "expectation": "block",
+      "reason": "Explicit foreign/assistant speech or directly negated planning."
+    },
+    {
+      "id": "old-zh-advice",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "助手建议我以博士为目标，我还没同意。",
+      "expectation": "block",
+      "reason": "Explicit foreign/assistant speech or directly negated planning."
+    },
+    {
+      "id": "old-en-question",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "Should my long-term goal be to open a library?",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-question",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "我的长期目标应该是开图书馆吗？",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-other-question",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "Does Aster plan to become a doctor?",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-other-question",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "小禾打算成为医生吗？",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-negation",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "I do not plan to become a doctor.",
+      "expectation": "block",
+      "reason": "Explicit foreign/assistant speech or directly negated planning."
+    },
+    {
+      "id": "old-zh-negation",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "我不打算成为医生。",
+      "expectation": "block",
+      "reason": "Explicit foreign/assistant speech or directly negated planning."
+    },
+    {
+      "id": "old-en-denial",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "Becoming a doctor is not my goal.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-denial",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "成为医生不是我的目标。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-joke",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "My long-term goal is to conquer Mars, just kidding.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-joke",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "我的长期目标是征服火星，开玩笑的。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-fiction",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "In my novel I say, \"My goal is to become a doctor.\"",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-fiction",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "在小说里我写道：“我的目标是成为医生。”",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-translation",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "Translate: \"My long-term goal is to build a library.\"",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-translation",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "翻译这句：“我的长期目标是建图书馆。”",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-en-wish",
+      "batch": "old-negative",
+      "lang": "en",
+      "raw": "It would be nice to run a library someday, but I have no plan.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "old-zh-wish",
+      "batch": "old-negative",
+      "lang": "zh",
+      "raw": "哪天能开图书馆就好了，但我没有这个计划。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-en-0",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "I don't intend to train as a pilot.",
+      "expectation": "block",
+      "reason": "Direct goal negation or explicit third-party goal subject."
+    },
+    {
+      "id": "new-negative-en-1",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "I won't pursue my goal of becoming a surgeon.",
+      "expectation": "block",
+      "reason": "Direct goal negation or explicit third-party goal subject."
+    },
+    {
+      "id": "new-negative-en-2",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "My daughter's goal is to qualify as an architect.",
+      "expectation": "block",
+      "reason": "Direct goal negation or explicit third-party goal subject."
+    },
+    {
+      "id": "new-negative-en-3",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "My colleague's plan is to complete a doctorate.",
+      "expectation": "block",
+      "reason": "Direct goal negation or explicit third-party goal subject."
+    },
+    {
+      "id": "new-negative-en-4",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "I might aim for a doctorate someday, but I haven't decided.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-en-5",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "Suppose I became wealthy; my goal would be to fund a hospital.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-en-6",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "For this exercise, pretend my goal is to sail around the world.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-en-7",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "I was joking when I said my goal was to climb Everest.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-en-8",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "Is it sensible for me to plan a career in medicine?",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-en-9",
+      "batch": "new-negative",
+      "lang": "en",
+      "raw": "I plan to pick up a parcel this afternoon.",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-positive-en-0",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "My long-term goal is to qualify as an electrician within three years.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-1",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "I don't want to procrastinate anymore; my goal is to earn my driving licence this year.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-2",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "If I receive the scholarship, my plan is to complete a four-year nursing degree.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-3",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "My plan is to open a bakery in five years, and today I am starting a monthly savings habit.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-4",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "My goal is not to get rich, but to build affordable housing.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-5",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "I plan to become a translator over the next five years.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-6",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "My ambition is to finish a marathon in two years.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-7",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "I intend to study mathematics every week until I qualify as a teacher.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-8",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "My long-term goal is to publish a book called Why Not?",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-en-9",
+      "batch": "new-positive",
+      "lang": "en",
+      "raw": "I do not plan to quit my training; my long-term goal is to become a nurse.",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-negative-zh-0",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "我从未打算成为职业飞行员。",
+      "expectation": "block",
+      "reason": "Direct goal negation or explicit third-party goal subject."
+    },
+    {
+      "id": "new-negative-zh-1",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "我不会把开公司作为长期目标。",
+      "expectation": "block",
+      "reason": "Direct goal negation or explicit third-party goal subject."
+    },
+    {
+      "id": "new-negative-zh-2",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "我女儿的长期目标是成为建筑师。",
+      "expectation": "block",
+      "reason": "Direct goal negation or explicit third-party goal subject."
+    },
+    {
+      "id": "new-negative-zh-3",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "我室友计划五年内读完博士。",
+      "expectation": "block",
+      "reason": "Direct goal negation or explicit third-party goal subject."
+    },
+    {
+      "id": "new-negative-zh-4",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "假设我是富豪，我的目标会是资助医院。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-zh-5",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "这是角色扮演，我的目标是环游世界。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-zh-6",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "这只是举个例子：我的长期计划是读法学院。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-zh-7",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "我是在说笑，我的目标是征服海王星。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-zh-8",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "我该不该把成为医生当作目标？",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-negative-zh-9",
+      "batch": "new-negative",
+      "lang": "zh",
+      "raw": "我计划下午取一个快递。",
+      "expectation": "model",
+      "reason": "内核不判、由模型判断，后续真实模型考试衡量。"
+    },
+    {
+      "id": "new-positive-zh-0",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我的长期目标是在三年内取得电工资格证。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-1",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我不想再拖了，今年一定要考下驾照。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-2",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "如果拿到奖学金，我计划完成四年制护理学位。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-3",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我的目标是五年内开面包店，今天开始每月固定存钱。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-4",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我的目标不是发财，而是建设负担得起的住房。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-5",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我计划未来五年成为翻译。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-6",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我的长期目标是两年后完成一次马拉松。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-7",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我打算每周学习数学，直到取得教师资格。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-8",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我的长期目标是出版一本名叫《为什么不呢？》的书。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "new-positive-zh-9",
+      "batch": "new-positive",
+      "lang": "zh",
+      "raw": "我不打算中断训练，我的长期目标是成为护士。",
+      "expectation": "allow",
+      "reason": "Explicit user goal, including conditions, start dates and affirmative clauses after negation."
+    },
+    {
+      "id": "false-rejection-0",
+      "batch": "false-rejection",
+      "lang": "en",
+      "raw": "If I receive the scholarship, my plan is to complete a four-year nursing degree.",
+      "expectation": "allow",
+      "reason": "Reviewer-confirmed genuine goal; preserve the exact formerly rejected source."
+    },
+    {
+      "id": "false-rejection-1",
+      "batch": "false-rejection",
+      "lang": "zh",
+      "raw": "如果拿到奖学金，我计划完成四年制护理学位。",
+      "expectation": "allow",
+      "reason": "Reviewer-confirmed genuine goal; preserve the exact formerly rejected source."
+    },
+    {
+      "id": "false-rejection-2",
+      "batch": "false-rejection",
+      "lang": "en",
+      "raw": "My plan is to open a bakery in five years, and today I am starting a monthly savings habit.",
+      "expectation": "allow",
+      "reason": "Reviewer-confirmed genuine goal; preserve the exact formerly rejected source."
+    },
+    {
+      "id": "false-rejection-3",
+      "batch": "false-rejection",
+      "lang": "zh",
+      "raw": "我的目标是五年内开面包店，今天开始每月固定存钱。",
+      "expectation": "allow",
+      "reason": "Reviewer-confirmed genuine goal; preserve the exact formerly rejected source."
+    },
+    {
+      "id": "false-rejection-4",
+      "batch": "false-rejection",
+      "lang": "en",
+      "raw": "I do not plan to quit my training; my long-term goal is to become a nurse.",
+      "expectation": "allow",
+      "reason": "Reviewer-confirmed genuine goal; preserve the exact formerly rejected source."
+    },
+    {
+      "id": "false-rejection-5",
+      "batch": "false-rejection",
+      "lang": "zh",
+      "raw": "我不打算中断训练，我的长期目标是成为护士。",
+      "expectation": "allow",
+      "reason": "Reviewer-confirmed genuine goal; preserve the exact formerly rejected source."
+    }
+  ]
+}
