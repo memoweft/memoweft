@@ -52,7 +52,10 @@ rules, including the exact additional exclusion lists:
 5. 同一分句内，只要否定词（不/没/没有/从未/并不/不再/别、`not/n't/never/no longer`）出现在目标动词**之前**，不论中间隔了多少修饰语（真的/really/actually/特别…），都算否定。但否定若只修饰另一个分句（「我不打算中断训练，我的长期目标是…」）不影响后一个分句。
 6. 白名单要求**目标动词的直接主语**是「我/I」（或「我的目标/计划是…」这种本人所有格作主语）。如果在「我」之后、目标动词之前出现了另一个主语（他人所有格、称谓、人名、他/她/他们、`my parents / my friend / he / she / they / 人名`），例如「我知道我朋友想…」`I know my parents plan …`，目标动词的主语是那个人，不算本人目标。
 
-7. 中文分句切分补上转折/并列连接：「但、但是、可是、不过、然而、而、只是、而且、并且」（前面有逗号或句首时），与英文 `but/however/though/and` 对称。否定、他人主语、问句、排除标记的检查只针对支持该目标的那个分句，不扫整条消息。来源范围必须与该目标分句相交；无效的已选分句不能借邻句的有效目标通过。
+7. 中文分句切分补上转折/并列连接：「但、但是、可是、不过、然而、而、只是、而且、并且」（前面有逗号或句首时），与英文 `but/however/though/and` 对称。除规则 9 的后续本人收回外，否定、他人主语、问句、排除标记的检查只针对支持该目标的那个分句，不扫整条消息。来源范围必须与该目标分句相交；无效的已选分句不能借邻句的有效目标通过。
+
+8. **过往想法不是目标**：从白名单目标谓词里移出「想过、考虑过、准备过、曾经想、本来想、原本打算」以及 `thought about / considered / used to want / was going to / had planned`。这些明确形式不能作为本人长期目标谓词；目标内容或书名里的这些词不当作当前谓词。
+9. **后续收回**：同一条支持原话里，在目标分句**之后**，本人主语又出现否定意向（「不打算、不想、不准备、不会去、算了」`not going to / don't plan / don't want / never mind`），视为收回，不形成目标。即便只裁选前面的目标分句，后续本人收回仍是该原话的反证；不跨 Evidence/轮次推断。代价：「我的目标是当护士，我不打算放弃」也拦，原话作为普通记忆来源保存。
 
 - 近期时间词：今晚、今天、明天、待会、等会、马上、这周末；`tonight`、`today`、`tomorrow`、`this afternoon`、`this evening`、`later today`、`right now`。
 - 明确玩笑/收回：开玩笑的、开个玩笑、说着玩的、逗你的；`just kidding`、`jk`、`kidding`。
@@ -65,18 +68,16 @@ rules, including the exact additional exclusion lists:
 ## Review corpus: three explicit expectations
 
 [`state-goals-policy-cases.json`](../py/tests/fixtures/state-goals-policy-cases.json)
-retains all **171** records: the previous **138** exact records, all **24**
-fifth-review records (12 negatives and 12 positives), and **9** Chinese
-positive variants. The variants cover three examples each of「我不知道别的，
-但…」「我没想别的，可是…」「我不确定，不过三年内我要…」. Original
-utterances and overlapping review records remain unchanged. `old-en-task` and
-`old-zh-task` remain 规则必拦.
+retains all **191** records: the previous **171** unchanged records, all
+**17** sixth-review sources (six reported failures, six other-person negatives
+and five positives), and **3** explicit conservative-rule limitations. Previous
+overlapping review records remain separate. No utterance is rewritten.
 
-| Class    | Cases | Forced-form result                                                                                                                                           |
-| -------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 规则必拦 |    81 | **0/81** owner goals formed, including the previous **69/69** rejections; all Evidence survives.                                                             |
-| 规则必放 |    65 | **65/65** form and recall, including the previous **44/44**, 12 new reviewer positives and nine Chinese variants. Before the clause repair **55/65** formed. |
-| 交给模型 |    25 | **17** semantic negatives and **8** positive known limitations. Actual forced `form` forms **10/25**; this is not a model correctness score.                 |
+| Class               | Cases | Forced-form result                                                                                                                                                   |
+| ------------------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 规则必拦            |    93 | **0/93** owner goals formed, including all previous **81** rejections and all six reported failures. Those six previously formed **6/6**.                            |
+| 规则必放            |    70 | **70/70** form and recall: previous **65/65** and all **5/5** new reviewer positives. No previous allow record or new reviewer positive moves to a limitation.       |
+| 交给模型 / 已知限制 |    28 | **17** semantic negatives and **11** positive limitations. Forced `form` forms **10/28**; not a model correctness score. This round adds **3** positive limitations. |
 
 Every case runs the real worker, compiler, SQLite and recall with forced
 `form + preference`. There is no scripted `no_change` substitute for kernel
@@ -108,9 +109,10 @@ so 但是/而且 are not partially consumed as 但/而. Non-clausal commas such 
 clipping a foreign quotation cannot remove its speaker.
 
 Negation, direct subject, questions and literal exclusions use only an
-intersecting goal clause. A negative/question/third-party/near-term neighbour
-cannot veto a valid selected goal; a valid neighbouring goal cannot rescue
-an invalid selected clause. The compiler does not expand or rewrite stored
+intersecting goal clause. A question/third-party/near-term neighbour cannot veto a valid selected goal;
+a valid neighbouring goal cannot rescue an invalid selected clause. Rule 9
+explicitly overrides the former local-only behaviour for later self-negated
+intentions, even if the negation concerns a different goal or not giving up. The compiler does not expand or rewrite stored
 support. Worker/SQLite/recall tests assert the exact selected content, original
 Evidence and provenance offsets for whole-source and goal-only selection.
 
@@ -118,8 +120,9 @@ All nine Chinese connectors and but/however/though/and are tested at the
 start and after a comma, with both source selections. The review failure and
 nine variants also run with the goal annotation omitted. A further matrix
 checks all four guards with the invalid clause before/after the valid goal
-and whole/goal/invalid-only support. The measured reproduction is **84 red
-cases → 84 green cases**, all sharing the clause-boundary root cause.
+and whole/goal/invalid-only support. The preceding repair had **84 red cases → 84 green cases**, sharing the
+clause-boundary root cause. Two expected outcomes for one unchanged utterance
+now deliberately reject under rule 9, as documented below.
 
 ## 已知限制
 
@@ -127,13 +130,31 @@ cases → 84 green cases**, all sharing the clause-boundary root cause.
 模型负责反讽、隐含否定、反事实、角色扮演和尚未决定等语义；上述 **17** 条
 语义负例不宣称零形成，后续真实模型考试衡量。
 
-**8** 条正例审查记录按当前白名单不形成目标，原话仍留在 Evidence：
+此前 **8** 条正例审查记录按白名单不形成目标，原话仍留在 Evidence：
 
 - `new-positive-en-4`、`new-positive-zh-4`：首个目标分句有明确否定，后半句省略本人主语。
 - `new-positive-en-6`：`My ambition` 不在白名单主语句型中。
 - `new-positive-en-8`：未加引号书名中的问号不能由规则区别于问句；中文书名号内问号不拆句。
 - `new-positive-zh-1`：肯定分句「今年一定要」没有本人主语。
 - `new-positive-zh-3`、`false-rejection-3`、`review3-positive-zh-1`：分句含指定排除词「今天」，后半句没有新的本人主语；不再把「今天开始」当成无条件放行理由。
+
+本轮新增 **3** 条正例已知限制，均不形成目标，完整原话作为普通 Evidence 保存：
+
+| ID                        | 原话                                                       | 规则代价                                                                   |
+| ------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `rule6-limit-zh`          | 我的目标是当护士，我不打算放弃                             | 后续否定的是放弃，仍按本人否定意向收回。                                   |
+| `rule6-limit-en`          | My goal is to become a nurse, but I don't plan to give up. | 同上；不进行否定对象的语义匹配。                                           |
+| `rule6-limit-prior-scope` | 我的目标是成为气象学家，但是我并不真的想成为飞行员。       | 后续否定的是另一目标，仍收回前目标；旧补充分句矩阵保留原话并按新规则拒绝。 |
+
+原有 **65** 条必放受规则 8、9 影响而迁移的记录：**0**。
+本轮审查者 **5** 个“后半句为本人目标”正例迁移的记录：**0**。
+新增限制是上述三条独立原话记录；同一原话的整句/裁选路径不重复计数。
+
+过往谓词仅使用规则 8 写明的形式，不扩成过去时态语义分类器。后续收回
+延用既有否定词及目标意向谓词和直接主语语法，另识别不会去、独立算了 /
+never mind；不把他人否定、引述、目标内容当成本人收回。先否定、后肯定
+目标仍能通过。规则之外的反讽、隐含否定、语用和语义关联交给模型，后续
+以真实模型考试衡量，不继续增加猜语义的关键词规则。
 
 语法覆盖是有限的：未识别的时间状语、主语省略和其他句式可能被拒绝；
 目标仍与普通偏好共用现有类型，省略目标注记且没有目标句法线索的模型输出

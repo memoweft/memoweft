@@ -77,4 +77,8 @@ def test_other_clause_cannot_veto_or_rescue_selected_goal(
     first, last = (bad, goal) if direction == 'before' else (goal, bad)
     raw = first + '，但是' + last + ('' if last.endswith('？') else '。')
     quote = None if selection == 'whole' else goal if selection == 'goal' else bad
-    _check(tmp_path / 'world.sqlite', raw, quote, 'zh', applied=selection != 'bad')
+    # Rule 9 deliberately overrides the previous local-only rule for later
+    # self-negated intentions, even for another goal or goal-only support.
+    # This unchanged utterance is listed as rule6-limit-prior-scope.
+    retracted = direction == 'after' and bad == '我并不真的想成为飞行员'
+    _check(tmp_path / 'world.sqlite', raw, quote, 'zh', applied=selection != 'bad' and not retracted)
