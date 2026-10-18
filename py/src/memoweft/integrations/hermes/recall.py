@@ -7,8 +7,13 @@ lifecycle-eligible, permission-allowed formal claims in a byte-stable order
 for the same World revision.  It deliberately does NOT search raw Evidence and
 does not inject Evidence text, summaries, or internal IDs.
 
-Literal matching is a deterministic character-bigram overlap score (Dice) computed
-entirely in memory. An optional local CPU provider nominates at most three
+Literal matching uses the original main candidate path. For English, a main
+candidate may be removed only when every shared occurrence is grammatical in
+its original case and contraction context, using a small explicit set. Any
+substantive overlap preserves it regardless of new
+scores. Previous English improvements may use remaining slots; their scores
+never veto main, and rendering cannot consume a retained main item's budget.
+An optional local CPU provider nominates at most three
 supplementary items; all original gates remain authoritative. Loading or failure
 preserves literal recall. A small,
 owner-approved semantic category table closes the observed lexical gap
@@ -22,6 +27,7 @@ from __future__ import annotations
 
 from ..trust.confirmed_sources import assistant_sources
 from .recall_identity import associate_owner_names
+from .recall_english_policy import compose as compose_english, key as english_candidate_key, reserve_main_order
 from ...semantic.runtime import CandidateProvider, SemanticCandidate, provider_for
 from ...semantic.store import content_hash
 
@@ -46,7 +52,7 @@ from ..trust.currentness import (
     world_item_visible,
 )
 
-#: Minimum Dice bigram-overlap score for a claim to be recalled.
+#: Minimum lexical overlap score for a claim to be recalled.
 MIN_SCORE = 0.15
 
 #: Hard caps for the injected block: item count and total characters.
@@ -110,6 +116,154 @@ _HISTORICAL_QUERY_PATTERN: re.Pattern[str] = re.compile(
     r"(?:以前|曾经|过去|原先|之前|早先|从前|先前|那时候|旧的|以前的|谈过|聊过|提过|还记得.*吗|(?:喜欢|爱|爱过|交往|在一起|住|待|用|选)过)"
     r"|\b(?:previous|previously|formerly|past|used to|history|historical)\b", re.IGNORECASE,
 )
+# Prior-head (ebe07284) English nomination logic. It only proposes the existing
+# improvements; its scores/grammar NEVER remove a main candidate. The sole
+# current removal policy is recall_english_policy, preserving original case
+# and actual apostrophe provenance around its closed FRAME_WORDS vocabulary.
+_ENGLISH_CARRIERS = _GENERIC_PREDICATE_BIGRAMS | frozenset("""
+    i me my mine we us our ours you your yours he him his she her hers
+    it its they them their theirs this that these those
+    what which who whom whose where when why how
+    do does did have has had having can could would should will shall may might
+    as from into about than then there here so also really actually very
+    use uses used
+""".split())
+_ENGLISH_WORD = re.compile(r"[a-zA-Z0-9_\-]+(?:['’][a-zA-Z]+)?")
+_ENGLISH_FOCUS = re.compile(
+    r"^(?:what|which)\s+(?:(?:type|kind|sort)s?\s+of\s+)?"
+    r"([a-z][a-z -]*?)\s+(?:am|is|are|was|were|do|does|did|have|has|had|can|could|would|should|will)\b",
+    re.IGNORECASE,
+)
+_ENGLISH_POSSESSIVE_FOCUS = re.compile(
+    r"^(?:what|which)\s+(?:is|are)\s+(?:my|your|his|her|our|their)\s+([a-z][a-z -]*?)[?.!\s]*$",
+    re.IGNORECASE,
+)
+_ENGLISH_ATTRIBUTE_QUERY = re.compile(
+    r"^(?:what|which)\s+.+?\s+(?:is|are|was|were)\s+"
+    r"((?:my|our|your|his|her|their|the)\s+.+?)[?.!]*$", re.IGNORECASE,
+)
+_ENGLISH_ATTRIBUTE_OF_QUERY = re.compile(
+    r"^(?:what|which)(?:\s+(?:is|are))?\s+.+?\s+of\s+"
+    r"((?:my|our|your|his|her|their|the)\s+.+?)[?.!]*$", re.IGNORECASE,
+)
+_ENGLISH_STRANDED_PREDICATE = re.compile(
+    r"^(.+?)\s+[a-z]+\s+(?:of|from|with|by|for|to|about)[?.!]*$", re.IGNORECASE,
+)
+_ENGLISH_REFERENCE_END = r"\s+(?:is|are|was|were|has|have|in|on|at|to|from|for|with|and|but|about)\b|[.!?;]|$"
+_ENGLISH_REFERENCES = (
+    re.compile(r"\b(?:my|our|your|his|her|their)\s+(.+?)(?=" + _ENGLISH_REFERENCE_END + r")", re.I),
+    re.compile(r"^(.+?)\s+(?:is|are|was|were|has|have)\b", re.I),
+    re.compile(r"^(?:i|we|you|he|she|they)(?:['’](?:m|re|ve|ll|d))?\s+[a-z]+(.*?)(?="
+               + _ENGLISH_REFERENCE_END + r")", re.I),
+)
+
+
+def _english_tokens(text: str) -> set[str]:
+    """Consume contractions atomically; never emit truncated stems like won.
+
+    Negative auxiliary contractions carry no topic. Other grammatical suffixes
+    leave the base (including a person's possessive); non-grammatical names
+    such as O'Brien stay whole. Ordinary words such as won remain searchable.
+    """
+    tokens = set()
+    for raw in _ENGLISH_WORD.findall(text):
+        word = raw.casefold().replace('’', "'")
+        if word.endswith("n't"):
+            continue
+        base, separator, suffix = word.rpartition("'")
+        if separator and suffix in {"m", "re", "ve", "ll", "d", "s"}:
+            word = base
+        if word not in _ENGLISH_CARRIERS:
+            tokens.add(word)
+    return tokens
+
+
+def _english_focus(query: str) -> set[str]:
+    """Inspectable topic phrase after grammatical projection, never a gate."""
+    return _english_tokens(_english_query_parts(query)[1])
+
+
+def _english_query_parts(query: str) -> tuple[str, str]:
+    """Separate a projected attribute from the explicit subject being asked.
+
+    In 'what X is my Y' / 'what is the X of my Y', X is an answer slot,
+    regardless of its vocabulary. It neither scores nor dilutes Y. Without an
+    explicit subject, 'what version do I use' keeps version as a real topic.
+    Memory-side nouns are never removed by this query-only grammar.
+    """
+    match = _ENGLISH_ATTRIBUTE_QUERY.search(query) or _ENGLISH_ATTRIBUTE_OF_QUERY.search(query)
+    if match and _english_tokens(match.group(1)):
+        topic = match.group(1)
+        predicate = _ENGLISH_STRANDED_PREDICATE.search(topic)
+        topic = predicate.group(1) if predicate and _english_tokens(predicate.group(1)) else topic
+        return topic, topic
+    focus = _ENGLISH_FOCUS.search(query) or _ENGLISH_POSSESSIVE_FOCUS.search(query)
+    if _ENGLISH_POSSESSIVE_FOCUS.search(query) and focus:
+        # Copular passive questions strand a preposition: 'what is my bottle
+        # made of?' asks about bottle. The predicate is not a noun modifier.
+        predicate = _ENGLISH_STRANDED_PREDICATE.search(focus.group(1))
+        if predicate and _english_tokens(predicate.group(1)):
+            return predicate.group(1), predicate.group(1)
+    return query, focus.group(1) if focus else ""
+
+
+def _english_inflection(word: str, vocabulary: set[str]) -> str:
+    # A grammatical variant must have its complete base literally present on
+    # one side. Do not create guessed stems or equate arbitrary prefixes.
+    candidates = []
+    if word.endswith("s") and not word.endswith("ss"):
+        candidates.append(word[:-1])
+    if word.endswith("ing"):
+        candidates.extend((word[:-3], word[:-3] + "e"))
+    return next((base for base in candidates if len(base) >= 3 and base in vocabulary), word)
+
+
+def _lexical_score(query: str, text: str) -> float:
+    """Prior improvement score, not a main-candidate eligibility threshold."""
+    english = not _CJK_RUN.search(query)
+    signal, phrase = _english_query_parts(query) if english else (query, "")
+    query_tokens = _english_tokens(signal) if english else _bigrams(query)
+    content_tokens = _english_tokens(text) if english else _bigrams(text)
+    vocabulary = query_tokens | content_tokens
+    if english:
+        normalized_query = {_english_inflection(word, vocabulary) for word in query_tokens}
+        normalized_content = {_english_inflection(word, vocabulary) for word in content_tokens}
+        # One ambiguous inflected word cannot create a new match. Require two
+        # corroborating lexical tokens before accepting grammatical variants.
+        if len(normalized_query & normalized_content) >= 2:
+            query_tokens, content_tokens = normalized_query, normalized_content
+    common = query_tokens & content_tokens
+    if not common:
+        return 0.0
+    if not english:
+        return _compute_overlap_score(query_tokens, content_tokens, common)
+    focus = _english_tokens(phrase)
+    references = set().union(*(_english_tokens(match.group(1))
+                              for pattern in _ENGLISH_REFERENCES for match in pattern.finditer(text)))
+    head = next((next(iter(tokens)) for word in reversed(_ENGLISH_WORD.findall(phrase))
+                 if (tokens := _english_tokens(word))), "")
+    if query_tokens == normalized_query and content_tokens == normalized_content:
+        focus = {_english_inflection(word, vocabulary) for word in focus}
+        head = _english_inflection(head, vocabulary)
+        references = {_english_inflection(word, vocabulary) for word in references}
+    # In 'what is my suitcase color', suitcase remains a primary reference if
+    # the claim explicitly names that object. An absent attribute head must not
+    # demote it. A location modifier in a claim about gardening tools does not
+    # thereby become evidence about the owner's middle name.
+    postcopular_reference = bool(_ENGLISH_POSSESSIVE_FOCUS.search(query))
+    referenced = common & references if postcopular_reference else set()
+    # A modifier alone ('running' in 'running shoes') is a weak signal. Two
+    # corroborating topic words retain ordinary overlap. This is term weighting,
+    # not a missing-word/coverage multiplier or a required-head filter.
+    weights = {word: 0.1 if len(common) == 1 and word in focus and word != head and word not in referenced else 1.0
+               for word in query_tokens}
+    score = 2 * sum(weights[word] for word in common) / (sum(weights.values()) + len(content_tokens))
+    primary = {word for word, weight in weights.items() if weight == 1.0}
+    if referenced or (head and head in common) or (primary and primary <= content_tokens):
+        score = max(score, MIN_SCORE + min(0.35, 0.10 * len(primary & content_tokens)))
+    return score
+
+
 def _strip_question_particles(text: str) -> str:
     """Strip trailing question particles in linear time, preserving 什么/怎么.
 
@@ -486,6 +640,31 @@ def _score_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[Mappin
     ]
 
 
+
+def _score_english_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[Mapping[str, object]]:
+    query_bigrams = _bigrams(query)
+    if not query_bigrams:
+        return []
+    scored: list[tuple[float, int, str, str]] = []
+    for row in rows:
+        content = str(row["content"])
+        # Graph-aware matching: score against the composed match text
+        # (content + entity names/aliases) while the output stays the
+        # canonical content.
+        match_text = _row_match_text(query, row)
+        score = _lexical_score(query, match_text)
+        if score < MIN_SCORE:
+            continue
+        scored.append(
+            (score, int(cast(Any, row["confidence"])), str(row["id"]), content)
+        )
+    scored.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    return [
+        {"id": item[2], "content": item[3], "score": item[0]}
+        for item in scored[:MAX_ITEMS]
+    ]
+
+
 def _score_anchor_rows(
     query: str, rows: Iterable[Mapping[str, object]]
 ) -> list[Mapping[str, object]]:
@@ -524,7 +703,7 @@ def _score_anchor_rows(
     ]
 
 
-def match_cognitions(
+def match_cognitions_main(
     query: str, rows: Iterable[Mapping[str, object]]
 ) -> list[Mapping[str, object]]:
     """Score current claims against the query; deterministic order.
@@ -545,6 +724,33 @@ def match_cognitions(
         if hits:
             return hits
     hits = _local_inquiry_matches(query, rows_list, _score_rows)
+    if hits:
+        return hits
+    return _score_anchor_rows(query, rows_list)
+
+
+
+def _match_cognitions_improved(
+    query: str, rows: Iterable[Mapping[str, object]]
+) -> list[Mapping[str, object]]:
+    """Score current claims against the query; deterministic order.
+
+    Order: score desc, then confidence desc, then id asc.  Byte-stable for the
+    same inputs.  Category expansion is a fallback ONLY when the direct
+    bigram match produced zero hits.
+    """
+    rows_list = list(rows)
+    query = _query_signal(query)
+    hits = _score_english_rows(query, rows_list)
+    if hits or not _CJK_RUN.search(query):
+        return hits
+    if not _is_inquiry(query) and len(query) > 12:
+        return []
+    for variant in _fallback_query_variants(query):
+        hits = _score_english_rows(variant, rows_list)
+        if hits:
+            return hits
+    hits = _local_inquiry_matches(query, rows_list, _score_english_rows)
     if hits:
         return hits
     return _score_anchor_rows(query, rows_list)
@@ -580,6 +786,47 @@ def _score_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
             for text in variants if (bigrams := _bigrams(text))
             and query_bigrams & bigrams
         ), default=0.0)
+        if score < MIN_SCORE:
+            continue
+        kind = str(row["kind"])
+        scored.append(
+            (
+                score,
+                int(cast(Any, row.get("confidence", 600))),
+                str(row["id"]),
+                _KIND_ORDER[kind],
+                kind,
+                content,
+                bool(row.get("is_superseded", False)),
+            )
+        )
+    scored.sort(key=lambda item: (-item[0], -item[1], item[2], item[3]))
+    return [
+        {
+            "kind": item[4],
+            "id": item[2],
+            "content": item[5],
+            "score": item[0],
+            "confidence": item[1],
+            "is_superseded": item[6],
+        }
+        for item in scored[:MAX_ITEMS]
+    ]
+
+
+
+def _score_english_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
+    query_bigrams = _bigrams(query)
+    if not query_bigrams:
+        return []
+    scored: list[tuple[float, int, str, int, str, str, bool]] = []
+    for row in rows:
+        content = str(row["content"])
+        # A short correction may omit its topic ("No, Friday evening").
+        # Score retained, permission-checked predecessor cues independently;
+        # neither their content nor their IDs become selected recall items.
+        variants = _row_match_variants(query, row)
+        score = max((_lexical_score(query, text) for text in variants), default=0.0)
         if score < MIN_SCORE:
             continue
         kind = str(row["kind"])
@@ -713,7 +960,7 @@ def _query_eligible_rows(query: str, rows: Iterable[Mapping[str, object]]) -> li
     return rows_list
 
 
-def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
+def _match_world_rows_main(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
     rows_list = _query_eligible_rows(query, rows)
     query = _query_signal(query)
     named = {
@@ -770,6 +1017,97 @@ def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[
                 -float(cast(Any, hit["score"])), -int(cast(Any, hit["confidence"])), str(hit["id"])
             ))[:MAX_ITEMS]
     return _score_world_anchor_rows(query, rows_list)
+
+
+
+def _match_world_rows_improved(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
+    rows_list = _query_eligible_rows(query, rows)
+    query = _query_signal(query)
+    named = {
+        str(anchor) for row in rows_list for anchor in _row_anchors(row)
+        if _anchor_is_explicit(query.casefold(), str(anchor).casefold())
+    }
+    if named:
+        identity = _score_world_anchor_rows(query, [row for row in rows_list if row.get("statement_kind") == "naming"])
+        relevant = _score_english_world_rows(query, rows_list)
+        anchored = _score_world_anchor_rows(query, rows_list)
+        result: list[dict[str, object]] = []
+        seen: set[tuple[str, str]] = set()
+        for item in [*identity, *relevant, *anchored]:
+            key = (str(item["kind"]), str(item["id"]))
+            if key not in seen:
+                result.append(item)
+                seen.add(key)
+        return result[:MAX_ITEMS]
+    topic_rows = [
+        {**row, "anchors": row.get("topic_cues", ())}
+        for row in rows_list if row.get("topic_cues")
+    ]
+    topic_hits = _score_world_anchor_rows(query, topic_rows, topic=True)
+    if topic_hits:
+        if _CJK_RUN.search(query):
+            return topic_hits
+        # Topic nomination must use the same English score, including generic
+        # word and contraction handling; a cue cannot supply a score by itself.
+        nominated = {item["id"] for item in topic_hits}
+        hits = _score_english_world_rows(query, [row for row in rows_list if row["id"] in nominated])
+        if hits:
+            return hits
+    hits = _score_english_world_rows(query, rows_list)
+    if hits or not _CJK_RUN.search(query):
+        return hits
+    if not _is_inquiry(query) and len(query) > 12:
+        return []
+    for variant in _fallback_query_variants(query):
+        hits = _score_english_world_rows(variant, rows_list)
+        if hits:
+            return hits
+    hits = _local_inquiry_matches(query, rows_list, _score_english_world_rows)
+    if hits:
+        return hits
+    # A retained predecessor may itself be very short ("only Wednesday
+    # evenings for exercise"). If the long question shares just its literal
+    # topic, use that non-generic cue only after ordinary retrieval missed.
+    # This is query-side localization, not a synthesized successor fact.
+    if _is_inquiry(query):
+        query_topics = _bigrams(query) - _GENERIC_PREDICATE_BIGRAMS
+        best: dict[str, dict[str, object]] = {}
+        for row in rows_list:
+            for text in cast(Sequence[str], row.get("predecessor_match_texts", ())):
+                for cue in sorted(query_topics & _bigrams(text)):
+                    for hit in _score_english_world_rows(cue, [row]):
+                        candidate_id = str(hit["id"])
+                        if candidate_id not in best or float(cast(Any, hit["score"])) > float(cast(Any, best[candidate_id]["score"])):
+                            best[candidate_id] = hit
+        if best:
+            return sorted(best.values(), key=lambda hit: (
+                -float(cast(Any, hit["score"])), -int(cast(Any, hit["confidence"])), str(hit["id"])
+            ))[:MAX_ITEMS]
+    return _score_world_anchor_rows(query, rows_list)
+
+
+def match_cognitions(query: str, rows: Iterable[Mapping[str, object]]) -> list[Mapping[str, object]]:
+    rows_list = list(rows)
+    main = match_cognitions_main(query, rows_list)
+    if _CJK_RUN.search(query):
+        return main
+    try:
+        prior = _match_cognitions_improved(query, rows_list)
+    except Exception:
+        prior = []
+    return compose_english(query, rows_list, main, prior, max_items=MAX_ITEMS)
+
+
+def _match_world_rows(query: str, rows: Iterable[Mapping[str, object]]) -> list[dict[str, object]]:
+    rows_list = list(rows)
+    main = _match_world_rows_main(query, rows_list)
+    if _CJK_RUN.search(query):
+        return main
+    try:
+        prior = _match_world_rows_improved(query, rows_list)
+    except Exception:
+        prior = []
+    return compose_english(query, rows_list, main, prior, max_items=MAX_ITEMS)
 
 
 def format_recall(items: Sequence[Mapping[str, object]], *, lang: Lang = 'zh') -> str:
@@ -1160,6 +1498,70 @@ def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
     return '\n'.join(dict.fromkeys(lines))
 
 
+def _append_semantic_candidates(
+    db: sqlite3.Connection, subject_id: str, query: str, model_tier: ModelTier,
+    literal: list[dict[str, object]], rows: list[dict[str, object]],
+    nominees: tuple[SemanticCandidate, ...], provider: CandidateProvider | None,
+) -> list[dict[str, object]]:
+    try:
+        selected = list(literal)
+        if nominees and provider is not None:
+            eligible = {(str(row["kind"]), str(row["id"])): row
+                        for row in _query_eligible_rows(query, rows)}
+            seen = {(str(item["kind"]), str(item["id"])) for item in selected}
+            additions = 0
+            for candidate in nominees:
+                key = candidate.kind, candidate.item_id
+                row = eligible.get(key)
+                if (key in seen or row is None or not math.isfinite(candidate.score)
+                        or candidate.score < provider.config.threshold or candidate.score > 1.00001
+                        or additions >= min(3, provider.config.max_additions)):
+                    continue
+                table = "world_event" if candidate.kind == "event" else candidate.kind
+                if table not in {"cognition", "relationship", "world_event"}:
+                    continue
+                raw = db.execute(f"SELECT content FROM {table} WHERE id=?", (candidate.item_id,)).fetchone()
+                if raw is None or content_hash(str(raw[0])) != candidate.content_hash:
+                    continue
+                selected.append({**row, "score": candidate.score})
+                seen.add(key)
+                additions += 1
+    except Exception:
+        selected = list(literal)
+    return selected
+
+
+def _render_snapshot_selection(
+    db: sqlite3.Connection, subject_id: str, query: str, model_tier: ModelTier, lang: Lang,
+    selected: list[dict[str, object]], rows: list[dict[str, object]],
+    dates: Mapping[tuple[str, str], str] | None = None,
+) -> tuple[list[dict[str, object]], str]:
+    historical = bool(_HISTORICAL_QUERY_PATTERN.search(query) or re.search(r'为什么|为何|不算|失效|why|invalid', query, re.I))
+    if lang == 'en':
+        # Matching keeps the original text, including its existing copy.
+        # Only the selected output projection uses localized generated copy;
+        # source text is never searched/replaced or translated in place.
+        english_content = {(str(row['kind']), str(row['id'])): row['english_content'] for row in rows}
+        if dates is None:
+            dates = recall_dates(db, subject_id, selected, model_tier)
+        rendered_items = []
+        for item in selected:
+            projection = {**item, 'recall_date': dates[(str(item['kind']), str(item['id']))],
+                          'content': english_content[(str(item['kind']), str(item['id']))]}
+            if historical:
+                explanation = _replacement_explanations(db, subject_id, [item], model_tier, lang=lang)
+                if explanation:
+                    projection['content'] = str(projection['content']) + '\n' + explanation
+            rendered_items.append(projection)
+        selected, rendered_recall = render_english_entries(rendered_items, max_items=MAX_ITEMS, max_chars=MAX_OUTPUT_CHARS)
+    else:
+        rendered_recall = format_recall(selected)
+        if historical:
+            explanations = _replacement_explanations(db, subject_id, selected, model_tier)
+            rendered_recall = '\n'.join(filter(None, (rendered_recall, explanations)))[:MAX_OUTPUT_CHARS]
+    return selected, rendered_recall
+
+
 def recall_world_snapshot(
     db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier = "local",
     candidate_provider: CandidateProvider | None = None,
@@ -1203,59 +1605,47 @@ def recall_world_snapshot(
             except Exception:
                 nominees = ()
         rows = _current_world_rows(db, subject_id, model_tier)
-        selected = _match_world_rows(query, rows)
-        literal = selected
-        try:
-            selected = list(literal)
-            if nominees and provider is not None:
-                eligible = {(str(row["kind"]), str(row["id"])): row
-                            for row in _query_eligible_rows(query, rows)}
-                seen = {(str(item["kind"]), str(item["id"])) for item in selected}
-                additions = 0
-                for candidate in nominees:
-                    key = candidate.kind, candidate.item_id
-                    row = eligible.get(key)
-                    if (key in seen or row is None or not math.isfinite(candidate.score)
-                            or candidate.score < provider.config.threshold or candidate.score > 1.00001
-                            or additions >= min(3, provider.config.max_additions)):
-                        continue
-                    table = "world_event" if candidate.kind == "event" else candidate.kind
-                    if table not in {"cognition", "relationship", "world_event"}:
-                        continue
-                    raw = db.execute(f"SELECT content FROM {table} WHERE id=?", (candidate.item_id,)).fetchone()
-                    if raw is None or content_hash(str(raw[0])) != candidate.content_hash:
-                        continue
-                    selected.append({**row, "score": candidate.score})
-                    seen.add(key)
-                    additions += 1
-        except Exception:
-            selected = literal
-        # Final per-item gate shares the coherent read transaction and destination.
-        selected = [item for item in selected if world_item_visible(
-            db, subject_id, cast(Any, str(item["kind"])), str(item["id"]),
-            surface="model_cloud" if model_tier == "cloud" else "recall")]
-        historical = bool(_HISTORICAL_QUERY_PATTERN.search(query) or re.search(r'为什么|为何|不算|失效|why|invalid', query, re.I))
-        if lang == 'en':
-            # Matching keeps the original text, including its existing copy.
-            # Only the selected output projection uses localized generated copy;
-            # source text is never searched/replaced or translated in place.
-            english_content = {(str(row['kind']), str(row['id'])): row['english_content'] for row in rows}
-            dates = recall_dates(db, subject_id, selected, model_tier)
-            rendered_items = []
-            for item in selected:
-                projection = {**item, 'recall_date': dates[(str(item['kind']), str(item['id']))],
-                              'content': english_content[(str(item['kind']), str(item['id']))]}
-                if historical:
-                    explanation = _replacement_explanations(db, subject_id, [item], model_tier, lang=lang)
-                    if explanation:
-                        projection['content'] = str(projection['content']) + '\n' + explanation
-                rendered_items.append(projection)
-            selected, rendered_recall = render_english_entries(rendered_items, max_items=MAX_ITEMS, max_chars=MAX_OUTPUT_CHARS)
+        # Run the original main candidate/semantic/render path first. Optional
+        # nomination happens once above; both arms reuse that immutable result.
+        def arm(literal: list[dict[str, object]]) -> list[dict[str, object]]:
+            items = _append_semantic_candidates(db, subject_id, query, model_tier, literal, rows, nominees, provider)
+            items = [item for item in items if world_item_visible(
+                db, subject_id, cast(Any, str(item["kind"])), str(item["id"]),
+                surface="model_cloud" if model_tier == "cloud" else "recall")]
+            return items
+
+        main_items = arm(_match_world_rows_main(query, rows))
+        if _CJK_RUN.search(query):
+            selected, rendered_recall = _render_snapshot_selection(
+                db, subject_id, query, model_tier, lang, main_items, rows)
         else:
-            rendered_recall = format_recall(selected)
-            if historical:
-                explanations = _replacement_explanations(db, subject_id, selected, model_tier)
-                rendered_recall = '\n'.join(filter(None, (rendered_recall, explanations)))[:MAX_OUTPUT_CHARS]
+            try:
+                prior_items = arm(_match_world_rows_improved(query, rows))
+            except Exception:
+                # The optional improvement arm must never invalidate a main
+                # result. Main failures above retain their existing behavior.
+                prior_items = []
+            union = {english_candidate_key(item): item for item in [*main_items, *prior_items]}
+            # One batched metadata projection per snapshot, shared by both arms
+            # and any budget fallback. Never scan once per render or item.
+            dates = recall_dates(db, subject_id, list(union.values()), model_tier) if lang == 'en' else None
+            main, _ = _render_snapshot_selection(db, subject_id, query, model_tier, lang, main_items, rows, dates)
+            try:
+                prior, _ = _render_snapshot_selection(db, subject_id, query, model_tier, lang, prior_items, rows, dates)
+            except Exception:
+                prior = []
+            combined = compose_english(query, rows, main, prior, max_items=max(MAX_ITEMS, len(main)))
+            selected, rendered_recall = _render_snapshot_selection(
+                db, subject_id, query, model_tier, lang, combined, rows, dates)
+            main_keys = {english_candidate_key(item) for item in main}
+            required = {english_candidate_key(item) for item in combined if english_candidate_key(item) in main_keys}
+            # Reordering and supplementary text must not consume a retained
+            # main item's character budget. Original main order is always a
+            # feasible fallback because those exact projected items fitted it.
+            if (not required <= {english_candidate_key(item) for item in selected}
+                    or (lang == 'zh' and len(rendered_recall) >= MAX_OUTPUT_CHARS)):
+                selected, rendered_recall = _render_snapshot_selection(
+                    db, subject_id, query, model_tier, lang, reserve_main_order(combined, main), rows, dates)
         selected_item_ids = tuple(
             (str(item["kind"]), str(item["id"])) for item in selected
         )

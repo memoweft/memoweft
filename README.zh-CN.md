@@ -24,6 +24,7 @@ MemoWeft 明确区分这些边界：
 - Entity、Relationship、Event、Cognition 和 Evaluation 是正式 World 对象。
 - 同一 revision 与查询输入得到 deterministic Recall（确定性召回），并且 Recall 不写 World。
   Python 召回会用当前有来源的自我命名和已接受别名，关联原文明确对齐的第一人称出生/偏好陈述；缺省目标、主题标签或本人视角本身不证明事实属于本人。其他表达沿既有召回路径，不猜新的身份关联；同名歧义保持未解析，姓名来源和事实来源分别遵守读取权限。
+  纯英文召回先走原有 main 候选路径；仅当共有词在原始大小写和撇号语境下均为功能词时，才可去掉原候选。显式集合缩至 79 词，保留非句首大写词、全大写词和独立缩写字母；只要共有实义词，就不受新分数和门槛淘汰。已有英文改进仅使用剩余名额，排序和字符预算不能挤掉应保留的 main 条目；[不变量及回归集合](bench/recall-quality/README.md)有完整说明，包含小写符号等已知限制。
   较早的中性名称成为规范名时，仍可通过当前、对读取目的地可用的别名来源识别有效自我命名；不直接信任别名显示字段或已撤回的来源。
   `I am Martin Mark.`、`I'm Martin Mark.`、`我是林晓。` 这类完整肯定的自我介绍也可建立关联；否定、疑问、整句引述和“我是该人的朋友/同事”不作为本人身份依据。
 - correction、retract、forget、archive、mute 和 permission change 都产生 durable receipt（持久回执）。

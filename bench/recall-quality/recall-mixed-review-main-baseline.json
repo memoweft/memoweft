@@ -1,0 +1,195 @@
+{
+  "reference": "b6fc783de17ac57690f0946e7951b22406cefce5",
+  "fixture_sha256": "ed23f12fd5c58751da26b8e226bb296e096d5418d2f4e0605f3f31c8e906dea8",
+  "source_sha256": "9df11fae0c0e77a20a941bb9a0bf29d1931ecf18fa647c6e065d6d90a8229f44",
+  "metrics": {
+    "queries": 15,
+    "positives": 0,
+    "hits": 0,
+    "recall": 0.0,
+    "returned": 23,
+    "wrong": 23,
+    "precision": 0.0
+  },
+  "results": [
+    {
+      "id": "mixed-00",
+      "selected": [
+        "zh-00"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-00"
+      ],
+      "snapshot_sha256": "2922a7c0e9b0bf4ae9980dc55e6e91fba2a3979d48c6492e078ecd56c2cc538a"
+    },
+    {
+      "id": "mixed-01",
+      "selected": [
+        "zh-01",
+        "zh-00",
+        "zh-07"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-00",
+        "zh-01",
+        "zh-07"
+      ],
+      "snapshot_sha256": "06354710008a531c807db934f0916b276adbd23112894f6df73d7da2a46b51ab"
+    },
+    {
+      "id": "mixed-02",
+      "selected": [
+        "zh-02",
+        "zh-10"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-02",
+        "zh-10"
+      ],
+      "snapshot_sha256": "62410f03ffc5aed6afd67a27e652bb7d89a0f04e4878a5e5f157483f586e658d"
+    },
+    {
+      "id": "mixed-03",
+      "selected": [
+        "zh-03",
+        "zh-02",
+        "zh-08"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-02",
+        "zh-03",
+        "zh-08"
+      ],
+      "snapshot_sha256": "d4f6ea4c6beb51d66c372b6328f13c46433d55d74fd1699805429958f10236b3"
+    },
+    {
+      "id": "mixed-04",
+      "selected": [
+        "zh-04"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-04"
+      ],
+      "snapshot_sha256": "8f6d96fadfcd7b2e669ce785e0c13416df6d9e06174dc969048df2e8566597f0"
+    },
+    {
+      "id": "mixed-05",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "9034755963cb09056a11ce6da6927abd25d8170cfd1266dd22eab75c40dcdd33"
+    },
+    {
+      "id": "mixed-06",
+      "selected": [
+        "zh-06"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-06"
+      ],
+      "snapshot_sha256": "44d7974a055fc921b6ae70c8c1497f9ec385e5b5ff33462488e8a62328d5e22d"
+    },
+    {
+      "id": "mixed-07",
+      "selected": [
+        "zh-06",
+        "zh-10"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-06",
+        "zh-10"
+      ],
+      "snapshot_sha256": "e3006231790ce2d17dc9794f8123ee1d6d729814a1dca08ad0c16dcdcbce6943"
+    },
+    {
+      "id": "mixed-08",
+      "selected": [
+        "zh-07",
+        "zh-00",
+        "zh-01"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-00",
+        "zh-01",
+        "zh-07"
+      ],
+      "snapshot_sha256": "7c934de472ac2401c668e8b4871cb34a2f20de0457560b2a1df50f9a50122ea7"
+    },
+    {
+      "id": "mixed-09",
+      "selected": [
+        "zh-08",
+        "zh-10"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-08",
+        "zh-10"
+      ],
+      "snapshot_sha256": "0eb9cd9b043f8dc1396d68292fee6ba114035d30ddcbe1395ebca2280a318887"
+    },
+    {
+      "id": "mixed-10",
+      "selected": [
+        "zh-09"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-09"
+      ],
+      "snapshot_sha256": "759db97fb71ff0f5d36fe46a2fc5f0f96230e691f85a1ee148af94bb1debf920"
+    },
+    {
+      "id": "mixed-11",
+      "selected": [
+        "zh-10"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-10"
+      ],
+      "snapshot_sha256": "18f01874a87385b6d4da22238dbb47b8d8eb98d70a914ad869b937e7d3de6c84"
+    },
+    {
+      "id": "mixed-12",
+      "selected": [
+        "zh-11"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-11"
+      ],
+      "snapshot_sha256": "7a455e4cbf4faf2070da923a7bb993450497fc9ff525fa648cd48da7f44d54ca"
+    },
+    {
+      "id": "mixed-13",
+      "selected": [
+        "zh-12"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-12"
+      ],
+      "snapshot_sha256": "071a21d2de18d6de692852cb6e2a0ef8e674bcfd2261e94026761d0a422b6cef"
+    },
+    {
+      "id": "mixed-14",
+      "selected": [
+        "zh-13"
+      ],
+      "rank": 0,
+      "wrong": [
+        "zh-13"
+      ],
+      "snapshot_sha256": "0e7f3511f3cb77ea8385f693facadc01a1b1526d7915e24e17be962dbf76f246"
+    }
+  ]
+}

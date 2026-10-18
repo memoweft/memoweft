@@ -1,0 +1,11 @@
+{
+  "main": "b6fc783de17ac57690f0946e7951b22406cefce5",
+  "previous": "ebe072840ef356d0a4257e013d29e8100061a149",
+  "fixtures": {
+    "english-invariant-random.json": "15f0eba9086b4a731fb04f71fe54b762282664d3489fbfd457a5b25876878167",
+    "english-invariant-labelled.json": "54f354e717881a4981e8f73f940e588fbe2288adc6b71f739b9ef754d7013a5e",
+    "english-invariant-snapshots.json": "8006667df5154096ecc417bcf7cc69843dfd6d4e54fa09ab65ad994c606402ac",
+    "english-review-long.json": "8b977a23cb8e932e241a845e9dfc8c162772454fe682ea9a994ca7ae64f4f577",
+    "english-review-long-main-baseline.json": "24d3c74bf38635655fb705692d46672d8d5d0d963d62e3dbf0560a9d67d97a5f"
+  }
+}

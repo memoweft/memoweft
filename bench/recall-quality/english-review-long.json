@@ -1,0 +1,906 @@
+{
+  "version": 1,
+  "note": "Exact independent third-review 30 facts and their 30 no-answer controls; labels unchanged.",
+  "cases": [
+    {
+      "id": "long-saxophone-positive",
+      "query": "What can you tell me about my saxophone?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My saxophone is a silver tenor instrument made by Selmer in 1988, with a curved neck, pearl keys, a dark leather carrying case, a padded shoulder strap, a replacement mouthpiece, and several reeds that I keep in a small wooden box beside the music stand."
+        },
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "long-saxophone-negative",
+      "query": "What can you tell me about my saxophone?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "long-aquarium-positive",
+      "query": "Do you remember my aquarium?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My aquarium holds 180 litres and contains six ember tetras, two corydoras, several smooth river stones, a large piece of driftwood, floating plants, a quiet external pump, a glass heater, and a programmable lamp that switches off at nine every evening."
+        },
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "long-aquarium-negative",
+      "query": "Do you remember my aquarium?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "long-sewing-positive",
+      "query": "Can you remind me about my sewing machine?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My sewing machine is a Janome HD3000 purchased in 2021, fitted with a walking foot for thick fabric, a metal bobbin case, an adjustable presser foot, a built-in thread cutter, and a bright desk lamp; I keep its manual and spare needles in the lower cabinet."
+        },
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "long-sewing-negative",
+      "query": "Can you remind me about my sewing machine?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "long-kiln-positive",
+      "query": "Where did I store the kiln?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I stored my kiln in the detached workshop behind the orchard after disconnecting its power cable, wrapping the ceramic shelves, removing the loose bricks, cleaning the chamber, and covering the lid with a cotton sheet so that dust would stay away while the studio was being painted."
+        },
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "long-kiln-negative",
+      "query": "Where did I store the kiln?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "long-kayak-positive",
+      "query": "How did I describe the folding kayak?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My folding kayak has a green fabric hull, an aluminium frame, a removable seat, two sealed storage compartments, a narrow bow, adjustable footrests, and reinforced seams; it packs into a black canvas bag and is comfortable enough for a slow afternoon on the lake."
+        },
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "long-kayak-negative",
+      "query": "How did I describe the folding kayak?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "multi-backpack-positive",
+      "query": "Which backpack is mine?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My backpack is the grey Osprey Talon 22, weighs 0.9 kg empty, and has two side pockets and an orange rain cover."
+        },
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "multi-backpack-negative",
+      "query": "Which backpack is mine?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "multi-thermos-positive",
+      "query": "What's the capacity of my thermos?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My thermos holds 750 ml, has a stainless steel body and a blue screw cap, and keeps tea hot throughout the working day."
+        },
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "multi-thermos-negative",
+      "query": "What's the capacity of my thermos?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "multi-fermenter-positive",
+      "query": "What is the volume of my fermenter?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My fermenter holds 30 litres, is made from food-safe plastic, and has a transparent airlock and a tap near its base."
+        },
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "multi-fermenter-negative",
+      "query": "What is the volume of my fermenter?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "multi-grinder-positive",
+      "query": "On which date did Mateo service my espresso grinder?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Mateo serviced my espresso grinder on 12 April 2024, replacing the upper burr, recalibrating the adjustment ring, lubricating the bearings, checking the motor brushes, cleaning the hopper, tightening the base screws, and testing several settings before returning it with a paper receipt and a small bag of replacement washers."
+        },
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "multi-grinder-negative",
+      "query": "On which date did Mateo service my espresso grinder?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "multi-bookshelf-positive",
+      "query": "What are the dimensions of my bookshelf?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My bookshelf measures 180 cm high, 90 cm wide, and 30 cm deep; its five shelves are made from pine."
+        },
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "multi-bookshelf-negative",
+      "query": "What are the dimensions of my bookshelf?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-shellfish-positive",
+      "query": "Don't I eat shellfish?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I don't eat shellfish because prawns caused an allergic reaction during a meal last spring."
+        },
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "negative-shellfish-negative",
+      "query": "Don't I eat shellfish?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-newspaper-positive",
+      "query": "Didn't I cancel the newspaper?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I cancelled my newspaper subscription on 3 March 2024 after the delivery charges increased and the weekend edition stopped including the local arts supplement."
+        },
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "negative-newspaper-negative",
+      "query": "Didn't I cancel the newspaper?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-caffeine-positive",
+      "query": "Am I allowed to drink caffeine?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I am not allowed to drink caffeine after noon because it disrupts my sleep."
+        },
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "negative-caffeine-negative",
+      "query": "Am I allowed to drink caffeine?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-medication-positive",
+      "query": "What medication must I never mix with alcohol?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I must never mix acetaminophen with alcohol; that warning is written on the medicine box."
+        },
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "negative-medication-negative",
+      "query": "What medication must I never mix with alcohol?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-lilies-positive",
+      "query": "Why don't I keep lilies indoors?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I don't keep lilies indoors because they are unsafe for my cats."
+        },
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "negative-lilies-negative",
+      "query": "Why don't I keep lilies indoors?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "plural-batteries-positive",
+      "query": "Which batteries do my torches need?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My torches need AA batteries, and I keep eight rechargeable spares in a red plastic case."
+        },
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "plural-batteries-negative",
+      "query": "Which batteries do my torches need?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "plural-cables-positive",
+      "query": "Where are the spare cables kept?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I keep the spare cables in a labelled box on the top shelf of the utility cupboard."
+        },
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "plural-cables-negative",
+      "query": "Where are the spare cables kept?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "plural-socks-positive",
+      "query": "What size are my hiking socks?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My hiking socks are size L, made from merino wool, and suitable for temperatures below freezing."
+        },
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "plural-socks-negative",
+      "query": "What size are my hiking socks?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "plural-weights-positive",
+      "query": "Can you tell me how much the dumbbells weigh?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My dumbbells weigh 7.5 kg each and have hexagonal rubber heads and textured steel handles."
+        },
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "plural-weights-negative",
+      "query": "Can you tell me how much the dumbbells weigh?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "plural-tomatoes-positive",
+      "query": "Did I buy the tomatoes in bulk?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I bought tomatoes in bulk from the farm shop and divided them into six bags for freezing."
+        },
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "plural-tomatoes-negative",
+      "query": "Did I buy the tomatoes in bulk?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "past-bergen-positive",
+      "query": "When did I move to Bergen?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I moved to Bergen in April 2022, rented an apartment near the harbour, and started working at the marine research centre shortly afterwards."
+        },
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "past-bergen-negative",
+      "query": "When did I move to Bergen?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "past-terrier-positive",
+      "query": "What did I call my old terrier?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I called my old terrier Pippin after the character in the book, and he lived with me for twelve years."
+        },
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "past-terrier-negative",
+      "query": "What did I call my old terrier?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "past-cello-positive",
+      "query": "Who repaired my cello last autumn?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Marta repaired my cello last autumn by replacing the bridge and adjusting the soundpost."
+        },
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "past-cello-negative",
+      "query": "Who repaired my cello last autumn?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "past-loft-positive",
+      "query": "How long did I rent the loft?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I rented my loft for 18 months before moving to a smaller apartment near the railway station."
+        },
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "past-loft-negative",
+      "query": "How long did I rent the loft?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "past-route-positive",
+      "query": "Which route did I take in 2024?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I took the coastal route in 2024 and stayed overnight in three small fishing villages."
+        },
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "past-route-negative",
+      "query": "Which route did I take in 2024?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "units-stove-positive",
+      "query": "How heavy is my camping stove?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My camping stove weighs 420 g without fuel and folds into a pouch measuring 15 by 10 cm."
+        },
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "units-stove-negative",
+      "query": "How heavy is my camping stove?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My balcony contains three potted ferns beside a wooden bench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "units-tyres-positive",
+      "query": "What's my bicycle tyre pressure?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My bicycle tyres run at 3.8 bar on dry roads, with a slightly lower setting for gravel and wet weather."
+        },
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "units-tyres-negative",
+      "query": "What's my bicycle tyre pressure?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I store ceramic tiles under the garage workbench."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "units-humidifier-positive",
+      "query": "How much water does my humidifier hold?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My humidifier holds 2.4 L of water and runs for about nine hours on its lowest setting."
+        },
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "units-humidifier-negative",
+      "query": "How much water does my humidifier hold?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I collect antique postcards from coastal towns."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "units-freezer-positive",
+      "query": "What temperature is my freezer?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My freezer is set to -18 C, and its alarm sounds if the door stays open for two minutes."
+        },
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "units-freezer-negative",
+      "query": "What temperature is my freezer?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We planted lavender behind the garden shed."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "units-filter-positive",
+      "query": "How often should I replace the filter?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I replace the purifier filter every 90 days and write the next replacement date on a sticker beside the power switch."
+        },
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "units-filter-negative",
+      "query": "How often should I replace the filter?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My favourite dessert is lemon sorbet."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    }
+  ]
+}
