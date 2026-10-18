@@ -1,4 +1,4 @@
-"""Third-review examples through the real worker, SQLite and recall path."""
+"""Review examples through the real worker, SQLite and recall path."""
 from __future__ import annotations
 
 import json
@@ -126,3 +126,42 @@ def test_quoted_exclusion_markers_remain_literal_exclusions(tmp_path: Path, raw:
     path = tmp_path / 'world.sqlite'
     _initialize_database(path)
     assert attempt(path, raw, fields={'is_long_term_goal': True})['state'] == 'no_change'
+
+
+@pytest.mark.parametrize('case', [c for c in CASES if c['id'] in {
+    'review4-negative-en-1', 'review4-negative-en-7', 'review4-negative-zh-1', 'review4-negative-zh-7',
+}], ids=lambda case: case['id'])
+def test_review_findings_cannot_disable_guard_by_omitting_goal_annotation(tmp_path: Path, case: dict[str, Any]) -> None:
+    path = tmp_path / 'world.sqlite'
+    _initialize_database(path)
+    result = attempt(path, case['raw'])
+    assert result['state'] == 'no_change', result['world_result_json']
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT count(*) FROM cognition').fetchone() == (0,)
+        assert db.execute('SELECT raw_content FROM evidence').fetchall() == [(case['raw'],)]
+
+
+@pytest.mark.parametrize('raw,expected', [
+    ('I actually really plan to open a clinic.', 'applied'),
+    ('我真的特别认真地打算开诊所。', 'applied'),
+    ('I think I really intend to open a clinic.', 'applied'),
+    ('我觉得我真的想开诊所。', 'applied'),
+    ('My goal is to help Rowan plan a concert.', 'applied'),
+    ('我的目标是帮助小岚计划一次音乐会。', 'applied'),
+    ('I plan to learn how not to give up.', 'applied'),
+    ("I plan to learn why Rowan's goal is not to retire.", 'applied'),
+    ('我计划解释为什么小岚的目标不是退休。', 'applied'),
+    ('I have never really actually intended to open a clinic.', 'no_change'),
+    ('我从未经过长时间仔细地思考后真的准备开诊所。', 'no_change'),
+    ('My goal is really actually not to open a clinic.', 'no_change'),
+    ('我的目标不再真的是开诊所。', 'no_change'),
+    ('我别特别认真地打算开诊所。', 'no_change'),
+])
+def test_direct_subject_and_negation_stop_at_goal_predicate(tmp_path: Path, raw: str, expected: str) -> None:
+    path = tmp_path / 'world.sqlite'
+    _initialize_database(path)
+    result = attempt(path, raw, fields={'is_long_term_goal': True})
+    assert result['state'] == expected, result['world_result_json']
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT raw_content FROM evidence').fetchall() == [(raw,)]
+        assert db.execute('SELECT count(*) FROM cognition').fetchone() == (int(expected == 'applied'),)

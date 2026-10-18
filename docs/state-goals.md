@@ -49,6 +49,9 @@ rules, including the exact additional exclusion lists:
 3. 模型建议形成目标、但没有任何分句满足白名单的：**不形成长期目标**，原话照常作为普通记忆来源保存（不丢信息）。白名单之外的说法识别不出来，接受为召回限制，写进 PR「已知限制」。
 4. 「如果/if」条件不影响判断（条件目标仍是目标）；目标从句里的动词（say/tell 等）不能被当作转述他人的标记——只有分句**主语**是别人、或整句是引号引述时才算他人发言。
 
+5. 同一分句内，只要否定词（不/没/没有/从未/并不/不再/别、`not/n't/never/no longer`）出现在目标动词**之前**，不论中间隔了多少修饰语（真的/really/actually/特别…），都算否定。但否定若只修饰另一个分句（「我不打算中断训练，我的长期目标是…」）不影响后一个分句。
+6. 白名单要求**目标动词的直接主语**是「我/I」（或「我的目标/计划是…」这种本人所有格作主语）。如果在「我」之后、目标动词之前出现了另一个主语（他人所有格、称谓、人名、他/她/他们、`my parents / my friend / he / she / they / 人名`），例如「我知道我朋友想…」`I know my parents plan …`，目标动词的主语是那个人，不算本人目标。
+
 - 近期时间词：今晚、今天、明天、待会、等会、马上、这周末；`tonight`、`today`、`tomorrow`、`this afternoon`、`this evening`、`later today`、`right now`。
 - 明确玩笑/收回：开玩笑的、开个玩笑、说着玩的、逗你的；`just kidding`、`jk`、`kidding`。
 
@@ -60,16 +63,18 @@ rules, including the exact additional exclusion lists:
 ## Review corpus: three explicit expectations
 
 [`state-goals-policy-cases.json`](../py/tests/fixtures/state-goals-policy-cases.json)
-retains all **96** exact review records: 30 old negatives, 20 second-review
-negatives, 20 second-review positives, six false-rejection records, and the
-third review's ten negatives and ten positives. The overlapping six records
-are counted separately; no original utterance is removed or rewritten.
+retains all **138** records: the previous **96** exact review records, all
+**32** fourth-review records (16 negatives and 16 positives), and **10** new
+negative variants (five in each language). The original overlapping six
+false-rejection records are still counted separately. No utterance is removed
+or rewritten. `old-en-task` and `old-zh-task` now belong to 规则必拦 because
+these task instructions have no owner whitelist subject.
 
 | Class    | Cases | Forced-form result                                                                                                                           |
 | -------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 规则必拦 |    41 | **0/41** owner goals formed; all Evidence survives.                                                                                          |
-| 规则必放 |    28 | **28/28** form and recall with original support.                                                                                             |
-| 交给模型 |    27 | **19** semantic negatives and **8** positive known limitations. Actual forced `form` forms **11/27**; this is not a model correctness score. |
+| 规则必拦 |    69 | **0/69** owner goals formed; all Evidence survives. Before this repair **14/69** formed: four reviewer counterexamples and ten new variants. |
+| 规则必放 |    44 | **44/44** form and recall: the previous 28 plus all 16 new reviewer positives.                                                               |
+| 交给模型 |    25 | **17** semantic negatives and **8** positive known limitations. Actual forced `form` forms **10/25**; this is not a model correctness score. |
 
 Every case runs the real worker, compiler, SQLite and recall with forced
 `form + preference`. There is no scripted `no_change` substitute for kernel
@@ -78,10 +83,21 @@ quoted markers, arbitrary singular/plural possessives, direct negation forms,
 time adjuncts, conditional goals, say/tell in goal content, optional annotations
 and source-span clipping. The original 35 state/goal cases remain required.
 
+Negation is a token-order check before the target predicate, with no modifier
+count or distance cap. The modifier 特别 is not split into the negation token
+别. Subject validation checks the nearest explicit owner subject and the
+auxiliary/modifier grammar before that predicate. A new finite verb or noun
+phrase, such as `know my parents`, cannot pass as an owner adjunct. This uses
+no person-name list or reporting-verb blacklist. A nested explicit owner (`I
+think I intend ...`) still passes. Goal content after the predicate, including
+say/tell and unrelated negative descriptions, is not scanned as the owner's
+subject or a pre-predicate negation. Recognition of affirmative adjuncts is
+finite; unrecognized forms remain a whitelist limitation.
+
 ## 已知限制
 
 内核不判、由模型判断/已知限制。白名单之外的说法识别不出来，接受为召回限制。
-模型负责反讽、隐含否定、反事实、角色扮演和尚未决定等语义；上述 **19** 条
+模型负责反讽、隐含否定、反事实、角色扮演和尚未决定等语义；上述 **17** 条
 语义负例不宣称零形成，后续真实模型考试衡量。
 
 **8** 条正例审查记录按当前白名单不形成目标，原话仍留在 Evidence：
