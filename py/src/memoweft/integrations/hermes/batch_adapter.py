@@ -633,6 +633,10 @@ class BatchItem:
     supersedes_cognition_id: Optional[str] = None
     #: Temporal superseding: this new relationship supersedes a prior relationship.
     supersedes_relationship_id: Optional[str] = None
+    # Optional interpretation intent: validation only, never a new stored kind.
+    is_long_term_goal: bool = False
+    # Compiler-owned distinction for the existing conditional reminder path.
+    is_situational_decision: bool = False
     # Compiler-owned occurrence identity; never accepted from model fields.
     state_version_id: Optional[str] = None
     #: V5 third-party perspective holder (targeted attribute/preference only):
@@ -766,7 +770,8 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
-    "长期目标与计划是可记忆的持续意向，用 preference（目标/打算）保留完整原话、动机、数量和条件，绝不是已完成事件；不需要另说‘记住’。例如长期建立社区图书馆、未来几年取得资格证。只有模糊愿望、假设、问题、未接受的助手建议和本次任务指令不形成目标。明确说目标已完成、放弃或改期时，保留完整新状态，用 form + supersedes_cognition_id 取代对应当前意向；没有完成声明、没有提及或期限已过都不能推断完成或放弃。不要新增 goal 类型或把计划填成 event。\n"
+    "本人长期目标/计划建议必须附 is_long_term_goal=true（仅供编译器校验，仍用 preference）；条件目标仍是目标。\n"
+    "长期目标与计划是可记忆的持续意向，用 preference（目标/打算）保留完整原话、动机、数量和条件，绝不是已完成事件；不需要另说‘记住’。例如长期建立社区图书馆、未来几年取得资格证。只有模糊愿望、问题、未接受的助手建议和本次任务指令不形成目标。明确说目标已完成、放弃或改期时，保留完整新状态，用 form + supersedes_cognition_id 取代对应当前意向；没有完成声明、没有提及或期限已过都不能推断完成或放弃。不要新增 goal 类型或把计划填成 event。\n"
     "先区分纠错与自然变化：原来记错才 correct；以前成立、后来换工作/搬家/关系变化/偏好变化/目标推进用 form + supersedes_cognition_id，关系用 supersedes_relationship_id，逐字复制 current 列表中对应旧项 id。保留旧状态作为过往。选择全部同主题相邻 sentences/segments，包含新旧方向、否定、原因和限制；不能只选‘最近在想偏好’的引导句，也不能把压力后一周的偏好转变当成仅限一周的指令。独立新主题不能取代旧主题；不确定哪个目标需澄清，不能凭最近一条猜测。\n"
     "明确纠正人名（含省略主题的‘那个人名写错了’）用 action=correct、statement_kind=alias、entity=新姓名、alias_of=旧姓名；不是 correct+naming，也不附 corrects_cognition_id、corrects_relationship_id 或 corrects_event_id。两姓名必须都在当前纠正原话中。\n"
     "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed；两种确认决定都必须用 assistant_claim 逐字引用 context 中被确认的助手提议（保留人物姓名和适用情境），保存双方来源；stated 命题仍从用户原话派生。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
@@ -878,10 +883,11 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "Mark a proposed owner goal/plan with is_long_term_goal=true (validation only; keep preference). Conditional goals remain goals.\n"
     "An explicit enduring goal or plan is a memory-worthy ongoing intention: use preference and keep "
     "the complete source wording, motivation, quantities and conditions, never an accomplished event. "
     "No separate remember request is necessary. Examples: a multi-year community library plan or a "
-    "long-term qualification goal. Exclude vague wishes, hypotheticals, questions, unaccepted assistant "
+    "long-term qualification goal. Exclude vague wishes, questions, unaccepted assistant "
     "suggestions and one-task instructions. An explicit completion, abandonment or rescheduling replaces "
     "the corresponding current intention using form + supersedes_cognition_id and the complete new status. "
     "Silence, an elapsed deadline or an intention never proves completion or abandonment. Do not invent "
@@ -2389,6 +2395,9 @@ class HermesBatchAdapterProcessor:
     ) -> tuple[Optional[BatchItem], str]:
         if not isinstance(raw_item, dict):
             return None, "invalid_cognition_item"
+        proposed_goal = raw_item.get('is_long_term_goal', False)
+        if not isinstance(proposed_goal, bool):
+            return None, 'invalid_goal_intent'
         action = raw_item.get("action")
         if action not in ("form", "correct", "contradict"):
             return None, "invalid_cognition_action"
@@ -3043,6 +3052,7 @@ class HermesBatchAdapterProcessor:
             ):
                 return None, "proposition_not_anchored"
 
+        is_situational_decision = False
         if kind == 'preference' and formed_by in {'stated', 'confirmed'} and not retract and topic_canonical_name is None and entity_canonical_name is None:
             # A confirmed situational decision has an explicit condition in its
             # selected source. Preserve that verbatim retrieval cue even when
@@ -3057,6 +3067,9 @@ class HermesBatchAdapterProcessor:
                     break
             if condition:
                 topic_canonical_name = condition.group(1).strip()
+                is_situational_decision = bool(re.match(
+                    r'[，,]?(?:就|请)提醒(?:我|我们|用户)', condition_source[condition.end():],
+                ))
         return (
             BatchItem(
                 action=str(action),
@@ -3089,6 +3102,8 @@ class HermesBatchAdapterProcessor:
                 perspective_holder_kind=perspective_holder_kind,
                 supersedes_cognition_id=supersedes_cognition_id,
                 supersedes_relationship_id=supersedes_relationship_id,
+                is_long_term_goal=proposed_goal,
+                is_situational_decision=is_situational_decision,
             ),
             "",
         )
@@ -3097,14 +3112,19 @@ class HermesBatchAdapterProcessor:
 
     @staticmethod
     def _owner_assertion_error(item: BatchItem, raw_by_id: Mapping[str, str]) -> str | None:
-        if item.action != 'form' or item.formed_by != 'stated':
+        if item.action != 'form' or item.formed_by != 'stated' and not item.is_long_term_goal:
+            return None
+        # A source-validated confirmed or explicit reminder decision has its typed
+        # two-source contract; it is not a proposed long-term goal. An explicit
+        # goal annotation can only tighten validation, never bypass it.
+        if (item.assistant_claim is not None or item.is_situational_decision) and not item.is_long_term_goal:
             return None
         owner_claim = (item.statement_kind in {'attribute', 'preference'} and item.entity_canonical_name is None
                        or item.statement_kind == 'relationship' and item.source_canonical_name is None)
         if not owner_claim:
             return None
         for eid, start, end, _text in item.supports:
-            error = owner_assertion_error(raw_by_id[eid], start, end)
+            error = owner_assertion_error(raw_by_id[eid], start, end, proposed_goal=item.is_long_term_goal)
             if error:
                 return error
         return None

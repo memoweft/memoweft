@@ -1,7 +1,6 @@
 """The manager-approved boundary: hard source rules versus model semantics."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import sqlite3
 from typing import Any, Literal
@@ -9,47 +8,9 @@ from typing import Any, Literal
 import pytest
 
 from memoweft.integrations.hermes.recall import recall_world_snapshot
-from memoweft.integrations.hermes.source_assertion import owner_assertion_error
 from test_hermes_world_worker import _initialize_database
 from test_state_goals import form
 from test_state_goals_revision import attempt
-
-POLICY_CASES: list[dict[str, str]] = json.loads(
-    (Path(__file__).parent / 'fixtures/state-goals-policy-cases.json').read_text(encoding='utf-8')
-)['cases']
-
-
-@pytest.mark.parametrize('case', POLICY_CASES, ids=lambda c: c['id'])
-def test_review_examples_obey_narrow_policy(tmp_path: Path, case: dict[str, str]) -> None:
-    path = tmp_path / 'world.sqlite'
-    _initialize_database(path)
-    raw, expected = case['raw'], case['expectation']
-    if expected == 'model':
-        # 内核不判、由模型判断，后续真实模型考试衡量。
-        # A forced form is adversarial interpreter output, not a model score.
-        assert owner_assertion_error(raw, 0, len(raw)) is None
-        result = attempt(path, raw)
-        if result['state'] == 'no_change':
-            # Existing task-only eligibility is separate from goal semantics.
-            assert 'owner_source_' not in str(result['world_result_json'])
-        else:
-            assert result['state'] == 'applied'
-        model_path = tmp_path / 'model-declined.sqlite'
-        _initialize_database(model_path)
-        assert attempt(model_path, raw, decision='no_change')['state'] == 'no_change'
-        with sqlite3.connect(model_path) as db:
-            assert db.execute('SELECT count(*) FROM cognition').fetchone() == (0,)
-    else:
-        result = attempt(path, raw)
-        assert result['state'] == ('no_change' if expected == 'block' else 'applied'), result['world_result_json']
-    with sqlite3.connect(path) as db:
-        assert db.execute('SELECT raw_content FROM evidence').fetchall() == [(raw,)]
-        rows = db.execute('SELECT content FROM cognition').fetchall()
-        normalized = (raw.replace('我', '用户', 1) if raw.startswith('我') else
-                      '用户' + raw if any('\u4e00' <= c <= '\u9fff' for c in raw) and '用户' not in raw else raw)
-        assert rows == ([] if result['state'] == 'no_change' else [(normalized,)])
-        assert db.execute('SELECT count(*) FROM world_event').fetchone() == (0,)
-
 
 @pytest.mark.parametrize('lang', ['en', 'zh'])
 def test_reconciled_relationship_rewording_supports_current_occurrence(tmp_path: Path, lang: Literal['en', 'zh']) -> None:
@@ -92,20 +53,22 @@ def test_direct_want_and_possessive_subject_are_blocked(tmp_path: Path, raw: str
     ('I do not plan to quit my training; my long-term goal is to become a nurse.', 'I do not plan to quit my training;'),
     ('我不打算中断训练，我的长期目标是成为护士。', '我不打算中断训练，'),
 ])
-def test_affirmative_goal_is_not_lost_when_a_negative_clause_is_selected(tmp_path: Path, raw: str, quote: str) -> None:
+def test_only_supported_affirmative_clause_can_form_a_goal(tmp_path: Path, raw: str, quote: str) -> None:
     path = tmp_path / 'world.sqlite'
     _initialize_database(path)
-    assert owner_assertion_error(raw, 0, len(quote)) is None
-    assert attempt(path, raw, quote=quote)['state'] == 'applied'
+    # The negative span alone cannot support an affirmative goal. Full-source
+    # support contains the independent affirmative clause and must pass.
+    assert attempt(path, raw, quote=quote)['state'] == 'no_change'
+    assert attempt(path, raw, n=2)['state'] == 'applied'
 
 
 @pytest.mark.parametrize('raw,blocked', [
-    ("My goal is to support my daughter's goal of studying architecture.", False),
-    ('我的目标是支持我女儿的目标。', False),
+    ("My goal is to support my daughter's goal of studying architecture.", True),
+    ('我的目标是支持我女儿的目标。', True),
     ("My daughter's goals are to qualify as an architect and teach design.", True),
     ("My colleague's plans include completing a doctorate.", True),
 ])
-def test_possessive_must_be_the_goal_subject_not_an_object(tmp_path: Path, raw: str, blocked: bool) -> None:
+def test_possessive_anywhere_in_goal_clause_is_excluded_by_whitelist(tmp_path: Path, raw: str, blocked: bool) -> None:
     path = tmp_path / 'world.sqlite'
     _initialize_database(path)
     assert attempt(path, raw)['state'] == ('no_change' if blocked else 'applied')

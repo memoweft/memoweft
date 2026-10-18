@@ -1,97 +1,103 @@
-"""High-confidence source rules; goal semantics belong to the interpreter.
-
-原话与来源不改写。只拦明确的来源归属、直接否定目标动词、他人目标主语；
-条件、日期、玩笑、疑问等不由内核猜语义，后续真实模型考试衡量。
-"""
+"""Clause-level source whitelist for owner goals; never rewrite Evidence."""
 from __future__ import annotations
 
 import re
 
-# Syntax, not activity keywords: negation must govern intend/plan/want itself.
-_NEGATED_GOAL = re.compile(
-    r"(?:我(?:们)?|本人|咱|俺)(?:并|也|根本|真的)?(?:不(?:再)?|从未|从没|从来没(?:有)?|没(?:有)?)(?:打算|想(?:要)?|计划|准备)"
-    r"|(?:我(?:们)?|本人)(?:不会|不|从不)把[^，,;；。.!?！？]+作为(?:长期)?目标"
-    r"|\b(?:I|we)\s+(?:(?:don't|do not|never|didn't|did not)\s+(?:intend|plan|want)\s+to|(?:am|are)\s+not\s+(?:planning|intending|wanting)\s+to|(?:have|had)\s+never\s+(?:intended|planned|wanted)\s+to)"
-    r"|\b(?:I'm|we're)\s+not\s+(?:planning|intending|wanting)\s+to"
-    r"|\b(?:I|we)\s+(?:won't|will not|never)\s+pursue\s+(?:my|our|the)\s+(?:long[- ]term\s+)?goal", re.I,
+# 1. 先把用户原话按句号、分号、逗号后接主语等切成分句（中英文都要）。
+# 2. 一个分句**只有同时满足**以下条件，才能支持「本人长期目标/计划」：
+#    - 主语是说话人本人：分句以「我 / 我的目标 / 我的计划 / 我打算 / 我想 / 我要 / 我准备」或 `I / My goal / My plan / I plan / I intend / I want / I'm going to / I aim` 开头（允许前面有时间状语，例如「三年内我要…」`next year I intend …`）；
+#    - 该分句内没有否定词修饰目标动词（不/没/从未/不再/不打算/don't/never/not/no longer…）；
+#    - 该分句内没有他人所有格或他人主语（「我女儿的 / 我父母的 / 我朋友想」`my daughter's / my parents' / my friend wants`；任何「我的 + 称谓/人名 + 的」或 `my + noun + 's/s'`）；
+#    - 不是问句。
+# 3. 模型建议形成目标、但没有任何分句满足白名单的：**不形成长期目标**，原话照常作为普通记忆来源保存（不丢信息）。白名单之外的说法识别不出来，接受为召回限制，写进 PR「已知限制」。
+# 4. 「如果/if」条件不影响判断（条件目标仍是目标）；目标从句里的动词（say/tell 等）不能被当作转述他人的标记——只有分句**主语**是别人、或整句是引号引述时才算他人发言。
+# 近期时间词：今晚、今天、明天、待会、等会、马上、这周末；`tonight`、`today`、`tomorrow`、`this afternoon`、`this evening`、`later today`、`right now`。
+# 明确玩笑/收回：开玩笑的、开个玩笑、说着玩的、逗你的；`just kidding`、`jk`、`kidding`。
+# 两组排除标记分句内出现就不算长期目标；不推断反讽、反事实或活动含义。
+# Existing Evidence validation independently requires a real user turn and
+# permission. These checks neither copy nor alter any utterance or source span.
+
+# This is only a routing cue: goals share the existing preference/attribute
+# types. It is NOT an assertion that a goal is real. Every routed proposal
+# must pass the source whitelist; ordinary preferences/states keep their type.
+_GOAL = re.compile(
+    r"目标(?=是|为|会|应|不)|计划|打算|准备|想|我希望|我要|把[^，,。;；]+作为(?:长期)?目标"
+    r"|\b(?:my\s+(?:long[- ]term\s+)?goal\s+of|goals?\s+(?:is|isn't|are|was|were|would|should))\b"
+    r"|\b(?:plans?|planning|planned|intend(?:s|ed|ing)?|want(?:s|ed|ing)?|hope(?:s|d)?|aim(?:s|ed|ing)?|ambition)\b|\bgoing\s+to\b", re.I,
 )
-_AFFIRMATIVE_GOAL = re.compile(
-    r"^(?:(?:我(?:们)?|本人|咱|俺)的(?:长期|人生|未来)?(?:目标|计划)(?:是|为)|(?:我(?:们)?|本人)(?:计划|打算|准备|想(?:要)?)(?!不)|(?:今年|明年)?(?:我)?(?:一定要|决心|决定要))"
-    r"|^(?:my|our)\s+(?:(?:long[- ]term|life|future)\s+)?(?:goal|plan|ambition)\s+(?:is|remains)\s+(?!not\b)"
-    r"|^(?:I|we)\s+(?:intend|plan|want|aim|hope)\s+to\b", re.I,
+# Quotes are masked in validation context only. Apostrophes inside words are
+# possessives/contractions, not quote delimiters. Book titles are not clauses.
+_QUOTE = re.compile(r'"[^"\n]*"|“[^”]*”|「[^」]*」|‘[^’]*’|(?<!\w)\'[^\'\n]+\'(?!\w)|《[^》]*》')
+_SENTENCE = re.compile(r"[。.!?！？;；\n]+")
+# Do not detach ', just kidding' or a date from its goal. A comma creates a
+# clause only before a fresh subject (optionally preceded by a time adjunct).
+_TIME_ZH = r"(?:(?:[一二三四五六七八九十百两\d]+年(?:内|后)|明年|今年|未来[一二三四五六七八九十百两\d]+年(?:内)?))"
+_TIME_EN = r"(?:(?:next|this)\s+year|today|tomorrow|in\s+\w+\s+years?|within\s+\w+\s+years?)"
+_SUBJECT = rf"(?:(?:{_TIME_ZH})?我|(?:{_TIME_EN}\s+)?(?:I\b|my\b)|he\b|she\b|they\b|他|她)"
+_COMMA = re.compile(rf"[，,]\s*(?=(?:(?:and|but|however)\s+)?{_SUBJECT})|\b(?:but|and|however)\s+(?={_SUBJECT})", re.I)
+_OWNER = re.compile(
+    rf"^(?:{_TIME_ZH})?我(?:的(?:长期|人生|未来)?(?:目标|计划)|打算|想|要|准备|计划|希望|现在|最近|将|会|并|不|从|没|已经|还|在|是|决定|一直|曾)"
+    rf"|^(?:{_TIME_EN}\s+)?(?:I\b|my\s+(?:(?:long[- ]term|life|future)\s+)?(?:[\w-]+\s+)?(?:goal|plan)\b)", re.I,
 )
-_CLAUSES = re.compile(r"[，,;；。.!?！？\n]|\b(?:but|and|however)\b|但是|不过|而是|而且", re.I)
-_ROLE_ZH = r"(?:女儿|儿子|朋友|同事|室友|母亲|父亲|妈妈|爸爸|姐姐|妹妹|哥哥|弟弟|妻子|丈夫|伴侣|老师|学生)"
-_ROLE_EN = r"(?:daughter|son|friend|colleague|roommate|mother|father|sister|brother|wife|husband|partner|teacher|student)"
-# Explicit possessive goal subjects are never the account owner's goal.
-_OTHER_GOAL = re.compile(
-    rf"^(?:(?:我(?:的)?|我们的?){_ROLE_ZH}(?:的)?(?:长期|人生)?(?:目标|计划|打算|想(?:要)?|准备)"
-    rf"|(?:my|our)\s+[\w-]+(?:['’]s)\s+(?:long[- ]term\s+)?(?:goals?|plans?|ambitions?)\b"
-    rf"|(?:my|our)\s+{_ROLE_EN}\s+(?:wants|plans|intends|aims|hopes)\b)", re.I,
+_OTHER_POSSESSIVE = re.compile(
+    r"我的(?!长期目标|长期计划|目标|计划)[^，,。;；！？!?：:\s的]+的"
+    r"|我(?!的)[^，,。;；！？!?：:\s的]+的(?:目标|计划)"
+    r"|\bmy\s+[\w-]+(?:'s|s')(?=\s|$)", re.I,
 )
-_REPORT_ZH = re.compile(r"^(?P<speaker>[^，,;；。.!?！？：:]{1,40}?)(?:说|表示|建议|写道)(?=$|[:：，,\s“\"‘「]|我|他|她)")
-_REPORT_EN = re.compile(r"^(?P<speaker>[^,;.!?]{1,60}?)\s+(?:said|says|suggested|wrote|say)\b", re.I)
-# Token boundaries distinguish a quoted sentence from I'm/I've.
-_QUOTE = re.compile(r"\"[^\"\n]*\"|“[^”]*”|「[^」]*」|‘[^’]*’|(?<!\w)'[^'\n]+'(?!\w)", re.S)
-_BOUNDARY = re.compile(r"[。！？!?;；\n]|(?<!\d)\.(?!\d)")
-_SENTENCE_BOUNDARY = re.compile(r"[。！？!?\n]|(?<!\d)\.(?!\d)")
+_NEGATION = re.compile(
+    r"(?:不(?:再)?|没(?:有)?|从未|从没|从来没(?:有)?)(?:打算|想(?:要)?|计划|准备|希望|要|会|把)"
+    r"|(?:目标|计划)(?:并)?不(?:再)?是"
+    r"|\b(?:don't|do\s+not|never|didn't|did\s+not|no\s+longer|not|won't)\s+"
+    r"(?:plan(?:ned|ning)?|want(?:ed|ing)?|aim(?:ed|ing)?|pursue|hope(?:d)?|intend(?:ed|ing)?)\b"
+    r"|\b(?:not|no\s+longer|never)\s+(?:planning|intending|wanting|going\s+to)\b"
+    r"|\b(?:goal|plan)\s+(?:is\s+(?:not|no\s+longer|never)|isn't)\b", re.I,
+)
+_EXCLUSION = re.compile(
+    r"今晚|今天|明天|待会|等会|马上|这周末|开玩笑的|开个玩笑|说着玩的|逗你的"
+    r"|\b(?:tonight|today|tomorrow|this afternoon|this evening|later today|right now|just kidding|jk|kidding)\b", re.I,
+)
+# Anchored grammatical subject + speech predicate only; never scan for
+# say/tell inside a goal such as 'My goal is to learn to say hello'.
+_OTHER_SPEAKER = re.compile(
+    r"^(?:(?!(?:I|my)\b)(?:[\w'-]+\s+){1,2}(?:said|says|suggested|wrote)\b"
+    r"|(?!我)[^，,。;；！？!?：:\s]{1,12}?(?:说|表示|建议|写道))", re.I,
+)
 
 
-def _foreign_report(text: str) -> bool:
-    text = text.strip().rstrip("，,:：")
-    zh, en = _REPORT_ZH.search(text), _REPORT_EN.search(text)
-    if zh:
-        speaker = zh['speaker'].strip()
-        return ('我' not in speaker and '本人' not in speaker
-                or bool(re.fullmatch(rf"我(?:的)?{_ROLE_ZH}", speaker))
-                or speaker in {'助手', '助理'})
-    if en:
-        return re.search(r"\b(?:I|we)\b", en['speaker'], re.I) is None
-    return False
-
-
-def owner_assertion_error(raw: str, start: int, end: int) -> str | None:
-    """Validate attribution and direct goal negation only, without rewriting.
-
-    明确引用别人的话/助手提议不能成为本人目标；明确他人所有格也不能。
-    否定只作用于目标动词，且同句没有另一个肯定目标从句时才拦；有肯定
-    目标从句必须放行。条件、今天开始、问句、玩笑等语义交给模型。
-    Context prevents selecting inside somebody else's quotation to erase its
-    speaker; no context is copied into support. Existing typed Evidence checks
-    still require a real, permission-eligible user turn, never assistant text.
-    """
-    boundaries = [m.end() for m in _BOUNDARY.finditer(raw)]
-    left = max((p for p in boundaries if p <= start), default=0)
-    right = next((p for p in boundaries if p >= end), len(raw))
-    frame = raw[left:right].replace('’', "'")
-    foreign_quotes = [quote for quote in _QUOTE.finditer(raw) if _foreign_report(raw[:quote.start()])]
-    for quote in foreign_quotes:
-        if quote.start() < end and start < quote.end():
-            return 'owner_source_quotation'
-    # A selected user declaration *after* a closed foreign quote has its own
-    # speaker; the other person's preceding quote is validation context only.
-    own_after_quote = any(
-        left <= quote.start() and quote.end() <= start
-        and not _foreign_report(raw[quote.end():start].lstrip('，,;； \n'))
-        for quote in foreign_quotes
-    )
-    if _foreign_report(frame) and not own_after_quote:
-        return 'owner_source_reported_speech'
-    # Possessive must be the clause's subject, not an object in "my goal is
-    # to support my daughter's goal". Check only clauses the support selects.
-    clause_start = 0
-    for clause_end, following in [*( (m.start(), m.end()) for m in _CLAUSES.finditer(frame)), (len(frame), len(frame))]:
-        if left + clause_start < end and start < left + clause_end and _OTHER_GOAL.match(frame[clause_start:clause_end].strip()):
-            return 'owner_source_other_goal_subject'
-        clause_start = following
-    # A semicolon can join the negative setup and a separate affirmative goal;
-    # keep that complete sentence in the negation check, even for clause support.
-    sentence_ends = [m.end() for m in _SENTENCE_BOUNDARY.finditer(raw)]
-    goal_left = max((p for p in sentence_ends if p <= start), default=0)
-    goal_right = next((p for p in sentence_ends if p >= end), len(raw))
-    goal_frame = raw[goal_left:goal_right].replace('’', "'")
-    if _NEGATED_GOAL.search(frame) and not any(
-        _AFFIRMATIVE_GOAL.search(clause.strip()) for clause in _CLAUSES.split(goal_frame)
-    ):
-        return 'owner_source_negated_intention'
-    return None
+def owner_assertion_error(raw: str, start: int, end: int, *, proposed_goal: bool = False) -> str | None:
+    """Check full clauses, retaining original offsets and speaker context."""
+    normalized = raw.replace('’', "'").replace('‘', "'")
+    quotes = list(_QUOTE.finditer(normalized))
+    # A clipped quoted goal cannot erase the foreign speaker or quotation.
+    if any(q.start() <= start and end <= q.end() for q in quotes):
+        return 'owner_source_quotation'
+    masked = list(normalized)
+    for quote in quotes:
+        masked[quote.start():quote.end()] = ' ' * (quote.end() - quote.start())
+    context = ''.join(masked)
+    boundaries = [0, *(m.end() for m in _SENTENCE.finditer(context)), len(context)]
+    is_goal = proposed_goal or bool(_GOAL.search(normalized[start:end]))
+    for left, right in zip(boundaries, boundaries[1:]):
+        if right <= start or end <= left:
+            continue
+        sentence = context[left:right]
+        offset = 0
+        for cut in [*_COMMA.finditer(sentence), None]:
+            stop = cut.start() if cut else len(sentence)
+            clause = sentence[offset:stop].strip().lstrip('，,;； ')
+            clause = re.sub(r'^(?:and|but|however)\s+', '', clause, flags=re.I)
+            clause_left, clause_right = left + offset, left + stop
+            offset = cut.end() if cut else len(sentence)
+            if clause_right <= start or end <= clause_left:
+                continue
+            if not is_goal:
+                if _OTHER_SPEAKER.match(clause):
+                    return 'owner_source_other_speaker'
+                continue
+            if (_OWNER.match(clause) and _GOAL.search(clause)
+                    and not _OTHER_POSSESSIVE.search(clause)
+                    and not _NEGATION.search(clause)
+                    and not _EXCLUSION.search(normalized[clause_left:clause_right])
+                    and not re.search(r'[?？]', clause)):
+                return None
+    return 'owner_source_goal_whitelist' if is_goal else None

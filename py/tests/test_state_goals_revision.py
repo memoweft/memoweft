@@ -26,8 +26,7 @@ _POLICY = {c['id']: c['expectation'] for c in json.loads(
 
 
 def attempt(path: Path, raw: str, *, fields: dict[str, Any] | None = None,
-            quote: str | None = None, n: int = 1,
-            decision: Literal['form', 'no_change'] = 'form') -> dict[str, object]:
+            quote: str | None = None, n: int = 1) -> dict[str, object]:
     clock = MutableClock()
     eid, jid = f'evidence-{n}', f'job-{n}'
     _insert_job(path, clock, job_id=jid, evidence_ids=(eid,))
@@ -36,7 +35,7 @@ def attempt(path: Path, raw: str, *, fields: dict[str, Any] | None = None,
                 supports=[dict(evidence_id=eid, quote=quote or raw)])
     item.update(fields or {})
     worker = WorldJobWorker(path, processor=HermesBatchAdapterProcessor(
-        str(path), lambda *a, **kw: _model(_batch(item) if decision == 'form' else {'schema_version': 8, 'result': 'no_change'}), clock=clock), policy=_policy(), clock=clock)
+        str(path), lambda *a, **kw: _model(_batch(item)), clock=clock), policy=_policy(), clock=clock)
     assert worker.run_until_quiescent() == 1
     return _job(path, jid)
 
@@ -45,14 +44,13 @@ def attempt(path: Path, raw: str, *, fields: dict[str, Any] | None = None,
 def test_review_negative_uses_approved_rule_or_model_boundary(tmp_path: Path, case: dict[str, str]) -> None:
     path = tmp_path / 'world.sqlite'
     _initialize_database(path)
-    must_block = _POLICY['old-' + case['id']] == 'block'
-    if not must_block:
-        # 内核不判、由模型判断，后续真实模型考试衡量。
-        assert owner_assertion_error(case['raw'], 0, len(case['raw'])) is None
-    result = attempt(path, case['raw'], decision='form' if must_block else 'no_change')
-    assert result['state'] == 'no_change', (case['id'], result['world_result_json'])
+    # All old sources are retained, but semantic cases no longer use a
+    # scripted no_change as proof of compiler rejection.
+    result = attempt(path, case['raw'])
+    if _POLICY['old-' + case['id']] == 'block':
+        assert result['state'] == 'no_change', result['world_result_json']
     with sqlite3.connect(path) as db:
-        assert db.execute('SELECT count(*) FROM cognition').fetchone() == (0,)
+        assert db.execute('SELECT count(*) FROM cognition').fetchone() == (int(result['state'] == 'applied'),)
         assert db.execute('SELECT count(*) FROM world_event').fetchone() == (0,)
         assert db.execute('SELECT raw_content FROM evidence').fetchall() == [(case['raw'],)]
 
@@ -119,7 +117,7 @@ def test_return_to_past_state_preserves_each_occurrence(
     ('小禾说：“我的长期目标是开图书馆。”', '我的长期目标是开图书馆。', True),
     ('My friend said, "My goal is to build a library."', 'My goal is to build a library.', True),
     ('If I were wealthy, my goal would be to build a library.', 'my goal would be to build a library.', False),
-    ("'My goal is to build a library.'", 'My goal is to build a library.', False),
+    ("'My goal is to build a library.'", 'My goal is to build a library.', True),
 ])
 def test_clipping_support_keeps_speaker_while_conditions_belong_to_model(
     tmp_path: Path, raw: str, quote: str, must_block: bool,
@@ -129,7 +127,7 @@ def test_clipping_support_keeps_speaker_while_conditions_belong_to_model(
     if not must_block:
         start = raw.index(quote)
         assert owner_assertion_error(raw, start, start + len(quote)) is None
-    assert attempt(path, raw, quote=quote, decision='form' if must_block else 'no_change')['state'] == 'no_change'
+    assert attempt(path, raw, quote=quote)['state'] == ('no_change' if must_block else 'applied')
 
 
 @pytest.mark.parametrize('topic', ['home', 'relationship'])
@@ -188,7 +186,11 @@ def test_source_rules_are_separate_from_model_semantics(tmp_path: Path, raw: str
     _initialize_database(path)
     if not must_block:
         assert owner_assertion_error(raw, 0, len(raw)) is None
-    assert attempt(path, raw, fields={'statement_kind': kind}, decision='form' if must_block else 'no_change')['state'] == 'no_change'
+    result = attempt(path, raw, fields={'statement_kind': kind})
+    if must_block:
+        assert result['state'] == 'no_change'
+    else:
+        assert result['state'] in {'applied', 'no_change'}  # model-only state semantics
 
 
 @pytest.mark.parametrize('raw', [

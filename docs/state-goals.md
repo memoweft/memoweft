@@ -30,60 +30,71 @@ remain frozen; passing a compiler test does not rescore the historical exam.
 
 ## Current formation boundary
 
-Explicit enduring goals remain sourced `preference` intentions, never invented
-completed events. Original Evidence, numbers, conditions and wording remain
-unchanged; the existing Chinese subject normalization is retained. Model
-interpretation owns semantic eligibility. The deterministic source guard is
-limited to the following high-confidence rules:
+Explicit enduring goals remain sourced `preference` intentions. No new stored
+kind or SQLite schema is introduced. The optional boolean interpretation field
+`is_long_term_goal` requests whitelist validation; it cannot disable source
+syntax checks when omitted or false. The existing typed conditional-reminder
+and two-source confirmation paths remain ordinary decisions, not long-term
+goals. Original Evidence and support offsets are never rewritten or duplicated.
 
-- 长期目标/状态只能来自用户本人的发言（不是助手、不是引用别人原话）。
-- 明确否定直接作用于目标动词（「我不打算/从未打算/不想 + 成为/做…」、
-  `I don't/never intend/plan/want to …`），且该句里没有另一个肯定目标从句时拦；
-  「我不打算中断训练，我的长期目标是成为护士」这种后半句有肯定目标的必须通过。
-- 明确的他人所有格作为目标主语（「我女儿的目标」「我朋友想」
-  `My daughter's goal`、`my friend wants`）不记成本人的目标；
-  本包对错误的 owner 解释零写入，保留 Evidence，不猜那个人的实体身份。
-- 删除「如果/要是/if」一律当假设的规则，带条件的目标仍是目标；
-  删除「今天开始…」判成一次性计划的规则；删除其他靠关键词猜语义的规则。
+The deterministic guard now uses a clause whitelist. These are the manager's
+rules, including the exact additional exclusion lists:
 
-Possessives must be goal subjects, not objects in a user's own goal such as
-“My goal is to support my daughter's goal”. Negative and affirmative clauses
-are checked separately, including semicolon-separated clauses. Source-range
-validation retains explicit speaker context when a model selects inside a
-foreign quotation; it never expands or rewrites the stored support. A book
-title ending in `?` does not prevent an explicit goal declaration from reaching
-interpretation. Existing typed Evidence, permission, confirmation, task-only
-eligibility and explicit correction/retraction paths remain separate.
+1. 先把用户原话按句号、分号、逗号后接主语等切成分句（中英文都要）。
+2. 一个分句**只有同时满足**以下条件，才能支持「本人长期目标/计划」：
+   - 主语是说话人本人：分句以「我 / 我的目标 / 我的计划 / 我打算 / 我想 / 我要 / 我准备」或 `I / My goal / My plan / I plan / I intend / I want / I'm going to / I aim` 开头（允许前面有时间状语，例如「三年内我要…」`next year I intend …`）；
+   - 该分句内没有否定词修饰目标动词（不/没/从未/不再/不打算/don't/never/not/no longer…）；
+   - 该分句内没有他人所有格或他人主语（「我女儿的 / 我父母的 / 我朋友想」`my daughter's / my parents' / my friend wants`；任何「我的 + 称谓/人名 + 的」或 `my + noun + 's/s'`）；
+   - 不是问句。
+3. 模型建议形成目标、但没有任何分句满足白名单的：**不形成长期目标**，原话照常作为普通记忆来源保存（不丢信息）。白名单之外的说法识别不出来，接受为召回限制，写进 PR「已知限制」。
+4. 「如果/if」条件不影响判断（条件目标仍是目标）；目标从句里的动词（say/tell 等）不能被当作转述他人的标记——只有分句**主语**是别人、或整句是引号引述时才算他人发言。
+
+- 近期时间词：今晚、今天、明天、待会、等会、马上、这周末；`tonight`、`today`、`tomorrow`、`this afternoon`、`this evening`、`later today`、`right now`。
+- 明确玩笑/收回：开玩笑的、开个玩笑、说着玩的、逗你的；`just kidding`、`jk`、`kidding`。
+
+两组排除标记分句内出现就不算长期目标，包括加引号的标记。没有反讽、
+反事实或活动类别黑名单，也不再用目标内容中的 say/tell 猜测转述。
+被选来源必须实际覆盖合格目标分句：只选否定前半句不能凭后半句形成目标。
+完整来源含独立肯定目标分句时仍能形成；独立引用后用户另说的目标也能形成。
 
 ## Review corpus: three explicit expectations
 
 [`state-goals-policy-cases.json`](../py/tests/fixtures/state-goals-policy-cases.json)
-contains all 76 exact synthetic review examples: 30 old negatives, 20 new
-negatives, 20 new positives, and six previously false-rejected sources. The six
-overlapping positive examples remain separate records rather than being
-silently deduplicated. Every record names its source batch, language,
-expectation and rationale.
+retains all **96** exact review records: 30 old negatives, 20 second-review
+negatives, 20 second-review positives, six false-rejection records, and the
+third review's ten negatives and ten positives. The overlapping six records
+are counted separately; no original utterance is removed or rewritten.
 
-| Class    | Cases | Deterministic expectation                                                                                                                                                                                                        |
-| -------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 规则必拦 |    14 | Explicit foreign/assistant speech, direct goal-verb negation without another affirmative goal clause, or an explicit third-party possessive goal subject: reject a forced owner `form + preference` with zero World writes.      |
-| 规则必放 |    26 | All 20 new positives and all six false-rejected cases: form with complete verbatim support, including conditional goals, start dates, and affirmative goals following negation.                                                  |
-| 交给模型 |    36 | 内核不判、由模型判断，后续真实模型考试衡量。The new source guard returns no semantic refusal; a scripted model `no_change` makes no World writes. Forced `form` results are reported separately, not scored as correct memories. |
+| Class    | Cases | Forced-form result                                                                                                                           |
+| -------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 规则必拦 |    41 | **0/41** owner goals formed; all Evidence survives.                                                                                          |
+| 规则必放 |    28 | **28/28** form and recall with original support.                                                                                             |
+| 交给模型 |    27 | **19** semantic negatives and **8** positive known limitations. Actual forced `form` forms **11/27**; this is not a model correctness score. |
 
-The retained original negative tests now use this approved classification
-instead of the superseded “all negatives must be rejected by keyword rules”
-assertion. No original utterance is removed or rewritten. Supplemental cases
-likewise retain all original inputs: hypothetical/question semantics belong to
-the model, while explicit source attribution and directly negated intentions
-stay deterministic. The original 35 state/goal cases remain required.
+Every case runs the real worker, compiler, SQLite and recall with forced
+`form + preference`. There is no scripted `no_change` substitute for kernel
+rejection. Additional deterministic tests cover every exact exclusion marker,
+quoted markers, arbitrary singular/plural possessives, direct negation forms,
+time adjuncts, conditional goals, say/tell in goal content, optional annotations
+and source-span clipping. The original 35 state/goal cases remain required.
 
-Measured forced-output results on these 76 sources: rules reject **14/14**,
-rules allow **26/26**, and the new source guard abstains on **36/36** delegated
-examples. A scripted model `no_change` makes zero World writes for all 36.
-Forcing an erroneous `form` instead forms 28/36; eight retain the pre-existing
-task-only or pure-inquiry eligibility outcomes. This is deliberately not a
-36-case model accuracy or rejection-rate score. Actual semantic classification
-still needs the later real-model examination.
+## 已知限制
+
+内核不判、由模型判断/已知限制。白名单之外的说法识别不出来，接受为召回限制。
+模型负责反讽、隐含否定、反事实、角色扮演和尚未决定等语义；上述 **19** 条
+语义负例不宣称零形成，后续真实模型考试衡量。
+
+**8** 条正例审查记录按当前白名单不形成目标，原话仍留在 Evidence：
+
+- `new-positive-en-4`、`new-positive-zh-4`：首个目标分句有明确否定，后半句省略本人主语。
+- `new-positive-en-6`：`My ambition` 不在白名单主语句型中。
+- `new-positive-en-8`：未加引号书名中的问号不能由规则区别于问句；中文书名号内问号不拆句。
+- `new-positive-zh-1`：肯定分句「今年一定要」没有本人主语。
+- `new-positive-zh-3`、`false-rejection-3`、`review3-positive-zh-1`：分句含指定排除词「今天」，后半句没有新的本人主语；不再把「今天开始」当成无条件放行理由。
+
+语法覆盖是有限的：未识别的时间状语、主语省略和其他句式可能被拒绝；
+目标仍与普通偏好共用现有类型，省略目标注记且没有目标句法线索的模型输出
+仍由解释模型负责。这个边界不扩展为内核的全面语义分类器。
 
 ## Current state, recurrence and P2 source repair
 
@@ -134,18 +145,9 @@ bytes, selected identities, hits and false recalls. No frozen recall fixture, sc
 label, schema, deadline, retry or waiting limit is changed. Source-level tests,
 CI and live-provider acceptance remain separate.
 
-Before integrating #124: **2,525** full Python tests,
-**234** focused tests, **246** mypy source/test files, and **636** Node tests
-pass. Format, lint, typecheck, build, API snapshot and documentation links pass.
-All 76 review utterances remain exact, all 26 positive/false-rejection cases
-form, both P2 reproductions are green, and the 638 complete Chinese previews
-remain byte-identical with unchanged hit and false-recall results.
-
-After an ordinary merge of `origin/main` at `6b569fb` (#124), final integration
-validation passes **2,907/2,907** full Python tests, **234/234** focused tests,
-**254** mypy source/test files and **636/636** Node tests. Format, lint,
-typecheck and all 638 complete Chinese previews pass on the merged source;
-preview bytes, hits and false recalls still equal `b6fc783`. The 76-case rule
-classes and both P2 results remain unchanged. The PR retains its existing
-history recognition, predecessor traversal and explanations; #124's scoring
-implementation is not changed by this task.
+The current round preserves all 638 complete Chinese previews byte for byte
+against `b6fc783`, including selected identities, hits and false recalls, over
+three repeats. The merged #124 candidate and frame invariants pass **318/318**.
+The original recurrence, P2 source attachment, forgetting, kind and topic guards
+remain required. Full-suite results are recorded on the PR for the final head;
+CI and real-model acceptance remain separate.
