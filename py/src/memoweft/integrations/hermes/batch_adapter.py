@@ -489,14 +489,60 @@ _NEGATION_EN_RE = re.compile(
 _SPAN_PUNCTUATION = re.compile(r"[\s，。！？!?,.:;；、~～「」『』]+")
 
 
-def _is_confirmation_span(span_text: str, assistant_claim: str) -> bool:
-    """Deterministic predicate: is this user slice a bare confirmation?
+def _explicit_short_confirmation(span_text: str, assistant_claim: str) -> bool:
+    """Closed confirmation grammar; ordinary shared text is not assent.
+
+    Accept a known bare/action affirmative, or an affirmative followed by a complete
+    literal value from the proposal (e.g. ``对，就是G6`` / ``Yes, jasmine tea``).
+    Other restatements belong to stated Evidence, not an imported assistant
+    proposition. Never remove English word boundaries before checking denial.
+    """
+    stripped = _SPAN_PUNCTUATION.sub('', span_text)
+    if not stripped or len(stripped) > CONFIRMATION_SPAN_MAX_CHARS:
+        return False
+    # Action assent authorizes the selected action, not an adjacent factual
+    # guess. Apply this before generic affirmatives (notably 好/就这么办), and
+    # check assistant_claim itself rather than searching the complete context.
+    from .action_confirmation import is_action_assent, is_selected_action_proposal
+    if is_action_assent(span_text):
+        return is_selected_action_proposal(assistant_claim)
+    if _AFFIRM_RE.fullmatch(stripped):
+        return True
+    cleaned = span_text.replace('没错', '').replace('不错', '').replace('没问题', '')
+    if (any(marker in cleaned for marker in _NEGATION_CJK)
+            or re.search(r"\b(?:no|not|never|nope|wrong|cannot)\b|n['’]t\b", cleaned, re.I)
+            or re.search(r'[?？]', span_text)):
+        return False
+    parts = re.split(r'[\s，。！？!?,.:;；、~～「」『』]+', span_text.strip(), maxsplit=1)
+    if len(parts) != 2 or not _AFFIRM_RE.fullmatch(parts[0]):
+        return False
+    value = re.sub(r'^(?:就是|正是)', '', parts[1]).strip().rstrip('。.!！')
+    value = re.sub(r'\s+', ' ', value).strip()
+    if not value:
+        return False
+    # Match the whole stated value, not any two characters. ASCII boundaries
+    # protect tea/team while allowing the literal G6 in 小鹏G6.
+    pattern = re.escape(value)
+    if value[0].isascii() and value[0].isalnum():
+        pattern = r'(?<![a-z0-9_])' + pattern
+    if value[-1].isascii() and value[-1].isalnum():
+        pattern += r'(?![a-z0-9_])'
+    return re.search(pattern, re.sub(r'\s+', ' ', assistant_claim), re.I) is not None
+
+
+def _is_confirmation_span(span_text: str, assistant_claim: str, *, require_affirmative: bool = False) -> bool:
+    """Validate assent before importing a claim, or associate a stated source.
 
     A bare confirmation is short, negation-free, and either a pure affirmative
     token or shares a two-character run with the assistant's claim (e.g.
     "对，就是G6" shares "G6" with "那你开的是小鹏G6吧？").  Assistant guessing
     right is never Evidence: the slice is still the user's own words.
+    Importing an assistant proposition (confirmed) requires explicit assent;
+    the legacy overlap path only associates an already user-grounded stated
+    restatement with its proposal and never changes that stated proposition.
     """
+    if require_affirmative:
+        return _explicit_short_confirmation(span_text, assistant_claim)
     stripped = _SPAN_PUNCTUATION.sub("", span_text)
     if not stripped or len(stripped) > CONFIRMATION_SPAN_MAX_CHARS:
         return False
@@ -830,6 +876,7 @@ _SYSTEM_PROMPT = (
     "输入按逐字锚定校验。\n"
     "5. formed_by=confirmed：仅当 assistant 提出命题、用户短确认（无否定词）时用于 attribute/preference。assistant_claim 必须是 con"
     "text 的逐字子串；proposition 等于 claim 去语气词/问尾、把\"你/您\"换\"用户\"。assistant 猜对本身不是 Evidence。\n"
+    "confirmed 的完整用户回复须为白名单肯定短语，或肯定短语加 claim 中完整逐字的值（如‘对，就是G6’）；不能只裁选肯定词而丢掉同条回复里的否认，也不能凭普通陈述的字词重合算确认。其他完整重述用 stated 保留用户原话；无法确认则不导入助手命题。\n"
     "6. naming：命题如\"我的表弟叫阿硕\"（stated）；entity.canonical_name 必须是某条切片的逐字子串；kind 默认 person。同一实体名已存在就别重复 naming"
     "。**「我的X叫Y」句式：X 是亲密关系词（女朋友/男朋友/老婆/老公/对象）→ 发 relationship（见第 7 条）；X 是其他明确关系词（朋友/同学/同事/室友…）→ 同样发 relationship。只有未陈述关系的命名才单独发 naming。「取"
     "名叫X」一律 naming**。\n"
@@ -1010,6 +1057,7 @@ _SYSTEM_PROMPT_EN = (
     "the user confirmed it briefly (no negation). assistant_claim must be a verbatim substring of the con"
     "text; the proposition equals the claim with discourse particles and question tails removed (no prono"
     "un rewriting). The assistant guessing right is never Evidence by itself.\n"
+    "For confirmed, the complete user reply must be a known affirmative (including 'Yes, do that.'), or an affirmative followed by a complete literal value in the claim (e.g. 'Yes, jasmine tea.'). Never crop an affirmative from a reply containing denial or use incidental overlap as assent. Use stated for other explicit user restatements; do not import an unconfirmed assistant proposition.\n"
     "6. naming: propositions like \"My cousin is called Ashuo\" (stated); entity.canonical_name must be a v"
     "erbatim substring of a slice; kind defaults to person. Do not repeat naming when the same entity nam"
     "e already exists. **\"My X is called Y\" sentences: when X is an intimate relation word (girlfriend/bo"
@@ -3013,7 +3061,11 @@ class HermesBatchAdapterProcessor:
                     return None, "assistant_claim_context_missing"
                 if claim not in context:
                     return None, "assistant_claim_not_in_context"
-                if not _is_confirmation_span(slice_text, claim):
+                if not _is_confirmation_span(slice_text, claim, require_affirmative=formed_by == 'confirmed'):
+                    return None, "confirmed_span_not_confirmation"
+                # A model-selected "yes" cannot discard "not Oslo" from the
+                # same short user reply. Longer/mixed replies use stated spans.
+                if formed_by == 'confirmed' and not _explicit_short_confirmation(raw_by_id[evidence_id], claim):
                     return None, "confirmed_span_not_confirmation"
             expected = _confirm_normalize(claim)
             if formed_by == "confirmed":
@@ -5501,7 +5553,12 @@ class HermesBatchAdapterProcessor:
                     ("confirmed-source-" + _hash_text(_canonical([cognition_id, source_evidence_id, source["message_id"]])),
                      _canonical({"cognition_id": cognition_id, "evidence_id": source_evidence_id, "relation": "support"}),
                      _canonical({"schema_version": 1, "assistant_source": {
-                         "interaction_id": source["interaction_id"], "message_id": source["message_id"]}})))
+                         "interaction_id": source["interaction_id"], "message_id": source["message_id"],
+                         # Keep the complete persisted turn as provenance, but
+                         # bind a substring confirmation to its actual claim.
+                         **({"claim": item.assistant_claim} if item.assistant_claim
+                            and item.assistant_claim != source["content"] else {}),
+                     }})))
         for evidence_id, start, end, _slice in item.supports:
             if target_entity_id is not None and item.entity_canonical_name and item.entity_canonical_name in _slice:
                 self._write_entity_ledger(db, target_entity_id, evidence_id, start, end)
