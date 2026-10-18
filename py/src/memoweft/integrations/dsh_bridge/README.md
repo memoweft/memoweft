@@ -1,5 +1,29 @@
 # DSH RPC v2 observed Evidence (MW-2)
 
+## Process-local request replay
+
+RPC v2 retains at most 128 recently used response envelopes and 8 MiB of
+conservatively accounted Python objects per server. The entry limit covers four
+times WeftMate's 32 concurrent requests; the byte limit also bounds large source
+lists and exports. This is a replay-retention budget, not a whole-process limit:
+the active query and optional semantic model/index have their own working sets.
+An individual response larger than the budget is returned intact but not cached.
+No response history is moved to disk.
+
+Capabilities advertise `request_id_replay: bounded_same_process_exact_response`,
+`request_id_replay_max_entries`, `request_id_replay_max_bytes`, and
+`request_id_conflict_scope: retained_replay_window`. Within that window, an exact
+request returns a detached copy of its first envelope and a conflicting payload
+fails closed. Entries leave the window by least recent use, size, or the existing
+source-mutation/deletion invalidation. After a miss, Core dispatches normally:
+mutating calls must keep their durable boundary/command/answer/import identity;
+read calls observe current data. A request ID alone is not a durable business
+identity. Callers must not reuse it for a different operation. Existing durable
+replay and deletion fences are unchanged.
+
+The synthetic Windows memory probe is documented in
+[the benchmark instructions](../../../../../bench/bridge-memory/README.md).
+
 The default local formation route requests streamed OpenAI-compatible completions
 with usage and `chat_template_kwargs: {"enable_thinking": false}`. The existing
 300-second HTTP read timeout measures transport inactivity: queue informational
