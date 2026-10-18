@@ -30,42 +30,54 @@ def forget_targets(kind: str, item_id: str, additional: object = None) -> list[t
 def scope_target(kind: str, item_id: str, additional: object = None) -> tuple[str, str]:
     if additional is None:
         return kind, item_id
-    return 'batch', json.dumps(forget_targets(kind, item_id, additional), separators=(',', ':'))
+    # Earlier batch previews could omit a later target's independent sources.
+    # Their credentials cannot authorize the corrected, larger preview.
+    return 'batch-complete-sources-v2', json.dumps(forget_targets(kind, item_id, additional), separators=(',', ':'))
 
 
 def delete_targets(db: sqlite3.Connection, command: CommandEnvelopeV1, completed_at: str) -> CommandMutation:
-    from .true_delete import delete_evidence, delete_world_item
+    from .true_delete import delete_evidence, _world_item_delete_scope
     if command['payload'].get('additional_targets') is None:
         raise TrustCommandError('invalid_forget_targets')
     targets = forget_targets(command['target_kind'], command['target_id'], command['payload'].get('additional_targets'))
     payload = {k: v for k, v in command['payload'].items() if k != 'additional_targets'}
-    affected: set[str] = set()
+    # Freeze every explicit target's chain and complete source set before the
+    # first deletion can remove another target or its provenance links.
+    markers: set[tuple[str, str]] = set()
+    sources: set[str] = set()
+    world_sources: set[str] = set()
+    for kind, item_id in targets:
+        if kind == 'evidence':
+            if not db.execute('SELECT 1 FROM evidence WHERE id=? AND subject_id=?',
+                              (item_id, command['subject_id'])).fetchone():
+                return CommandMutation('rejected', rejection_code='world_item_not_found')
+            sources.add(item_id)
+        else:
+            scope = _world_item_delete_scope(db, command['subject_id'], kind, item_id)
+            if isinstance(scope, CommandMutation):
+                return scope
+            chain, target_sources = scope
+            markers.update((kind, linked_id) for linked_id in chain)
+            sources.update(target_sources)
+            world_sources.update(target_sources)
+    affected = {item_id for _, item_id in markers}
     applied = False
-    tables = {'cognition': ('cognition', 'subject_id'), 'entity': ('entity', 'world_id'),
-              'relationship': ('relationship', 'world_id'), 'event': ('world_event', 'world_id'),
-              'evidence': ('evidence', 'subject_id')}
-    def exists(kind: str, item_id: str) -> bool:
-        table, owner = tables[kind]
-        return db.execute(f'SELECT 1 FROM {table} WHERE id=? AND {owner}=?',
-                          (item_id, command['subject_id'])).fetchone() is not None
-    if any(not exists(kind, item_id) for kind, item_id in targets):
-        return CommandMutation('rejected', rejection_code='world_item_not_found')
     # A later target may reject. Roll back earlier targets too, including all
     # markers, dependencies and source bodies; only the outer command commits.
     db.execute('SAVEPOINT delete_confirmed_targets')
     try:
-        for kind, item_id in targets:
-            # An earlier cascade may already have removed an explicitly named
-            # target. Only this transaction's actual affected set can prove it.
-            if item_id in affected and not exists(kind, item_id):
-                continue
-            child = cast(CommandEnvelopeV1, {**command, 'target_kind': kind, 'target_id': item_id, 'payload': payload})
-            result = (delete_evidence if kind == 'evidence' else delete_world_item)(
-                db, child, completed_at, command['subject_id'])
-            if result.result_state == 'rejected':
+        db.executemany(
+            'INSERT OR IGNORE INTO world_delete_marker (subject_id, object_kind, item_id, deleted_at) VALUES (?,?,?,?)',
+            [(command['subject_id'], kind, item_id, completed_at) for kind, item_id in sorted(markers)])
+        # Deduplicate sources, not vanished World objects. Every frozen source
+        # still reaches the existing origin and cascade checks.
+        for evidence_id in sorted(sources):
+            child = cast(CommandEnvelopeV1, {**command, 'target_kind': 'evidence', 'target_id': evidence_id, 'payload': payload})
+            result = delete_evidence(db, child, completed_at, command['subject_id'])
+            if result.result_state == 'rejected' or (evidence_id in world_sources and result.result_state != 'applied'):
                 db.execute('ROLLBACK TO delete_confirmed_targets')
                 db.execute('RELEASE delete_confirmed_targets')
-                return result
+                return CommandMutation('rejected', rejection_code=result.rejection_code or 'source_already_deleted')
             applied = applied or result.result_state == 'applied'
             affected.update(result.affected_ids)
         db.execute('RELEASE delete_confirmed_targets')

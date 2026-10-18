@@ -95,7 +95,12 @@ MemoWeft keeps these boundaries explicit:
   lists the combined cascade; the token binds the ordered target list as well
   as all affected context copies. A missing scope, changed target/context or
   rejected source rolls back the entire batch. Overlapping revision chains
-  are erased once. Retain the original confirmed token; no per-target refresh
+  are erased once. Every explicit target's full revision chain and source set
+  is collected before any cascade writes, so an object removed by an earlier
+  source never causes its remaining sources or rejection checks to be skipped.
+  Credentials from the earlier incomplete batch preview are rejected; obtain a
+  new complete preview and confirmation. Single-target credentials are unchanged.
+  Retain the original confirmed token; no per-target refresh
   or host-side queue is needed. Existing single-target calls remain unchanged.
   The same scope includes `evidence.preceding_ai_context` copies. Preview items
   identify them as `object_kind=evidence_context`, `item_type=preceding_ai_context`;
