@@ -173,3 +173,34 @@ Temporal explanations are emitted on the current occurrence, keeping the
 existing output budget available for past facts rather than repeating the same
 explanation on every past entry. The Chinese 638-case complete-preview gate is
 unchanged; no scoring function, label, schema, deadline, retry or wait changes.
+
+## Automated-review thread verification
+
+Both reported guards are already present in `38381703`; this follow-up adds
+behavioral evidence without changing product code. The new
+[`test_state_goals_review_threads.py`](../py/tests/test_state_goals_review_threads.py)
+runs the real worker/compiler, SQLite transaction and read-only recall. Only
+interpretations are fixed responses; legacy topic sidecars are seeded explicitly
+after real formation, without changing original Evidence or topic provenance.
+
+| Finding                                        | Historical reproduction                                                                                           | Current evidence                                                                                                                                                                                            |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Parsed topic was mistaken for an omitted topic | Four mismatched-topic cases were incorrectly applied by the `50f65bec` formation adapter and successor validator. | `38381703` rejects all four before World writes, for Chinese/English and both current topic cues and legacy topic targets; all eight same-topic/omitted-topic controls apply and recall only the successor. |
+| Predecessor cognition kind was not compared    | Four mismatches were incorrectly applied by the same historical adapter/validator.                                | `38381703` rejects attribute→preference and preference→attribute in both languages; all four matching-kind controls apply and recall only the successor.                                                    |
+
+The unchanged 20 tests produce **8 failures / 12 passes** with the frozen
+`50f65bec` formation adapter and successor validator, and **20/20 passes** with
+current product code. Rejected cases assert the exact reason, unchanged World
+rows, support/target/entity ledgers and revision, and identical current recall.
+Accepted controls assert the real replacement transition and current recall;
+every case also checks both verbatim input sources. The existing 123 focused
+tests stay required alongside these 20 tests, including the 30 rejected review
+negatives and the original 35 cases. Historical replay does not claim a complete
+historical-system or live-provider evaluation.
+
+Thread-follow-up verification: full Python **2,434/2,434**, focused
+**143/143** (the existing 123 plus 20 thread cases), mypy **245** files,
+format and lint pass. The 30 review negatives still accept zero, the original
+35 cases pass, and all 638 complete Chinese previews equal `b6fc783` byte for
+byte with unchanged hits and false recalls. Product code is unchanged from
+`38381703`.
