@@ -129,6 +129,10 @@ MemoWeft keeps these boundaries explicit:
   `preceding_candidates`. Both fit atomically in the existing quote budget.
   Completed turns wake formation immediately; host queues own capacity
   and foreground priority.
+- Preference/state successor entities identify the subject, not the changed value.
+  A value accidentally labelled as a topic receives the existing single durable
+  compiler rewrite with this contract; fenced Apply still enforces the original
+  same-account, same-subject and user-evidence checks.
 - A single explicit correction can replace several named Cognition targets with
   one deterministic successor. Only identical, compiler-grounded correction items
   with the same support spans may share that successor; ordinary duplicate forms,
