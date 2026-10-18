@@ -42,7 +42,9 @@ def words(text: str) -> set[str]:
 def substantive_words(text: str) -> set[str]:
     """Preserve original case and contraction provenance before comparison.
 
-    Uppercase words (including single letters), and capitalized words after
+    Case is read from the root before a straight or curly apostrophe, so a
+    lowercase grammatical suffix cannot hide an uppercase acronym. Uppercase
+    words (including single letters), and capitalized words after
     another word in the same sentence, are substantive on either side. Bare
     s/t/d/m/ll/re/ve are absent from FRAME_WORDS. Only an actual apostrophe
     construction supplies generated grammatical words: won't has no 'won',
@@ -57,7 +59,13 @@ def substantive_words(text: str) -> set[str]:
             sentence_start += boundary + 1
             prefix = text[sentence_start:match.start()]
         raw = match[0]
-        protected = raw.isupper() or (raw[0].isupper() and any(char.isalpha() for char in prefix))
+        case_root = re.split(r"['’]", raw, maxsplit=1)[0]
+        # English capitalizes the personal pronoun I even in ordinary I'm /
+        # I've / I'll / I'd. Preserve their existing grammatical treatment;
+        # this orthographic convention is not an uppercase acronym cue.
+        pronoun_contraction = re.fullmatch(r"I['’](?:m|ve|ll|d)", raw) is not None
+        protected = (raw.isupper() or (case_root.isupper() and not pronoun_contraction)
+                     or (case_root[0].isupper() and any(char.isalpha() for char in prefix)))
         folded = raw.casefold().replace('’', "'")
         if folded in _NEGATIVE:
             # Whole irregular negative auxiliary, never a free 'won'/'can'.

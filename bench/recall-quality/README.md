@@ -42,6 +42,11 @@ substantive if it is all uppercase (including single letters and standalone
 side's protected occurrence preserves the shared word. Each authorized search
 projection has its own sentence start. A bare `d`, `m` or `re` is substantive;
 only an actual apostrophe construction generates grammatical suffixes.
+Case is checked on the original root before either straight or curly
+apostrophes: `IT's`, `IT’s`, `WHO's` and `US's` retain their uppercase roots.
+Ordinary personal-pronoun `I'm`/`I've`/`I'll`/`I'd` retain their existing grammar
+treatment: English capitalizes this pronoun by convention. Independent letters
+and acronym roots are protected; explicit controls verify both behaviors.
 Contractions expand completely (`What's` → `what is`, `won't` → `will not`),
 including curly apostrophes. Generated auxiliary `will` in `won't`/`I'll` is
 grammatical; bare `will` remains substantive. No truncated `won` is generated.
@@ -57,6 +62,10 @@ permitted deletion, without skipping or relabelling them as negatives. In the
 complete matcher the previous nomination arm already retains the `not` sample;
 the other ten samples demonstrate the remaining misses. This limitation is
 accepted for this revision, not a claim of universal English recall.
+The lowercase noun `does` (plural of female deer, `doe`) is another accepted
+rare-sense limitation. An explicit positive control records main recalling
+`The does sleep in the meadow.` for `Where are the does?`, while current recall
+remains empty; this sample is not skipped or relabelled as a negative.
 
 ### Frozen collections and measured floors
 

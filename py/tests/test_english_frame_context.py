@@ -33,6 +33,46 @@ def test_review_29_contexts_retain_main_answer(case: dict[str, Any], context_res
         assert [item["id"] for item in matcher(case["query"], rows)] == ["target"]
 
 
+@pytest.mark.parametrize("query,content", [
+    ("IT's in charge of what?", "IT's responsible for the wireless network."),
+    ("IT’s in charge of what?", "IT’s responsible for the wireless network."),
+    ("WHO's role?", "WHO's responsible for the vaccination program."),
+], ids=["IT-straight", "IT-curly", "WHO-possessive"])
+def test_review_apostrophe_root_case_retains_main(query: str, content: str) -> None:
+    # The review supplied the IT sentence and its curly-apostrophe counterpart;
+    # the WHO question uses a synthetic organization-role fact.
+    rows = [dict(id="target", kind="cognition", confidence=600, content=content)]
+    for main, current in ((recall._match_world_rows_main, recall._match_world_rows),
+                          (recall.match_cognitions_main, recall.match_cognitions)):
+        assert [item["id"] for item in main(query, rows)] == ["target"]
+        assert [item["id"] for item in current(query, rows)] == ["target"]
+    observed = run([dict(id="apostrophe-root", query=query, memories=rows, expect=["target"])])
+    assert observed[0]["selected"] == ["target"]
+
+
+@pytest.mark.parametrize("apostrophe", ["'", "’"])
+@pytest.mark.parametrize("root", ["IT", "WHO", "US", "A", "I"])
+@pytest.mark.parametrize("side", ["query", "memory"])
+def test_uppercase_apostrophe_root_on_either_side_is_substantive(root: str, apostrophe: str, side: str) -> None:
+    possessive = root + apostrophe + "s"
+    query = possessive + " role?" if side == "query" else root.lower() + " role?"
+    content = root.lower() + " coordinates supplies." if side == "query" else possessive + " coordinating supplies."
+    row = dict(id="target", kind="cognition", content=content)
+    assert policy.compose(query, [row], [row], [], max_items=5) == [row]
+
+
+def test_does_female_deer_plural_is_an_explicit_known_limit() -> None:
+    # Accepted rare noun sense, not an xfail or a negative answer label.
+    query = "Where are the does?"
+    rows = [dict(id="target", kind="cognition", confidence=600, content="The does sleep in the meadow.")]
+    for main, current in ((recall._match_world_rows_main, recall._match_world_rows),
+                          (recall.match_cognitions_main, recall.match_cognitions)):
+        assert [item["id"] for item in main(query, rows)] == ["target"]
+        assert current(query, rows) == [], "documented doe-plural limitation remains"
+    observed = run([dict(id="does-known-limit", query=query, memories=rows, expect=["target"])])
+    assert observed[0]["selected"] == [] and observed[0]["rank"] == 0
+
+
 @pytest.mark.parametrize("word", "he be as in at do and for not or a".split())
 def test_documented_lowercase_rare_senses_remain_known_limits(word: str) -> None:
     # Accepted limitation, not an xfail/skip or a positive relabelled negative.
@@ -72,19 +112,25 @@ def test_title_case_at_sentence_start_is_not_automatically_a_name() -> None:
     assert policy.compose("Who remembers?", [row], [row], [], max_items=5) == []
 
 
-@pytest.mark.parametrize("query,content", [
-    ("What's ready?", "what's pending."),
-    ("I won't ski.", "we won't sail."),
-    ("I'm skiing.", "I'm sailing."),
-    ("I'll ski.", "I'll sail."),
-    ("I'd ski.", "I'd sail."),
-    ("we're skiing.", "we're sailing."),
-    ("we've skied.", "we've sailed."),
-    ("we can't ski.", "we can't sail."),
+@pytest.mark.parametrize("query,content,retain", [
+    ("What's ready?", "what's pending.", False),
+    ("I won't ski.", "we won't sail.", False),
+    ("I'm skiing.", "I'm sailing.", False),
+    ("I'll ski.", "I'll sail.", False),
+    ("I'd ski.", "I'd sail.", False),
+    ("I've skied.", "I've sailed.", False),
+    ("i'm skiing.", "i'm sailing.", False),
+    ("i'll ski.", "i'll sail.", False),
+    ("i'd ski.", "i'd sail.", False),
+    ("we're skiing.", "we're sailing.", False),
+    ("we've skied.", "we've sailed.", False),
+    ("we can't ski.", "we can't sail.", False),
 ])
-def test_actual_apostrophe_contractions_still_allow_grammar_only_deletion(query: str, content: str) -> None:
+def test_apostrophe_grammar_respects_original_root_case(query: str, content: str, retain: bool) -> None:
+    # Ordinary personal-pronoun I is conventionally capitalized. Preserve the
+    # existing grammar-only contraction behavior rather than treating it as IT.
     row = dict(id="target", kind="cognition", content=content)
-    assert policy.compose(query, [row], [row], [], max_items=5) == []
+    assert policy.compose(query, [row], [row], [], max_items=5) == ([row] if retain else [])
 
 
 @pytest.mark.parametrize("field", ["match_text", "anchors", "topic_cues", "predecessor_match_texts"])

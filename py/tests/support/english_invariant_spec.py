@@ -50,7 +50,10 @@ def substantive(text: str) -> set[str]:
     for token in re.finditer(r"[a-z0-9_\-]+(?:['’][a-z]+)?", text, re.I):
         raw = token[0]
         clause = re.split(r"[.!?\n]", text[:token.start()])[-1]
-        protected = raw.isupper() or (raw[0].isupper() and bool(re.search(r"[^\W\d_]", clause)))
+        root = raw.replace('’', "'").partition("'")[0]
+        pronoun = raw.replace('’', "'") in {"I'm", "I've", "I'll", "I'd"}
+        protected = (raw.isupper() or (root.isupper() and not pronoun)
+                     or (root[0].isupper() and bool(re.search(r"[^\W\d_]", clause))))
         lower = raw.lower().replace('’', "'")
         if lower in {"won't", "can't", "shan't"}:
             if protected:
