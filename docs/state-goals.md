@@ -45,6 +45,7 @@ rules, including the exact additional exclusion lists:
    - 主语是说话人本人：分句以「我 / 我的目标 / 我的计划 / 我打算 / 我想 / 我要 / 我准备」或 `I / My goal / My plan / I plan / I intend / I want / I'm going to / I aim` 开头（允许前面有时间状语，例如「三年内我要…」`next year I intend …`）；
    - 该分句内没有否定词修饰目标动词（不/没/从未/不再/不打算/don't/never/not/no longer…）；
    - 该分句内没有他人所有格或他人主语（「我女儿的 / 我父母的 / 我朋友想」`my daughter's / my parents' / my friend wants`；任何「我的 + 称谓/人名 + 的」或 `my + noun + 's/s'`）；
+     目标分句内任意位置出现「我＋称谓/人名＋的」（我女儿的、我父母的、我朋友的、我哥的…）都按他人所有格排除，与英文 `my X's` 一致，不要求后接「目标/计划」。
    - 不是问句。
 3. 模型建议形成目标、但没有任何分句满足白名单的：**不形成长期目标**，原话照常作为普通记忆来源保存（不丢信息）。白名单之外的说法识别不出来，接受为召回限制，写进 PR「已知限制」。
 4. 「如果/if」条件不影响判断（条件目标仍是目标）；目标从句里的动词（say/tell 等）不能被当作转述他人的标记——只有分句**主语**是别人、或整句是引号引述时才算他人发言。
@@ -68,16 +69,16 @@ rules, including the exact additional exclusion lists:
 ## Review corpus: three explicit expectations
 
 [`state-goals-policy-cases.json`](../py/tests/fixtures/state-goals-policy-cases.json)
-retains all **191** records: the previous **171** unchanged records, all
-**17** sixth-review sources (six reported failures, six other-person negatives
-and five positives), and **3** explicit conservative-rule limitations. Previous
+retains all **196** records: the previous **191** unchanged records and
+**5** seventh-review object-possessive sources (the bilingual reviewer pair
+and three authored Chinese variants). Previous
 overlapping review records remain separate. No utterance is rewritten.
 
-| Class               | Cases | Forced-form result                                                                                                                                                   |
-| ------------------- | ----: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 规则必拦            |    93 | **0/93** owner goals formed, including all previous **81** rejections and all six reported failures. Those six previously formed **6/6**.                            |
-| 规则必放            |    70 | **70/70** form and recall: previous **65/65** and all **5/5** new reviewer positives. No previous allow record or new reviewer positive moves to a limitation.       |
-| 交给模型 / 已知限制 |    28 | **17** semantic negatives and **11** positive limitations. Forced `form` forms **10/28**; not a model correctness score. This round adds **3** positive limitations. |
+| Class               | Cases | Forced-form result                                                                                                                                                                   |
+| ------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 规则必拦            |    98 | **0/98** owner goals formed, including all previous **93** rejections and five object-possessive cases. The four Chinese cases previously formed **4/4**.                            |
+| 规则必放            |    70 | **70/70** form and recall: previous **65/65** and all **5/5** new reviewer positives. No previous allow record or new reviewer positive moves to a limitation.                       |
+| 交给模型 / 已知限制 |    28 | **17** semantic negatives and **11** positive limitations. Forced `form` forms **10/28**; not a model correctness score. No new positive limitation in the object-possessive repair. |
 
 Every case runs the real worker, compiler, SQLite and recall with forced
 `form + preference`. There is no scripted `no_change` substitute for kernel
@@ -99,6 +100,16 @@ finite; unrecognized forms remain a whitelist limitation. Bare terminal 计划
 and English determiner + plan references are nouns, not goal predicates.
 Bilingual lifecycle tests verify that a completed-plan reference still
 supersedes the ongoing plan, without adding completion/activity keyword rules.
+
+The seventh review found that Chinese short possessives were only excluded
+before 目标/计划. Object content such as 我女儿的教育 now follows the same
+clause-wide possessive exclusion as `my daughter's education`. No title/name
+list is used. The validated direct owner subject is excluded from the content
+scan, so 我希望/我要 followed by an ordinary 的 phrase is not mistaken for
+another person's possessive. The four Chinese cases cross whole/prefix-only
+support with annotated/unannotated proposals: **16 red → 16 green**. The
+English comparison and eight owner-subject positive controls also pass.
+All previous **70** allow records remain allowed; **0** migrate to known limits.
 
 ## Clause-local validation and support ranges
 
@@ -138,7 +149,7 @@ now deliberately reject under rule 9, as documented below.
 - `new-positive-zh-1`：肯定分句「今年一定要」没有本人主语。
 - `new-positive-zh-3`、`false-rejection-3`、`review3-positive-zh-1`：分句含指定排除词「今天」，后半句没有新的本人主语；不再把「今天开始」当成无条件放行理由。
 
-本轮新增 **3** 条正例已知限制，均不形成目标，完整原话作为普通 Evidence 保存：
+第六轮新增的 **3** 条正例已知限制，均不形成目标，完整原话作为普通 Evidence 保存：
 
 | ID                        | 原话                                                       | 规则代价                                                                   |
 | ------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -148,7 +159,7 @@ now deliberately reject under rule 9, as documented below.
 
 原有 **65** 条必放受规则 8、9 影响而迁移的记录：**0**。
 本轮审查者 **5** 个“后半句为本人目标”正例迁移的记录：**0**。
-新增限制是上述三条独立原话记录；同一原话的整句/裁选路径不重复计数。
+第六轮新增限制是上述三条独立原话记录；同一原话的整句/裁选路径不重复计数。
 
 过往谓词仅使用规则 8 写明的形式，不扩成过去时态语义分类器。后续收回
 延用既有否定词及目标意向谓词和直接主语语法，另识别不会去、独立算了 /

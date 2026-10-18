@@ -14,6 +14,7 @@ from test_state_goals_whitelist import CASES
 
 
 CLAUSE_CASES = [c for c in CASES if 'goal_quote' in c]
+OBJECT_POSSESSIVE_CASES = [c for c in CASES if c['batch'] == 'review7-object-possessive']
 CONNECTORS = [('zh', word) for word in ['但', '但是', '可是', '不过', '然而', '而', '只是', '而且', '并且']]
 CONNECTORS += [('en', word) for word in ['but', 'however', 'though', 'and']]
 
@@ -42,6 +43,31 @@ def _check(path: Path, raw: str, quote: str | None, lang: Literal['en', 'zh'],
             assert rows == []
             assert snapshot is None or not snapshot.selected_item_ids
         assert db.execute('SELECT count(*) FROM world_event').fetchone() == (0,)
+
+
+@pytest.mark.parametrize('case', OBJECT_POSSESSIVE_CASES, ids=lambda case: case['id'])
+@pytest.mark.parametrize('annotated', [False, True])
+@pytest.mark.parametrize('selected_only', [False, True])
+def test_object_possessive_cannot_support_owner_goal(
+    tmp_path: Path, case: dict[str, Any], annotated: bool, selected_only: bool,
+) -> None:
+    # Force form through the worker; clipping before the possessive cannot
+    # remove counterevidence inside the same supporting goal clause.
+    _check(tmp_path / 'world.sqlite', case['raw'], case['prefix_quote'] if selected_only else None,
+           case['lang'], applied=False, annotated=annotated)
+
+
+@pytest.mark.parametrize('raw,lang', [
+    ('我希望提高当地的教育水平。', 'zh'),
+    ('我要提高当地的教育水平。', 'zh'),
+    ('I hope to improve local education.', 'en'),
+    ('I am going to improve local education.', 'en'),
+])
+@pytest.mark.parametrize('annotated', [False, True])
+def test_validated_owner_subject_is_not_a_content_possessive(
+    tmp_path: Path, raw: str, lang: Literal['en', 'zh'], annotated: bool,
+) -> None:
+    _check(tmp_path / 'world.sqlite', raw, None, lang, annotated=annotated)
 
 
 @pytest.mark.parametrize('case', CLAUSE_CASES, ids=lambda case: case['id'])

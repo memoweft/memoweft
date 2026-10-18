@@ -8,6 +8,7 @@ import re
 #    - 主语是说话人本人：分句以「我 / 我的目标 / 我的计划 / 我打算 / 我想 / 我要 / 我准备」或 `I / My goal / My plan / I plan / I intend / I want / I'm going to / I aim` 开头（允许前面有时间状语，例如「三年内我要…」`next year I intend …`）；
 #    - 该分句内没有否定词修饰目标动词（不/没/从未/不再/不打算/don't/never/not/no longer…）；
 #    - 该分句内没有他人所有格或他人主语（「我女儿的 / 我父母的 / 我朋友想」`my daughter's / my parents' / my friend wants`；任何「我的 + 称谓/人名 + 的」或 `my + noun + 's/s'`）；
+#      目标分句内任意位置出现「我＋称谓/人名＋的」（我女儿的、我父母的、我朋友的、我哥的…）都按他人所有格排除，与英文 `my X's` 一致，不要求后接「目标/计划」。
 #    - 不是问句。
 # 3. 模型建议形成目标、但没有任何分句满足白名单的：**不形成长期目标**，原话照常作为普通记忆来源保存（不丢信息）。白名单之外的说法识别不出来，接受为召回限制，写进 PR「已知限制」。
 # 4. 「如果/if」条件不影响判断（条件目标仍是目标）；目标从句里的动词（say/tell 等）不能被当作转述他人的标记——只有分句**主语**是别人、或整句是引号引述时才算他人发言。
@@ -67,7 +68,7 @@ _OWNER = re.compile(
 )
 _OTHER_POSSESSIVE = re.compile(
     r"我的(?!长期目标|长期计划|目标|计划)[^，,。;；！？!?：:\s的]+的"
-    r"|我(?!的)[^，,。;；！？!?：:\s的]+的(?:目标|计划)"
+    r"|我(?!的)[^，,。;；！？!?：:\s的]+的"
     r"|\bmy\s+[\w-]+(?:'s|s')(?=\s|$)", re.I,
 )
 # Negation is ordered within one clause, never bounded by an adverb count.
@@ -151,9 +152,10 @@ def _supported_owner_goal(clause: str) -> bool:
         copula = _COPULA_HEAD.match(clause, target.start())
         if copula is not None and _NEGATION.search(copula[0]):
             return False
-    # The subject region is validated. Preserve the existing exclusion for
-    # explicit possessives in content without spanning from owner 我 over its verb.
-    return _OTHER_POSSESSIVE.search(clause[target.start():]) is None
+    # The direct subject is already validated. Scan all remaining content,
+    # including objects, without spanning from owner 我 over its verb in
+    # predicates starting with 我 (e.g. 我希望 / 我要).
+    return _OTHER_POSSESSIVE.search(clause[max(target.start(), subject.end()):]) is None
 
 
 def _owner_retraction(clause: str) -> bool:

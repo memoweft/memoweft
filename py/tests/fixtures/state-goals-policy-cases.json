@@ -1,5 +1,5 @@
 {
-  "source": "Exact synthetic examples from six PR #125 independent reviews plus authored variants and explicit conservative-rule limitations; overlapping review records remain separate.",
+  "source": "Exact synthetic examples from seven PR #125 independent reviews plus authored variants and explicit conservative-rule limitations; overlapping review records remain separate.",
   "policy": "Clause whitelist plus exactly the manager-specified near-term and joking/retraction markers; block/allow/model are explicit review expectations, not model scores.",
   "cases": [
     {
@@ -1747,6 +1747,56 @@
       "expectation": "model",
       "known_limit": true,
       "reason": "已知限制：后续本人否定意向一律视为收回，不判断是否在否定放弃或另一个目标；保留普通 Evidence。"
+    },
+    {
+      "id": "review7-object-zh",
+      "batch": "review7-object-possessive",
+      "lang": "zh",
+      "raw": "我的目标是资助我女儿的教育。",
+      "prefix_quote": "我的目标是资助",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：目标分句内任意位置的他人所有格均排除；不要求后接目标/计划，与英文 my X's 对称。"
+    },
+    {
+      "id": "review7-object-en",
+      "batch": "review7-object-possessive",
+      "lang": "en",
+      "raw": "My goal is to fund my daughter's education.",
+      "prefix_quote": "My goal is to fund",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：目标分句内任意位置的他人所有格均排除；不要求后接目标/计划，与英文 my X's 对称。"
+    },
+    {
+      "id": "review7-object-parents",
+      "batch": "review7-object-possessive",
+      "lang": "zh",
+      "raw": "我的目标是改善我父母的生活。",
+      "prefix_quote": "我的目标是改善",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：目标分句内任意位置的他人所有格均排除；不要求后接目标/计划，与英文 my X's 对称。"
+    },
+    {
+      "id": "review7-object-friend",
+      "batch": "review7-object-possessive",
+      "lang": "zh",
+      "raw": "我的计划是支持我朋友的研究。",
+      "prefix_quote": "我的计划是支持",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：目标分句内任意位置的他人所有格均排除；不要求后接目标/计划，与英文 my X's 对称。"
+    },
+    {
+      "id": "review7-object-brother",
+      "batch": "review7-object-possessive",
+      "lang": "zh",
+      "raw": "我打算照顾我哥的孩子。",
+      "prefix_quote": "我打算照顾",
+      "expectation": "block",
+      "known_limit": false,
+      "reason": "规则必拦：目标分句内任意位置的他人所有格均排除；不要求后接目标/计划，与英文 my X's 对称。"
     }
   ]
 }
