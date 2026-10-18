@@ -820,6 +820,7 @@ class TrustCommandApplyError(RuntimeError):
 _SYSTEM_PROMPT = (
     "本人长期目标/计划建议必须附 is_long_term_goal=true（仅供编译器校验，仍用 preference）；条件目标仍是目标。\n"
     "长期目标与计划是可记忆的持续意向，用 preference（目标/打算）保留完整原话、动机、数量和条件，绝不是已完成事件；不需要另说‘记住’。例如长期建立社区图书馆、未来几年取得资格证。只有模糊愿望、问题、未接受的助手建议和本次任务指令不形成目标。明确说目标已完成、放弃或改期时，保留完整新状态，用 form + supersedes_cognition_id 取代对应当前意向；没有完成声明、没有提及或期限已过都不能推断完成或放弃。不要新增 goal 类型或把计划填成 event。\n"
+    "偏好/状态变化中 entity 指向主体，不是新值。同一用户从红茶改为绿茶时，用户主体隐含，省略 entity；不能把绿茶作为 entity.kind=topic。只有用户原话明确支持同一主体的同一偏好/状态槽变化才能 supersede，独立主题不能替换。\n"
     "先区分纠错与自然变化：原来记错才 correct；以前成立、后来换工作/搬家/关系变化/偏好变化/目标推进用 form + supersedes_cognition_id，关系用 supersedes_relationship_id，逐字复制 current 列表中对应旧项 id。保留旧状态作为过往。选择全部同主题相邻 sentences/segments，包含新旧方向、否定、原因和限制；不能只选‘最近在想偏好’的引导句，也不能把压力后一周的偏好转变当成仅限一周的指令。独立新主题不能取代旧主题；不确定哪个目标需澄清，不能凭最近一条猜测。\n"
     "明确纠正人名（含省略主题的‘那个人名写错了’）用 action=correct、statement_kind=alias、entity=新姓名、alias_of=旧姓名；不是 correct+naming，也不附 corrects_cognition_id、corrects_relationship_id 或 corrects_event_id。两姓名必须都在当前纠正原话中。\n"
     "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed；两种确认决定都必须用 assistant_claim 逐字引用 context 中被确认的助手提议（保留人物姓名和适用情境），保存双方来源；stated 命题仍从用户原话派生。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
@@ -949,6 +950,7 @@ _SYSTEM_PROMPT_EN = (
     "like 'thinking about my preferences'. A preference shift after a stressful week is not necessarily "
     "a one-week instruction. An independent topic cannot replace another topic; clarify an ambiguous "
     "predecessor rather than guessing the most recent item.\n"
+    "For preference/state changes, entity identifies the subject, never the new value. The account owner is implicit: omit entity for their own changed preference; do not label green tea as entity.kind=topic when replacing a red-tea preference. Supersede only the same subject's same preference/state slot, with the full user evidence.\n"
     "For an explicit name correction, including an omitted-topic 'that name was wrong', use action=correct, statement_kind=alias, entity=new name and alias_of=old name. Do not use correct+naming or attach any corrects_cognition_id, corrects_relationship_id or corrects_event_id; both names must occur in the current correction evidence.\n"
     "Split independent person relationships, abilities/evaluations and enduring decisions into separate items, even within one sentence. A relationship never substitutes for an evaluation, or vice versa. Select the relationship clause alone; represent a user's evaluation as attribute + entity targeting the person, as the user's view rather than certified objective ability. Resolve a unique adjacent pronoun without folding the relationship into the evaluation. The compiler creates entities with source links; redundant naming is unnecessary. Explicitly confirmed future situational actions/reminders form a separate preference decision: stated for an explicit restatement, confirmed for short assent. In BOTH cases include assistant_claim quoting the confirmed proposal verbatim from context (retain the person name and situation), so both sources are preserved; stated propositions still derive from user text. Never form a decision from unconfirmed assistant advice, refusal or casual emotion. Correct evaluations with corrects_cognition_id and relationships with corrects_relationship_id. For an explicit name correction use action=correct, statement_kind=alias, entity=new name, alias_of=old name; both names must occur in the same correction evidence. Ordinary aliases still use form.\n"
     "For an ongoing owner attribute/preference whose selected source explicitly names its topic, "
@@ -1420,6 +1422,14 @@ class HermesBatchAdapterProcessor:
                     "compiler error; every cognition must include a nonempty proposition "
                     "and valid supports. Copy names, forms of address, numbers and dates "
                     "exactly from user evidence. Never invent facts."
+                    + (" For a preference/state change, entity identifies WHO holds the state, "
+                       "not its new value. Select a predecessor only for the same account, subject "
+                       "and same preference/state slot. For the account owner's own preference, "
+                       "omit entity and perspective_holder; do not put the new value (e.g. green tea) "
+                       "in entity.kind=topic. A topic is a stable retrieval cue, not the changed value. "
+                       "Preserve the full user support and predecessor ID only if that same-slot "
+                       "change is actually stated; otherwise do not supersede."
+                       if compiled.reason == "supersession_target_entity_mismatch" else "")
                     + (" For a confirmed decision, omit entity/topic/perspective_holder fields; "
                        "keep assistant_claim verbatim from context and the user's confirmation support. "
                        "The compiler derives the situational topic. If the user explicitly restated "
@@ -1971,7 +1981,18 @@ class HermesBatchAdapterProcessor:
         if truncated:
             return _CompiledOutcome(None, "model_output_truncated")
         try:
-            return self._compile(content, job, db)
+            compiled = self._compile(content, job, db)
+            if compiled.batch is not None:
+                for item in compiled.batch.items:
+                    # A value mislabelled as a topic needs contract feedback,
+                    # not a weaker Apply guard. Reuse the existing durable,
+                    # single rewrite; Apply still rechecks inside its fence.
+                    if item.topic_canonical_name and item.supersedes_cognition_id:
+                        resolved = resolve_state_version(db, job.subject_id, item, self.model_tier)
+                        error = validate_successor(db, job.subject_id, resolved, self.model_tier)
+                        if error == 'supersession_target_entity_mismatch':
+                            return _CompiledOutcome(None, error)
+            return compiled
         except _ZeroWriteError as exc:
             return _CompiledOutcome(None, str(exc))
 
