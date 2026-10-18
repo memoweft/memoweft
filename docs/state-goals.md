@@ -105,7 +105,7 @@ This package does not rerun the exam, use a new answer/judge score or claim a li
 model accuracy improvement. The focused prompt changes still need separate live
 acceptance; they do not justify guessing missing facts or altering old results.
 
-Local validation of this change: the initial 15 failures became green, and the
+Initial delivery validation (`50f65bec`): the initial 15 failures became green, and the
 additional mixed-operation red case became green in both orders. The final
 state/goal suite has 35 passing tests, repeated three times. Full Python has
 2,326 passes; Node has 636 passes. Strict mypy checks all 242 source/test files;
@@ -113,3 +113,63 @@ format, lint, TypeScript typecheck, build, API snapshot and documentation links
 pass. All 638 frozen complete previews equal `b6fc783`, with unchanged hit and
 false-recall results. These are source-level results; CI and live-provider
 acceptance remain separate.
+
+## Independent review follow-up
+
+The review reproduced a real `A → B → A` failure: a past value's deterministic
+identity collided with its retained row. Removing the collision check alone
+would produce a cycle and hide every state. The repair keeps the existing
+identity for first occurrences, and derives a new occurrence identity only when
+the value is already in this current predecessor's history. The derivation uses
+the prior identity and references to the actual new user Evidence. Existing
+sources are never cloned, rewritten or reassigned. State projections can repeat
+the same value because the user actually stated it again; their evidence and
+transition order remain distinct. `A → B → A → B` and `A → B → C → A` therefore
+remain linear, traceable histories with one current occurrence. A later plain
+restatement supports that current occurrence. Whole-chain forgetting follows
+the existing transition graph and clears every occurrence and source.
+
+The compiler also applies a small bilingual source guard independently of the
+model's classification. It validates the enclosing user-source sentence, not a
+model proposition. This validation context does not expand the stored support.
+Questions, explicit hypothetical states, negated intentions, quoted third-party
+claims, fictional context, unaccepted suggestions and explicitly one-off plans
+cannot become new owner goals/states. Selecting only a fragment cannot strip
+its question, conditional frame or speaker. Ordinary dislikes, reported goal
+completion/abandonment, and genuine writing/translation goals remain valid.
+Legacy single-item envelopes use the same check. Existing confirmation and
+explicit correction/retraction contracts remain distinct.
+
+[`state-goals-negatives.json`](../py/tests/fixtures/state-goals-negatives.json)
+preserves all 30 review utterances exactly: 15 Chinese and 15 English. On
+`50f65bec`, forcing `form + preference` accepted 24/30; the guarded compiler
+accepts 0/30. This is a deterministic adversarial-output measure, not a live
+model rejection-rate claim. All original 35 state/goal tests remain required.
+Explicit counterfactual grammar (`if I were`, `如果…会`) is checked even without
+goal, profession or location keywords; it cannot be promoted to either an
+attribute or a preference. ASCII single-quoted claims are checked too, while
+contractions such as `I'm` remain normal source text.
+
+The 24 recurrence reproductions (four topics × two languages × three sequences)
+were all red before the repair. They include the review's Northport/Southport
+and Aster/Clover cases, plus job and preference returns. They assert current
+recall, each transition, each original support, unchanged Evidence count/text,
+and retained past states. Additional tests cover source-fragment bypasses,
+both attribute/preference output kinds, genuine writing/translation goals,
+current-occurrence restatement and whole-chain erasure. Explicit topic and
+predecessor-kind mismatches are also rejected; an explicit new topic cannot be
+mistaken for an omitted topic.
+
+Follow-up local validation: 24/24 recurrence cases pass after their red
+reproductions, and original review-negative acceptance is 24/30 → 0/30. All
+original 35 tests remain green; the combined focused suite has 123 passes.
+Full Python has 2,414 passes, Node has 636 passes, and strict mypy checks 244
+source/test files. Format, lint, typecheck, build, API snapshot and documentation
+links pass. The 638 complete Chinese previews remain byte-identical to
+`b6fc783`, with unchanged hits and false recalls. No live-provider score is
+claimed.
+
+Temporal explanations are emitted on the current occurrence, keeping the
+existing output budget available for past facts rather than repeating the same
+explanation on every past entry. The Chinese 638-case complete-preview gate is
+unchanged; no scoring function, label, schema, deadline, retry or wait changes.

@@ -48,7 +48,8 @@ from .world_worker import (
 )
 from .terminal_outcome import persist_terminal_outcome_in_transaction
 from .recall import _predecessor_match_texts
-from .state_evolution import is_superseded, validate_successor
+from .state_evolution import is_superseded, resolve_state_version, validate_successor
+from .source_assertion import owner_assertion_error
 
 logger = logging.getLogger(__name__)
 
@@ -628,6 +629,8 @@ class BatchItem:
     supersedes_cognition_id: Optional[str] = None
     #: Temporal superseding: this new relationship supersedes a prior relationship.
     supersedes_relationship_id: Optional[str] = None
+    # Compiler-owned occurrence identity; never accepted from model fields.
+    state_version_id: Optional[str] = None
     #: V5 third-party perspective holder (targeted attribute/preference only):
     #: the entity holding this view.  None == owner_self.
     perspective_holder_name: Optional[str] = None
@@ -638,6 +641,8 @@ class BatchItem:
         return self.statement_kind
 
     def cognition_id(self, subject_id: str) -> str:
+        if self.state_version_id is not None:
+            return self.state_version_id
         # Same deterministic derivation as V1 ("memoweft_cognition_v1") so a
         # V1-formed cognition restated through V3 keeps the same ID and takes
         # the same-ID support path instead of duplicating.  V5 third-party
@@ -678,6 +683,8 @@ class BatchItem:
             assert self.entity_canonical_name is not None
             return entity_id_for(subject_id, self.entity_canonical_name)
         if self.statement_kind == "relationship":
+            if self.state_version_id is not None:
+                return self.state_version_id
             assert self.relation_type is not None
             assert self.target_canonical_name is not None
             source_id = (
@@ -2042,6 +2049,9 @@ class HermesBatchAdapterProcessor:
             supports=parsed,
             supersedes_cognition_id=supersedes_id,
         )
+        source_error = self._owner_assertion_error(item, raw_by_id)
+        if source_error:
+            return None, source_error
         return (
             _CompiledBatch(
                 items=(item,),
@@ -2166,6 +2176,9 @@ class HermesBatchAdapterProcessor:
                             and _is_confirmation_span(raw, turn['content'])]
                         if len(proposals) == 1:
                             item = replace(item, assistant_source=proposals[0])
+            source_error = self._owner_assertion_error(item, raw_by_id)
+            if source_error:
+                return None, source_error
             items.append(item)
 
         identities = [item.apply_identity(job.subject_id) for item in items]
@@ -3078,6 +3091,21 @@ class HermesBatchAdapterProcessor:
 
     # ── fenced atomic Apply ────────────────────────────────────────────────
 
+    @staticmethod
+    def _owner_assertion_error(item: BatchItem, raw_by_id: Mapping[str, str]) -> str | None:
+        if item.action != 'form' or item.formed_by != 'stated':
+            return None
+        owner_claim = (item.statement_kind in {'attribute', 'preference'} and item.entity_canonical_name is None
+                       or item.statement_kind == 'relationship' and item.source_canonical_name is None)
+        if not owner_claim:
+            return None
+        for eid, start, end, _text in item.supports:
+            error = owner_assertion_error(raw_by_id[eid], start, end,
+                                          transition=bool(item.supersedes_cognition_id or item.supersedes_relationship_id))
+            if error:
+                return error
+        return None
+
     def _apply_atomically(
         self, db: sqlite3.Connection, job: ClaimedWorldJob, batch: _CompiledBatch
     ) -> tuple[bool, Optional[dict[str, object]]]:
@@ -3152,6 +3180,7 @@ class HermesBatchAdapterProcessor:
                 raise _ZeroWriteError("ambiguous_supersession_target")
             wrote_any = False
             for item in batch.items:
+                item = resolve_state_version(db, job.subject_id, item, self.model_tier)
                 successor_error = validate_successor(db, job.subject_id, item, self.model_tier)
                 if successor_error:
                     raise _ZeroWriteError(successor_error)
@@ -3844,7 +3873,7 @@ class HermesBatchAdapterProcessor:
                     position = raw.rfind(name, 0, start)
                     if position >= 0:
                         self._write_entity_ledger(db, entity_id, evidence_id, position, position + len(name))
-        relationship_id = relationship_id_for(
+        relationship_id = item.state_version_id or relationship_id_for(
             job.subject_id, source_id, item.relation_type, target_id
         )
         existing = db.execute(

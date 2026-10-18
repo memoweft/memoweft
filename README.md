@@ -84,6 +84,11 @@ MemoWeft keeps these boundaries explicit:
   missing, unreadable, foreign, already replaced or incompatible targets before
   the atomic write. Formation offers only current targets, with permitted old
   wording separately available as predecessor context.
+  Returning to a past value creates a sourced state occurrence, keeping a linear
+  `A → B → A` history and the latest occurrence current. It never clones old
+  Evidence. Deterministic source checks reject questions, hypothetical or
+  negated intentions, quoted third-party goals and unaccepted suggestions as
+  new owner goals/states; genuine completion or abandonment stays supported.
 - DSH recall previews additionally expose `recent_evidence`: permission-filtered
   exact user quotes from unfinished formation, kept separate from formal World
   items. This read-only bridge uses the existing Evidence and conversation

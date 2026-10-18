@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Python temporal memory supports returning to a previous state while preserving each occurrence and its original source. Goal/state formation now checks the user's actual assertion independently of model classification, rejecting hypothetical, negated, quoted or question-only claims.
+
 - Python remembers explicit long-term goals as intentions and distinguishes later completion, abandonment and other state changes from corrections. Current recall uses the latest state; historical questions retain past states without describing a natural change as a mistake.
 
 - Python DSH bridge: bound response replay retention so repeated source and memory reads do not accumulate full response copies for the process lifetime. Replay-window limits are exposed in capabilities; durable operation identities continue to govern retries after a cached response expires.

@@ -1147,8 +1147,12 @@ def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
                     surface='model_cloud' if model_tier == 'cloud' else 'recall', model_tier=model_tier):
                     continue
                 if reason in {'supersedes', 'superseded'}:
-                    lines.append(f'Previous state (no longer current): {content}; the user later reported a change; use the current state.'
-                                 if lang == 'en' else f'状态变化（过往）：{content}；用户后来报告了新状态，以当前状态为准。')
+                    # Past entries already carry their own label. Repeat the
+                    # temporal explanation only on the current entry, keeping
+                    # room for the actual past facts within the existing cap.
+                    if not item.get('is_superseded'):
+                        lines.append(f'Earlier state: {content} (the user reported a change).'
+                                     if lang == 'en' else f'状态变化（过往）：{content}；用户后来报告了新状态，以当前状态为准。')
                 else:
                     lines.append(f'Replaced understanding (no longer current): {content}; corrected by the user ({reason}); use the current understanding.'
                                  if lang == 'en' else f'取代原因（旧理解不再有效）：{content}；后经用户纠正取代（{reason}），以当前理解为准。')
