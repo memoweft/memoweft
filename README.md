@@ -60,6 +60,10 @@ MemoWeft keeps these boundaries explicit:
   selected span and the complete short reply. Incidental character overlap
   and a cropped affirmative before a denial do not qualify. Other explicit
   user restatements use `stated`; see the [rules and audit](docs/distraction-sources.md).
+  Action-directed assent such as `Yes, do that.` or `好` requires the selected
+  claim itself to be an action proposal. A neighboring offer cannot confirm a
+  factual guess; the confirmation explanation quotes only the selected claim,
+  while provenance retains the complete original assistant turn.
 - Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
   Python links current, sourced self-naming claims and accepted aliases to
   the same person even when an earlier neutral name remains canonical;

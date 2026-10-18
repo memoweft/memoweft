@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Action confirmations now bind to the selected action proposal rather than a nearby factual guess. Confirmation explanations quote that proposal while provenance keeps the complete original assistant turn.
+
 - Python no longer treats incidental overlap with an assistant suggestion as user confirmation. Explicit short confirmations remain supported, and selecting only “yes” cannot discard a denial in the same reply.
 
 - Python temporal memory supports returning to a previous state and attaches a reworded relationship restatement to the current occurrence. Goal safeguards cover clear source attribution, direct goal-verb negation without an affirmative goal clause, and explicit third-party goal subjects; conditional goals and long-term plans starting today remain eligible, while other semantics belong to the interpretation model.

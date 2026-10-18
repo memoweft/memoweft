@@ -12,6 +12,7 @@ from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
 from memoweft.integrations.hermes.batch_adapter import HermesBatchAdapterProcessor
 from memoweft.integrations.hermes.recall import recall_world_snapshot
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
+from memoweft.integrations.trust.confirmed_sources import assistant_sources
 from test_dsh_interactions import _boundary
 from test_hermes_batch_adapter_v5 import _batch, _model
 
@@ -23,27 +24,40 @@ FIXTURE: dict[str, Any] = json.loads(
 
 def _exercise(tmp_path: Path, user: str, assistant: str, quote: str, *,
               lang: Literal['en', 'zh'], confirmed: bool = False,
-              assistant_support: bool = False) -> tuple[str, list[tuple[str, str]], str]:
+              assistant_support: bool = False,
+              selected_claim: str | None = None,
+              prior_turn: bool = False) -> tuple[str, list[tuple[str, str]], str]:
     runtime = DshMemoWeftRuntime()
     runtime.initialize('audit', dsh_home=str(tmp_path), subject_id='owner',
                        auto_route=False, model_tier='local', lang=lang)
     try:
+        prior_user = 'Please make a suggestion.' if lang == 'en' else '请给我一个建议。'
+        if prior_turn:
+            runtime.ingest_durable_boundary(_boundary('audit', 'b', [
+                {'role': 'user', 'content': prior_user, 'message_id': 'user-prior'},
+                {'role': 'assistant', 'content': assistant, 'message_id': 'assistant-a'},
+            ]))
+            assert runtime.db_path is not None
+            # Model-free settlement of the preceding request, not a guard
+            # against the forced confirmed recommendation tested below.
+            assert WorldJobWorker(runtime.db_path).run_until_quiescent() == 1
         # Both speakers cross the real durable-ingest boundary. Only the user
         # may become Evidence; the assistant is persisted as role-tagged context.
-        receipt = runtime.ingest_durable_boundary(_boundary('audit', 'a', [
-            {'role': 'assistant', 'content': assistant, 'message_id': 'assistant-a'},
-            {'role': 'user', 'content': user, 'message_id': 'user-a'},
-        ]))
+        messages: list[dict[str, object]] = []
+        if not prior_turn:
+            messages.append({'role': 'assistant', 'content': assistant, 'message_id': 'assistant-a'})
+        messages.append({'role': 'user', 'content': user, 'message_id': 'user-a'})
+        receipt = runtime.ingest_durable_boundary(_boundary('audit', 'a', messages))
         assert runtime.db_path is not None
         path = runtime.db_path
         with sqlite3.connect(path) as db:
-            evidence = db.execute('SELECT id,raw_content FROM evidence').fetchall()
+            evidence = db.execute('SELECT id,raw_content FROM evidence WHERE raw_content=?', (user,)).fetchall()
         assert len(evidence) == 1 and evidence[0][1] == user
         item: dict[str, Any] = dict(action='form', statement_kind='attribute',
             formed_by='confirmed' if confirmed else 'stated', proposition='placeholder',
             supports=[dict(evidence_id=evidence[0][0], quote=assistant if assistant_support else quote)])
         if confirmed:
-            item['assistant_claim'] = assistant
+            item['assistant_claim'] = selected_claim or assistant
 
         def route(*args: Any, **kwargs: Any) -> dict[str, object]:
             # Keep recommending form on the existing compiler rewrite, too.
@@ -57,16 +71,20 @@ def _exercise(tmp_path: Path, user: str, assistant: str, quote: str, *,
             row = db.execute('SELECT state,world_result_json FROM memory_world_job WHERE job_id=?', (receipt['job_id'],)).fetchone()
             assert row is not None
             rows = db.execute('SELECT id,content FROM cognition').fetchall()
-            assert db.execute('SELECT raw_content FROM evidence').fetchall() == [(user,)]
+            assert sorted(db.execute('SELECT raw_content FROM evidence').fetchall()) == sorted(
+                [(prior_user,), (user,)] if prior_turn else [(user,)])
             assert db.execute('SELECT count(*) FROM world_event').fetchone() == (0,)
             before = list(db.iterdump())
-            snapshot = recall_world_snapshot(db, 'owner', assistant if confirmed else quote, lang=lang)
+            snapshot = recall_world_snapshot(db, 'owner', (selected_claim or assistant) if confirmed else quote, lang=lang)
             assert list(db.iterdump()) == before
             if rows:
                 assert snapshot is not None
                 assert snapshot.selected_item_ids == (('cognition', rows[0][0]),)
                 assert rows[0][1] in snapshot.rendered_recall
-                assert db.execute('SELECT count(*) FROM cognition_evidence WHERE relation=\'support\'').fetchone() == (1,)
+                assert db.execute('SELECT count(*) FROM cognition_evidence WHERE relation=\'support\'').fetchone() == (2 if prior_turn else 1,)
+                if prior_turn:
+                    sources = assistant_sources(db, 'owner', rows[0][0])
+                    assert len(sources) == 1 and sources[0]['content'] == assistant
             else:
                 assert snapshot is None or not snapshot.selected_item_ids
             return str(row[0]), rows, snapshot.rendered_recall if snapshot else ''

@@ -1379,7 +1379,7 @@ def _current_world_rows(
                         if _anchor_is_explicit(content, name)
                     ))
             if kind == "cognition":
-                proposal_sources = assistant_sources(db, subject_id, row_id)
+                proposal_sources = assistant_sources(db, subject_id, row_id, selected_claim_only=True)
                 if proposal_sources:
                     proposals = "\n".join(source["content"] for source in proposal_sources)
                     english_content += "\nAssistant's words the user confirmed: " + proposals

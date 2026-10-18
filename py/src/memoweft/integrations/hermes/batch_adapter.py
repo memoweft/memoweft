@@ -500,6 +500,12 @@ def _explicit_short_confirmation(span_text: str, assistant_claim: str) -> bool:
     stripped = _SPAN_PUNCTUATION.sub('', span_text)
     if not stripped or len(stripped) > CONFIRMATION_SPAN_MAX_CHARS:
         return False
+    # Action assent authorizes the selected action, not an adjacent factual
+    # guess. Apply this before generic affirmatives (notably 好/就这么办), and
+    # check assistant_claim itself rather than searching the complete context.
+    from .action_confirmation import is_action_assent, is_selected_action_proposal
+    if is_action_assent(span_text):
+        return is_selected_action_proposal(assistant_claim)
     if _AFFIRM_RE.fullmatch(stripped):
         return True
     cleaned = span_text.replace('没错', '').replace('不错', '').replace('没问题', '')
@@ -514,10 +520,6 @@ def _explicit_short_confirmation(span_text: str, assistant_claim: str) -> bool:
     value = re.sub(r'\s+', ' ', value).strip()
     if not value:
         return False
-    # The English counterpart of 就这么办 is explicit action assent, not a
-    # literal value. Preserve the existing confirmed-reminder contract.
-    if value.casefold() == 'do that':
-        return True
     # Match the whole stated value, not any two characters. ASCII boundaries
     # protect tea/team while allowing the literal G6 in 小鹏G6.
     pattern = re.escape(value)
@@ -5551,7 +5553,12 @@ class HermesBatchAdapterProcessor:
                     ("confirmed-source-" + _hash_text(_canonical([cognition_id, source_evidence_id, source["message_id"]])),
                      _canonical({"cognition_id": cognition_id, "evidence_id": source_evidence_id, "relation": "support"}),
                      _canonical({"schema_version": 1, "assistant_source": {
-                         "interaction_id": source["interaction_id"], "message_id": source["message_id"]}})))
+                         "interaction_id": source["interaction_id"], "message_id": source["message_id"],
+                         # Keep the complete persisted turn as provenance, but
+                         # bind a substring confirmation to its actual claim.
+                         **({"claim": item.assistant_claim} if item.assistant_claim
+                            and item.assistant_claim != source["content"] else {}),
+                     }})))
         for evidence_id, start, end, _slice in item.supports:
             if target_entity_id is not None and item.entity_canonical_name and item.entity_canonical_name in _slice:
                 self._write_entity_ledger(db, target_entity_id, evidence_id, start, end)
