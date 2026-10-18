@@ -1,0 +1,277 @@
+{
+  "reference": "b6fc783de17ac57690f0946e7951b22406cefce5",
+  "fixture_sha256": "3208a9afd476f05b89dade759935e132789cb43919408688dfb83f18c25f19dd",
+  "source_sha256": "9df11fae0c0e77a20a941bb9a0bf29d1931ecf18fa647c6e065d6d90a8229f44",
+  "metrics": {
+    "queries": 29,
+    "positives": 29,
+    "hits": 29,
+    "recall": 1.0,
+    "returned": 29,
+    "wrong": 0,
+    "precision": 1.0
+  },
+  "results": [
+    {
+      "id": "context-can",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "4d89ec843d847318d20095db913331a7e1e6ac7b7a73af749265ab4f216aa4b7"
+    },
+    {
+      "id": "context-will",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "6d600c1d5b1780a723f4e628b7be8ffe57f4c473507c8bc8cfca46c779163d40"
+    },
+    {
+      "id": "context-mine",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "5d212ba39776335d07e7d855d1cadf828bd2fa09fe408b84805eaf20d70e0c3f"
+    },
+    {
+      "id": "context-may",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "155d15a05e4bb53c7dfb21c495205573f95d156c5ab93052e846fa8d442a3a8c"
+    },
+    {
+      "id": "context-must",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "2fe6e89be542ebe82bd9d454459ecbba1bb8f1cd5c7c8e9bc8a89ca4a9a67898"
+    },
+    {
+      "id": "context-might",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "d80a98f75047068db68f20351a2e23c8d81780dc4b29e5827a2953614f4bbfd8"
+    },
+    {
+      "id": "context-us",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "7b9f3e2a25b1697b92aa26f4aac49151da93ae1556b6e2f48064d099364330cc"
+    },
+    {
+      "id": "context-it",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "d7a61f921b00d99a4fea837ab226e349635084bfeb74bd6b0e3bb7e3b82c7d4f"
+    },
+    {
+      "id": "context-won",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "7d4abfad77631a98d7d03e3dde796324119b0af8287330f9953a1c453166e403"
+    },
+    {
+      "id": "context-or",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "8264add15607f9225cd116e39177f6f6ed4248591f18e09086f43e6bd0230fa0"
+    },
+    {
+      "id": "context-don",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "6550c92607e295388019946ffc8b25cf4ba59f9f0ed30626624d2fe1a1057813"
+    },
+    {
+      "id": "context-d",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "993d8554328af737a1f382e3819227f328caa15157f332104c0307adb21b8fc5"
+    },
+    {
+      "id": "context-m",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "22f2c2ecdb46d43fcf4c6fa0171d6dcd85255096f3b1be6a1cdd73e3a2db0d3a"
+    },
+    {
+      "id": "context-s",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "5aeb4a7adb2221bd00bf54368cce406220516af0dc68c9d6976e88e38fc76a89"
+    },
+    {
+      "id": "context-t",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "240ace006f02bf46eb47b6aec0d2dc00bb198f0bbc82ebb49ea2c3affa91172b"
+    },
+    {
+      "id": "context-re",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "c00379baf8facbbe9921752574562ed311fe7cd99677f98681472fb3e61d0514"
+    },
+    {
+      "id": "context-ll",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "0782b6a4d51c79be77a42d0dfa27ab97d5c9e2f8a6e9c06784c765677ee3225b"
+    },
+    {
+      "id": "context-who",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "9a5572d7b9b9bb518d74195fba6147243eb86a7e1d04ba13d5c5316d421c6293"
+    },
+    {
+      "id": "context-am",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "ef40f34d6a6682f849cbb88822060dafbc1f88553d1d69341b8f73e6aab836d0"
+    },
+    {
+      "id": "context-a",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "c326d597da24de4b6494b81ad2c6a3894206052e3d0a7cf54d792bf72d2ebeb3"
+    },
+    {
+      "id": "context-he",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "1e415d444660a6f65e502964dd2f32dc890280e3cd460ceb96de9e02e2b1ef36"
+    },
+    {
+      "id": "context-be",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "38e653fc11ac18d87a576cbdce7a7564ddd87e747c6f4365766cc43f9c67a0e8"
+    },
+    {
+      "id": "context-as",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "1d8066b518d3285ea555b608dc9daf68cfb615d809df2feaa42952e0f5c0b7f8"
+    },
+    {
+      "id": "context-in",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "a1e82dedb340348c651c41d790a49959e3b4fe5e1cc6087f759cea20d3caac25"
+    },
+    {
+      "id": "context-at",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "aa13e892ac23e4c263fa1aebabe188e8391ca527a52966a198885dbed5935293"
+    },
+    {
+      "id": "context-do",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "50f911cdc1edef39c05edeba0ba7dba69090835e249033bd7b42d14cea3392f7"
+    },
+    {
+      "id": "context-and",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "52e0e602a9301173c308dea58aa134eb52169c82e0725ec6e4581d727e30d84d"
+    },
+    {
+      "id": "context-for",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "3743742a80726a695e6a8ff807df1f24de2468f31ccca22e708eb1be73fedc0a"
+    },
+    {
+      "id": "context-not",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "b875d6104990d18ba3790a1a8887eb8fdf9d412c98e4848f5cd0b5daf419aa38"
+    }
+  ]
+}

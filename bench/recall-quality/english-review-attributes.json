@@ -1,0 +1,504 @@
+{
+  "version": 1,
+  "note": "Exact synthetic 21 positives and 10 negatives extracted as literals from the independent PR 124 review script; no review code executed.",
+  "cases": [
+    {
+      "id": "boots",
+      "query": "Which hiking boots do I wear?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I wear hiking boots from Salomon."
+        },
+        {
+          "id": "distractor",
+          "content": "I keep ceramic bowls in the kitchen."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "camera",
+      "query": "What camera is Nora using on October 19, 2026?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Nora is using a camera from Fujifilm."
+        },
+        {
+          "id": "distractor",
+          "content": "Nora has an appointment on October 19, 2026."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "pottery",
+      "query": "I'm studying pottery; which pottery tools do I own?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My pottery tools include a wooden rib."
+        },
+        {
+          "id": "distractor",
+          "content": "I'm learning Spanish."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "diet",
+      "query": "Don't I avoid peanuts?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I avoid peanuts because of an allergy."
+        },
+        {
+          "id": "distractor",
+          "content": "I don't like long flights."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "bikes",
+      "query": "What is my bicycle lock?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My bicycle lock is an Abus chain."
+        },
+        {
+          "id": "distractor",
+          "content": "My mailbox is near the gate."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "tea",
+      "query": "Which green tea do I prefer?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I prefer green tea from Uji."
+        },
+        {
+          "id": "distractor",
+          "content": "I prefer black coffee."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "passport-date",
+      "query": "What date is my passport renewal?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My passport renewal is scheduled for 2027-04-12."
+        },
+        {
+          "id": "distractor",
+          "content": "My balcony has three plants."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "passport-date-trap",
+      "query": "What date is my passport renewal?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My passport renewal is scheduled for 2027-04-12."
+        },
+        {
+          "id": "distractor",
+          "content": "Our cousin brought a date to the wedding at the lakeside hotel last Saturday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "appointment-time",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My dentist appointment is at 15:30 on 2026-11-06."
+        },
+        {
+          "id": "distractor",
+          "content": "My balcony has three plants."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "travel-day",
+      "query": "Which day is my flight to Lisbon?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My flight to Lisbon is on Tuesday, 2026-11-10."
+        },
+        {
+          "id": "distractor",
+          "content": "My balcony has three plants."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "boots-specific",
+      "query": "What specific hiking boots do I wear?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I wear hiking boots from Salomon."
+        },
+        {
+          "id": "distractor",
+          "content": "My balcony has three plants."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "address",
+      "query": "What is my current address?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My address is 18 Cedar Lane."
+        },
+        {
+          "id": "distractor",
+          "content": "My balcony has three plants."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "job",
+      "query": "Which job does Elena have?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Elena has a job as an architect."
+        },
+        {
+          "id": "distractor",
+          "content": "Elena collects blue glass."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "piano",
+      "query": "I'm practicing piano. What piano pieces do I play?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I play piano pieces by Ravel."
+        },
+        {
+          "id": "distractor",
+          "content": "I'm working on a cookbook."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "server",
+      "query": "Which database server do I use for analytics?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I use a database server running PostgreSQL for analytics."
+        },
+        {
+          "id": "distractor",
+          "content": "I enjoy hiking on weekends."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "suitcase-color",
+      "query": "What color is my suitcase?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My suitcase is blue."
+        },
+        {
+          "id": "distractor",
+          "content": "My garden has three apple trees."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "jacket-size",
+      "query": "What size is my jacket?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My jacket is medium."
+        },
+        {
+          "id": "distractor",
+          "content": "My garden has three apple trees."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "desk-material",
+      "query": "What material is my desk?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My desk is oak."
+        },
+        {
+          "id": "distractor",
+          "content": "My garden has three apple trees."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "headphones-brand",
+      "query": "What brand are my headphones?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My headphones are Sony."
+        },
+        {
+          "id": "distractor",
+          "content": "My garden has three apple trees."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "graduation-year",
+      "query": "What year is my graduation?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My graduation was in 2019."
+        },
+        {
+          "id": "distractor",
+          "content": "My garden has three apple trees."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "software-version",
+      "query": "What version do I use?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I use version 4.1 for the photo editor."
+        },
+        {
+          "id": "distractor",
+          "content": "My garden has three apple trees."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "via_trust": true
+    },
+    {
+      "id": "negative-won-long",
+      "query": "Nora won't buy hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I won't be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-haven-long",
+      "query": "I haven't booked flights to Lisbon for the winter holiday.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "They haven't really actually used what we have always usually been using for you and your family."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-generic",
+      "query": "What do I do?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We are always there for them."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-generic-shared",
+      "query": "Do I really know what they think?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "They really know what we think."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-name",
+      "query": "Nora?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We prefer ceramic bowls."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-not",
+      "query": "Is Nora not allergic to peanuts?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We are not really very sure about what they think."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-won",
+      "query": "Won't Nora buy hiking boots?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We won't really use what they have."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-shouldn",
+      "query": "Shouldn't Nora replace the telescope?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "They shouldn't really use what we have."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-haven",
+      "query": "Haven't they booked flights to Lisbon?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We haven't really used what you have."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    },
+    {
+      "id": "negative-generic-anything",
+      "query": "Is there anything about Nora?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We really think anything is what they have always used."
+        }
+      ],
+      "expect": [],
+      "via_trust": true
+    }
+  ]
+}

@@ -1,0 +1,412 @@
+{
+  "version": 1,
+  "note": "Independently authored synthetic contexts covering the 29 review token ideas. Capitalized symbols are protected; lowercase rare senses have explicit known-limit tests separately.",
+  "cases": [
+    {
+      "id": "context-can",
+      "category": "positive",
+      "query": "where is my can?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my can holds spare screws beside the workshop window."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-will",
+      "category": "positive",
+      "query": "what about my will?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my will names a wildlife charity as the residual beneficiary."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-mine",
+      "category": "positive",
+      "query": "where is my mine?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my mine lies beneath an abandoned railway embankment."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-may",
+      "category": "positive",
+      "query": "what about my may?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my may brings the annual observatory maintenance shutdown."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-must",
+      "category": "positive",
+      "query": "where is my must?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my must ferments inside a numbered oak vat beside the press."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-might",
+      "category": "positive",
+      "query": "what about my might?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my might describes the giant's extraordinary physical strength."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-us",
+      "category": "positive",
+      "query": "what about my US?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my US assignment lasted fourteen months in a coastal laboratory."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-it",
+      "category": "positive",
+      "query": "what about my IT?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my IT department maintains encrypted backups every Friday evening."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-won",
+      "category": "positive",
+      "query": "what have we won?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my we won a silver cup during the regional rowing championship."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-or",
+      "category": "positive",
+      "query": "what about my OR?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my OR schedule reserves Thursday mornings for orthopedic surgery."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-don",
+      "category": "positive",
+      "query": "what about my Don?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my volunteer Don coordinates deliveries to the animal shelter."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-d",
+      "category": "positive",
+      "query": "what about my d?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my d labels the diameter measurement recorded beside the specimen."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-m",
+      "category": "positive",
+      "query": "what about my m?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my m labels the medium glove compartment in the stock ledger."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-s",
+      "category": "positive",
+      "query": "what about my s?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my s labels the small helmet rack near the rental counter."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-t",
+      "category": "positive",
+      "query": "what about my t?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my t represents elapsed seconds during the pendulum experiment."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-re",
+      "category": "positive",
+      "query": "what about my re?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my re begins the second exercise in the solfege workbook."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-ll",
+      "category": "positive",
+      "query": "what about my ll?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my ll labels the extra large cardigan shelf in the costume room."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-who",
+      "category": "positive",
+      "query": "what about my WHO?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my WHO bulletin discusses vaccination supplies after the flood."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-am",
+      "category": "positive",
+      "query": "what about my AM?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my AM receiver picks up the harbor weather broadcast at dawn."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-a",
+      "category": "positive",
+      "query": "what about my A?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my A blood group appears on the fictional donor card."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-he",
+      "category": "positive",
+      "query": "what about my He?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my He cylinder supplies helium to the demonstration balloon."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-be",
+      "category": "positive",
+      "query": "what about my Be?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my Be sample remains sealed behind the laboratory shield."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-as",
+      "category": "positive",
+      "query": "what about my As?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my As label identifies arsenic in the classroom element chart."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-in",
+      "category": "positive",
+      "query": "what about my In?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my In sample illustrates indium's softness during the demonstration."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-at",
+      "category": "positive",
+      "query": "what about my At?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my At square marks astatine in the printed element chart."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-do",
+      "category": "positive",
+      "query": "what about my Do?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my Do note opens the choir's descending warmup pattern."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-and",
+      "category": "positive",
+      "query": "what about my AND?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my AND operator combines two Boolean flags in the example."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-for",
+      "category": "positive",
+      "query": "what about my FOR?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my FOR loop iterates over the synthetic parcel identifiers."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    },
+    {
+      "id": "context-not",
+      "category": "positive",
+      "query": "what about my NOT?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "my NOT operator reverses the Boolean flag in the example."
+        }
+      ],
+      "expect": [
+        "target"
+      ]
+    }
+  ]
+}

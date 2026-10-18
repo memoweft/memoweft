@@ -1,0 +1,1946 @@
+{
+  "version": 1,
+  "note": "Synthetic English regressions authored and frozen before the review fix. Twenty factual pools with three correlated phrasings each; sixty negatives. Exposed regression data, not a blind benchmark.",
+  "cases": [
+    {
+      "id": "passport-0",
+      "category": "positive",
+      "query": "What date is my passport renewal?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My passport renewal is scheduled for 2027-04-12."
+        },
+        {
+          "id": "unrelated",
+          "content": "Our cousin brought a date to the wedding at the lakeside hotel last Saturday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": true
+    },
+    {
+      "id": "passport-1",
+      "category": "positive",
+      "query": "When is my passport renewal scheduled?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My passport renewal is scheduled for 2027-04-12."
+        },
+        {
+          "id": "unrelated",
+          "content": "Our cousin brought a date to the wedding at the lakeside hotel last Saturday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "passport-2",
+      "category": "positive",
+      "query": "Please remind me about renewing my passport.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My passport renewal is scheduled for 2027-04-12."
+        },
+        {
+          "id": "unrelated",
+          "content": "Our cousin brought a date to the wedding at the lakeside hotel last Saturday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "dentist-0",
+      "category": "positive",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My dentist appointment starts at 14:30 on Thursday."
+        },
+        {
+          "id": "unrelated",
+          "content": "We had a wonderful time visiting the coastal museum yesterday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": true
+    },
+    {
+      "id": "dentist-1",
+      "category": "positive",
+      "query": "When does my dentist appointment start?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My dentist appointment starts at 14:30 on Thursday."
+        },
+        {
+          "id": "unrelated",
+          "content": "We had a wonderful time visiting the coastal museum yesterday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "dentist-2",
+      "category": "positive",
+      "query": "Can you remind me about the dentist appointment?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My dentist appointment starts at 14:30 on Thursday."
+        },
+        {
+          "id": "unrelated",
+          "content": "We had a wonderful time visiting the coastal museum yesterday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "boots-0",
+      "category": "positive",
+      "query": "Which specific hiking boots do I use?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My hiking boots are the Ridgeway Summit model."
+        },
+        {
+          "id": "unrelated",
+          "content": "I keep a specific recipe for orange cake."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": true
+    },
+    {
+      "id": "boots-1",
+      "category": "positive",
+      "query": "What hiking boots are in my equipment?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My hiking boots are the Ridgeway Summit model."
+        },
+        {
+          "id": "unrelated",
+          "content": "I keep a specific recipe for orange cake."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "boots-2",
+      "category": "positive",
+      "query": "Remind me about my hiking boots.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My hiking boots are the Ridgeway Summit model."
+        },
+        {
+          "id": "unrelated",
+          "content": "I keep a specific recipe for orange cake."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "address-0",
+      "category": "positive",
+      "query": "What is my current address?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My address is 42 Willow Crescent."
+        },
+        {
+          "id": "unrelated",
+          "content": "I read about an ocean current in a science magazine."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": true
+    },
+    {
+      "id": "address-1",
+      "category": "positive",
+      "query": "Where is my address recorded?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My address is 42 Willow Crescent."
+        },
+        {
+          "id": "unrelated",
+          "content": "I read about an ocean current in a science magazine."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "address-2",
+      "category": "positive",
+      "query": "Can you remind me of my address?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My address is 42 Willow Crescent."
+        },
+        {
+          "id": "unrelated",
+          "content": "I read about an ocean current in a science magazine."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "train-0",
+      "category": "positive",
+      "query": "What time does my train depart?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My train departs at 08:45 from platform seven."
+        },
+        {
+          "id": "unrelated",
+          "content": "My knitting project took a long time."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "train-1",
+      "category": "positive",
+      "query": "When is my train departure?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My train departs at 08:45 from platform seven."
+        },
+        {
+          "id": "unrelated",
+          "content": "My knitting project took a long time."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "train-2",
+      "category": "positive",
+      "query": "Tell me about my train platform.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My train departs at 08:45 from platform seven."
+        },
+        {
+          "id": "unrelated",
+          "content": "My knitting project took a long time."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "medicine-0",
+      "category": "positive",
+      "query": "When do I take my allergy medicine?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I take my allergy medicine every evening at 20:00."
+        },
+        {
+          "id": "unrelated",
+          "content": "I bought a watch to tell the time."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "medicine-1",
+      "category": "positive",
+      "query": "What time is my allergy medicine scheduled?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I take my allergy medicine every evening at 20:00."
+        },
+        {
+          "id": "unrelated",
+          "content": "I bought a watch to tell the time."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "medicine-2",
+      "category": "positive",
+      "query": "Remind me about my evening allergy medicine.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I take my allergy medicine every evening at 20:00."
+        },
+        {
+          "id": "unrelated",
+          "content": "I bought a watch to tell the time."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "lunch-0",
+      "category": "positive",
+      "query": "What date is my lunch with Nora?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My lunch with Nora is on 2027-05-09 at noon."
+        },
+        {
+          "id": "unrelated",
+          "content": "I read a book about a fictional wedding date."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "lunch-1",
+      "category": "positive",
+      "query": "When is my lunch with Nora?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My lunch with Nora is on 2027-05-09 at noon."
+        },
+        {
+          "id": "unrelated",
+          "content": "I read a book about a fictional wedding date."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "lunch-2",
+      "category": "positive",
+      "query": "Tell me about my lunch with Nora.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My lunch with Nora is on 2027-05-09 at noon."
+        },
+        {
+          "id": "unrelated",
+          "content": "I read a book about a fictional wedding date."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "meeting-0",
+      "category": "positive",
+      "query": "What time is our design meeting?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Our design meeting starts at 09:15 in room Alder."
+        },
+        {
+          "id": "unrelated",
+          "content": "I spent time photographing mountains."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "meeting-1",
+      "category": "positive",
+      "query": "When does our design meeting start?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Our design meeting starts at 09:15 in room Alder."
+        },
+        {
+          "id": "unrelated",
+          "content": "I spent time photographing mountains."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "meeting-2",
+      "category": "positive",
+      "query": "Where is our design meeting?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Our design meeting starts at 09:15 in room Alder."
+        },
+        {
+          "id": "unrelated",
+          "content": "I spent time photographing mountains."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "watering-0",
+      "category": "positive",
+      "query": "When do I water my orchids?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I water my orchids on Sunday mornings."
+        },
+        {
+          "id": "unrelated",
+          "content": "My bicycle needs a new chain."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "watering-1",
+      "category": "positive",
+      "query": "What is my orchid watering routine?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I water my orchids on Sunday mornings."
+        },
+        {
+          "id": "unrelated",
+          "content": "My bicycle needs a new chain."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "watering-2",
+      "category": "positive",
+      "query": "Remind me about watering my orchids.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I water my orchids on Sunday mornings."
+        },
+        {
+          "id": "unrelated",
+          "content": "My bicycle needs a new chain."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "library-0",
+      "category": "positive",
+      "query": "What books do I enjoy at the library?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I enjoy reading astronomy books at the library."
+        },
+        {
+          "id": "unrelated",
+          "content": "I enjoy pottery classes at the arts centre."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "library-1",
+      "category": "positive",
+      "query": "Which astronomy books do I read?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I enjoy reading astronomy books at the library."
+        },
+        {
+          "id": "unrelated",
+          "content": "I enjoy pottery classes at the arts centre."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "library-2",
+      "category": "positive",
+      "query": "Tell me about reading at the library.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I enjoy reading astronomy books at the library."
+        },
+        {
+          "id": "unrelated",
+          "content": "I enjoy pottery classes at the arts centre."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "friend-0",
+      "category": "positive",
+      "query": "What does Nora collect?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Nora collects antique maps."
+        },
+        {
+          "id": "unrelated",
+          "content": "Lena collects ceramic bowls."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "friend-1",
+      "category": "positive",
+      "query": "Tell me about Nora's maps.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Nora collects antique maps."
+        },
+        {
+          "id": "unrelated",
+          "content": "Lena collects ceramic bowls."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "friend-2",
+      "category": "positive",
+      "query": "Which antique maps does Nora collect?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Nora collects antique maps."
+        },
+        {
+          "id": "unrelated",
+          "content": "Lena collects ceramic bowls."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "software-0",
+      "category": "positive",
+      "query": "Which version of Python do I use?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I use Python 3.12 for my astronomy scripts."
+        },
+        {
+          "id": "unrelated",
+          "content": "I use a fountain pen for postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "software-1",
+      "category": "positive",
+      "query": "What Python version runs my astronomy scripts?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I use Python 3.12 for my astronomy scripts."
+        },
+        {
+          "id": "unrelated",
+          "content": "I use a fountain pen for postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "software-2",
+      "category": "positive",
+      "query": "Tell me about my Python scripts.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I use Python 3.12 for my astronomy scripts."
+        },
+        {
+          "id": "unrelated",
+          "content": "I use a fountain pen for postcards."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "music-0",
+      "category": "positive",
+      "query": "What music do I listen to while painting?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I listen to chamber music while painting."
+        },
+        {
+          "id": "unrelated",
+          "content": "I listen to weather forecasts while driving."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "music-1",
+      "category": "positive",
+      "query": "Which chamber music do I enjoy?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I listen to chamber music while painting."
+        },
+        {
+          "id": "unrelated",
+          "content": "I listen to weather forecasts while driving."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "music-2",
+      "category": "positive",
+      "query": "Tell me about my painting music.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I listen to chamber music while painting."
+        },
+        {
+          "id": "unrelated",
+          "content": "I listen to weather forecasts while driving."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "swim-0",
+      "category": "positive",
+      "query": "When do I swim at the Birch pool?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I swim at the Birch pool on Tuesday afternoons."
+        },
+        {
+          "id": "unrelated",
+          "content": "I work on pottery on Friday mornings."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "swim-1",
+      "category": "positive",
+      "query": "Which pool do I swim at?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I swim at the Birch pool on Tuesday afternoons."
+        },
+        {
+          "id": "unrelated",
+          "content": "I work on pottery on Friday mornings."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "swim-2",
+      "category": "positive",
+      "query": "Tell me about swimming at Birch.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I swim at the Birch pool on Tuesday afternoons."
+        },
+        {
+          "id": "unrelated",
+          "content": "I work on pottery on Friday mornings."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "bread-0",
+      "category": "positive",
+      "query": "What bread do I bake?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I bake sourdough bread every Saturday."
+        },
+        {
+          "id": "unrelated",
+          "content": "I mend woollen scarves every winter."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "bread-1",
+      "category": "positive",
+      "query": "When do I bake sourdough bread?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I bake sourdough bread every Saturday."
+        },
+        {
+          "id": "unrelated",
+          "content": "I mend woollen scarves every winter."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "bread-2",
+      "category": "positive",
+      "query": "Remind me about baking sourdough.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I bake sourdough bread every Saturday."
+        },
+        {
+          "id": "unrelated",
+          "content": "I mend woollen scarves every winter."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "camera-0",
+      "category": "positive",
+      "query": "What is my current camera?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My camera is an Orion R7 with a macro lens."
+        },
+        {
+          "id": "unrelated",
+          "content": "My telescope is a Vega 80 with a solar filter."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "camera-1",
+      "category": "positive",
+      "query": "Which camera has my macro lens?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My camera is an Orion R7 with a macro lens."
+        },
+        {
+          "id": "unrelated",
+          "content": "My telescope is a Vega 80 with a solar filter."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "camera-2",
+      "category": "positive",
+      "query": "Tell me about my Orion camera.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My camera is an Orion R7 with a macro lens."
+        },
+        {
+          "id": "unrelated",
+          "content": "My telescope is a Vega 80 with a solar filter."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "contraction-0",
+      "category": "positive",
+      "query": "Why won't I buy the cobalt bicycle?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I will not buy the cobalt bicycle because its frame is too small."
+        },
+        {
+          "id": "unrelated",
+          "content": "I will not buy the green umbrella because it is heavy."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "contraction-1",
+      "category": "positive",
+      "query": "Why will I not buy the cobalt bicycle?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I will not buy the cobalt bicycle because its frame is too small."
+        },
+        {
+          "id": "unrelated",
+          "content": "I will not buy the green umbrella because it is heavy."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "contraction-2",
+      "category": "positive",
+      "query": "Which cobalt bicycle won't I buy?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I will not buy the cobalt bicycle because its frame is too small."
+        },
+        {
+          "id": "unrelated",
+          "content": "I will not buy the green umbrella because it is heavy."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "winner-0",
+      "category": "positive",
+      "query": "Has Nora won a chess trophy?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Nora won the regional chess trophy in 2026."
+        },
+        {
+          "id": "unrelated",
+          "content": "Nora planted tulips beside the garden wall."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "winner-1",
+      "category": "positive",
+      "query": "What trophy has Nora won?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Nora won the regional chess trophy in 2026."
+        },
+        {
+          "id": "unrelated",
+          "content": "Nora planted tulips beside the garden wall."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "winner-2",
+      "category": "positive",
+      "query": "Tell me about the regional chess trophy.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "Nora won the regional chess trophy in 2026."
+        },
+        {
+          "id": "unrelated",
+          "content": "Nora planted tulips beside the garden wall."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "ticket-0",
+      "category": "positive",
+      "query": "When is my ferry ticket booked?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I have booked my ferry ticket for 2027-06-18."
+        },
+        {
+          "id": "unrelated",
+          "content": "I have packed a woollen blanket for camping."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "ticket-1",
+      "category": "positive",
+      "query": "Which ferry ticket have I booked?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I have booked my ferry ticket for 2027-06-18."
+        },
+        {
+          "id": "unrelated",
+          "content": "I have packed a woollen blanket for camping."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "ticket-2",
+      "category": "positive",
+      "query": "I've booked a ferry ticket; when is it?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "I have booked my ferry ticket for 2027-06-18."
+        },
+        {
+          "id": "unrelated",
+          "content": "I have packed a woollen blanket for camping."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "workshop-0",
+      "category": "positive",
+      "query": "What time is my woodworking workshop?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My woodworking workshop begins at 18:00 on Wednesday."
+        },
+        {
+          "id": "unrelated",
+          "content": "My watercolor lesson is on Monday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "workshop-1",
+      "category": "positive",
+      "query": "When does my woodworking workshop begin?",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My woodworking workshop begins at 18:00 on Wednesday."
+        },
+        {
+          "id": "unrelated",
+          "content": "My watercolor lesson is on Monday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "workshop-2",
+      "category": "positive",
+      "query": "Tell me about my Wednesday woodworking workshop.",
+      "memories": [
+        {
+          "id": "target",
+          "content": "My woodworking workshop begins at 18:00 on Wednesday."
+        },
+        {
+          "id": "unrelated",
+          "content": "My watercolor lesson is on Monday."
+        }
+      ],
+      "expect": [
+        "target"
+      ],
+      "required": false
+    },
+    {
+      "id": "negative-date",
+      "category": "question_words",
+      "query": "What date is my passport renewal?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "Our cousin brought a date to the wedding at the lakeside hotel last Saturday."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-time",
+      "category": "question_words",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "We had a wonderful time visiting the coastal museum yesterday."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-specific",
+      "category": "question_words",
+      "query": "Which specific hiking boots do I use?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I keep a specific recipe for orange cake."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-current",
+      "category": "question_words",
+      "query": "What is my current address?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I read about an ocean current in a science magazine."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-what",
+      "category": "question_words",
+      "query": "What alternatives are there to commuter trains?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I think their adaptability is what drew me to them."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-generic",
+      "category": "question_words",
+      "query": "What do I know?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I know what I like and I think it is what they like."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-running",
+      "category": "question_words",
+      "query": "Which running shoes do I use?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I use a database and enjoy running queries."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-perfect",
+      "category": "question_words",
+      "query": "Which running shoes have I used?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I used running queries for work."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-middle",
+      "category": "question_words",
+      "query": "What is my middle name?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "My gardening tools are in the middle drawer."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "negative-when",
+      "category": "question_words",
+      "query": "When is my passport renewal?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "When I read novels I imagine distant planets."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-0",
+      "category": "contractions",
+      "query": "Nora won't buy hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I won't be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-1",
+      "category": "contractions",
+      "query": "Nora won\u2019t buy hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I won\u2019t be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-2",
+      "category": "contractions",
+      "query": "Nora can't buy hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "can't be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-3",
+      "category": "contractions",
+      "query": "Nora isn't buying hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "isn't be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-4",
+      "category": "contractions",
+      "query": "Nora shouldn't buy hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "shouldn't be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-5",
+      "category": "contractions",
+      "query": "I'm buying hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I'm be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-6",
+      "category": "contractions",
+      "query": "I'll buy hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I'll be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-7",
+      "category": "contractions",
+      "query": "I'd buy hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I'd be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-8",
+      "category": "contractions",
+      "query": "We've ordered hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "we've be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "contraction-negative-9",
+      "category": "contractions",
+      "query": "They're buying hiking boots before winter.",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "they're be there for you, and you know that we have always been there for them, but this is how it is."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-0",
+      "category": "unrelated",
+      "query": "What do you remember about my telescope?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I repair bicycles."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-1",
+      "category": "unrelated",
+      "query": "What do you remember about my passport?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I collect porcelain."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-2",
+      "category": "unrelated",
+      "query": "What do you remember about my orchids?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I swim on Tuesdays."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-3",
+      "category": "unrelated",
+      "query": "What do you remember about my dentist?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I bake bread."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-4",
+      "category": "unrelated",
+      "query": "What do you remember about my camera?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I study fungi."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-5",
+      "category": "unrelated",
+      "query": "What do you remember about my medicine?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I paint murals."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-6",
+      "category": "unrelated",
+      "query": "What do you remember about my ferry?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I play violin."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-7",
+      "category": "unrelated",
+      "query": "What do you remember about my workshop?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I attend yoga."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-8",
+      "category": "unrelated",
+      "query": "What do you remember about my address?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I research ocean currents."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-9",
+      "category": "unrelated",
+      "query": "What do you remember about my library?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I train for marathons."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-10",
+      "category": "unrelated",
+      "query": "What do you remember about my astronomy?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I crochet scarves."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-11",
+      "category": "unrelated",
+      "query": "What do you remember about my sourdough?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I write sonnets."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-12",
+      "category": "unrelated",
+      "query": "What do you remember about my allergies?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I collect stamps."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-13",
+      "category": "unrelated",
+      "query": "What do you remember about my chess?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I grow tomatoes."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-14",
+      "category": "unrelated",
+      "query": "What do you remember about my bicycle?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I translate novels."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-15",
+      "category": "unrelated",
+      "query": "What do you remember about my painting?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I hike mountains."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-16",
+      "category": "unrelated",
+      "query": "What do you remember about my ceramics?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I play tennis."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-17",
+      "category": "unrelated",
+      "query": "What do you remember about my train?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I cook noodles."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-18",
+      "category": "unrelated",
+      "query": "What do you remember about my lunch?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I mend clocks."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-19",
+      "category": "unrelated",
+      "query": "What do you remember about my music?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I build robots."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-20",
+      "category": "unrelated",
+      "query": "What do you remember about my macro lens?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I am studying Spanish."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-21",
+      "category": "unrelated",
+      "query": "What do you remember about my pool?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I weave baskets."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-22",
+      "category": "unrelated",
+      "query": "What do you remember about my ticket?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I visit museums."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-23",
+      "category": "unrelated",
+      "query": "What do you remember about my maps?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I research fossils."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-24",
+      "category": "unrelated",
+      "query": "What do you remember about my boots?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I record bird calls."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-25",
+      "category": "unrelated",
+      "query": "What do you remember about my pottery?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I learn calculus."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-26",
+      "category": "unrelated",
+      "query": "What do you remember about my umbrellas?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I enjoy sailing."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-27",
+      "category": "unrelated",
+      "query": "What do you remember about my volcanoes?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I grow lavender."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-28",
+      "category": "unrelated",
+      "query": "What do you remember about my piano?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I study astronomy."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "unrelated-29",
+      "category": "unrelated",
+      "query": "What do you remember about my sculpture?",
+      "memories": [
+        {
+          "id": "unrelated",
+          "content": "I mend boats."
+        }
+      ],
+      "expect": [],
+      "required": false
+    },
+    {
+      "id": "boundary-other_account",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "other_account"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    },
+    {
+      "id": "boundary-forgotten",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "forgotten"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    },
+    {
+      "id": "boundary-cloud_denied",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "cloud_denied"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "cloud"
+    },
+    {
+      "id": "boundary-local_denied",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "local_denied"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    },
+    {
+      "id": "boundary-cross_evidence",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "cross_evidence"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    },
+    {
+      "id": "boundary-invalid",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "invalid"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    },
+    {
+      "id": "boundary-muted",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "muted"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    },
+    {
+      "id": "boundary-archived",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "archived"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    },
+    {
+      "id": "boundary-assistant",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "assistant"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    },
+    {
+      "id": "boundary-unformed",
+      "category": "boundary",
+      "query": "What time is my dentist appointment?",
+      "memories": [
+        {
+          "id": "blocked",
+          "content": "My dentist appointment starts at 14:30 on Thursday.",
+          "state": "unformed"
+        }
+      ],
+      "expect": [],
+      "required": false,
+      "tier": "local"
+    }
+  ]
+}

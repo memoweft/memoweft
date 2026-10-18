@@ -1,0 +1,536 @@
+{
+  "reference": "b6fc783de17ac57690f0946e7951b22406cefce5",
+  "fixture_sha256": "8b977a23cb8e932e241a845e9dfc8c162772454fe682ea9a994ca7ae64f4f577",
+  "source_sha256": "9df11fae0c0e77a20a941bb9a0bf29d1931ecf18fa647c6e065d6d90a8229f44",
+  "metrics": {
+    "queries": 60,
+    "positives": 30,
+    "hits": 30,
+    "recall": 1.0,
+    "returned": 41,
+    "wrong": 11,
+    "precision": 0.7317073170731707
+  },
+  "results": [
+    {
+      "id": "long-saxophone-positive",
+      "selected": [
+        "target",
+        "unrelated"
+      ],
+      "rank": 1,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "67383cc127fd3c4640b9c826e47e44b05cca2d35fc8c84ae5f8ceac1cf2e4090"
+    },
+    {
+      "id": "long-saxophone-negative",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "bf052a5dda124e9542e606d5575f805e5e1b982d8cc4efa1626e1adbb84383f5"
+    },
+    {
+      "id": "long-aquarium-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "42ebb847a840419e22a86022e242facc8719a933a7b34a4144e89b23fe312990"
+    },
+    {
+      "id": "long-aquarium-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "d2136c5a140e6151d3eae89c225db9c0df14a6ae2c666efad3400748f047692d"
+    },
+    {
+      "id": "long-sewing-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "68fed0a73fbe79ec2f5f851a139fc920c11cdd40cd31ffe430be24006e26fb22"
+    },
+    {
+      "id": "long-sewing-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "3721ec083ec935a884b1e51656c1bb8b488f6ae49d9c433ef146daf4553a0556"
+    },
+    {
+      "id": "long-kiln-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "5c81bb1fa9fe1d1da25e075ea72b44ed45d0b11c40b53f94288902df96373fe8"
+    },
+    {
+      "id": "long-kiln-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "3f427b7ee021b2dba41008ba787dadded805617ac5d85b58d333956ab690c6d4"
+    },
+    {
+      "id": "long-kayak-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "a75fb6b00f9e33142a7f16ead139b3b58348edd5d205a3c7ab6b33ec2603455c"
+    },
+    {
+      "id": "long-kayak-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "81809c1f3b3559946f8024a2e038e6d0ac749b1852050e4e1a84fff8fa503fa7"
+    },
+    {
+      "id": "multi-backpack-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "25b75f9285283e30421e27b977d5a74d50ba4187c5e078bad512d45ded6d3435"
+    },
+    {
+      "id": "multi-backpack-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "638e76b0543c006081acfc716ef606eaa4ac1cf6aef2015b73c2297531217858"
+    },
+    {
+      "id": "multi-thermos-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "7151eb18c67f709d8c7a31961d24251a94568d8ee8f696af66fb015e8e3738d1"
+    },
+    {
+      "id": "multi-thermos-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "9816363c3b93cb65071d31832ad3181b703b869c327d483fc6319bc8a3d65708"
+    },
+    {
+      "id": "multi-fermenter-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "cd06098732eac56437cc2fed4c932e31e17a1032c44bec7c2813b1a72e42a74b"
+    },
+    {
+      "id": "multi-fermenter-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "47ebeccfc53796f49e5bc2a7dbedfafffaa12744d2604aa03aaef3099c871d96"
+    },
+    {
+      "id": "multi-grinder-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "e779fc5dbf164671aa175a64f2da00682173eb521c26bb762de0574669a16649"
+    },
+    {
+      "id": "multi-grinder-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "4cda0d2409bca930484ed7afee3de8d0d84d4d15c26cfe1ddfc91f2257d7d2de"
+    },
+    {
+      "id": "multi-bookshelf-positive",
+      "selected": [
+        "target",
+        "unrelated"
+      ],
+      "rank": 1,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "d7cbdd42f4e84c0b28454dd06d6fb2e2037ac7043e55c280c885191c47c49f45"
+    },
+    {
+      "id": "multi-bookshelf-negative",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "f4a54a4a7832cc9d499cb65dd6dcdc3766e8dd6b4f03a2d331f0aa30284c6c91"
+    },
+    {
+      "id": "negative-shellfish-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "09dedda5ff993cafaa696babc5aef36b4f3aa3034ad5fe7f463ce0a064e3ee1f"
+    },
+    {
+      "id": "negative-shellfish-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "59ec9f2837c3966d2cc0448ab44db990e0021f713c869db55a5176146d2983e9"
+    },
+    {
+      "id": "negative-newspaper-positive",
+      "selected": [
+        "unrelated",
+        "target"
+      ],
+      "rank": 2,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "fe22895829e6fa74cd237f49ad53ebf9650d5f5258f37ff26617c709c4668c58"
+    },
+    {
+      "id": "negative-newspaper-negative",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "35ff1ffb813949c13923335a0b0e0a219c8371f47fc8614e440287e4465be839"
+    },
+    {
+      "id": "negative-caffeine-positive",
+      "selected": [
+        "target",
+        "unrelated"
+      ],
+      "rank": 1,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "a9c8b3fb1b2882808da6b694e73b292355c571c8e2579050174e3682433d3cf1"
+    },
+    {
+      "id": "negative-caffeine-negative",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "0c379fd875d5de5a90c1455e52a082e5b080c4a732efd21397b744c624117ab3"
+    },
+    {
+      "id": "negative-medication-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "27eb9d718426ed3fa4664d245c707ab5108a53777100305608e57d4b722cf898"
+    },
+    {
+      "id": "negative-medication-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "78516581fbd35597ce01e4ab2311a69ef764ccbd1dca7803958587c1553a67a2"
+    },
+    {
+      "id": "negative-lilies-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "3b0d55ace29803bd5d3e8d74314835d818117a5506b18ab389f8e219d6fc4e63"
+    },
+    {
+      "id": "negative-lilies-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "b76c04499f6af6aa0deb989bc074981781171f773e8c01e4cf5d4a2e721a789c"
+    },
+    {
+      "id": "plural-batteries-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "5c217d146ba6f0ccd629ff48ea9126fa21ff308445eeaea0fcccbd85940e61b0"
+    },
+    {
+      "id": "plural-batteries-negative",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "844e2ea63dfb18af4071bb739acfa1288e3e88cb14d4acbb1a3a6af54c084d8b"
+    },
+    {
+      "id": "plural-cables-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "c014f7e82d41cc0f0b03b1d0769e1a2064b0134b39bc914d9f38a835352b97cb"
+    },
+    {
+      "id": "plural-cables-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "abbf676d5c267a91efd8aeaa72859044f2a1c7bc184ba526e9072d9a2e45e9a5"
+    },
+    {
+      "id": "plural-socks-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "a2fab2ca36a7aef25c1fe11ab21f3c51c061c7f0dd7edcf0b706c33c1133e295"
+    },
+    {
+      "id": "plural-socks-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "18f698ed8421c596ac7876dea4f33153cb3fbc7e40e82f4c44962058eab88952"
+    },
+    {
+      "id": "plural-weights-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "5ad9982d0e821eec5fe49acdd1531c5f16cd303da0bc22d3a74b6c3ca57304f0"
+    },
+    {
+      "id": "plural-weights-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "f917a9c1fc32d9bc72bfbcdf83890847a33f536928ab5eeac7e4936175039fbb"
+    },
+    {
+      "id": "plural-tomatoes-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "95916b4162e14aef6ca202df39c3f1f34fa7aaa0bd7aff84c075dec40bfb0119"
+    },
+    {
+      "id": "plural-tomatoes-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "dbb4c8f11a564699f425b81bd7e5897420cdea9f3b685bb8d03ef3a635ae9116"
+    },
+    {
+      "id": "past-bergen-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "2478c7cf3212250ad768fcee6899980774ae97d07a58838baf7722790be05ce5"
+    },
+    {
+      "id": "past-bergen-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "5f85d4442f70e6966adf57b8b5ac3a835a3a15e7f018aa29c6dcaaf26b3f7d39"
+    },
+    {
+      "id": "past-terrier-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "f129b70b8246bf71cb7510b41ab63ceffb372633a97e5b709ef33de25b7fd6c8"
+    },
+    {
+      "id": "past-terrier-negative",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "a1985482d90265ce3120adb08213d65b5254d506cba852a6f934313a63c50ad9"
+    },
+    {
+      "id": "past-cello-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "68b33f02ef36b18743392e96be194e2d2d6b67a8cf9c91bc02ca9eb6b5ac9668"
+    },
+    {
+      "id": "past-cello-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "d18b6003fa0a91e0116d72eda46f8f7139723709a0cd5b77d17d973da42057d1"
+    },
+    {
+      "id": "past-loft-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "f61fbe375f1c0aca81e2b1201066be1a7adf239f6f241899f000a4bfd3269cdc"
+    },
+    {
+      "id": "past-loft-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "234df74c73b4bb2cadb89ae584bdf7f77fbe995a0393506c38557f3672648150"
+    },
+    {
+      "id": "past-route-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "1d53bae518d6e5d025677172d78a9439f714efe57e7fb3cedfecf9ac2290adcd"
+    },
+    {
+      "id": "past-route-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "53953b0c385d4901f761e219c72160a27aaf8a71097f408e83c5cad12ff59660"
+    },
+    {
+      "id": "units-stove-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "fdcd5a9ace72ee0452c932ae04f896b71d09ef9cc031379e1a4d5f984cb53a60"
+    },
+    {
+      "id": "units-stove-negative",
+      "selected": [
+        "unrelated"
+      ],
+      "rank": 0,
+      "wrong": [
+        "unrelated"
+      ],
+      "snapshot_sha256": "18a9f721ccbc4bb626a03ba2b882c04a11131f5d9a7da76d517cb63e17855a2c"
+    },
+    {
+      "id": "units-tyres-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "c34af365ab101cba3e624f0908ee2f975222ea6c4f2af4443d4db1850187b561"
+    },
+    {
+      "id": "units-tyres-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "cf828d2c5da8e18ce3e37bfa9426f199612f2965a5664b39ec6b71407e801b59"
+    },
+    {
+      "id": "units-humidifier-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "b8d7ce88221848585418aaeb57906debddf0ff4bf2010656d0b7a416ca35c09f"
+    },
+    {
+      "id": "units-humidifier-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "9703b36078472e787f86b710c414fcd359a7e28cbf362f01e64316c38b8412c9"
+    },
+    {
+      "id": "units-freezer-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "c0ece5ee2fb00a9679ce7ab6c3fb42c012c221829278710438b67cddd91f0358"
+    },
+    {
+      "id": "units-freezer-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "9acaab8e58534802e1e164033efd951a36b1ea7fe3366e598507559e5e678264"
+    },
+    {
+      "id": "units-filter-positive",
+      "selected": [
+        "target"
+      ],
+      "rank": 1,
+      "wrong": [],
+      "snapshot_sha256": "3fa87c7996db55ea5da42d989b304ac1cff308fd238c787e0517e4999cea4925"
+    },
+    {
+      "id": "units-filter-negative",
+      "selected": [],
+      "rank": 0,
+      "wrong": [],
+      "snapshot_sha256": "fd7d7de950f14b8fbff8f1ed8a92e84daa040ce0233fb402e136c2c30f435307"
+    }
+  ]
+}
