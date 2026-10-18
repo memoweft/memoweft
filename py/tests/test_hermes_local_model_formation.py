@@ -24,7 +24,7 @@ def test_explicit_ongoing_preferences_are_distinct_from_wishes_and_moods() -> No
     assert '只有无可形成内容才用 no_change' in _SYSTEM_PROMPT
 
 
-@pytest.mark.parametrize('prompt', [_SYSTEM_PROMPT, _SYSTEM_PROMPT_EN])
+@pytest.mark.parametrize('prompt', [_SYSTEM_PROMPT, _SYSTEM_PROMPT_EN], ids=['zh', 'en'])
 def test_formation_prompt_does_not_contain_evaluation_answers(prompt: str) -> None:
     for answer in ('锻炼', '周三', '周五', '技术', '买菜', '小林', '设计', '项目朋友',
                    'exercise', 'Wednesday', 'Friday', 'technical', 'Lin', 'design',

@@ -102,7 +102,7 @@ def historical_module(ref):
             del sys.modules[name]
 
 
-def run(cases, repeats=7, reference=None, padding=0):
+def run(cases, repeats=7, reference=None, padding=0, exact_preview_reference=False):
     results = []
     reference_results = []
     with TemporaryDirectory(prefix="memoweft-recall-quality-") as folder:
@@ -127,6 +127,8 @@ def run(cases, repeats=7, reference=None, padding=0):
                                 started = perf_counter()
                                 previous = service.preview_recall(case["query"], model_tier=case["tier"])["preview"]
                                 reference_latencies.append((perf_counter() - started) * 1000)
+                                if exact_preview_reference:
+                                    assert previous == first, case["id"] + ": complete preview differs from reference"
                         else:
                             started = perf_counter()
                             result = service.preview_recall(case["query"], model_tier=case["tier"])["preview"]
@@ -198,12 +200,15 @@ def main():
     parser.add_argument("--out", type=Path)
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--reference-ref")
+    parser.add_argument("--exact-preview-reference", action="store_true", help="Require the complete preview, including rendered bytes, to equal --reference-ref")
     parser.add_argument("--repeats", type=int, default=7)
     parser.add_argument("--padding", type=int, default=0)
     parser.add_argument("--exact-baseline", action="store_true", help="Require identical per-case selection, hit and false-recall results")
     args = parser.parse_args()
     if args.repeats < 1 or args.padding < 0:
         parser.error("repeats must be positive and padding nonnegative")
+    if args.exact_preview_reference and not args.reference_ref:
+        parser.error("--exact-preview-reference requires --reference-ref")
     started = perf_counter()
     splits = ["dev", "challenge", "holdout", "review"] if args.split == "all" else [args.split]
     fixtures = {split: json.loads((HERE / f"{split}.json").read_text(encoding="utf-8"))["cases"] for split in splits}
@@ -213,7 +218,7 @@ def main():
         check_fixtures(report["fixture_hashes"], baseline)
     with ExitStack() as stack:
         reference = stack.enter_context(historical_module(args.reference_ref)) if args.reference_ref else None
-        report["splits"] = {split: run(fixtures[split], args.repeats, reference, args.padding) for split in splits}
+        report["splits"] = {split: run(fixtures[split], args.repeats, reference, args.padding, args.exact_preview_reference) for split in splits}
     report["duration_seconds"] = perf_counter() - started
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

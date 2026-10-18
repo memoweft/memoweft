@@ -48,6 +48,8 @@ from .world_worker import (
 )
 from .terminal_outcome import persist_terminal_outcome_in_transaction
 from .recall import _predecessor_match_texts
+from .state_evolution import is_superseded, resolve_state_version, validate_successor
+from .source_assertion import owner_assertion_error
 
 logger = logging.getLogger(__name__)
 
@@ -271,6 +273,10 @@ _PURE_INQUIRY_PATTERNS = (
 )
 
 _DECLARATION_SIGNALS = (
+    # Explicit goal declarations can end with a book title such as Why Not?.
+    # Route the source to interpretation; punctuation does not decide its meaning.
+    re.compile(r"^(?:my|our)\s+(?:(?:long[- ]term|life)\s+)?(?:goal|plan|ambition)\s+(?:is|remains)\b", re.I),
+    re.compile(r"^(?:我|我们|本人)的(?:长期|人生)?(?:目标|计划)(?:是|为)"),
     re.compile(r"我叫[^\s?？，,。]+"),
     re.compile(r"叫我[^\s?？，,。]+"),
     re.compile(r"我的名字[是叫]"),
@@ -627,6 +633,12 @@ class BatchItem:
     supersedes_cognition_id: Optional[str] = None
     #: Temporal superseding: this new relationship supersedes a prior relationship.
     supersedes_relationship_id: Optional[str] = None
+    # Optional interpretation intent: validation only, never a new stored kind.
+    is_long_term_goal: bool = False
+    # Compiler-owned distinction for the existing conditional reminder path.
+    is_situational_decision: bool = False
+    # Compiler-owned occurrence identity; never accepted from model fields.
+    state_version_id: Optional[str] = None
     #: V5 third-party perspective holder (targeted attribute/preference only):
     #: the entity holding this view.  None == owner_self.
     perspective_holder_name: Optional[str] = None
@@ -637,6 +649,8 @@ class BatchItem:
         return self.statement_kind
 
     def cognition_id(self, subject_id: str) -> str:
+        if self.state_version_id is not None:
+            return self.state_version_id
         # Same deterministic derivation as V1 ("memoweft_cognition_v1") so a
         # V1-formed cognition restated through V3 keeps the same ID and takes
         # the same-ID support path instead of duplicating.  V5 third-party
@@ -677,6 +691,8 @@ class BatchItem:
             assert self.entity_canonical_name is not None
             return entity_id_for(subject_id, self.entity_canonical_name)
         if self.statement_kind == "relationship":
+            if self.state_version_id is not None:
+                return self.state_version_id
             assert self.relation_type is not None
             assert self.target_canonical_name is not None
             source_id = (
@@ -754,6 +770,9 @@ class TrustCommandApplyError(RuntimeError):
 # ── model contract ─────────────────────────────────────────────────────────
 
 _SYSTEM_PROMPT = (
+    "本人长期目标/计划建议必须附 is_long_term_goal=true（仅供编译器校验，仍用 preference）；条件目标仍是目标。\n"
+    "长期目标与计划是可记忆的持续意向，用 preference（目标/打算）保留完整原话、动机、数量和条件，绝不是已完成事件；不需要另说‘记住’。例如长期建立社区图书馆、未来几年取得资格证。只有模糊愿望、问题、未接受的助手建议和本次任务指令不形成目标。明确说目标已完成、放弃或改期时，保留完整新状态，用 form + supersedes_cognition_id 取代对应当前意向；没有完成声明、没有提及或期限已过都不能推断完成或放弃。不要新增 goal 类型或把计划填成 event。\n"
+    "先区分纠错与自然变化：原来记错才 correct；以前成立、后来换工作/搬家/关系变化/偏好变化/目标推进用 form + supersedes_cognition_id，关系用 supersedes_relationship_id，逐字复制 current 列表中对应旧项 id。保留旧状态作为过往。选择全部同主题相邻 sentences/segments，包含新旧方向、否定、原因和限制；不能只选‘最近在想偏好’的引导句，也不能把压力后一周的偏好转变当成仅限一周的指令。独立新主题不能取代旧主题；不确定哪个目标需澄清，不能凭最近一条猜测。\n"
     "明确纠正人名（含省略主题的‘那个人名写错了’）用 action=correct、statement_kind=alias、entity=新姓名、alias_of=旧姓名；不是 correct+naming，也不附 corrects_cognition_id、corrects_relationship_id 或 corrects_event_id。两姓名必须都在当前纠正原话中。\n"
     "将同一句中独立的人物关系、能力/评价、持续决定分别形成，不能因为已形成关系就省略评价或相反。关系只选择关系分句，评价用 attribute + entity 指向该人物，表示用户的看法而非客观能力认证；需要姓名时可用唯一相邻指代，不必把关系也并进评价。实体由编译器创建并关联各项原话来源，无须重复 naming。用户明确确认以后特定情境的行动/提醒，用独立 preference 决定；明确重述按 stated，短确认按 confirmed；两种确认决定都必须用 assistant_claim 逐字引用 context 中被确认的助手提议（保留人物姓名和适用情境），保存双方来源；stated 命题仍从用户原话派生。未确认的助手建议、拒绝、纯情绪闲聊不形成决定。纠正评价用 corrects_cognition_id，纠正关系用 corrects_relationship_id；纠正姓名用 action=correct, statement_kind=alias, entity=新姓名, alias_of=旧姓名，两姓名须来自同一明确纠正原话；正常别名仍用 form。\n"
     "本人持续 attribute/preference 的所选原话明确命名了适用主题时，必须附主题检索线索：\"entity\":{\"canonical_name\":\"<原话主题词>\",\"kind\":\"topic\",\"aliases\":[\"<常见同义主题词>\"]}。这是第10条第三方 entity 之外的本人主题用法；不是改成第三方属性。给主题的常见等价叫法，便于以后换说法仍能检索。别名只能换主题叫法，不能加入新事实、限制、数值、人物或扩大范围；不能确定同义时 aliases 留空。主题词必须在所选原话中；命题仍逐字来自所选原话。原话未命名主题或省略主题的纠正不用补 entity；已有前项主题线索会保留。relationship 不适用此字段。\n"
@@ -787,7 +806,7 @@ _SYSTEM_PROMPT = (
     "item 形状（statement_kind 决定额外字段）：\n"
     "{\"action\":\"form\",\"target\":\"owner_self\",\"statement_kind\":\"attribute\"|\"preference\"|\"naming\"|\"relations"
     "hip\"|\"alias\"|\"event\",\"formed_by\":\"stated\"|\"confirmed\",\"proposition\":\"…\",\"supports\":[{\"evidence_id\":\""
-    "...\",\"sentence_id\":\"t0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
+    "...\",\"sentence_id\":\"t0\"}],\"corrects_cognition_id\":\"...\",\"supersedes_cognition_id\":\"...\",\"supersedes_relationship_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"entity_reference\":{\"mention\":\"他\"},\"perspective_holder\":{\"canonical_name\""
     ":\"…\",\"kind\":\"person\"},\"alias_of\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"target_entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"source_entity\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"relation_type\":\"g"
@@ -797,14 +816,14 @@ _SYSTEM_PROMPT = (
     "规则：\n"
     "1. 只处理：用户本人稳定属性/偏好；第三方稳定属性或偏好（一次性/情景内容不算）；用户对第三方的命名；用户↔第三方或第三方↔第三方的稳定关系；用户明确说两个名字**同指一人**的显式等价。**对任何"
     "人的评价按独立 attribute 记录用户观点**；除已发生/已确定事件外的一次性事实、含糊内容一律不产出。逐条审阅 Evidence，凡是明确的都要产出（每边界最多 5 条；作息/通勤/日程等稳定习惯也算用户稳定属性或偏好，可"
-    "以产出；愿望/期待与情绪、观点不产出。带明确短期范围的临时状态（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。这里的愿望不包括对助手以后持"
+    "以产出；模糊愿望/期待与情绪闲聊不产出，明确持续目标/计划按 preference 形成。带明确短期范围的临时状态（如\"这周不想社交\"）也不形成永久 attribute/preference，只保留原始 Evidence）。这里的愿望不包括对助手以后持"
     "续生效的明确要求，答复方式要求是 preference；没有明确截止范围的当前习惯或安排属于持续约束，必须 form。‘最近’本身不能作为 no_change 的理由；形成当前约束，之后有新说法再 c"
     "orrect 或 supersede。\n"
     "2. supports 的 evidence_id 必须来自输入，并优先选择该 Evidence 给出的 sentence_id，独立分句可用 segment_id；系统从segment原文确定性计算Unicode start/end与s"
     "tated proposition。旧quote/start/end仅兼容，不要自行复制、概括或计算。assistant/context永远不是Evidence。\n"
     "3. action=form：形成或复述（复述自动并入同 ID support 链）；只有用户明确说旧记忆错了并给出新值才用 correct（attribute/preference 用 correc"
     "ts_cognition_id；relationship 改口替换用 corrects_relationship_id）。明确撤回（无新值，见第 13 条）用 correct+retract；只是不同"
-    "意/怀疑同一命题（见第 14 条）用 contradict。**看到\"其实…不是…是…\"\"记错了\"\"改一下\"\"不算数\"\"猜错啦\"\"不对\"等改口纠错信号，或用户表明状态改变，必须使用 correct 处"
+    "意/怀疑同一命题（见第 14 条）用 contradict。**看到\"其实…不是…是…\"\"记错了\"\"改一下\"\"不算数\"\"猜错啦\"\"不对\"等改口纠错信号，必须使用 correct 处"
     "理旧记忆并更新为新认知，绝不能放任冲突旧记忆并存**。\n"
     "4. formed_by=stated：使用segment_id时，proposition只是必填占位，系统会从所选segment逐字派生正式命题并完成第一人称归一；模型不要复制、概括或计算命题。结构"
     "字段中的姓名必须能在所选segment或规则10允许的唯一指代上下文中核对。姓名、称呼、数字、日期必须保留用户原话写法，不得改写或猜测；无法核对就不产出。quote同样逐字派生命题，start/end"
@@ -864,6 +883,23 @@ _SYSTEM_PROMPT = (
 #: English equivalent of rules 1-17 (Owner-approved §4.12 localization, option B).
 #: Semantically equivalent to _SYSTEM_PROMPT, with domain-independent rules.
 _SYSTEM_PROMPT_EN = (
+    "Mark a proposed owner goal/plan with is_long_term_goal=true (validation only; keep preference). Conditional goals remain goals.\n"
+    "An explicit enduring goal or plan is a memory-worthy ongoing intention: use preference and keep "
+    "the complete source wording, motivation, quantities and conditions, never an accomplished event. "
+    "No separate remember request is necessary. Examples: a multi-year community library plan or a "
+    "long-term qualification goal. Exclude vague wishes, questions, unaccepted assistant "
+    "suggestions and one-task instructions. An explicit completion, abandonment or rescheduling replaces "
+    "the corresponding current intention using form + supersedes_cognition_id and the complete new status. "
+    "Silence, an elapsed deadline or an intention never proves completion or abandonment. Do not invent "
+    "a goal statement_kind or encode an intention as event.\n"
+    "Distinguish mistakes from changes: correct only a prior error; a previously true job, residence, "
+    "relationship, preference or goal that changes over time uses form + supersedes_cognition_id, or "
+    "supersedes_relationship_id for a relationship. Copy the exact predecessor id from the current list. "
+    "Preserve the old state as history. Select ALL adjacent same-topic sentences/segments needed for "
+    "the direction of change, new value, negation, reason and conditions; never select only an opening "
+    "like 'thinking about my preferences'. A preference shift after a stressful week is not necessarily "
+    "a one-week instruction. An independent topic cannot replace another topic; clarify an ambiguous "
+    "predecessor rather than guessing the most recent item.\n"
     "For an explicit name correction, including an omitted-topic 'that name was wrong', use action=correct, statement_kind=alias, entity=new name and alias_of=old name. Do not use correct+naming or attach any corrects_cognition_id, corrects_relationship_id or corrects_event_id; both names must occur in the current correction evidence.\n"
     "Split independent person relationships, abilities/evaluations and enduring decisions into separate items, even within one sentence. A relationship never substitutes for an evaluation, or vice versa. Select the relationship clause alone; represent a user's evaluation as attribute + entity targeting the person, as the user's view rather than certified objective ability. Resolve a unique adjacent pronoun without folding the relationship into the evaluation. The compiler creates entities with source links; redundant naming is unnecessary. Explicitly confirmed future situational actions/reminders form a separate preference decision: stated for an explicit restatement, confirmed for short assent. In BOTH cases include assistant_claim quoting the confirmed proposal verbatim from context (retain the person name and situation), so both sources are preserved; stated propositions still derive from user text. Never form a decision from unconfirmed assistant advice, refusal or casual emotion. Correct evaluations with corrects_cognition_id and relationships with corrects_relationship_id. For an explicit name correction use action=correct, statement_kind=alias, entity=new name, alias_of=old name; both names must occur in the same correction evidence. Ordinary aliases still use form.\n"
     "For an ongoing owner attribute/preference whose selected source explicitly names its topic, "
@@ -930,7 +966,7 @@ _SYSTEM_PROMPT_EN = (
     "Item shape (statement_kind decides the extra fields):\n"
     "{\"action\":\"form\",\"target\":\"owner_self\",\"statement_kind\":\"attribute\"|\"preference\"|\"naming\"|\"relations"
     "hip\"|\"alias\"|\"event\",\"formed_by\":\"stated\"|\"confirmed\",\"proposition\":\"…\",\"supports\":[{\"evidence_id\":\""
-    "...\",\"sentence_id\":\"t0\"}],\"corrects_cognition_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
+    "...\",\"sentence_id\":\"t0\"}],\"corrects_cognition_id\":\"...\",\"supersedes_cognition_id\":\"...\",\"supersedes_relationship_id\":\"...\",\"assistant_claim\":\"...\",\"entity\":{\"canonical_"
     "name\":\"…\",\"kind\":\"person\"},\"entity_reference\":{\"mention\":\"they\"},\"perspective_holder\":{\"canonical_na"
     "me\":\"…\",\"kind\":\"person\"},\"alias_of\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"target_entity\":{\"canonic"
     "al_name\":\"…\",\"kind\":\"person\"},\"source_entity\":{\"canonical_name\":\"…\",\"kind\":\"person\"},\"relation_type\""
@@ -944,8 +980,8 @@ _SYSTEM_PROMPT_EN = (
     "wo names for one person stated by the user . **Keep attributable evaluations as separate owner-view attribute items **; one-off facts"
     " other than happened/confirmed events and vague content are never produced. Review the Evidence one "
     "by one; produce everything that is definite (at most 5 per boundary; routines/commutes/schedules and"
-    " other stable habits count as stable attributes or preferences and may be produced; wishes/expectati"
-    "ons , emotions and opinions are not produced. A temporary state with an explicit short time scope (f"
+    " other stable habits count as stable attributes or preferences and may be produced; explicit enduring goals/plans "
+    "form as preferences, while vague wishes, emotions and chitchat do not. A temporary state with an explicit short time scope (f"
     "or example, \"I do not want to socialize this week\") must not become a permanent attribute/preference"
     "; retain only its raw Evidence). Wishes do not include explicit ongoing instructions to the assistan"
     "t: ongoing response requirements are preferences. Current routines or arrangements without an explic"
@@ -1340,7 +1376,8 @@ class HermesBatchAdapterProcessor:
                        "the decision, use stated with the user's full sentence_id and include assistant_claim."
                        if compiled.reason in ("topic_name_not_in_span", "invalid_topic_claim", "proposition_mismatch") else "")
                     + (" The source passed the declarative-fact check. Reconsider no_change: "
-                       "a new personal preference, name, relationship or correction must be "
+                       "a new personal preference, enduring goal/plan (as an intention, not an event), "
+                       "name, relationship, state change or correction must be "
                        "represented unless the current World already expresses it. A question "
                        "or task-only instruction can still return no_change."
                        if compiled.reason == "model_no_change" else "")
@@ -1593,6 +1630,8 @@ class HermesBatchAdapterProcessor:
         payload: list[dict[str, object]] = []
         for r in rows:
             cognition_id = str(r[0])
+            if is_superseded(db, "cognition", cognition_id):
+                continue
             if not world_item_visible(
                 db,
                 job.subject_id,
@@ -1823,7 +1862,7 @@ class HermesBatchAdapterProcessor:
                 "target_entity_id": str(r[4]),
             }
             for r in rows
-            if world_item_visible(
+            if not is_superseded(db, "relationship", str(r[0])) and world_item_visible(
                 db,
                 job.subject_id,
                 "relationship",
@@ -2020,6 +2059,9 @@ class HermesBatchAdapterProcessor:
             supports=parsed,
             supersedes_cognition_id=supersedes_id,
         )
+        source_error = self._owner_assertion_error(item, raw_by_id)
+        if source_error:
+            return None, source_error
         return (
             _CompiledBatch(
                 items=(item,),
@@ -2144,6 +2186,9 @@ class HermesBatchAdapterProcessor:
                             and _is_confirmation_span(raw, turn['content'])]
                         if len(proposals) == 1:
                             item = replace(item, assistant_source=proposals[0])
+            source_error = self._owner_assertion_error(item, raw_by_id)
+            if source_error:
+                return None, source_error
             items.append(item)
 
         identities = [item.apply_identity(job.subject_id) for item in items]
@@ -2350,6 +2395,9 @@ class HermesBatchAdapterProcessor:
     ) -> tuple[Optional[BatchItem], str]:
         if not isinstance(raw_item, dict):
             return None, "invalid_cognition_item"
+        proposed_goal = raw_item.get('is_long_term_goal', False)
+        if not isinstance(proposed_goal, bool):
+            return None, 'invalid_goal_intent'
         action = raw_item.get("action")
         if action not in ("form", "correct", "contradict"):
             return None, "invalid_cognition_action"
@@ -2435,6 +2483,7 @@ class HermesBatchAdapterProcessor:
         supersedes_relationship_id: Optional[str] = supersedes_rel.strip() if isinstance(supersedes_rel, str) and supersedes_rel.strip() else None
         if not supersedes_relationship_id and supersedes_cognition_id and (supersedes_cognition_id.startswith("relationship-") or kind == "relationship"):
             supersedes_relationship_id = supersedes_cognition_id
+            supersedes_cognition_id = None
         corrects = raw_item.get("corrects_cognition_id")
         # LLM JSON hygiene: models habitually emit "" for optional fields.
         # An empty string is semantically absent — normalize it instead of
@@ -3003,6 +3052,7 @@ class HermesBatchAdapterProcessor:
             ):
                 return None, "proposition_not_anchored"
 
+        is_situational_decision = False
         if kind == 'preference' and formed_by in {'stated', 'confirmed'} and not retract and topic_canonical_name is None and entity_canonical_name is None:
             # A confirmed situational decision has an explicit condition in its
             # selected source. Preserve that verbatim retrieval cue even when
@@ -3017,6 +3067,9 @@ class HermesBatchAdapterProcessor:
                     break
             if condition:
                 topic_canonical_name = condition.group(1).strip()
+                is_situational_decision = bool(re.match(
+                    r'[，,]?(?:就|请)提醒(?:我|我们|用户)', condition_source[condition.end():],
+                ))
         return (
             BatchItem(
                 action=str(action),
@@ -3049,11 +3102,32 @@ class HermesBatchAdapterProcessor:
                 perspective_holder_kind=perspective_holder_kind,
                 supersedes_cognition_id=supersedes_cognition_id,
                 supersedes_relationship_id=supersedes_relationship_id,
+                is_long_term_goal=proposed_goal,
+                is_situational_decision=is_situational_decision,
             ),
             "",
         )
 
     # ── fenced atomic Apply ────────────────────────────────────────────────
+
+    @staticmethod
+    def _owner_assertion_error(item: BatchItem, raw_by_id: Mapping[str, str]) -> str | None:
+        if item.action != 'form' or item.formed_by != 'stated' and not item.is_long_term_goal:
+            return None
+        # A source-validated confirmed or explicit reminder decision has its typed
+        # two-source contract; it is not a proposed long-term goal. An explicit
+        # goal annotation can only tighten validation, never bypass it.
+        if (item.assistant_claim is not None or item.is_situational_decision) and not item.is_long_term_goal:
+            return None
+        owner_claim = (item.statement_kind in {'attribute', 'preference'} and item.entity_canonical_name is None
+                       or item.statement_kind == 'relationship' and item.source_canonical_name is None)
+        if not owner_claim:
+            return None
+        for eid, start, end, _text in item.supports:
+            error = owner_assertion_error(raw_by_id[eid], start, end, proposed_goal=item.is_long_term_goal)
+            if error:
+                return error
+        return None
 
     def _apply_atomically(
         self, db: sqlite3.Connection, job: ClaimedWorldJob, batch: _CompiledBatch
@@ -3113,8 +3187,26 @@ class HermesBatchAdapterProcessor:
 
             results: list[dict[str, object]] = []
             pending_transitions: list[tuple[str, str]] = []
+            superseding_priors = {
+                prior for item in batch.items
+                for prior in (item.supersedes_cognition_id, item.supersedes_relationship_id)
+                if prior is not None
+            }
+            mutation_targets = [
+                target for item in batch.items
+                for target in (item.supersedes_cognition_id, item.supersedes_relationship_id,
+                               item.corrects_cognition_id, item.corrects_relationship_id,
+                               item.contradicts_cognition_id, item.corrects_event_id)
+                if target is not None
+            ]
+            if any(mutation_targets.count(prior) > 1 for prior in superseding_priors):
+                raise _ZeroWriteError("ambiguous_supersession_target")
             wrote_any = False
             for item in batch.items:
+                item = resolve_state_version(db, job.subject_id, item, self.model_tier)
+                successor_error = validate_successor(db, job.subject_id, item, self.model_tier)
+                if successor_error:
+                    raise _ZeroWriteError(successor_error)
                 wrote_any = self._apply_topic_aliases(db, job, item, now_text) or wrote_any
                 if item.action == "form":
                     if item.statement_kind in ("naming", "relationship"):
@@ -3183,11 +3275,11 @@ class HermesBatchAdapterProcessor:
                             new_rel_id = item.apply_identity(job.subject_id) if hasattr(item, "apply_identity") else (
                                 item.cognition_id(job.subject_id)
                             )
-                            import uuid as _uuid
+                            transition_id = "relationship-transition-" + _hash_text(_canonical(["superseded", prior_rel_id, new_rel_id]))
                             db.execute(
-                                "INSERT OR REPLACE INTO relationship_transitions (id, prior_relationship_id, replacement_relationship_id, reason, revision) "
-                                "VALUES (?, ?, ?, 'superseded', (SELECT revision FROM memory_state WHERE singleton = 1))",
-                                (str(_uuid.uuid4()), prior_rel_id, new_rel_id),
+                                "INSERT INTO relationship_transitions (id, prior_relationship_id, replacement_relationship_id, reason, revision) "
+                                "VALUES (?, ?, ?, 'superseded', ?)",
+                                (transition_id, prior_rel_id, new_rel_id, self._current_revision(db) + 1),
                             )
                             wrote = True
                 elif item.action == "contradict":
@@ -3225,7 +3317,8 @@ class HermesBatchAdapterProcessor:
             if wrote_any:
                 revision = self._bump_memory_state(db)
                 for prior_id, replacement_id in pending_transitions:
-                    self._write_transition(db, prior_id, replacement_id, revision)
+                    self._write_transition(db, prior_id, replacement_id, revision,
+                                           reason="supersedes" if prior_id in superseding_priors else "corrects")
 
             terminal_state: Literal["applied", "no_change"] = (
                 "applied" if wrote_any else "no_change"
@@ -3803,7 +3896,7 @@ class HermesBatchAdapterProcessor:
                     position = raw.rfind(name, 0, start)
                     if position >= 0:
                         self._write_entity_ledger(db, entity_id, evidence_id, position, position + len(name))
-        relationship_id = relationship_id_for(
+        relationship_id = item.state_version_id or relationship_id_for(
             job.subject_id, source_id, item.relation_type, target_id
         )
         existing = db.execute(
@@ -3849,17 +3942,18 @@ class HermesBatchAdapterProcessor:
                 self._reconcile_single_status_cognitions(db, job, item, now_text)
             return outcome, True
         if (
-            str(existing[0]) != item.proposition
+            (item.state_version_id is None and str(existing[0]) != item.proposition)
             or str(existing[1]) != item.relation_type
             or str(existing[2]) not in FORMED_BY_BASES
             or str(existing[4]) != source_id
         ):
             raise _ZeroWriteError("relationship_replay_mismatch")
-        added = 0
-        for evidence_id, _start, _end, _slice in item.supports:
-            added += _ensure_relationship_support_link(
+        support_changes_before = db.total_changes
+        for evidence_id, start, end, _slice in item.supports:
+            _ensure_relationship_support_link(
                 db, relationship_id, evidence_id
             )
+            self._write_relationship_ledger(db, relationship_id, evidence_id, start, end)
         linked = int(
             db.execute(
                 "SELECT COUNT(DISTINCT evidence_id) FROM relationship_evidence "
@@ -3881,7 +3975,7 @@ class HermesBatchAdapterProcessor:
             if new_confidence >= floor:
                 new_cred = label
                 break
-        if added or new_confidence != int(existing[3]):
+        if db.total_changes != support_changes_before or new_confidence != int(existing[3]):
             db.execute(
                 "UPDATE relationship SET confidence = ?, cred_status = ?, "
                 "updated_at = ? WHERE id = ?",
@@ -5475,15 +5569,16 @@ class HermesBatchAdapterProcessor:
         prior_id: str,
         replacement_id: str,
         revision: int,
+        *, reason: str = "corrects",
     ) -> None:
         transition_id = "cognition-transition-" + _hash_text(
-            _canonical(["corrects", prior_id, replacement_id])
+            _canonical([reason, prior_id, replacement_id])
         )
         db.execute(
             "INSERT OR IGNORE INTO cognition_transitions ("
             "id, prior_cognition_id, replacement_cognition_id, reason, revision"
-            ") VALUES (?, ?, ?, 'corrects', ?)",
-            (transition_id, prior_id, replacement_id, revision),
+            ") VALUES (?, ?, ?, ?, ?)",
+            (transition_id, prior_id, replacement_id, reason, revision),
         )
 
     def _bump_memory_state(self, db: sqlite3.Connection) -> int:

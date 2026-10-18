@@ -114,6 +114,7 @@ _GENERIC_PREDICATE_BIGRAMS: frozenset[str] = frozenset({
 })
 _HISTORICAL_QUERY_PATTERN: re.Pattern[str] = re.compile(
     r"(?:以前|曾经|过去|原先|之前|早先|从前|先前|那时候|旧的|以前的|谈过|聊过|提过|还记得.*吗|(?:喜欢|爱|爱过|交往|在一起|住|待|用|选)过)"
+    r"|\b(?:previous|previously|formerly|past|used to|history|historical)\b", re.IGNORECASE,
 )
 # Prior-head (ebe07284) English nomination logic. It only proposes the existing
 # improvements; its scores/grammar NEVER remove a main candidate. The sole
@@ -1429,7 +1430,7 @@ def _predecessor_match_texts(
                 f"SELECT c.id, c.content, c.archived_at, c.muted_at "
                 f"FROM {kind}_transitions t JOIN {kind} c ON c.id = t.prior_{kind}_id "
                 f"WHERE t.replacement_{kind}_id = ? AND c.{subject_column} = ? "
-                "AND t.reason IN ('corrects', 'superseded', 'name_corrected') ORDER BY c.id",
+                "AND t.reason IN ('corrects', 'supersedes', 'superseded', 'name_corrected') ORDER BY c.id",
                 (pending.pop(), subject_id),
             ).fetchall()
         except sqlite3.OperationalError:
@@ -1483,8 +1484,16 @@ def _replacement_explanations(db: sqlite3.Connection, subject_id: str,
                 if not world_item_evidence_visible(db, subject_id, cast(Any, kind), str(prior),
                     surface='model_cloud' if model_tier == 'cloud' else 'recall', model_tier=model_tier):
                     continue
-                lines.append(f'Replaced understanding (no longer current): {content}; corrected by the user ({reason}); use the current understanding.'
-                             if lang == 'en' else f'取代原因（旧理解不再有效）：{content}；后经用户纠正取代（{reason}），以当前理解为准。')
+                if reason in {'supersedes', 'superseded'}:
+                    # Past entries already carry their own label. Repeat the
+                    # temporal explanation only on the current entry, keeping
+                    # room for the actual past facts within the existing cap.
+                    if not item.get('is_superseded'):
+                        lines.append(f'Earlier state: {content} (the user reported a change).'
+                                     if lang == 'en' else f'状态变化（过往）：{content}；用户后来报告了新状态，以当前状态为准。')
+                else:
+                    lines.append(f'Replaced understanding (no longer current): {content}; corrected by the user ({reason}); use the current understanding.'
+                                 if lang == 'en' else f'取代原因（旧理解不再有效）：{content}；后经用户纠正取代（{reason}），以当前理解为准。')
                 pending.append(str(prior))
     return '\n'.join(dict.fromkeys(lines))
 

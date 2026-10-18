@@ -1,0 +1,185 @@
+{
+  "source": "PR #125 independent review, 30 exact synthetic negative utterances",
+  "cases": [
+    {
+      "id": "en-one-off",
+      "category": "one-off",
+      "lang": "en",
+      "raw": "I plan to buy bread tonight."
+    },
+    {
+      "id": "zh-one-off",
+      "category": "one-off",
+      "lang": "zh",
+      "raw": "我打算今晚买面包。"
+    },
+    {
+      "id": "en-task",
+      "category": "task",
+      "lang": "en",
+      "raw": "Please draft a five-year library plan for me."
+    },
+    {
+      "id": "zh-task",
+      "category": "task",
+      "lang": "zh",
+      "raw": "请替我拟一个五年图书馆计划。"
+    },
+    {
+      "id": "en-hypothetical",
+      "category": "hypothetical",
+      "lang": "en",
+      "raw": "If I won the lottery, my goal would be to build a library."
+    },
+    {
+      "id": "zh-hypothetical",
+      "category": "hypothetical",
+      "lang": "zh",
+      "raw": "如果中了彩票，我的目标会是建图书馆。"
+    },
+    {
+      "id": "en-counterfactual",
+      "category": "counterfactual",
+      "lang": "en",
+      "raw": "If I had stayed in school, I would be aiming for a doctorate."
+    },
+    {
+      "id": "zh-counterfactual",
+      "category": "counterfactual",
+      "lang": "zh",
+      "raw": "要是我当年没退学，我现在就会以博士为目标。"
+    },
+    {
+      "id": "en-third-party",
+      "category": "third-party",
+      "lang": "en",
+      "raw": "Aster plans to become a doctor over the next five years."
+    },
+    {
+      "id": "zh-third-party",
+      "category": "third-party",
+      "lang": "zh",
+      "raw": "小禾打算未来五年成为医生。"
+    },
+    {
+      "id": "en-third-party-quote",
+      "category": "third-party-quote",
+      "lang": "en",
+      "raw": "Aster said, \"My long-term goal is to open a library.\""
+    },
+    {
+      "id": "zh-third-party-quote",
+      "category": "third-party-quote",
+      "lang": "zh",
+      "raw": "小禾说：“我的长期目标是开图书馆。”"
+    },
+    {
+      "id": "en-advice",
+      "category": "advice",
+      "lang": "en",
+      "raw": "The assistant suggested I aim for a doctorate; I have not agreed."
+    },
+    {
+      "id": "zh-advice",
+      "category": "advice",
+      "lang": "zh",
+      "raw": "助手建议我以博士为目标，我还没同意。"
+    },
+    {
+      "id": "en-question",
+      "category": "question",
+      "lang": "en",
+      "raw": "Should my long-term goal be to open a library?"
+    },
+    {
+      "id": "zh-question",
+      "category": "question",
+      "lang": "zh",
+      "raw": "我的长期目标应该是开图书馆吗？"
+    },
+    {
+      "id": "en-other-question",
+      "category": "other-question",
+      "lang": "en",
+      "raw": "Does Aster plan to become a doctor?"
+    },
+    {
+      "id": "zh-other-question",
+      "category": "other-question",
+      "lang": "zh",
+      "raw": "小禾打算成为医生吗？"
+    },
+    {
+      "id": "en-negation",
+      "category": "negation",
+      "lang": "en",
+      "raw": "I do not plan to become a doctor."
+    },
+    {
+      "id": "zh-negation",
+      "category": "negation",
+      "lang": "zh",
+      "raw": "我不打算成为医生。"
+    },
+    {
+      "id": "en-denial",
+      "category": "denial",
+      "lang": "en",
+      "raw": "Becoming a doctor is not my goal."
+    },
+    {
+      "id": "zh-denial",
+      "category": "denial",
+      "lang": "zh",
+      "raw": "成为医生不是我的目标。"
+    },
+    {
+      "id": "en-joke",
+      "category": "joke",
+      "lang": "en",
+      "raw": "My long-term goal is to conquer Mars, just kidding."
+    },
+    {
+      "id": "zh-joke",
+      "category": "joke",
+      "lang": "zh",
+      "raw": "我的长期目标是征服火星，开玩笑的。"
+    },
+    {
+      "id": "en-fiction",
+      "category": "fiction",
+      "lang": "en",
+      "raw": "In my novel I say, \"My goal is to become a doctor.\""
+    },
+    {
+      "id": "zh-fiction",
+      "category": "fiction",
+      "lang": "zh",
+      "raw": "在小说里我写道：“我的目标是成为医生。”"
+    },
+    {
+      "id": "en-translation",
+      "category": "translation",
+      "lang": "en",
+      "raw": "Translate: \"My long-term goal is to build a library.\""
+    },
+    {
+      "id": "zh-translation",
+      "category": "translation",
+      "lang": "zh",
+      "raw": "翻译这句：“我的长期目标是建图书馆。”"
+    },
+    {
+      "id": "en-wish",
+      "category": "wish",
+      "lang": "en",
+      "raw": "It would be nice to run a library someday, but I have no plan."
+    },
+    {
+      "id": "zh-wish",
+      "category": "wish",
+      "lang": "zh",
+      "raw": "哪天能开图书馆就好了，但我没有这个计划。"
+    }
+  ]
+}
