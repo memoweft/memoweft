@@ -39,8 +39,8 @@ def test_every_dropped_main_candidate_is_function_only(surface: str, group: list
 
 def test_closed_grammar_vocabulary_contains_no_attribute_nouns() -> None:
     assert policy.FRAME_WORDS == FRAME_WORDS
-    assert len(policy.FRAME_WORDS) == 110
-    assert not {"version", "date", "color", "size", "year", "brand", "material", "aquarium"} & policy.FRAME_WORDS
+    assert len(policy.FRAME_WORDS) == 79
+    assert not set("version date color size year brand material aquarium can will may must might mine won don us being tell tells s t d m ll re ve isn aren wasn weren doesn didn haven hasn hadn wouldn shouldn couldn".split()) & policy.FRAME_WORDS
 
 
 @pytest.mark.parametrize("text", ["What's my version?", "What’s my version?", "Nora won't buy boots.",

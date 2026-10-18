@@ -76,31 +76,37 @@ def test_production_snapshot_keeps_verbatim_body_and_is_read_only(
 
 @pytest.mark.parametrize("query,content,retain_main", [
     ("What alternatives are there to commuter trains?", "I think their adaptability is what drew me to them.", False),
-    ("What do I know?", "I know what I like and I think it is what they like.", False),
+    ("What do I know?", "I know what I like and I think it is what they like.", True),
     ("What telescope do I use?", "I use a microscope.", True),
     ("Which cats do I like?", "I like catering.", True),
     ("Which running shoes do I use?", "I use a database and enjoy running queries.", True),
     ("What is my middle name?", "My gardening tools are in the middle drawer.", True),
-    ("I'm learning pottery, and I'm considering sculpture.", "I'm cataloguing nebulae.", False),
-    ("I'll study pottery, and I'll consider sculpture.", "I'll catalogue nebulae.", False),
-    ("I'd study pottery, and I'd consider sculpture.", "I'd catalogue nebulae.", False),
+    ("I'm learning pottery, and I'm considering sculpture.", "I'm cataloguing nebulae.", True),
+    ("I'll study pottery, and I'll consider sculpture.", "I'll catalogue nebulae.", True),
+    ("I'd study pottery, and I'd consider sculpture.", "I'd catalogue nebulae.", True),
     ("我的望远镜是什么？", "我喜欢显微镜。", False),
 ])
 def test_only_function_word_main_hits_may_be_removed(query: str, content: str, retain_main: bool) -> None:
     rows = [{"kind": "cognition", "id": "unrelated", "content": content, "confidence": 600}]
     # These remain false-answer labels. The explicit new invariant requires
     # retaining main's substantive 'use'/'like'/'running'/'middle' hits despite their known irrelevance.
+    # The original-case rule also protects standalone I and a capitalized
+    # contraction base in the middle of a sentence. These remain false labels.
     expected = ["unrelated"] if retain_main else []
     assert [row["id"] for row in _match_world_rows(query, rows)] == expected
     assert [row["id"] for row in match_cognitions(query, rows)] == expected
 
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c[0])
-def test_case_normalization_preserves_rank_and_score(case: tuple[str, ...]) -> None:
+def test_uppercase_preserves_target_rank_score_and_existing_hits(case: tuple[str, ...]) -> None:
     _, query, target, distractor, *_ = case
     original = _match_world_rows(query, _rows(target, distractor))
     changed = _match_world_rows(query.upper(), _rows(target.upper(), distractor.upper()))
-    assert [(hit["id"], hit["score"]) for hit in changed] == [(hit["id"], hit["score"]) for hit in original]
+    assert changed[0]["id"] == original[0]["id"] == "target"
+    assert changed[0]["score"] == original[0]["score"]
+    assert {hit["id"] for hit in original} <= {hit["id"] for hit in changed}
+    # Capitalizing all words now deliberately protects additional main hits;
+    # it cannot create admissions beyond main or the existing nomination arm.
 
 
 @pytest.mark.parametrize("query", ["Which running shoes do I use?", "Which running shoes have I used?"])

@@ -12,8 +12,10 @@ All facts, accounts and hosts are fictional. The runner creates temporary SQLite
 
 English selection now runs the original main matcher, eligibility, optional
 semantic nomination and rendering path first. A main candidate may be removed
-only if every shared word, after complete contraction expansion, is in
-`recall_english_policy.FRAME_WORDS`. Any other shared word must survive regardless
+only if every shared occurrence is grammatical in its original case and
+apostrophe context on both query and memory sides. The explicit vocabulary is
+`recall_english_policy.FRAME_WORDS`; actual contractions generate auxiliaries
+only within that construction. Any other shared word must survive regardless
 of supplementary scores or thresholds. This includes ordinary nouns such as
 `version`, `date` and `color`, and substantive verbs such as `use` and `think`.
 
@@ -27,13 +29,34 @@ character budget. Optional semantic nomination is called once and reused in
 both arms, inside the same read transaction. Chinese/mixed matching stays on
 the original main path.
 
-The closed set has 110 grammar words/forms: interrogatives, auxiliaries,
-articles, conjunctions, prepositions, pronouns, explicit remember/tell/know
-request verbs, and legacy contraction fragments. No attribute or topic noun is
-included. Full contractions are expanded before comparison (`What's` →
-`what is`, `won't` → `will not`), including curly apostrophes. Ordinary action
-verbs and descriptive adjectives are conservatively retained rather than added
-to an ever-growing stop list. The exact set is in the source and PR description.
+The closed set shrank from **110 to 79** words/forms. Removed everyday
+homographs are `can will may must might mine won don us being tell tells`;
+bare `s t d m ll re ve` and obsolete negative-contraction stems were also
+removed. Remaining words serve interrogative, auxiliary, article, conjunction,
+preposition, pronoun or explicit request-verb roles. No attribute nouns occur.
+The exact set is in the source and PR description.
+
+Classification preserves original occurrences before case folding. A word is
+substantive if it is all uppercase (including single letters and standalone
+`I`), or initially capitalized after another word in the same sentence. Either
+side's protected occurrence preserves the shared word. Each authorized search
+projection has its own sentence start. A bare `d`, `m` or `re` is substantive;
+only an actual apostrophe construction generates grammatical suffixes.
+Contractions expand completely (`What's` → `what is`, `won't` → `will not`),
+including curly apostrophes. Generated auxiliary `will` in `won't`/`I'll` is
+grammatical; bare `will` remains substantive. No truncated `won` is generated.
+
+#### Known limitations / 已知限制
+
+Lowercase `he be as in at do and for not or` and standalone lowercase `a` can
+still be classified as grammatical when intended as chemical symbols, musical
+notes, program operators or blood groups. These rare senses need additional
+context beyond this rule. All-uppercase and non-sentence-initial capitalized
+variants are protected. Eleven explicit known-limit tests assert the policy's
+permitted deletion, without skipping or relabelling them as negatives. In the
+complete matcher the previous nomination arm already retains the `not` sample;
+the other ten samples demonstrate the remaining misses. This limitation is
+accepted for this revision, not a claim of universal English recall.
 
 ### Frozen collections and measured floors
 
@@ -55,13 +78,20 @@ quality estimates. No labels or existing baseline outcomes were changed.
 - `recall-mixed-review.json`: the independent 15 Chinese/mixed queries and
   shared 14-fact pool. This collection has no answer-quality labels; compare
   complete previews byte-for-byte, including the mixed `version` lookup.
+- `english-frame-context.json`: independently authored facts covering all 29
+  fourth-review token ideas. Baseline recorded from unmodified main `b6fc783d`
+  recalls 29/29; pre-fix `ab59e6c3` recalls 10/29, current recalls 29/29. The
+  new context tests first reported 46 failures, then pass. Capitalized chemical
+  symbols, notes and operators are protected; lowercase known-limit controls
+  are separate explicit tests, not hidden in the four quality collections.
 
 | English collection  | Main / current correct-answer recall | Main / current false items | Main / current item precision |
 | ------------------- | -----------------------------------: | -------------------------: | ----------------------------: |
-| Original 120        |                        60/60 / 60/60 |                    42 / 18 |               58.82% / 76.92% |
-| Independent 21 + 10 |                        21/21 / 21/21 |                     25 / 6 |               45.65% / 77.78% |
+| Original 120        |                        60/60 / 60/60 |                    42 / 25 |               58.82% / 70.59% |
+| Independent 21 + 10 |                        21/21 / 21/21 |                    25 / 11 |               45.65% / 65.63% |
 | Fact-first 30       |                        30/30 / 30/30 |                     30 / 0 |              50.00% / 100.00% |
-| Independent 30 + 30 |                        30/30 / 30/30 |                     11 / 0 |              73.17% / 100.00% |
+| Independent 30 + 30 |                        30/30 / 30/30 |                     11 / 5 |               73.17% / 85.71% |
+| Context audit 29    |                        29/29 / 29/29 |                      0 / 0 |             100.00% / 100.00% |
 
 Each collection independently requires recall and precision at least main,
 false items at most main, no lost main positive and no newly forbidden item.
@@ -71,6 +101,11 @@ old zero-return expectations conflicted with this explicit new contract. Those
 examples and false-answer labels are retained, and assertions now enforce main
 preservation and no additional false returns. Remaining errors are reported,
 not relabeled or hidden by another collection's aggregate gains.
+The original-case requirement also preserves standalone `I` and capitalized
+contraction bases inside sentences. Tests that previously expected those main
+false hits to disappear now explicitly require retention; their false-answer
+labels and all historical baselines are unchanged. A fully uppercased query
+may deliberately retain additional main candidates.
 
 All 638 original Chinese full snapshots and all 15 mixed full previews remain
 byte-identical to main. Repeated previews are deterministic; database dumps
@@ -85,7 +120,14 @@ reproduce those inputs exactly. `english-invariant-labelled.json` records
 248 scenarios from every English collection, the three exam cases and the
 post-copular attribute/version cases. Both matchers must reproduce main's
 frozen candidates, preserve every substantive main candidate and admit only
-main or prior-head candidates: 2,800 scenario/entrypoint comparisons.
+main or prior-head candidates: 2,800 scenario/entrypoint comparisons. Their
+independent occurrence-level specification now also checks original case and
+contraction provenance; the frozen inputs and reference candidates are unchanged.
+Another 640 seeded scenarios vary case, sentence position, bare letters,
+homographs and straight/curly apostrophes through both matchers: 1,280 more
+candidate-preservation/admission comparisons. These use the unchanged main and
+prior nomination arms as references. The 29 context probes exercise both
+matchers and full snapshots, with an actual frozen-main baseline.
 
 `english-invariant-snapshots.json` adds 192 full snapshot cases (96 seeded
 pools in both rendering languages). They check the same membership boundaries,
@@ -101,7 +143,9 @@ uv run python tests/support/english_recall_gate.py --suite english-review-attrib
 uv run python tests/support/english_recall_gate.py --suite english-fact-inverse --repeats 3
 uv run python tests/support/english_recall_gate.py --suite english-review-long --repeats 3
 uv run python tests/support/english_recall_gate.py --suite recall-mixed-review --repeats 3
+uv run python tests/support/english_recall_gate.py --suite english-frame-context --repeats 3
 uv run pytest -q tests/test_english_candidate_invariant.py
+uv run pytest -q tests/test_english_frame_context.py
 ```
 
 ### Original Chinese corpus

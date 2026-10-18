@@ -8,8 +8,9 @@ for the same World revision.  It deliberately does NOT search raw Evidence and
 does not inject Evidence text, summaries, or internal IDs.
 
 Literal matching uses the original main candidate path. For English, a main
-candidate may be removed only when every shared expanded word is in the small
-explicit grammar set. Any substantive overlap preserves it regardless of new
+candidate may be removed only when every shared occurrence is grammatical in
+its original case and contraction context, using a small explicit set. Any
+substantive overlap preserves it regardless of new
 scores. Previous English improvements may use remaining slots; their scores
 never veto main, and rendering cannot consume a retained main item's budget.
 An optional local CPU provider nominates at most three
@@ -116,7 +117,8 @@ _HISTORICAL_QUERY_PATTERN: re.Pattern[str] = re.compile(
 )
 # Prior-head (ebe07284) English nomination logic. It only proposes the existing
 # improvements; its scores/grammar NEVER remove a main candidate. The sole
-# current removal vocabulary is recall_english_policy.FRAME_WORDS.
+# current removal policy is recall_english_policy, preserving original case
+# and actual apostrophe provenance around its closed FRAME_WORDS vocabulary.
 _ENGLISH_CARRIERS = _GENERIC_PREDICATE_BIGRAMS | frozenset("""
     i me my mine we us our ours you your yours he him his she her hers
     it its they them their theirs this that these those

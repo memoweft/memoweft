@@ -71,8 +71,10 @@ MemoWeft keeps these boundaries explicit:
   semantic candidates; loading/failure preserves literal recall. See
   [configuration and lifecycle](docs/semantic-recall.md).
   English recall preserves the original main candidate path. A candidate may be
-  removed only when every shared word, after contraction expansion, belongs to
-  the explicit 110-word grammar set. A substantive overlap always survives new
+  removed only when every shared occurrence is grammatical in its original
+  case and contraction context, using an explicit 79-word set. Capitalized
+  names, uppercase words and bare contraction fragments remain substantive.
+  A substantive overlap always survives new
   scores. Previous English improvements may fill remaining slots, while main
   items retain priority under count/character budgets. See the
   [candidate invariant and regression collections](bench/recall-quality/README.md).

@@ -5,15 +5,14 @@ from typing import Any
 
 FRAME_WORDS = frozenset("""
 what which who whom whose where when why how
-am is are was were be been being do does did have has had
-can could will would should shall may might must
+am is are was were be been do does did have has had
+could would should shall
 a an the and or but not
 of to in on at for from with by about as into
-i me my mine we us our ours you your yours he him his she her hers
+i me my we our ours you your yours he him his she her hers
 it its they them their theirs this that these those
-remember remembers remembered tell tells told know knows knew remind
+remember remembers remembered told know knows knew remind
 anything
-s t ll re ve d m won don isn aren wasn weren doesn didn haven hasn hadn wouldn shouldn couldn
 """.split())
 
 
@@ -28,12 +27,45 @@ def words(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9_\-]+", text))
 
 
-def shared(query: str, row: dict[str, Any]) -> set[str]:
+def texts_for(row: dict[str, Any]) -> list[str]:
     texts = [row["content"], row.get("match_text", "")]
     for field in ("anchors", "topic_cues", "predecessor_match_texts"):
         value = row.get(field, ())
         texts.extend([value] if isinstance(value, str) else value)
-    return words(query) & words(" ".join(texts))
+    return texts
+
+
+def shared(query: str, row: dict[str, Any]) -> set[str]:
+    return words(query) & words(" ".join(texts_for(row)))
+
+
+def substantive(text: str) -> set[str]:
+    """Independent occurrence-level specification, not a production import.
+
+    Only apostrophe constructions introduce generated auxiliary words. A raw
+    lexical base still needs the closed set and original-case checks. Any one
+    substantive occurrence on either side is sufficient to preserve a hit.
+    """
+    result = set()
+    for token in re.finditer(r"[a-z0-9_\-]+(?:['’][a-z]+)?", text, re.I):
+        raw = token[0]
+        clause = re.split(r"[.!?\n]", text[:token.start()])[-1]
+        protected = raw.isupper() or (raw[0].isupper() and bool(re.search(r"[^\W\d_]", clause)))
+        lower = raw.lower().replace('’', "'")
+        if lower in {"won't", "can't", "shan't"}:
+            if protected:
+                result |= words(raw)
+            continue
+        if re.fullmatch(r"[a-z]+n't", lower):
+            base = lower[:-3]
+        elif re.fullmatch(r"[a-z]+'(?:m|s|re|ve|ll|d)", lower):
+            base = lower.split("'")[0]
+        else:
+            base = lower
+        for part in re.findall(r"[a-z0-9_\-]+", base):
+            if protected or part not in FRAME_WORDS:
+                result.add(part)
+    return result
 
 
 def check(case: dict[str, Any], current: list[dict[str, Any]], surface: str) -> None:
@@ -43,7 +75,10 @@ def check(case: dict[str, Any], current: list[dict[str, Any]], surface: str) -> 
     rows = {row["id"]: row for row in case["rows"]}
     for missing in main - selected:
         common = shared(case["query"], rows[missing])
-        assert common <= FRAME_WORDS, (case["id"], missing, common - FRAME_WORDS)
+        meaningful = substantive(case["query"])
+        for text in texts_for(rows[missing]):
+            meaningful |= substantive(text)
+        assert not common & meaningful, (case["id"], missing, common & meaningful)
     assert selected <= main | prior, (case["id"], "new admission", selected - main - prior)
 
 
