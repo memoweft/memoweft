@@ -134,9 +134,18 @@ bytes, selected identities, hits and false recalls. No frozen recall fixture, sc
 label, schema, deadline, retry or waiting limit is changed. Source-level tests,
 CI and live-provider acceptance remain separate.
 
-Final local validation for this boundary: **2,525** full Python tests,
+Before integrating #124: **2,525** full Python tests,
 **234** focused tests, **246** mypy source/test files, and **636** Node tests
 pass. Format, lint, typecheck, build, API snapshot and documentation links pass.
 All 76 review utterances remain exact, all 26 positive/false-rejection cases
 form, both P2 reproductions are green, and the 638 complete Chinese previews
 remain byte-identical with unchanged hit and false-recall results.
+
+After an ordinary merge of `origin/main` at `6b569fb` (#124), final integration
+validation passes **2,907/2,907** full Python tests, **234/234** focused tests,
+**254** mypy source/test files and **636/636** Node tests. Format, lint,
+typecheck and all 638 complete Chinese previews pass on the merged source;
+preview bytes, hits and false recalls still equal `b6fc783`. The 76-case rule
+classes and both P2 results remain unchanged. The PR retains its existing
+history recognition, predecessor traversal and explanations; #124's scoring
+implementation is not changed by this task.
