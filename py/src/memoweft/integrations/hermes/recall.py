@@ -9,7 +9,7 @@ does not inject Evidence text, summaries, or internal IDs.
 
 Literal matching uses CJK character bigrams and lowercased Latin whole words,
 with deterministic overlap scoring computed entirely in memory. English-only
-queries exclude grammatical carriers and use soft topic coverage weights.
+queries exclude grammatical carriers and separate attribute slots from topics.
 No requested noun or question word is a mandatory content filter.
 An optional local CPU provider nominates at most three
 supplementary items; all original gates remain authoritative. Loading or failure
@@ -120,7 +120,7 @@ _ENGLISH_CARRIERS = _GENERIC_PREDICATE_BIGRAMS | frozenset("""
     what which who whom whose where when why how
     do does did have has had having can could would should will shall may might
     as from into about than then there here so also really actually very
-    use uses used date time specific current version type kind sort
+    use uses used
 """.split())
 _ENGLISH_WORD = re.compile(r"[a-zA-Z0-9_\-]+(?:['’][a-zA-Z]+)?")
 _ENGLISH_FOCUS = re.compile(
@@ -131,6 +131,24 @@ _ENGLISH_FOCUS = re.compile(
 _ENGLISH_POSSESSIVE_FOCUS = re.compile(
     r"^(?:what|which)\s+(?:is|are)\s+(?:my|your|his|her|our|their)\s+([a-z][a-z -]*?)[?.!\s]*$",
     re.IGNORECASE,
+)
+_ENGLISH_ATTRIBUTE_QUERY = re.compile(
+    r"^(?:what|which)\s+.+?\s+(?:is|are|was|were)\s+"
+    r"((?:my|our|your|his|her|their|the)\s+.+?)[?.!]*$", re.IGNORECASE,
+)
+_ENGLISH_ATTRIBUTE_OF_QUERY = re.compile(
+    r"^(?:what|which)(?:\s+(?:is|are))?\s+.+?\s+of\s+"
+    r"((?:my|our|your|his|her|their|the)\s+.+?)[?.!]*$", re.IGNORECASE,
+)
+_ENGLISH_STRANDED_PREDICATE = re.compile(
+    r"^(.+?)\s+[a-z]+\s+(?:of|from|with|by|for|to|about)[?.!]*$", re.IGNORECASE,
+)
+_ENGLISH_REFERENCE_END = r"\s+(?:is|are|was|were|has|have|in|on|at|to|from|for|with|and|but|about)\b|[.!?;]|$"
+_ENGLISH_REFERENCES = (
+    re.compile(r"\b(?:my|our|your|his|her|their)\s+(.+?)(?=" + _ENGLISH_REFERENCE_END + r")", re.I),
+    re.compile(r"^(.+?)\s+(?:is|are|was|were|has|have)\b", re.I),
+    re.compile(r"^(?:i|we|you|he|she|they)(?:['’](?:m|re|ve|ll|d))?\s+[a-z]+(.*?)(?="
+               + _ENGLISH_REFERENCE_END + r")", re.I),
 )
 
 
@@ -155,9 +173,32 @@ def _english_tokens(text: str) -> set[str]:
 
 
 def _english_focus(query: str) -> set[str]:
-    """Optional soft query emphasis; never an eligibility condition."""
-    match = _ENGLISH_FOCUS.search(query) or _ENGLISH_POSSESSIVE_FOCUS.search(query)
-    return _english_tokens(match.group(1)) if match else set()
+    """Inspectable topic phrase after grammatical projection, never a gate."""
+    return _english_tokens(_english_query_parts(query)[1])
+
+
+def _english_query_parts(query: str) -> tuple[str, str]:
+    """Separate a projected attribute from the explicit subject being asked.
+
+    In 'what X is my Y' / 'what is the X of my Y', X is an answer slot,
+    regardless of its vocabulary. It neither scores nor dilutes Y. Without an
+    explicit subject, 'what version do I use' keeps version as a real topic.
+    Memory-side nouns are never removed by this query-only grammar.
+    """
+    match = _ENGLISH_ATTRIBUTE_QUERY.search(query) or _ENGLISH_ATTRIBUTE_OF_QUERY.search(query)
+    if match and _english_tokens(match.group(1)):
+        topic = match.group(1)
+        predicate = _ENGLISH_STRANDED_PREDICATE.search(topic)
+        topic = predicate.group(1) if predicate and _english_tokens(predicate.group(1)) else topic
+        return topic, topic
+    focus = _ENGLISH_FOCUS.search(query) or _ENGLISH_POSSESSIVE_FOCUS.search(query)
+    if _ENGLISH_POSSESSIVE_FOCUS.search(query) and focus:
+        # Copular passive questions strand a preposition: 'what is my bottle
+        # made of?' asks about bottle. The predicate is not a noun modifier.
+        predicate = _ENGLISH_STRANDED_PREDICATE.search(focus.group(1))
+        if predicate and _english_tokens(predicate.group(1)):
+            return predicate.group(1), predicate.group(1)
+    return query, focus.group(1) if focus else ""
 
 
 def _english_inflection(word: str, vocabulary: set[str]) -> str:
@@ -173,7 +214,8 @@ def _english_inflection(word: str, vocabulary: set[str]) -> str:
 
 def _lexical_score(query: str, text: str) -> float:
     english = not _CJK_RUN.search(query)
-    query_tokens = _english_tokens(query) if english else _bigrams(query)
+    signal, phrase = _english_query_parts(query) if english else (query, "")
+    query_tokens = _english_tokens(signal) if english else _bigrams(query)
     content_tokens = _english_tokens(text) if english else _bigrams(text)
     vocabulary = query_tokens | content_tokens
     if english:
@@ -186,18 +228,32 @@ def _lexical_score(query: str, text: str) -> float:
     common = query_tokens & content_tokens
     if not common:
         return 0.0
-    score = _compute_overlap_score(query_tokens, content_tokens, common)
-    if english and (focus := _english_focus(query)):
-        if query_tokens == normalized_query and content_tokens == normalized_content:
-            focus = {_english_inflection(word, vocabulary) for word in focus}
-        # A lone polysemous word is weaker than corroborated topic overlap.
-        # Both weights are continuous: missing any requested word never vetoes
-        # a row. In particular date/time/specific/current are not topic tokens.
-        coverage = len(focus & content_tokens) / len(focus)
-        if len(common) == 1:
-            score *= (0.1 + 0.9 * coverage) ** 2
-        emphasis = (MIN_SCORE + min(0.35, 0.10 * len(focus))) * coverage ** 3
-        score = max(score, emphasis)
+    if not english:
+        return _compute_overlap_score(query_tokens, content_tokens, common)
+    focus = _english_tokens(phrase)
+    references = set().union(*(_english_tokens(match.group(1))
+                              for pattern in _ENGLISH_REFERENCES for match in pattern.finditer(text)))
+    head = next((next(iter(tokens)) for word in reversed(_ENGLISH_WORD.findall(phrase))
+                 if (tokens := _english_tokens(word))), "")
+    if query_tokens == normalized_query and content_tokens == normalized_content:
+        focus = {_english_inflection(word, vocabulary) for word in focus}
+        head = _english_inflection(head, vocabulary)
+        references = {_english_inflection(word, vocabulary) for word in references}
+    # In 'what is my suitcase color', suitcase remains a primary reference if
+    # the claim explicitly names that object. An absent attribute head must not
+    # demote it. A location modifier in a claim about gardening tools does not
+    # thereby become evidence about the owner's middle name.
+    postcopular_reference = bool(_ENGLISH_POSSESSIVE_FOCUS.search(query))
+    referenced = common & references if postcopular_reference else set()
+    # A modifier alone ('running' in 'running shoes') is a weak signal. Two
+    # corroborating topic words retain ordinary overlap. This is term weighting,
+    # not a missing-word/coverage multiplier or a required-head filter.
+    weights = {word: 0.1 if len(common) == 1 and word in focus and word != head and word not in referenced else 1.0
+               for word in query_tokens}
+    score = 2 * sum(weights[word] for word in common) / (sum(weights.values()) + len(content_tokens))
+    primary = {word for word, weight in weights.items() if weight == 1.0}
+    if referenced or (head and head in common) or (primary and primary <= content_tokens):
+        score = max(score, MIN_SCORE + min(0.35, 0.10 * len(primary & content_tokens)))
     return score
 
 

@@ -70,9 +70,11 @@ MemoWeft keeps these boundaries explicit:
   Python optionally supplements literal matches with up to three local CPU
   semantic candidates; loading/failure preserves literal recall. See
   [configuration and lifecycle](docs/semantic-recall.md).
-  English literal scoring ignores pronouns, auxiliaries and question carriers;
-  noun phrase coverage provides soft emphasis without requiring particular
-  words in an answer. Contractions are consumed whole. Limited plural/gerund
+  English literal scoring ignores grammatical carriers and separates an answer
+  slot from its explicit topic by question structure, without an attribute-word
+  list or a missing-word coverage penalty. Meaningful nouns such as `version`
+  remain searchable in source text and actual topic requests. Contractions are
+  consumed whole. Limited plural/gerund
   variants require a literal base and two corroborating topic tokens; no
   synonyms or inferred topics are added.
   Short natural corrections can be retrieved through the topic of their

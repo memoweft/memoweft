@@ -116,6 +116,18 @@ def test_partial_requested_phrase_can_recall_with_corroborating_topic_words() ->
     assert hits and hits[0]["id"] == "target"
 
 
+@pytest.mark.parametrize("query,content", [
+    ("What is my suitcase color?", "My suitcase is blue."),
+    ("What is my jacket size?", "My jacket is medium."),
+    ("What is my passport number?", "My passport is R472915."),
+    ("What is my software version?", "I use version 4.1 for the photo editor."),
+])
+def test_postcopular_attributes_keep_the_explicitly_referenced_object(query: str, content: str) -> None:
+    rows = [{"kind": "cognition", "id": "target", "content": content, "confidence": 600}]
+    for matcher in (_match_world_rows, match_cognitions):
+        assert [hit["id"] for hit in matcher(query, rows)] == ["target"]
+
+
 @pytest.mark.parametrize("state", ["other_account", "cross_evidence", "forgotten", "local_denied", "cloud_denied"])
 @pytest.mark.parametrize("language", ["en", "zh"])
 def test_improved_match_cannot_bypass_source_gates(tmp_path: Path, state: str, language: str) -> None:

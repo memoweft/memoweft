@@ -155,10 +155,12 @@ def main() -> None:
         report = {"metrics": metrics(items, rows), "results": rows}
         if args.out:
             args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(report["metrics"]))
         if args.suite == "recall-mixed-review":
+            assert digest((HERE / f"{args.suite}.json").read_bytes()) == baseline["fixture_sha256"]
             assert rows == baseline["results"], "Mixed full snapshots changed"
+            print(json.dumps({"snapshots": len(rows), "byte_identical": True}))
         else:
+            print(json.dumps(report["metrics"]))
             check(items, rows, baseline, suite=args.suite)
         if args.suite == "english":
             assert chinese(recall) == baseline["chinese_snapshots"], "Chinese full snapshots changed"

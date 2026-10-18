@@ -31,11 +31,11 @@ without unrelated returns. Both straight and curly `won't` negatives must be emp
 | English metric               | main baseline | Review fix |
 | ---------------------------- | ------------: | ---------: |
 | Positive queries recalled    |       60 / 60 |    60 / 60 |
-| Correct / all returned items |      60 / 102 |    60 / 65 |
-| Item precision               |        58.82% |     92.31% |
-| Forbidden returned items     |            42 |          5 |
+| Correct / all returned items |      60 / 102 |    60 / 68 |
+| Item precision               |        58.82% |     88.24% |
+| Forbidden returned items     |            42 |          8 |
 
-The remaining five forbidden items are reported, not relabeled. All 638 Chinese
+The remaining eight forbidden items are reported, not relabeled. All 638 Chinese
 snapshots, including rendered text, IDs, currentness digest and snapshot token,
 remain byte-identical to main. Default pytest runs both gates without Git
 history, models or network access. For a three-repeat deterministic report:
@@ -44,6 +44,45 @@ history, models or network access. For a three-repeat deterministic report:
 cd py
 uv run python tests/support/english_recall_gate.py --repeats 3
 uv run pytest -q tests/test_english_recall_gate.py
+```
+
+### Independent attribute review and fact-first inversions
+
+The independent review's exact 21 positive and 10 negative tuples are preserved
+in `english-review-attributes.json`. Its 15 Chinese/mixed queries and shared
+14-fact pool are preserved in `recall-mixed-review.json`, including the English
+`version` source and mixed-language question. Only literal synthetic data were
+extracted; no reviewer code runs in this gate.
+
+`english-fact-inverse.json` adds 30 separately authored examples. Each starts
+with a complete concrete fact (value, object, unit or date), then reverses the
+value into an attribute/fact question; the attribute noun is generally absent
+from the fact. This differs from the original twenty-pool/three-phrasing method.
+All inputs were frozen and measured on unmodified main `b6fc783d` before the
+attribute fix. Their `*-main-baseline.json` files record per-case outcomes and
+canonical fixture/source hashes. They must not be regenerated to pass a fix.
+
+| English collection  | Main correct-answer recall | Current recall | Main false items | Current false items | Main / current item precision |
+| ------------------- | -------------------------: | -------------: | ---------------: | ------------------: | ----------------------------: |
+| Original 120        |                    60 / 60 |        60 / 60 |               42 |                   8 |               58.82% / 88.24% |
+| Independent 21 + 10 |                    21 / 21 |        21 / 21 |               25 |                   4 |               45.65% / 84.00% |
+| Fact-first 30       |                    30 / 30 |        30 / 30 |               30 |                   0 |              50.00% / 100.00% |
+
+Each collection independently requires recall and precision at least main and
+false returns at most main. Per-case gates additionally reject every lost main
+positive and newly forbidden item, preventing aggregate gains from hiding a
+regression. New collections exercise `QueryService.preview_recall`; repeated
+results are deterministic and database dumps remain identical. The mixed set
+has no answer labels or precision estimate: all 15 full previews must match
+main byte-for-byte. All 638 original Chinese snapshots must also remain equal.
+These are exposed regression collections, not a blind or general quality claim.
+
+```sh
+cd py
+uv run python tests/support/english_recall_gate.py --suite english-review-attributes --repeats 3
+uv run python tests/support/english_recall_gate.py --suite english-fact-inverse --repeats 3
+uv run python tests/support/english_recall_gate.py --suite recall-mixed-review --repeats 3
+uv run pytest -q tests/test_recall_attribute_questions.py
 ```
 
 ### Original Chinese corpus
