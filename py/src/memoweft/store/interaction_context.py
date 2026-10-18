@@ -325,11 +325,6 @@ class SqliteInteractionContextStore:
             timestamp=prior.timestamp,
             model_context_dependencies=dependencies,
         )
-        if self._deleted_dependency(subject_id, turns):
-            from ..integrations.trust.true_delete import _redact_observed_dependencies
-            _redact_observed_dependencies(self._db, subject_id, {current.id})
-            return 'applied', current.id, current.context_hash, str(self._db.execute(
-                'SELECT context_hash FROM interaction_context WHERE id=?', (current.id,)).fetchone()[0])
         next_hash = hash_context(turns)
         cursor = self._db.execute(
             "UPDATE interaction_context SET context_json = ?, context_hash = ? "
@@ -350,6 +345,11 @@ class SqliteInteractionContextStore:
                 refreshed.context_hash if refreshed is not None else current.context_hash
             )
             return "conflict", current.id, refreshed_hash, refreshed_hash
+        if self._deleted_dependency(subject_id, turns):
+            from ..integrations.trust.true_delete import _redact_observed_dependencies
+            _redact_observed_dependencies(self._db, subject_id, {current.id})
+            return 'applied', current.id, current.context_hash, str(self._db.execute(
+                'SELECT context_hash FROM interaction_context WHERE id=?', (current.id,)).fetchone()[0])
         return "applied", current.id, current.context_hash, next_hash
 
     def remove_by_subject(self, subject_id: str) -> int:
