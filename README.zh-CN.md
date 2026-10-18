@@ -21,6 +21,7 @@ Python distribution（Python 发行包）通过 `hermes_agent.memory_providers` 
 MemoWeft 明确区分这些边界：
 
 - 用户原文保持为带来源和权限的 exact Evidence（精确证据）。
+- 通过 `confirmed`（用户确认）记住助手提议时，用户的选定片段和完整短回复都须为明示肯定，或肯定短语加提议中的完整逐字值；不能凭两字符重合，或只裁出“是的”丢掉后面的否认。其他明确重述用 `stated`（用户陈述）保留原话；[规则与逐题诊断](docs/distraction-sources.md)列出有限语法和已知限制。
 - Entity、Relationship、Event、Cognition 和 Evaluation 是正式 World 对象。
 - 同一 revision 与查询输入得到 deterministic Recall（确定性召回），并且 Recall 不写 World。
   Python 召回会用当前有来源的自我命名和已接受别名，关联原文明确对齐的第一人称出生/偏好陈述；缺省目标、主题标签或本人视角本身不证明事实属于本人。其他表达沿既有召回路径，不猜新的身份关联；同名歧义保持未解析，姓名来源和事实来源分别遵守读取权限。

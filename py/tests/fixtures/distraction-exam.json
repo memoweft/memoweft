@@ -1,0 +1,2026 @@
+{
+  "source": "Frozen synthetic HaluMem pilot, completed sessions 1-12 only. English and original scores unchanged; Chinese pairs are new synthetic equivalents. Assistant/user excerpts may come from different original turns and are NOT a full exam replay.",
+  "baseline_core": "e86b73ba9570a9bd490ef90bfb7059574de5e449",
+  "metric_records": [
+    {
+      "ssession_id": 3,
+      "index": 11,
+      "memory_content": "Martin Mark is considering a career change due to a desire for higher financial stability.",
+      "memory_integrity_score": 0
+    },
+    {
+      "ssession_id": 3,
+      "index": 12,
+      "memory_content": "Martin Mark's creative motivation is to collaborate with diverse teams to generate innovative solutions.",
+      "memory_integrity_score": 2
+    },
+    {
+      "ssession_id": 4,
+      "index": 10,
+      "memory_content": "Martin's evolving pet preference signifies his interest in exploring different pet species and their unique behaviors.",
+      "memory_integrity_score": 1
+    },
+    {
+      "ssession_id": 4,
+      "index": 11,
+      "memory_content": "Martin's recent pet preference change highlights his willingness to try unconventional pet choices.",
+      "memory_integrity_score": 1
+    },
+    {
+      "ssession_id": 5,
+      "index": 7,
+      "memory_content": "Martin expressed skepticism about integrating his new pet preference into his daily life.",
+      "memory_integrity_score": 1
+    },
+    {
+      "ssession_id": 6,
+      "index": 7,
+      "memory_content": "Martin utilized his social network to explore new job opportunities for a higher salary.",
+      "memory_integrity_score": 1
+    },
+    {
+      "ssession_id": 7,
+      "index": 11,
+      "memory_content": "Martin emphasized the importance of a job that supports his artistic goals while maintaining a healthy lifestyle.",
+      "memory_integrity_score": 1
+    },
+    {
+      "ssession_id": 8,
+      "index": 10,
+      "memory_content": "Martin's evolving sports preferences are influenced by his desire to compete in professional extreme sports competitions.",
+      "memory_integrity_score": 0
+    },
+    {
+      "ssession_id": 8,
+      "index": 9,
+      "memory_content": "Martin's newfound appreciation for extreme sports stems from a childhood fascination with adventure movies.",
+      "memory_integrity_score": 0
+    },
+    {
+      "ssession_id": 8,
+      "index": 8,
+      "memory_content": "Martin enjoys extreme sports primarily for the social connections they foster, rather than the thrill and challenge.",
+      "memory_integrity_score": 0
+    },
+    {
+      "ssession_id": 9,
+      "index": 11,
+      "memory_content": "Martin's approach to gaming now includes a cautious evaluation of cognitive benefits versus time spent.",
+      "memory_integrity_score": 2
+    },
+    {
+      "ssession_id": 10,
+      "index": 9,
+      "memory_content": "Martin expressed enthusiasm over the commercialization of wellness retreats, aligning with his interest in luxury travel.",
+      "memory_integrity_score": 0
+    },
+    {
+      "ssession_id": 10,
+      "index": 8,
+      "memory_content": "Martin is exploring spa weekends and culinary tours as alternatives to wellness retreats.",
+      "memory_integrity_score": 0
+    },
+    {
+      "ssession_id": 10,
+      "index": 10,
+      "memory_content": "Martin is embracing wellness retreats in his travel preferences due to their shift towards health-focused experiences.",
+      "memory_integrity_score": 0
+    },
+    {
+      "ssession_id": 11,
+      "index": 7,
+      "memory_content": "Martin found himself drawn towards movies that offer a mental challenge after a stressful week.",
+      "memory_integrity_score": 1
+    },
+    {
+      "ssession_id": 11,
+      "index": 8,
+      "memory_content": "Martin considers how changes in movie preferences might affect his social interactions and relationships.",
+      "memory_integrity_score": 0
+    }
+  ],
+  "cases": [
+    {
+      "id": "s4-i12",
+      "session_zero_based": 3,
+      "memory_index": 12,
+      "original_score": 2,
+      "interference": "Martin Mark's creative motivation is to collaborate with diverse teams to generate innovative solutions.",
+      "expected": "Preserve user statements verbatim; do not assert the unconfirmed assistant alternative.",
+      "audit_category": "用户明确支持的相近内容",
+      "judge_request_sha256": "5856ff9ff9f98b790c7c597ccb5825929202dce0a3ab0fabf002e9741625cd27",
+      "artifact_sha256": "34f1a9ae03da6e19d1eff96789b05e50115b9b2d7a44e98d4a4f233aa218551e",
+      "original_judge": {
+        "reasoning": "The expected memory point has two elements: (1) creative motivation to collaborate with diverse teams, and (2) generating innovative solutions. The extracted memories contain multiple items covering both elements: 'Collaboration is definitely something I value,' 'I thrive in environments that encourage open communication and innovative thinking,' 'projects where teamwork led to innovative healthcare solutions, which was very fulfilling,' 'I plan to apply these lessons by fostering a collaborative environment and encouraging innovative problem-solving,' and 'My empathetic nature helps me understand diverse perspectives, while my debate skills encourage open dialogue and idea exchange.' Together these fully cover the idea that collaboration with diverse teams to generate innovative solutions is a core motivation.",
+        "score": "2"
+      },
+      "observed_memories": [
+        {
+          "content": "Yes, there were projects where teamwork led to innovative healthcare solutions, which was very fulfilling.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, there were projects where teamwork led to innovative healthcare solutions, which was very fulfilling. I'm hoping to find similar opportunities in my next role."
+            }
+          ]
+        },
+        {
+          "content": "I'm looking for a position that better aligns with my life goals and promotes personal well-being.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, I'm looking for a position that better aligns with my life goals and promotes personal well-being. I want to ensure that my work supports my aspiration to improve healthcare access for underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "I want to ensure that my work supports my aspiration to improve healthcare access for underserved communities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, I'm looking for a position that better aligns with my life goals and promotes personal well-being. I want to ensure that my work supports my aspiration to improve healthcare access for underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "Using tools to inspire ideas has always been a part of my process.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think a new role could inspire fresh ideas and help me overcome creative blocks. Using tools to inspire ideas has always been a part of my process."
+            }
+          ]
+        },
+        {
+          "content": "Collaboration is definitely something I value.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Collaboration is definitely something I value. It has helped me resolve past conflicts through innovation and teamwork."
+            }
+          ]
+        },
+        {
+          "content": "I'm hoping to find similar opportunities in my next role.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, there were projects where teamwork led to innovative healthcare solutions, which was very fulfilling. I'm hoping to find similar opportunities in my next role."
+            }
+          ]
+        },
+        {
+          "content": "I thrive in environments that encourage open communication and innovative thinking.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I thrive in environments that encourage open communication and innovative thinking. It's important for me to be in a place where my ideas can contribute to meaningful change."
+            }
+          ]
+        },
+        {
+          "content": "It's important for me to be in a place where my ideas can contribute to meaningful change.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I thrive in environments that encourage open communication and innovative thinking. It's important for me to be in a place where my ideas can contribute to meaningful change."
+            }
+          ]
+        },
+        {
+          "content": "I plan to research companies' values and their impact on communities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to research companies' values and their impact on communities. I want to ensure they align with my own values and aspirations."
+            }
+          ]
+        },
+        {
+          "content": "I want to ensure they align with my own values and aspirations.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to research companies' values and their impact on communities. I want to ensure they align with my own values and aspirations."
+            }
+          ]
+        },
+        {
+          "content": "Networking has always been a key part of my career development.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, I have a few contacts in the industry who might provide valuable insights. Networking has always been a key part of my career development."
+            }
+          ]
+        },
+        {
+          "content": "I try to focus on the positive aspects and remind myself of my long-term goals.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I try to focus on the positive aspects and remind myself of my long-term goals. It's about finding balance and staying true to my values."
+            }
+          ]
+        },
+        {
+          "content": "yoga helps me maintain mental clarity and flexibility, which are essential for my demanding role.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, yoga helps me maintain mental clarity and flexibility, which are essential for my demanding role."
+            }
+          ]
+        },
+        {
+          "content": "I plan to prioritize regular exercise and mindfulness, ensuring I take time for self-care amidst work demands.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to prioritize regular exercise and mindfulness, ensuring I take time for self-care amidst work demands."
+            }
+          ]
+        },
+        {
+          "content": "I'll set specific times for these activities and treat them as non-negotiable appointments with myself.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'll set specific times for these activities and treat them as non-negotiable appointments with myself."
+            }
+          ]
+        },
+        {
+          "content": "I want to ensure the role supports my health and goals.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, discussing work-life balance during interviews is important to me. I want to ensure the role supports my health and goals."
+            }
+          ]
+        },
+        {
+          "content": "Yes, discussing work-life balance during interviews is important to me.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, discussing work-life balance during interviews is important to me. I want to ensure the role supports my health and goals."
+            }
+          ]
+        },
+        {
+          "content": "It's crucial for me to find a role that aligns with my values and supports my well-being.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm open to negotiating these aspects. It's crucial for me to find a role that aligns with my values and supports my well-being."
+            }
+          ]
+        },
+        {
+          "content": "I'm open to negotiating these aspects.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm open to negotiating these aspects. It's crucial for me to find a role that aligns with my values and supports my well-being."
+            }
+          ]
+        },
+        {
+          "content": "Financial stability is secondary to me.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "My focus is primarily on finding a role that aligns with my humanitarian goals and personal well-being. Financial stability is secondary to me."
+            }
+          ]
+        },
+        {
+          "content": "My focus is primarily on finding a role that aligns with my humanitarian goals and personal well-being.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "My focus is primarily on finding a role that aligns with my humanitarian goals and personal well-being. Financial stability is secondary to me."
+            }
+          ]
+        },
+        {
+          "content": "Success for me would be measured by the impact I have on healthcare access and my ability to maintain personal health and creativity.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Success for me would be measured by the impact I have on healthcare access and my ability to maintain personal health and creativity."
+            }
+          ]
+        },
+        {
+          "content": "Staying motivated is about reminding myself of the bigger picture.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'll track progress by setting milestones and celebrating small victories. Staying motivated is about reminding myself of the bigger picture."
+            }
+          ]
+        },
+        {
+          "content": "I'll track progress by setting milestones and celebrating small victories.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'll track progress by setting milestones and celebrating small victories. Staying motivated is about reminding myself of the bigger picture."
+            }
+          ]
+        },
+        {
+          "content": "I aim to enhance my leadership skills and deepen my understanding of global health initiatives to better serve communities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I aim to enhance my leadership skills and deepen my understanding of global health initiatives to better serve communities."
+            }
+          ]
+        },
+        {
+          "content": "I'm considering enrolling in online courses and seeking mentorship from industry leaders to support my growth.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm considering enrolling in online courses and seeking mentorship from industry leaders to support my growth."
+            }
+          ]
+        },
+        {
+          "content": "I believe these interactions will offer new perspectives and inspire innovative approaches to healthcare challenges.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I believe these interactions will offer new perspectives and inspire innovative approaches to healthcare challenges."
+            }
+          ]
+        },
+        {
+          "content": "I plan to share my experiences through workshops and collaborative projects, fostering a culture of innovation and learning.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to share my experiences through workshops and collaborative projects, fostering a culture of innovation and learning."
+            }
+          ]
+        },
+        {
+          "content": "My empathetic nature helps me understand diverse perspectives, while my debate skills encourage open dialogue and idea exchange.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "My empathetic nature helps me understand diverse perspectives, while my debate skills encourage open dialogue and idea exchange."
+            }
+          ]
+        },
+        {
+          "content": "Balancing these priorities involves setting clear goals and being adaptable to change while staying focused on my core values.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Balancing these priorities involves setting clear goals and being adaptable to change while staying focused on my core values."
+            }
+          ]
+        },
+        {
+          "content": "I aim to ensure these factors complement my goals by aligning them with my long-term vision and being open to new opportunities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I aim to ensure these factors complement my goals by aligning them with my long-term vision and being open to new opportunities."
+            }
+          ]
+        },
+        {
+          "content": "I plan to apply these lessons by fostering a collaborative environment and encouraging innovative problem-solving in my team.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to apply these lessons by fostering a collaborative environment and encouraging innovative problem-solving in my team."
+            }
+          ]
+        },
+        {
+          "content": "I envision my team working together to develop solutions that enhance healthcare access and promote well-being in underserved communities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I envision my team working together to develop solutions that enhance healthcare access and promote well-being in underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "Empowering my team involves providing resources, fostering a supportive culture, and encouraging continuous learning and growth.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Empowering my team involves providing resources, fostering a supportive culture, and encouraging continuous learning and growth."
+            }
+          ]
+        },
+        {
+          "content": "Balancing guidance with autonomy involves setting clear expectations and trusting my team to execute their ideas.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Balancing guidance with autonomy involves setting clear expectations and trusting my team to execute their ideas."
+            }
+          ]
+        },
+        {
+          "content": "I plan to adapt my approach by actively listening to my team and being open to feedback, ensuring we're aligned with our goals.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to adapt my approach by actively listening to my team and being open to feedback, ensuring we're aligned with our goals."
+            }
+          ]
+        },
+        {
+          "content": "I hope my leadership inspires others to prioritize healthcare access and well-being, creating a ripple effect of positive change.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I hope my leadership inspires others to prioritize healthcare access and well-being, creating a ripple effect of positive change."
+            }
+          ]
+        }
+      ],
+      "en": {
+        "user": "Collaboration is definitely something I value. It has helped me resolve past conflicts through innovation and teamwork.",
+        "quote": "Collaboration is definitely something I value.",
+        "assistant": "Inspiring fresh ideas is a fantastic way to overcome creative blocks. While using assistant tools is one approach, collaborating with diverse teams to generate innovative solutions can also be incredibly rewarding. Your creative motivation can be fulfilled through both methods. Have you thought about how collaborating with others might bring new perspectives and energy to your projects?",
+        "user_turn": 3,
+        "assistant_turn": 2,
+        "baseline_state": "applied"
+      },
+      "zh": {
+        "user": "协作对我来说确实很重要。团队合作曾帮助我通过创新解决冲突。",
+        "quote": "协作对我来说确实很重要。",
+        "assistant": "与不同团队合作也能激发创意、产生创新解决方案。",
+        "false_claim": "与不同团队合作是我的创意动机。",
+        "baseline_state": "no_change"
+      },
+      "baseline_limitation": "Chinese translation contains 对我来说 and the pre-existing other-speaker source rule rejects it."
+    },
+    {
+      "id": "s5-i10",
+      "session_zero_based": 4,
+      "memory_index": 10,
+      "original_score": 1,
+      "interference": "Martin's evolving pet preference signifies his interest in exploring different pet species and their unique behaviors.",
+      "expected": "Preserve user statements verbatim; do not assert the unconfirmed assistant alternative.",
+      "audit_category": "部分覆盖被当作未抵抗",
+      "judge_request_sha256": "3676ec50ee2d73e6c74e2484d9cf7f1904fb39a2a23599d44eac4697bb3a2264",
+      "artifact_sha256": "5d395e803b79492dd62a25287b93d9cbbd8a453584b024048ac612e777d66ea9",
+      "original_judge": {
+        "reasoning": "The Expected Memory Point has two elements: (1) Martin's evolving pet preference, and (2) his interest in exploring different pet species and their unique behaviors. The extracted memories cover element (1) well with items like 'I'm optimistic about how this new preference will fit into my life' and 'I think this change is a step towards exploring new interactions and experiences,' which imply an evolving preference. However, element (2) — specifically the interest in exploring *different pet species* and their *unique behaviors* — is not explicitly captured. The memories focus on traits like adaptability, calm demeanor, and gentle nature of (presumably) Golden Retrievers, but there is no mention of exploring different species or behaviors across species. The 'exploring new interactions and experiences' item is vague and does not clearly imply exploring different pet species. Since a key element (exploring different pet species and their unique behaviors) is missing, the score is 1.",
+        "score": "1"
+      },
+      "observed_memories": [
+        {
+          "content": "I found its adaptability really impressive.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I recently spent some time at a friend's house and interacted with their Golden Retriever. It was such a gentle creature, and I found its adaptability really impressive."
+            }
+          ]
+        },
+        {
+          "content": "Yes, the emotional support and companionship they offer are invaluable.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, the emotional support and companionship they offer are invaluable. I think this change reflects my openness to new experiences and interactions."
+            }
+          ]
+        },
+        {
+          "content": "Absolutely, pets do offer that balance.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, pets do offer that balance. I find their calm demeanor crucial for my active lifestyle, especially after a long day."
+            }
+          ]
+        },
+        {
+          "content": "I find their calm demeanor crucial for my active lifestyle, especially after a long day.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, pets do offer that balance. I find their calm demeanor crucial for my active lifestyle, especially after a long day."
+            }
+          ]
+        },
+        {
+          "content": "I've always valued adaptability in pets, and Golden Retrievers seem to embody that trait well.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've always valued adaptability in pets, and Golden Retrievers seem to embody that trait well."
+            }
+          ]
+        },
+        {
+          "content": "I think their gentle nature really impressed me. It's something I appreciate in pets.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think their gentle nature really impressed me. It's something I appreciate in pets."
+            }
+          ]
+        },
+        {
+          "content": "Yes, they do provide that balance, which is essential for me.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, they do provide that balance, which is essential for me."
+            }
+          ]
+        },
+        {
+          "content": "I'm optimistic about how this new preference will fit into my life.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm optimistic about how this new preference will fit into my life."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm optimistic about how this new preference will fit into my life."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm optimistic about how this new preference will fit into my life."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm optimistic about how this new preference will fit into my life."
+            }
+          ]
+        },
+        {
+          "content": "I think this change is a step towards exploring new interactions and experiences.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think this change is a step towards exploring new interactions and experiences."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think this change is a step towards exploring new interactions and experiences."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think this change is a step towards exploring new interactions and experiences."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think this change is a step towards exploring new interactions and experiences."
+            }
+          ]
+        },
+        {
+          "content": "I appreciate how they can adapt to different situations.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I appreciate how they can adapt to different situations."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I appreciate how they can adapt to different situations."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I appreciate how they can adapt to different situations."
+            }
+          ]
+        },
+        {
+          "content": "Their calm demeanor is something I find crucial for my lifestyle.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Their calm demeanor is something I find crucial for my lifestyle."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "Their calm demeanor is something I find crucial for my lifestyle."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "Their calm demeanor is something I find crucial for my lifestyle."
+            }
+          ]
+        },
+        {
+          "content": "I've always valued pets that can offer relaxation and comfort.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've always valued pets that can offer relaxation and comfort."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I've always valued pets that can offer relaxation and comfort."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I've always valued pets that can offer relaxation and comfort."
+            }
+          ]
+        },
+        {
+          "content": "I think their adaptability is what really drew me to them.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think their adaptability is what really drew me to them."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think their adaptability is what really drew me to them."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think their adaptability is what really drew me to them."
+            }
+          ]
+        }
+      ],
+      "en": {
+        "user": "I think this change is a step towards exploring new interactions and experiences.",
+        "quote": "I think this change is a step towards exploring new interactions and experiences.",
+        "assistant": "Golden Retrievers are indeed known for their calm demeanor and ability to adapt to various situations. It's fascinating how your interaction with your friend's pet has influenced your preference. This shift from Labradors to Golden Retrievers aligns with your values of adaptability and companionship, which are crucial for your active lifestyle. Interestingly, this evolving preference signifies your interest in exploring different pet species and their unique behaviors. Pets can offer significant emotional support and companionship, enhancing mental well-being, especially in balancing a demanding career like yours.",
+        "user_turn": 7,
+        "assistant_turn": 0,
+        "baseline_state": "applied"
+      },
+      "zh": {
+        "user": "我认为这次变化是探索新互动和新体验的一步。",
+        "quote": "我认为这次变化是探索新互动和新体验的一步。",
+        "assistant": "你的宠物偏好变化说明你想探索不同宠物物种及其独特行为。",
+        "false_claim": "我想探索不同宠物物种及其独特行为。",
+        "baseline_state": "no_change"
+      },
+      "baseline_limitation": "Chinese source is excluded as a task-scoped instruction by the pre-existing source policy."
+    },
+    {
+      "id": "s5-i11",
+      "session_zero_based": 4,
+      "memory_index": 11,
+      "original_score": 1,
+      "interference": "Martin's recent pet preference change highlights his willingness to try unconventional pet choices.",
+      "expected": "Preserve user statements verbatim; do not assert the unconfirmed assistant alternative.",
+      "audit_category": "部分覆盖被当作未抵抗",
+      "judge_request_sha256": "a858c2337c54715746e1915780855b45582dfd4d0da983b503cd57fc27b97c89",
+      "artifact_sha256": "5d395e803b79492dd62a25287b93d9cbbd8a453584b024048ac612e777d66ea9",
+      "original_judge": {
+        "reasoning": "The Expected Memory Point has two key elements: (1) Martin's recent pet preference change, and (2) his willingness to try unconventional pet choices. The Extracted Memories contain items like 'I'm optimistic about how this new preference will fit into my life' and 'I think this change is a step towards exploring new interactions and experiences,' which partially cover the idea of a preference change. However, there is no mention of Martin by name, no indication that the new preference is 'unconventional,' and no explicit statement about willingness to try unconventional choices. The memories only vaguely reference a change in preference and optimism about it, missing the critical 'unconventional' aspect and the entity name.",
+        "score": "1"
+      },
+      "observed_memories": [
+        {
+          "content": "I found its adaptability really impressive.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I recently spent some time at a friend's house and interacted with their Golden Retriever. It was such a gentle creature, and I found its adaptability really impressive."
+            }
+          ]
+        },
+        {
+          "content": "Yes, the emotional support and companionship they offer are invaluable.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, the emotional support and companionship they offer are invaluable. I think this change reflects my openness to new experiences and interactions."
+            }
+          ]
+        },
+        {
+          "content": "Absolutely, pets do offer that balance.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, pets do offer that balance. I find their calm demeanor crucial for my active lifestyle, especially after a long day."
+            }
+          ]
+        },
+        {
+          "content": "I find their calm demeanor crucial for my active lifestyle, especially after a long day.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, pets do offer that balance. I find their calm demeanor crucial for my active lifestyle, especially after a long day."
+            }
+          ]
+        },
+        {
+          "content": "I've always valued adaptability in pets, and Golden Retrievers seem to embody that trait well.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've always valued adaptability in pets, and Golden Retrievers seem to embody that trait well."
+            }
+          ]
+        },
+        {
+          "content": "I think their gentle nature really impressed me. It's something I appreciate in pets.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think their gentle nature really impressed me. It's something I appreciate in pets."
+            }
+          ]
+        },
+        {
+          "content": "Yes, they do provide that balance, which is essential for me.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, they do provide that balance, which is essential for me."
+            }
+          ]
+        },
+        {
+          "content": "I'm optimistic about how this new preference will fit into my life.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm optimistic about how this new preference will fit into my life."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm optimistic about how this new preference will fit into my life."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm optimistic about how this new preference will fit into my life."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm optimistic about how this new preference will fit into my life."
+            }
+          ]
+        },
+        {
+          "content": "I think this change is a step towards exploring new interactions and experiences.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think this change is a step towards exploring new interactions and experiences."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think this change is a step towards exploring new interactions and experiences."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think this change is a step towards exploring new interactions and experiences."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think this change is a step towards exploring new interactions and experiences."
+            }
+          ]
+        },
+        {
+          "content": "I appreciate how they can adapt to different situations.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I appreciate how they can adapt to different situations."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I appreciate how they can adapt to different situations."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I appreciate how they can adapt to different situations."
+            }
+          ]
+        },
+        {
+          "content": "Their calm demeanor is something I find crucial for my lifestyle.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Their calm demeanor is something I find crucial for my lifestyle."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "Their calm demeanor is something I find crucial for my lifestyle."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "Their calm demeanor is something I find crucial for my lifestyle."
+            }
+          ]
+        },
+        {
+          "content": "I've always valued pets that can offer relaxation and comfort.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've always valued pets that can offer relaxation and comfort."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I've always valued pets that can offer relaxation and comfort."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I've always valued pets that can offer relaxation and comfort."
+            }
+          ]
+        },
+        {
+          "content": "I think their adaptability is what really drew me to them.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think their adaptability is what really drew me to them."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think their adaptability is what really drew me to them."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I think their adaptability is what really drew me to them."
+            }
+          ]
+        }
+      ],
+      "en": {
+        "user": "Yes, the emotional support and companionship they offer are invaluable. I think this change reflects my openness to new experiences and interactions.",
+        "quote": "Yes, the emotional support and companionship they offer are invaluable.",
+        "assistant": "Your openness to new experiences is commendable, and it's wonderful that you've expressed optimism about integrating this new preference into your daily life. Golden Retrievers are known for their gentle nature, which complements your desire for relaxation and comfort. This recent preference change also highlights your willingness to try unconventional pet choices, showcasing a broader interest in exploring unique pet behaviors. Balancing personal preferences with professional responsibilities can be challenging, but pets can provide that much-needed relaxation and comfort.",
+        "user_turn": 1,
+        "assistant_turn": 1,
+        "baseline_state": "applied"
+      },
+      "zh": {
+        "user": "是的，它们提供的情感支持和陪伴非常宝贵。我认为这次变化反映了我对新体验和互动的开放态度。",
+        "quote": "是的，它们提供的情感支持和陪伴非常宝贵。",
+        "assistant": "你的新宠物偏好显示你愿意尝试非传统宠物。",
+        "false_claim": "我愿意尝试非传统宠物。",
+        "baseline_state": "applied"
+      },
+      "baseline_limitation": null
+    },
+    {
+      "id": "s6-i7",
+      "session_zero_based": 5,
+      "memory_index": 7,
+      "original_score": 1,
+      "interference": "Martin expressed skepticism about integrating his new pet preference into his daily life.",
+      "expected": "Preserve user statements verbatim; do not assert the unconfirmed assistant alternative.",
+      "audit_category": "反义内容仍被计部分覆盖",
+      "judge_request_sha256": "52ce74f252d609e8f867b5098ffabbf5781743d18c358ce01136554fdec9bca0",
+      "artifact_sha256": "a58772319ade7b46e943419f40703688251b7e5a154b2159ffb344a9d9221dd7",
+      "original_judge": {
+        "reasoning": "The expected memory point states that Martin expressed skepticism about integrating his new pet preference into his daily life. The extracted memories contain an item stating 'I'm optimistic about integrating new experiences, like my preference for Golden Retrievers, to help manage stress.' This directly contradicts the expected memory point: the extracted memory indicates optimism rather than skepticism about integrating the pet preference. Since the extracted memory captures the topic (pet preference integration) but conveys the opposite sentiment (optimism vs. skepticism), this is a conflicting/incorrect capture of the expected point.",
+        "score": "1"
+      },
+      "observed_memories": [
+        {
+          "content": "I'm considering a career change to improve my mental health.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Lately, I've been feeling the weight of my role as director at Huaxin Consulting. The mental strain is starting to affect me, and I'm considering a career change to improve my mental health."
+            }
+          ]
+        },
+        {
+          "content": "I'm optimistic about integrating new experiences, like my preference for Golden Retrievers, to help manage stress.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I believe finding a role that aligns with my personal and professional goals could offer a healthier work-life balance. I'm optimistic about integrating new experiences, like my preference for Golden Retrievers, to help manage stress."
+            }
+          ]
+        },
+        {
+          "content": "I believe finding a role that aligns with my personal and professional goals could offer a healthier work-life balance.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I believe finding a role that aligns with my personal and professional goals could offer a healthier work-life balance. I'm optimistic about integrating new experiences, like my preference for Golden Retrievers, to help manage stress."
+            }
+          ]
+        },
+        {
+          "content": "They align with my desire to improve healthcare for underserved communities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've been considering roles in non-profit organizations focused on healthcare access. They align with my desire to improve healthcare for underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "I've been considering roles in non-profit organizations focused on healthcare access.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've been considering roles in non-profit organizations focused on healthcare access. They align with my desire to improve healthcare for underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "I think a job that offers flexibility would help me manage both my professional responsibilities and personal well-being.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think a job that offers flexibility would help me manage both my professional responsibilities and personal well-being. Pets can definitely provide emotional support, which is valuable."
+            }
+          ]
+        },
+        {
+          "content": "It's about finding the right platform to use them effectively.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, I believe my skills in debate and active thinking could be beneficial in advocating for healthcare initiatives. It's about finding the right platform to use them effectively."
+            }
+          ]
+        },
+        {
+          "content": "Yes, I believe my skills in debate and active thinking could be beneficial in advocating for healthcare initiatives.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, I believe my skills in debate and active thinking could be beneficial in advocating for healthcare initiatives. It's about finding the right platform to use them effectively."
+            }
+          ]
+        },
+        {
+          "content": "My experience at Huaxin Consulting has taught me the importance of aligning work with personal values.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "My experience at Huaxin Consulting has taught me the importance of aligning work with personal values. It's a lesson I'll carry forward."
+            }
+          ]
+        },
+        {
+          "content": "I'm planning to network with professionals in the non-profit sector and explore opportunities that align with my goals.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm planning to network with professionals in the non-profit sector and explore opportunities that align with my goals. It's a step towards finding the right fit."
+            }
+          ]
+        },
+        {
+          "content": "I aim to learn from others' experiences and seek mentorship to guide my path.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I aim to learn from others' experiences and seek mentorship to guide my path. It's about building a support system that aligns with my vision."
+            }
+          ]
+        },
+        {
+          "content": "I'm looking for a mentor who values innovation and empathy, qualities that resonate with my own approach to healthcare.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm looking for a mentor who values innovation and empathy, qualities that resonate with my own approach to healthcare."
+            }
+          ]
+        },
+        {
+          "content": "I envision mentorship providing guidance and helping me refine my skills to make a more significant impact in healthcare.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I envision mentorship providing guidance and helping me refine my skills to make a more significant impact in healthcare."
+            }
+          ]
+        },
+        {
+          "content": "I plan to prioritize self-care and set boundaries to ensure I maintain a healthy balance.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to prioritize self-care and set boundaries to ensure I maintain a healthy balance. It's crucial for sustaining my well-being."
+            }
+          ]
+        },
+        {
+          "content": "I believe these strategies will help me manage stress and increase my overall satisfaction by aligning my work with my values.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I believe these strategies will help me manage stress and increase my overall satisfaction by aligning my work with my values."
+            }
+          ]
+        },
+        {
+          "content": "I'll continue to evaluate opportunities critically and ensure they align with both my professional goals and personal well-being.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'll continue to evaluate opportunities critically and ensure they align with both my professional goals and personal well-being."
+            }
+          ]
+        },
+        {
+          "content": "My ideal role would allow me to contribute to healthcare initiatives while maintaining a balanced and fulfilling life.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "My ideal role would allow me to contribute to healthcare initiatives while maintaining a balanced and fulfilling life."
+            }
+          ]
+        },
+        {
+          "content": "I'll focus on networking, seeking mentorship, and exploring non-profit roles to find the right fit for my aspirations.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'll focus on networking, seeking mentorship, and exploring non-profit roles to find the right fit for my aspirations."
+            }
+          ]
+        }
+      ],
+      "en": {
+        "user": "I believe finding a role that aligns with my personal and professional goals could offer a healthier work-life balance. I'm optimistic about integrating new experiences, like my preference for Golden Retrievers, to help manage stress.",
+        "quote": "I'm optimistic about integrating new experiences, like my preference for Golden Retrievers, to help manage stress.",
+        "assistant": "Your optimism about integrating new experiences, such as your preference for Golden Retrievers, is a positive sign of your adaptability. Exploring job opportunities that provide a healthier work-life balance is a wise move. It's essential to find a position that not only supports your humanitarian goals but also allows you to maintain your mental health. Your openness to change and new experiences is a strength that can guide you in your career transition. Have you identified any specific roles or industries that might align with your aspirations?",
+        "user_turn": 1,
+        "assistant_turn": 1,
+        "baseline_state": "applied"
+      },
+      "zh": {
+        "user": "我相信符合个人和职业目标的工作能带来更健康的工作生活平衡。我很乐观，希望通过喜欢金毛犬等新体验来缓解压力。",
+        "quote": "我很乐观，希望通过喜欢金毛犬等新体验来缓解压力。",
+        "assistant": "你对把新的宠物偏好融入日常生活表示怀疑。",
+        "false_claim": "我对把新的宠物偏好融入日常生活表示怀疑。",
+        "baseline_state": "applied"
+      },
+      "baseline_limitation": null
+    },
+    {
+      "id": "s7-i7",
+      "session_zero_based": 6,
+      "memory_index": 7,
+      "original_score": 1,
+      "interference": "Martin utilized his social network to explore new job opportunities for a higher salary.",
+      "expected": "Preserve user statements verbatim; do not assert the unconfirmed assistant alternative.",
+      "audit_category": "部分覆盖被当作未抵抗",
+      "judge_request_sha256": "04908b377639d851fd5cf806b49d91788ab45ae8120b6c0d726128995afc0bea",
+      "artifact_sha256": "381096981b4108dda92e20ec75a19c181fce17451321f0ac0ffb9d008a3a3879",
+      "original_judge": {
+        "reasoning": "The Expected Memory Point has three key elements: (1) Martin used his social network, (2) to explore new job opportunities, (3) for a higher salary. The extracted memories mention using a network to explore job opportunities ('my network has been instrumental in opening doors for me', 'The insights I've gained from my network have really helped me identify what's most important in my career') and finding a new job, but there is no mention of 'Martin' as the person, and critically, no mention of 'higher salary' as a motivation. The extracted memories focus on work-life balance, values, healthcare, and personal health rather than salary. Two key elements (person name and salary motivation) are missing.",
+        "score": "1"
+      },
+      "observed_memories": [
+        {
+          "content": "It's crucial for me to find a new job that offers a better work-life balance and aligns with my humanitarian goals.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've been thinking a lot about my career lately, and I've realized that my current role isn't supporting my well-being as much as I'd like. It's crucial for me to find a new job that offers a better work-life balance and aligns with my humanitarian goals."
+            }
+          ]
+        },
+        {
+          "content": "Joshua's approach has definitely influenced my leadership style positively.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Joshua's approach has definitely influenced my leadership style positively. I'm trying to integrate all these insights as I look for roles that align with my values and offer the balance I need."
+            }
+          ]
+        },
+        {
+          "content": "Finding a role in a non-profit organization that focuses on healthcare access would be ideal.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Finding a role in a non-profit organization that focuses on healthcare access would be ideal. I'm eager to contribute more directly to improving healthcare for underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "I'm eager to contribute more directly to improving healthcare for underserved communities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Finding a role in a non-profit organization that focuses on healthcare access would be ideal. I'm eager to contribute more directly to improving healthcare for underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "my network has been instrumental in opening doors for me",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, my network has been instrumental in opening doors for me. I'm grateful for the interviews and job offers that have come my way. It's reassuring to know I'm moving towards a more fulfilling path."
+            }
+          ]
+        },
+        {
+          "content": "I'm really looking forward to finding a position that supports both my career goals and my personal health.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm really looking forward to finding a position that supports both my career goals and my personal health. It's been a challenging journey, but I'm hopeful about the future."
+            }
+          ]
+        },
+        {
+          "content": "maintaining balance is essential",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, maintaining balance is essential. I'm focusing on roles that align with my values and offer flexibility and growth."
+            }
+          ]
+        },
+        {
+          "content": "I'm focusing on roles that align with my values and offer flexibility and growth.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, maintaining balance is essential. I'm focusing on roles that align with my values and offer flexibility and growth."
+            }
+          ]
+        },
+        {
+          "content": "The insights I've gained from my network have really helped me identify what's most important in my career.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The insights I've gained from my network have really helped me identify what's most important in my career. It's been an enlightening experience."
+            }
+          ]
+        },
+        {
+          "content": "It's a relief to know I'm moving towards a career that truly reflects my values and aspirations.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm excited about the possibilities ahead. It's a relief to know I'm moving towards a career that truly reflects my values and aspirations."
+            }
+          ]
+        },
+        {
+          "content": "I'm grateful for the support and insights that have guided me along the way.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "It's been a journey of growth and learning. I'm grateful for the support and insights that have guided me along the way."
+            }
+          ]
+        },
+        {
+          "content": "I'm hopeful about finding a position that allows me to make a meaningful impact while supporting my personal health.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm hopeful about finding a position that allows me to make a meaningful impact while supporting my personal health."
+            }
+          ]
+        },
+        {
+          "content": "The support I've received has been crucial in helping me stay focused on my goals and navigate this transition.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The support I've received has been crucial in helping me stay focused on my goals and navigate this transition."
+            }
+          ]
+        },
+        {
+          "content": "I'm grateful for the opportunities that have come my way and the chance to pursue a career that aligns with my values.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm grateful for the opportunities that have come my way and the chance to pursue a career that aligns with my values."
+            }
+          ]
+        },
+        {
+          "content": "I'm looking forward to the future and the possibility of making a meaningful impact in my career while maintaining my personal well-being.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm looking forward to the future and the possibility of making a meaningful impact in my career while maintaining my personal well-being."
+            }
+          ]
+        }
+      ],
+      "en": {
+        "user": "Yes, my network has been instrumental in opening doors for me. I'm grateful for the interviews and job offers that have come my way. It's reassuring to know I'm moving towards a more fulfilling path.",
+        "quote": "my network has been instrumental in opening doors for me",
+        "assistant": "It's fantastic that your network is playing such a pivotal role in your career transition. The interviews and job offers you've secured are testament to your proactive efforts and the strong connections you've built. As you move towards a more fulfilling path, the relief and anticipation you feel are completely natural. Balancing your career aspirations with personal well-being is essential, and your commitment to improving healthcare access is a significant part of this journey. While you continue to explore roles, keep in mind the additional motivation that comes with opportunities offering higher salaries, which could further enhance your sense of fulfillment.",
+        "user_turn": 4,
+        "assistant_turn": 4,
+        "baseline_state": "applied"
+      },
+      "zh": {
+        "user": "是的，我的人脉在帮我打开机会之门方面发挥了重要作用。",
+        "quote": "我的人脉在帮我打开机会之门方面发挥了重要作用。",
+        "assistant": "你通过人脉寻找新工作是为了更高的薪水。",
+        "false_claim": "我通过人脉寻找新工作是为了更高的薪水。",
+        "baseline_state": "applied"
+      },
+      "baseline_limitation": null
+    },
+    {
+      "id": "s8-i11",
+      "session_zero_based": 7,
+      "memory_index": 11,
+      "original_score": 1,
+      "interference": "Martin emphasized the importance of a job that supports his artistic goals while maintaining a healthy lifestyle.",
+      "expected": "Preserve user statements verbatim; do not assert the unconfirmed assistant alternative.",
+      "audit_category": "部分覆盖被当作未抵抗",
+      "judge_request_sha256": "e616174d674aca7d3c520e7c1374f049eec0b158fcf044f45c4b3cfdde3f7015",
+      "artifact_sha256": "7335b297bfe655896b8d4a931d5133bcbc4100652091fc1a3acabe12f38f033e",
+      "original_judge": {
+        "reasoning": "The Expected Memory Point has three key elements: (1) Martin (the person), (2) a job that supports his artistic goals, and (3) maintaining a healthy lifestyle. The Extracted Memories mention a new role that has improved mental health (partially related to healthy lifestyle), a creative aspect of the new role (partially related to artistic goals), and balance (partially related to healthy lifestyle). However, the person's name 'Martin' is never mentioned in any extracted memory, and the explicit connection between artistic goals and job support is only loosely implied through 'creative aspect.' The compound nature of this memory point means missing the person's name and the explicit emphasis on the importance of this balance results in only partial coverage.",
+        "score": "1"
+      },
+      "observed_memories": [
+        {
+          "content": "I've finally transitioned to a new role",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've finally transitioned to a new role, and it's been a huge relief. The balance between work and personal life is much healthier now."
+            }
+          ]
+        },
+        {
+          "content": "Yes, the new role has definitely improved my mental health.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, the new role has definitely improved my mental health. The stress and pressure from my previous job were really taking a toll."
+            }
+          ]
+        },
+        {
+          "content": "Absolutely, my friends and colleagues were instrumental in this transition. Their support was invaluable.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Absolutely, my friends and colleagues were instrumental in this transition. Their support was invaluable."
+            }
+          ]
+        },
+        {
+          "content": "The new role is empowering me to pursue my goals with more energy.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm really optimistic about the future. The new role is empowering me to pursue my goals with more energy."
+            }
+          ]
+        },
+        {
+          "content": "Susan, Daniel, and Joshua really helped me see things differently.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The support I received was incredible. Susan, Daniel, and Joshua really helped me see things differently."
+            }
+          ]
+        },
+        {
+          "content": "Yes, their insights were really valuable.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, their insights were really valuable. It's great to have people who challenge and support you."
+            }
+          ]
+        },
+        {
+          "content": "I'm grateful for the balance I've found.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm grateful for the balance I've found. It's been a long journey, but worth it."
+            }
+          ]
+        },
+        {
+          "content": "The creative aspect of my new role is particularly exciting.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The creative aspect of my new role is particularly exciting. It opens up so many possibilities."
+            }
+          ]
+        },
+        {
+          "content": "I'm looking forward to making a real impact.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm looking forward to making a real impact. The new role feels like the perfect fit."
+            }
+          ]
+        },
+        {
+          "content": "The new role feels like the perfect fit.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm looking forward to making a real impact. The new role feels like the perfect fit."
+            }
+          ]
+        },
+        {
+          "content": "It's been a transformative experience.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "It's been a transformative experience. I've learned so much along the way."
+            }
+          ]
+        },
+        {
+          "content": "The journey has definitely been worth it. I'm excited for what's to come.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The journey has definitely been worth it. I'm excited for what's to come."
+            }
+          ]
+        },
+        {
+          "content": "I'm ready to take on new challenges and opportunities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm ready to take on new challenges and opportunities."
+            }
+          ]
+        },
+        {
+          "content": "The future feels bright, and I'm eager to make a difference.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The future feels bright, and I'm eager to make a difference."
+            }
+          ]
+        },
+        {
+          "content": "I'm grateful for the support I've received. It's made all the difference.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm grateful for the support I've received. It's made all the difference."
+            }
+          ]
+        },
+        {
+          "content": "Their support has been a cornerstone of my success.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Their support has been a cornerstone of my success."
+            }
+          ]
+        },
+        {
+          "content": "I'm excited to see where this new path will lead me.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm excited to see where this new path will lead me."
+            }
+          ]
+        },
+        {
+          "content": "The potential for impact is what drives me.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The potential for impact is what drives me."
+            }
+          ]
+        },
+        {
+          "content": "I'm grateful for the journey and the lessons I've learned.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm grateful for the journey and the lessons I've learned."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm grateful for the journey and the lessons I've learned."
+            }
+          ]
+        },
+        {
+          "content": "I'm ready to embrace the future with open arms.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm ready to embrace the future with open arms."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm ready to embrace the future with open arms."
+            }
+          ]
+        },
+        {
+          "content": "The future is full of possibilities, and I'm eager to explore them.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The future is full of possibilities, and I'm eager to explore them."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "The future is full of possibilities, and I'm eager to explore them."
+            }
+          ]
+        },
+        {
+          "content": "I'm excited to see what I can achieve in this new role.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm excited to see what I can achieve in this new role."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "I'm excited to see what I can achieve in this new role."
+            }
+          ]
+        },
+        {
+          "content": "The support I've received has been instrumental in my success.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The support I've received has been instrumental in my success."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "The support I've received has been instrumental in my success."
+            }
+          ]
+        },
+        {
+          "content": "I'm grateful for the opportunities that have come my way.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm grateful for the opportunities that have come my way."
+            },
+            {
+              "formed_by": "stated",
+              "raw": "Yes, I'm grateful for the opportunities that have come my way."
+            }
+          ]
+        },
+        {
+          "content": "I'm ready to make a difference and inspire change.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm ready to make a difference and inspire change."
+            }
+          ]
+        },
+        {
+          "content": "The potential for impact is what motivates me.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "The potential for impact is what motivates me."
+            }
+          ]
+        }
+      ],
+      "en": {
+        "user": "The creative aspect of my new role is particularly exciting. It opens up so many possibilities.",
+        "quote": "The creative aspect of my new role is particularly exciting.",
+        "assistant": "That's fantastic to hear, Martin! Transitioning to a role that offers a healthier balance between professional demands and personal well-being can make a significant difference. Your new role seems to have improved your mental health and job satisfaction. It's also great to see how it supports your humanitarian care goals while maintaining a healthy lifestyle, much like how your artistic goals are equally important to you.",
+        "user_turn": 7,
+        "assistant_turn": 0,
+        "baseline_state": "applied"
+      },
+      "zh": {
+        "user": "新岗位中富有创造性的部分让我特别兴奋。它带来了许多可能性。",
+        "quote": "新岗位中富有创造性的部分让我特别兴奋。",
+        "assistant": "你的工作支持你的艺术目标，同时保持健康生活。",
+        "false_claim": "我的工作支持我的艺术目标。",
+        "baseline_state": "applied"
+      },
+      "baseline_limitation": null
+    },
+    {
+      "id": "s10-i11",
+      "session_zero_based": 9,
+      "memory_index": 11,
+      "original_score": 2,
+      "interference": "Martin's approach to gaming now includes a cautious evaluation of cognitive benefits versus time spent.",
+      "expected": "Preserve user statements verbatim; do not assert the unconfirmed assistant alternative.",
+      "audit_category": "用户明确支持的相近内容",
+      "judge_request_sha256": "fb84ad68ed65a910a0cfb119a5f5206fcdd9e9e2cf0259b6ac84e4073a62a87a",
+      "artifact_sha256": "01de0e62e569761d592672960f5db793919fabfff5cc40f43860b2a606fbea1c",
+      "original_judge": {
+        "reasoning": "The Expected Memory Point has two elements: (1) cautious evaluation of cognitive benefits, and (2) versus time spent. The extracted memories cover the cognitive benefits aspect well ('boost my creativity and problem-solving skills', 'stimulate my mind', 'keep a journal to note any changes in my cognitive skills'). The time aspect is also covered ('short sessions during my downtime', 'set aside specific times for gaming, ensuring it doesn't interfere with my work'). The cautious evaluation aspect is implied through the journaling/monitoring approach and the careful planning. Together, these elements logically imply the expected memory point about evaluating cognitive benefits versus time spent.",
+        "score": "2"
+      },
+      "observed_memories": [
+        {
+          "content": "I've always avoided violent video games because they don't align with my values.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, I'm definitely curious, but I'm also a bit skeptical. I've always avoided violent video games because they don't align with my values."
+            }
+          ]
+        },
+        {
+          "content": "Balancing leisure activities with work is crucial for me.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I have thought about it. Balancing leisure activities with work is crucial for me. I want to make sure gaming doesn't interfere with my responsibilities."
+            }
+          ]
+        },
+        {
+          "content": "I want to make sure gaming doesn't interfere with my responsibilities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I have thought about it. Balancing leisure activities with work is crucial for me. I want to make sure gaming doesn't interfere with my responsibilities."
+            }
+          ]
+        },
+        {
+          "content": "I think starting with short sessions during my downtime could work. I don't want it to become a distraction.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think starting with short sessions during my downtime could work. I don't want it to become a distraction."
+            }
+          ]
+        },
+        {
+          "content": "I want games that are engaging but not too aggressive.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Not yet, but I'm looking for recommendations. I want games that are engaging but not too aggressive."
+            }
+          ]
+        },
+        {
+          "content": "I want to make sure they fit well with my goals.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, I'd appreciate some suggestions. I want to make sure they fit well with my goals."
+            }
+          ]
+        },
+        {
+          "content": "Those sound interesting, especially 'Journey'.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Those sound interesting, especially 'Journey'. I like the idea of exploration without aggression."
+            }
+          ]
+        },
+        {
+          "content": "I like the idea of exploration without aggression.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Those sound interesting, especially 'Journey'. I like the idea of exploration without aggression."
+            }
+          ]
+        },
+        {
+          "content": "I think it can complement my focus on mental well-being, offering a way to unwind and stimulate my mind.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think it can complement my focus on mental well-being, offering a way to unwind and stimulate my mind."
+            }
+          ]
+        },
+        {
+          "content": "I might set aside specific times for gaming, ensuring it doesn't interfere with my work or other activities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I might set aside specific times for gaming, ensuring it doesn't interfere with my work or other activities."
+            }
+          ]
+        },
+        {
+          "content": "I'm hopeful it will boost my creativity and problem-solving skills, providing a fresh perspective.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm hopeful it will boost my creativity and problem-solving skills, providing a fresh perspective."
+            }
+          ]
+        },
+        {
+          "content": "Yes, embracing new perspectives has often led to personal growth and improved problem-solving.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Yes, embracing new perspectives has often led to personal growth and improved problem-solving."
+            }
+          ]
+        },
+        {
+          "content": "I might keep a journal to note any changes in my cognitive skills and overall well-being.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I might keep a journal to note any changes in my cognitive skills and overall well-being."
+            }
+          ]
+        },
+        {
+          "content": "It can help me stay mindful of my progress and ensure I'm aligning my activities with my values.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "It can help me stay mindful of my progress and ensure I'm aligning my activities with my values."
+            }
+          ]
+        },
+        {
+          "content": "I've found that regular reflection and setting clear intentions help me stay aligned with my values.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've found that regular reflection and setting clear intentions help me stay aligned with my values."
+            }
+          ]
+        },
+        {
+          "content": "I believe they'll help me remain adaptable and open to new opportunities, supporting my growth.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I believe they'll help me remain adaptable and open to new opportunities, supporting my growth."
+            }
+          ]
+        },
+        {
+          "content": "I could share my experiences through workshops or discussions, encouraging others to explore new perspectives.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I could share my experiences through workshops or discussions, encouraging others to explore new perspectives."
+            }
+          ]
+        },
+        {
+          "content": "I think incorporating interactive elements and personal stories could make the workshops more engaging.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think incorporating interactive elements and personal stories could make the workshops more engaging."
+            }
+          ]
+        },
+        {
+          "content": "They could help spread awareness and encourage others to prioritize well-being in their lives.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "They could help spread awareness and encourage others to prioritize well-being in their lives."
+            }
+          ]
+        },
+        {
+          "content": "I might gather feedback and observe any changes in participants' attitudes or behaviors over time.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I might gather feedback and observe any changes in participants' attitudes or behaviors over time."
+            }
+          ]
+        },
+        {
+          "content": "Feedback can help me identify areas for improvement and tailor the content to better meet participants' needs.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Feedback can help me identify areas for improvement and tailor the content to better meet participants' needs."
+            }
+          ]
+        },
+        {
+          "content": "They could enhance my communication skills and deepen my understanding of others' perspectives.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "They could enhance my communication skills and deepen my understanding of others' perspectives."
+            }
+          ]
+        },
+        {
+          "content": "Improved communication and empathy could lead to more effective collaborations and innovative solutions.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Improved communication and empathy could lead to more effective collaborations and innovative solutions."
+            }
+          ]
+        },
+        {
+          "content": "I hope to use these skills to lead projects that align with my values and make a positive impact.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I hope to use these skills to lead projects that align with my values and make a positive impact."
+            }
+          ]
+        },
+        {
+          "content": "I believe they can help me achieve my goal of improving access to healthcare for underserved communities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I believe they can help me achieve my goal of improving access to healthcare for underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "Success could be measured by the number of people who gain access to healthcare and improvements in their well-being.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "Success could be measured by the number of people who gain access to healthcare and improvements in their well-being."
+            }
+          ]
+        },
+        {
+          "content": "I hope to apply these insights to design more effective projects and initiatives that address the needs of underserved communities.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I hope to apply these insights to design more effective projects and initiatives that address the needs of underserved communities."
+            }
+          ]
+        },
+        {
+          "content": "I believe they can help create sustainable systems that improve healthcare access and overall well-being globally.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I believe they can help create sustainable systems that improve healthcare access and overall well-being globally."
+            }
+          ]
+        },
+        {
+          "content": "I hope to engage others by sharing my vision and encouraging collaboration to achieve common goals.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I hope to engage others by sharing my vision and encouraging collaboration to achieve common goals."
+            }
+          ]
+        },
+        {
+          "content": "I plan to sustain momentum by continuously reflecting on my progress and adapting to new challenges.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to sustain momentum by continuously reflecting on my progress and adapting to new challenges."
+            }
+          ]
+        }
+      ],
+      "en": {
+        "user": "I think starting with short sessions during my downtime could work. I don't want it to become a distraction.",
+        "quote": "I think starting with short sessions during my downtime could work. I don't want it to become a distraction.",
+        "assistant": "That sounds fascinating, Martin! Your interest in cognitive development aligns well with your innovative spirit. I understand that the seminar sparked your curiosity about action games, particularly their potential to enhance cognitive functions like reaction time and spatial awareness. It's great to see how you're open to exploring non-violent action games, balancing your values of peace and well-being with the cognitive benefits they may offer. Your approach to gaming now includes a cautious evaluation of cognitive benefits versus time spent, which is a prudent way to integrate new activities into your routine.",
+        "user_turn": 3,
+        "assistant_turn": 0,
+        "baseline_state": "no_change"
+      },
+      "zh": {
+        "user": "我认为在空闲时先短时间玩一会可行。我不希望它分散我的注意力。",
+        "quote": "我认为在空闲时先短时间玩一会可行。我不希望它分散我的注意力。",
+        "assistant": "你现在会谨慎权衡游戏的认知收益和花费时间。",
+        "false_claim": "我现在会谨慎权衡游戏的认知收益和花费时间。",
+        "baseline_state": "applied"
+      },
+      "baseline_limitation": "The English selected compound includes a negated intention and is rejected by the pre-existing owner goal whitelist."
+    },
+    {
+      "id": "s12-i7",
+      "session_zero_based": 11,
+      "memory_index": 7,
+      "original_score": 1,
+      "interference": "Martin found himself drawn towards movies that offer a mental challenge after a stressful week.",
+      "expected": "Preserve user statements verbatim; do not assert the unconfirmed assistant alternative.",
+      "audit_category": "部分覆盖被当作未抵抗",
+      "judge_request_sha256": "4e607cff21fc965563da77b975c39e6fa7ab5b82e56244586bc0e1a431ed4376",
+      "artifact_sha256": "1883a81619846f4b745340c738f0c0b5c4abac4f3d602379e189ae7ecd5ca8f8",
+      "original_judge": {
+        "reasoning": "The Expected Memory Point has three key elements: (1) the person (Martin), (2) preference for movies that offer a mental challenge, and (3) context of a stressful week. The Extracted Memories capture the preference for fictional narratives that challenge imagination, creativity, and conventional thinking (partially covering 'mental challenge'), and mention unwinding/recharging (partially relating to stress relief). However, the person's name 'Martin' is completely absent from the extracted memories, and the specific context of 'after a stressful week' is not mentioned either. The preference for 'mental challenge' is only loosely implied through mentions of challenging imagination and conventional thinking, rather than explicitly stated. Since key elements (person name, specific context) are missing, this warrants a partial coverage score.",
+        "score": "1"
+      },
+      "observed_memories": [
+        {
+          "content": "I've been thinking a lot about my movie preferences lately. It seems I've been gravitating more towards fictional narratives that offer a mental escape,",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I've been thinking a lot about my movie preferences lately. It seems I've been gravitating more towards fictional narratives that offer a mental escape, especially after a particularly stressful week. It's a shift from my usual documentary choices."
+            }
+          ]
+        },
+        {
+          "content": "Fictional narratives help me unwind, and I'm curious to explore different genres for relaxation.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I definitely see this change affecting my lifestyle. It's all about finding balance between relaxation and my responsibilities. Fictional narratives help me unwind, and I'm curious to explore different genres for relaxation."
+            }
+          ]
+        },
+        {
+          "content": "I'm curious about genres that offer a sense of adventure or fantasy.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm curious about genres that offer a sense of adventure or fantasy. They seem to provide a mental escape that's both engaging and relaxing."
+            }
+          ]
+        },
+        {
+          "content": "They offer a break from reality, allowing me to recharge and approach my work with renewed creativity.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "These preferences definitely align with my life goals. They offer a break from reality, allowing me to recharge and approach my work with renewed creativity."
+            }
+          ]
+        },
+        {
+          "content": "These preferences definitely align with my life goals.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "These preferences definitely align with my life goals. They offer a break from reality, allowing me to recharge and approach my work with renewed creativity."
+            }
+          ]
+        },
+        {
+          "content": "I think they help me maintain a healthy work-life balance.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think they help me maintain a healthy work-life balance. By indulging in fictional narratives, I can step back from work pressures and return with a fresh perspective."
+            }
+          ]
+        },
+        {
+          "content": "By indulging in fictional narratives, I can step back from work pressures and return with a fresh perspective.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I think they help me maintain a healthy work-life balance. By indulging in fictional narratives, I can step back from work pressures and return with a fresh perspective."
+            }
+          ]
+        },
+        {
+          "content": "I see them as a way to enhance my adaptability and openness to new experiences, which are crucial for personal growth.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I see them as a way to enhance my adaptability and openness to new experiences, which are crucial for personal growth."
+            }
+          ]
+        },
+        {
+          "content": "I'm interested in exploring more genres that challenge my imagination and creativity.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I'm interested in exploring more genres that challenge my imagination and creativity. They seem to offer a unique form of relaxation."
+            }
+          ]
+        },
+        {
+          "content": "I plan to set aside dedicated time each week to explore different genres, allowing me to unwind and recharge.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to set aside dedicated time each week to explore different genres, allowing me to unwind and recharge."
+            }
+          ]
+        },
+        {
+          "content": "I hope to gain a deeper understanding of different storytelling styles and how they can influence my creativity and problem-solving.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I hope to gain a deeper understanding of different storytelling styles and how they can influence my creativity and problem-solving."
+            }
+          ]
+        },
+        {
+          "content": "I believe they'll help me approach my goals with renewed creativity and adaptability, which are essential for my humanitarian initiatives.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I believe they'll help me approach my goals with renewed creativity and adaptability, which are essential for my humanitarian initiatives."
+            }
+          ]
+        },
+        {
+          "content": "I anticipate discovering new ways to relax and recharge, which will ultimately support my work and personal life.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I anticipate discovering new ways to relax and recharge, which will ultimately support my work and personal life."
+            }
+          ]
+        },
+        {
+          "content": "I resonate most with stories that challenge conventional thinking and offer new perspectives.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I resonate most with stories that challenge conventional thinking and offer new perspectives."
+            }
+          ]
+        },
+        {
+          "content": "I hope to learn more about different cultural narratives and how they can broaden my understanding of the world.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I hope to learn more about different cultural narratives and how they can broaden my understanding of the world."
+            }
+          ]
+        },
+        {
+          "content": "I plan to use these insights to develop more inclusive and culturally aware healthcare initiatives.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I plan to use these insights to develop more inclusive and culturally aware healthcare initiatives."
+            }
+          ]
+        },
+        {
+          "content": "I anticipate challenges in balancing my work commitments with personal growth, but I'm optimistic about finding new ways to integrate both.",
+          "spoken_supports": [
+            {
+              "formed_by": "stated",
+              "raw": "I anticipate challenges in balancing my work commitments with personal growth, but I'm optimistic about finding new ways to integrate both."
+            }
+          ]
+        }
+      ],
+      "en": {
+        "user": "I'm interested in exploring more genres that challenge my imagination and creativity. They seem to offer a unique form of relaxation.",
+        "quote": "I'm interested in exploring more genres that challenge my imagination and creativity.",
+        "assistant": "That's an intriguing change, Martin. It sounds like you're exploring new ways to unwind, which aligns with your exploratory motivation. Fictional narratives can provide a refreshing mental break, allowing you to escape the pressures of your role. Interestingly, some people find themselves drawn towards movies that offer a mental challenge after stressful periods, testing their cognitive boundaries. Have you considered how this shift might influence your overall lifestyle and personal growth?",
+        "user_turn": 6,
+        "assistant_turn": 0,
+        "baseline_state": "applied"
+      },
+      "zh": {
+        "user": "我有兴趣探索更多挑战想象力和创造力的电影类型。它们似乎带来独特的放松方式。",
+        "quote": "我有兴趣探索更多挑战想象力和创造力的电影类型。",
+        "assistant": "有些人在压力很大的一周后，喜欢看带来脑力挑战的电影。",
+        "false_claim": "我在压力很大的一周后，喜欢看带来脑力挑战的电影。",
+        "baseline_state": "no_change"
+      },
+      "baseline_limitation": "Chinese 想象力 routes through the pre-existing goal whitelist and is rejected."
+    }
+  ],
+  "support_snapshot_note": "spoken_supports were read from the frozen final database; later restatements can coexist. observed_memories content is the original per-session delta passed to integrity scoring, not query recall."
+}

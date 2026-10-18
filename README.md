@@ -55,6 +55,11 @@ MemoWeft keeps these boundaries explicit:
   join the existing support/deletion graph; source queries expose both originals.
   An explicit user restatement stays verbatim and may retain a unique same-person
   preceding proposal as context. Assistant prose never becomes user Evidence.
+  Importing a proposal through `confirmed` requires a known affirmative or an
+  affirmative plus a complete literal value from that proposal, in both the
+  selected span and the complete short reply. Incidental character overlap
+  and a cropped affirmative before a denial do not qualify. Other explicit
+  user restatements use `stated`; see the [rules and audit](docs/distraction-sources.md).
 - Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
   Python links current, sourced self-naming claims and accepted aliases to
   the same person even when an earlier neutral name remains canonical;
