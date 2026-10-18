@@ -12,6 +12,7 @@ from memoweft.integrations.hermes.batch_adapter import HermesBatchAdapterProcess
 from memoweft.integrations.hermes.boundary_store import HermesBoundaryStore
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
 from memoweft.integrations.trust.command_store import TrustCommandError
+from memoweft.integrations.trust.forget_preview import preview_forget
 from memoweft.portable.builder import build_bundle
 from test_hermes_boundary_store import _boundary, _target
 from test_hermes_batch_adapter_v5 import _batch, _model, _route
@@ -82,7 +83,8 @@ def test_one_real_source_is_reused_without_a_duplicate_preference_and_other_fact
         else:
             revision = int(db.execute('SELECT revision FROM memory_state').fetchone()[0])
     if not mixed:
-        deleted = service.submit_command(_command('forget-after-source-reuse', revision, 'delete_world_item', 'cognition', str(green[0][0])))
+        preview = preview_forget(str(path), _SUBJECT, target_kind='cognition', target_id=str(green[0][0]))
+        deleted = service.submit_command(_command('forget-after-source-reuse', revision, 'delete_world_item', 'cognition', str(green[0][0]), {'forget_scope': preview['forget_scope']}))
         assert deleted['result_state'] == 'applied'
         with _open(path) as db:
             assert '绿茶' not in json.dumps(build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0), ensure_ascii=False)
@@ -155,7 +157,8 @@ def test_failed_or_late_corrections_cannot_keep_or_reintroduce_forgotten_source_
         current = str(db.execute("SELECT id FROM cognition WHERE content='用户其实更喜欢绿茶。'").fetchone()[0])
     def erase() -> None:
         revision = int(service.get_capabilities()['world_revision'])
-        assert service.submit_command(_command('erase-real-source', revision, 'delete_world_item', 'cognition', current))['result_state'] == 'applied'
+        preview = preview_forget(str(path), _SUBJECT, target_kind='cognition', target_id=current)
+        assert service.submit_command(_command('erase-real-source', revision, 'delete_world_item', 'cognition', current, {'forget_scope': preview['forget_scope']}))['result_state'] == 'applied'
     if late:
         erase()
     command = _proposal(source, command_id='unbound-source-attempt')
@@ -229,7 +232,8 @@ def test_successful_source_then_direct_evidence_erasure_scrubs_all_command_copie
     assert receipt['result_state'] == 'applied'
     with _open(path) as db:
         evidence = str(db.execute("SELECT id FROM evidence WHERE raw_content LIKE '%DIRECT_SOURCE_PRIVATE_RAW%'").fetchone()[0])
-    assert service.submit_command(_command('direct-erasure', 2, 'delete_evidence', 'evidence', evidence))['result_state'] == 'applied'
+    preview = preview_forget(str(path), _SUBJECT, target_kind='evidence', target_id=evidence)
+    assert service.submit_command(_command('direct-erasure', 2, 'delete_evidence', 'evidence', evidence, {'forget_scope': preview['forget_scope']}))['result_state'] == 'applied'
     assert service.submit_command(command) == receipt
     with _open(path) as db:
         stored = '\n'.join(db.iterdump())

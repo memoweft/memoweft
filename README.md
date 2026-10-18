@@ -68,6 +68,34 @@ MemoWeft keeps these boundaries explicit:
   its complete literal topic and action verb must match the selected proposal.
   Whole-reply denial checks still apply; the finite grammar and limits are
   documented in the [confirmation rules](docs/distraction-sources.md).
+- Hosts bind the actual recall dependencies to assistant turns through the existing
+  `model_context_dependencies` boundary field or `link_interaction_dependencies`.
+  Forgetting a fact erases whole dependent interaction-context copies, transitively,
+  without touching the original application chat. Legacy copies lacking complete
+  dependency capture are matched within the account against full original/canonical
+  facts (with presentation and owner-pronoun normalization), and appear in the same
+  forget preview. Matching requires whole-clause equality and preserves word/value
+  boundaries (York never matches Yorkshire). Content-free context identities and retained source IDs fence replay and survive Portable v4;
+  an erased copy wins over an older live copy in either restore order. Export does
+  no word scrubbing. This cannot revoke a standalone historical backup restored
+  into a database that has never received the deletion state.
+- Forget previews return `forget_scope`. Clients must retain this value with the
+  confirmed plan and send it unchanged in `payload.forget_scope` on
+  `delete_evidence` / `delete_world_item`. It binds the account, target, World
+  revision and the affected context/commitment IDs and contents. Unrelated additions
+  do not invalidate the confirmed set. Under the existing write lock,
+  a changed snapshot rejects with `forget_scope_changed`; a legacy call that would
+  alter contexts without a token rolls back with `forget_scope_required`.
+  Re-preview and obtain a new confirmation and command ID after rejection; never silently refresh
+  the token at execution time. `forget_scope_fence: 1` advertises this contract.
+  The same scope includes `evidence.preceding_ai_context` copies. Preview items
+  identify them as `object_kind=evidence_context`, `item_type=preceding_ai_context`;
+  successful receipt `affected_ids` includes their Evidence IDs. Context-only
+  cleanup retains the independent raw Evidence and does not add it to the
+  preview's source-deletion `evidence_ids` list.
+  Portable erasure markers carry a content-free original context fingerprint;
+  alternate local IDs with reused session/episode names must match that fingerprint,
+  and all matched IDs participate in the same transitive cascade.
 - Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
   Python links current, sourced self-naming claims and accepted aliases to
   the same person even when an earlier neutral name remains canonical;

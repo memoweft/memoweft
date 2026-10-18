@@ -144,11 +144,13 @@ def test_hard_delete_fences_queued_job_and_boundary_replay_after_restart(tmp_pat
         evidence_id = db.execute("SELECT id FROM evidence").fetchone()[0]
     finally:
         db.close()
+    from memoweft.integrations.trust.forget_preview import preview_forget
+    preview = preview_forget(str(path), "owner", target_kind="evidence", target_id=evidence_id)
     command = {
         "schema_version": 1, "command_id": "hard-delete-boundary",
         "subject_id": "owner", "actor": "owner", "expected_world_revision": 0,
         "operation": "delete_evidence", "target_kind": "evidence",
-        "target_id": evidence_id, "payload": {}, "submitted_at": _NOW_ISO,
+        "target_id": evidence_id, "payload": {"forget_scope": preview["forget_scope"]}, "submitted_at": _NOW_ISO,
     }
     receipt = CommandService(path, subject_id="owner", host_id="hermes:weixin", clock=_clock).submit_command(command)
     assert receipt["result_state"] == "applied"

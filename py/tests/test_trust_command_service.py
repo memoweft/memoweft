@@ -516,8 +516,10 @@ def test_delete_evidence_clears_source_world_and_portable_replay(tmp_path: Path)
         _seed_revision(db)
         old_bundle = build_bundle(db, _SUBJECT, host_id=_HOST, exported_at=_T0)
     service = _service(path)
+    from memoweft.integrations.trust.forget_preview import preview_forget
+    preview = preview_forget(str(path), _SUBJECT, target_kind="evidence", target_id="e-coffee")
     receipt = service.submit_command(
-        _command("delete-evidence", 1, "delete_evidence", "evidence", "e-coffee")
+        _command("delete-evidence", 1, "delete_evidence", "evidence", "e-coffee", {"forget_scope": preview["forget_scope"]})
     )
     assert receipt["result_state"] == "applied"
     assert "用户喜欢喝咖啡" not in json.dumps(receipt, ensure_ascii=False)

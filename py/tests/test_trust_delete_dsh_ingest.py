@@ -10,6 +10,7 @@ import pytest
 from memoweft.integrations.dsh_bridge import DshMemoWeftRuntime
 from memoweft.integrations.hermes.world_worker import WorldJobWorker
 from memoweft.integrations.trust.command_service import CommandService
+from memoweft.integrations.trust.forget_preview import preview_forget
 
 from test_dsh_local_route import _boundary
 
@@ -53,6 +54,7 @@ def test_dsh_ingested_cognition_delete_respects_ledger_owner(
                     "INSERT INTO evidence_ledger (id, content, payload_json) VALUES (?, ?, ?)",
                     ("foreign-ledger", json.dumps(foreign), "{}"),
                 )
+        preview = preview_forget(str(db_path), subject_id, target_kind="cognition", target_id=cognition_id)
         receipt = CommandService(
             db_path, subject_id=subject_id, host_id=host_id
         ).submit_command({
@@ -64,7 +66,7 @@ def test_dsh_ingested_cognition_delete_respects_ledger_owner(
             "operation": "delete_world_item",
             "target_kind": "cognition",
             "target_id": cognition_id,
-            "payload": {},
+            "payload": {"forget_scope": preview["forget_scope"]},
             "submitted_at": "2026-09-27T00:00:00.000Z",
         })
         with sqlite3.connect(db_path) as db:

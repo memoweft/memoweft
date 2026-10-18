@@ -63,10 +63,10 @@ def test_source_forget_erases_commitments_and_transitive_reuse_keeps_unrelated(
     preview = preview_forget(str(path), _SUBJECT, target_kind='evidence', target_id='source')
     items = preview['items']
     assert isinstance(items, list)
-    assert {item['item_id'] for item in items} == {original.id, reused.id}
+    assert {item['item_id'] for item in items} == {original.id, reused.id, 'episode-a', 'episode-b'}
     with _open(path) as db:
         assert list(db.iterdump()) == before
-    receipt = _service(path).submit_command(_command('erase', 1, 'delete_evidence', 'evidence', 'source'))
+    receipt = _service(path).submit_command(_command('erase', 1, 'delete_evidence', 'evidence', 'source', {'forget_scope': preview['forget_scope']}))
     assert receipt['storage_cleanup']['state'] == 'complete'
     assert {original.id, reused.id} <= set(receipt['affected_ids'])
     with _open(path) as db:
@@ -122,7 +122,7 @@ def test_source_job_recovers_commitment_when_interaction_context_is_missing(
         receipt = CommandService(path, subject_id=subject, host_id=host).submit_command({
             'schema_version': 1, 'command_id': 'job-only-delete', 'subject_id': subject, 'actor': 'owner',
             'expected_world_revision': revision, 'operation': 'delete_evidence', 'target_kind': 'evidence',
-            'target_id': source, 'payload': {}, 'submitted_at': _T0})
+            'target_id': source, 'payload': {'forget_scope': preview['forget_scope']}, 'submitted_at': _T0})
         assert receipt['result_state'] == 'applied' and item.id in receipt['affected_ids']
         _assert_no_text(Path(path), 'FG2JobOnlyQuote')
         with _open(Path(path)) as db:

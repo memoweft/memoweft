@@ -58,7 +58,7 @@ def delete_evidence(
     subject_id: str,
 ) -> CommandMutation:
     payload = command["payload"]
-    if set(payload) - {"delete_conversation_snippets"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
+    if set(payload) - {"delete_conversation_snippets", "forget_scope"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
         raise TrustCommandError("invalid_trust_command_payload")
     if command["target_kind"] != "evidence":
         return CommandMutation("rejected")
@@ -100,6 +100,16 @@ def delete_evidence(
     cognition_ids = _ids(db, "SELECT cognition_id FROM cognition_evidence WHERE evidence_id = ?", evidence_id)
     relationship_ids = _ids(db, "SELECT relationship_id FROM relationship_evidence WHERE evidence_id = ?", evidence_id)
     world_event_ids = _ids(db, "SELECT world_event_id FROM world_event_evidence WHERE evidence_id = ?", evidence_id)
+
+    # Freeze canonical facts before their rows and support links are erased.
+    # These are only used to locate legacy derived copies, never to rewrite text.
+    source_texts = [str(row[1]), str(row[2])]
+    for table, fact_ids in (("cognition", cognition_ids), ("relationship", relationship_ids),
+                       ("world_event", world_event_ids)):
+        for item_id in fact_ids:
+            content = db.execute(f"SELECT content FROM {table} WHERE id=?", (item_id,)).fetchone()
+            if content and content[0]:
+                source_texts.append(str(content[0]))
 
     entity_ids: set[str] = set()
     ledger_ids: set[str] = set()
@@ -206,7 +216,7 @@ def delete_evidence(
         if _mentions_id(content, affected_ids) or _mentions_id(payload, affected_ids):
             db.execute("DELETE FROM evidence_ledger WHERE id=?", (ledger_id,))
     affected_ids.update(_redact_observed_dependencies(db, subject_id, affected_ids,
-                                  str(row[1]) if row[1] else None))
+                                  str(row[1]) if row[1] else None, source_texts=source_texts))
     for proposal_id, payload, review in list(db.execute(
         "SELECT id, payload_json, review_payload_json FROM proposals"
     )):
@@ -327,7 +337,7 @@ def delete_world_item(
     subject_id: str,
 ) -> CommandMutation:
     payload = command["payload"]
-    if set(payload) - {"delete_conversation_snippets"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
+    if set(payload) - {"delete_conversation_snippets", "forget_scope"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
         raise TrustCommandError("invalid_trust_command_payload")
     kind = command["target_kind"]
     item_id = command["target_id"]
@@ -397,20 +407,64 @@ def delete_world_item(
         raise
 
 
-def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affected: set[str], source_text: str | None = None) -> set[str]:
-    """Erase source-derived assistant text, including transitive interaction reuse.
+def _legacy_fact_text(text: str) -> str:
+    """Normalize a complete clause without destroying word/value boundaries."""
+    import re
+    text = text.casefold().replace('**', '').replace('__', '').strip().rstrip('.。;；').rstrip()
+    text = re.sub(r'^(?:记住|请记住)', '', text)
+    text = re.sub(r'^(?:用户|我|你|您)', 'owner ', text)
+    text = re.sub(r'^(?:the user|i|you)\b', 'owner', text)
+    return ' '.join(text.split())
 
-    Source-derived Core copies are erased; the host owns original chat retention.
-    Keeping interaction identity with a changed hash prevents stale Portable replay.
-    """
-    from ...store.interaction_context import _context_from_json, hash_context
+
+def _legacy_fact_clauses(text: str) -> set[str]:
+    import re
+    # Deliberately do not split commas/conjunctions or erase punctuation inside
+    # a clause. York/Yorkshire, New York/NewYork and qualified claims differ.
+    return {value for clause in re.split(r'[。;；\n]+|\.(?=\s|$)', text)
+            if (value := _legacy_fact_text(clause))}
+
+
+def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str,
+                                  affected: set[str], source_text: str | None = None, *,
+                                  source_texts: list[str] | None = None) -> set[str]:
+    from ...store.interaction_context import _context_from_json, hash_context, erased_context_json, ERASED_HASH_REF, erasure_fingerprint
     contexts = list(db.execute("SELECT id,context_json FROM interaction_context WHERE subject_id=?", (subject_id,)))
+    facts = {_legacy_fact_text(text) for text in (source_texts or [source_text or '']) if text}
+    facts.discard('')
+
+    def original_match(raw: str) -> bool:
+        if not source_text:
+            return False
+        try:
+            turns = json.loads(raw)
+        except (ValueError, TypeError):
+            return False
+        return isinstance(turns, list) and any(isinstance(turn, dict)
+            and turn.get('role') == 'user' and _legacy_fact_text(source_text) in _legacy_fact_clauses(str(turn.get('content', '')))
+            for turn in turns)
+
+    def legacy_match(raw: str) -> bool:
+        try:
+            turns = json.loads(raw)
+        except (ValueError, TypeError):
+            return False
+        if not isinstance(turns, list):
+            return False
+        for turn in turns:
+            if not isinstance(turn, dict) or not isinstance(turn.get('content'), str):
+                continue
+            dep = turn.get('model_context_dependencies')
+            # Complete capture (including explicit empty) is authoritative.
+            if turn.get('role') == 'assistant' and not (isinstance(dep, dict)
+                    and dep.get('capture_status') in {'complete', 'complete_empty'}):
+                if facts & _legacy_fact_clauses(turn['content']):
+                    return True
+        return False
+
     tainted = set(affected)
-    # Older commitments have only episode provenance. Erase the whole derived
-    # row when that episode contains the forgotten source; do not keep mixed
-    # source wording. This also handles commitments without dependency metadata.
     tainted.update(str(item_id) for item_id, raw in contexts
-                   if _contains_text(str(raw), source_text))
+                   if original_match(str(raw)) or legacy_match(str(raw)))
     commitments = list(db.execute(
         "SELECT c.id, i.id FROM interaction_commitment c LEFT JOIN interaction_context i "
         "ON i.subject_id=c.subject_id AND i.conversation_id=c.conversation_id "
@@ -428,25 +482,25 @@ def _redact_observed_dependencies(db: sqlite3.Connection, subject_id: str, affec
         "SELECT id, preceding_ai_context FROM evidence WHERE subject_id = ? AND preceding_ai_context IS NOT NULL",
         (subject_id,),
     )):
-        if _mentions_id(str(raw), tainted) or _contains_text(str(raw), source_text):
+        if _mentions_id(str(raw), tainted) or _contains_text(str(raw), source_text) or legacy_match(str(raw)):
             db.execute("UPDATE evidence SET preceding_ai_context = NULL WHERE id = ? AND subject_id = ?",
                        (evidence_id, subject_id))
-    for item_id, raw in contexts:
-        try:
-            turns = json.loads(str(raw))
-        except (ValueError, TypeError):
-            continue
-        if not isinstance(turns, list):
-            continue
-        clean = [turn for turn in turns if not (isinstance(turn, dict) and turn.get("role") == "assistant"
-                 and (str(item_id) in tainted or _mentions_id(json.dumps(turn.get("model_context_dependencies")), tainted))
-                 or source_text and source_text in json.dumps(turn, ensure_ascii=False))]
-        if clean != turns:
-            next_json = json.dumps(clean, ensure_ascii=False, separators=(",", ":"))
-            db.execute("UPDATE interaction_context SET context_json=?,context_hash=? WHERE id=?",
-                       (next_json,hash_context(_context_from_json(next_json)),item_id))
-    erased = {str(item_id) for item_id, _ in commitments if str(item_id) in tainted}
-    _delete_ids(db, "interaction_commitment", "id", erased)
+    erased = {str(item_id) for item_id, raw in contexts if str(item_id) in tainted and not erased_context_json(str(raw))}
+    for item_id in erased:
+        context_row = db.execute("SELECT conversation_id,episode_id,context_json FROM interaction_context WHERE id=? AND subject_id=?",
+                                 (item_id, subject_id)).fetchone()
+        assert context_row is not None
+        sources = _context_evidence_ids(db, subject_id, str(context_row[0]), str(context_row[1]), str(context_row[2])) - affected
+        # Preserve only source identities for still-retained user Evidence. This
+        # is existing origin metadata, not a text copy or a recovery log.
+        marker = json.dumps([{'role': 'user', 'content': '', 'source_ref': 'memoweft:evidence:' + eid}
+                             for eid in sorted(sources)] + [{'role': 'assistant', 'content': '',
+                                'source_ref': ERASED_HASH_REF + erasure_fingerprint(_context_from_json(str(context_row[2])))}], separators=(',', ':'))
+        db.execute("UPDATE interaction_context SET context_json=?,context_hash=? WHERE id=? AND subject_id=?",
+                   (marker, hash_context(_context_from_json(marker)), item_id, subject_id))
+    erased_commitments = {str(item_id) for item_id, _ in commitments if str(item_id) in tainted}
+    _delete_ids(db, "interaction_commitment", "id", erased_commitments)
+    erased.update(erased_commitments)
     return erased
 
 
@@ -463,22 +517,35 @@ def erase_conversation_commitments(db: sqlite3.Connection, subject_id: str, conv
 
 def conversation_evidence_ids(db: sqlite3.Connection, subject_id: str, conversation_id: str) -> set[str]:
     """Recover exact origins even after an earlier deletion removed the batch job."""
-    from ..dsh_bridge import _origin_id
     remaining: set[str] = set()
     for raw, in db.execute("SELECT evidence_ids_json FROM memory_world_job WHERE subject_id = ? AND (parent_session_id = ? OR result_session_id = ?)",
                           (subject_id, conversation_id, conversation_id)):
         remaining.update(str(value) for value in json.loads(str(raw)))
-    hosts = {str(row[0]) for row in db.execute("SELECT DISTINCT host_id FROM evidence WHERE subject_id = ?", (subject_id,))}
     for episode_id, raw in db.execute("SELECT episode_id, context_json FROM interaction_context WHERE subject_id = ? AND conversation_id = ?", (subject_id, conversation_id)):
-        for index, turn in enumerate(json.loads(str(raw))):
-            if not isinstance(turn, dict) or turn.get("role") != "user":
-                continue
-            for host_id in hosts:
-                origin = _origin_id(message=turn, content=str(turn.get("content", "")), session_id=conversation_id,
-                                    message_index=index, subject_id=subject_id, host_id=host_id, boundary_id=str(episode_id))
-                remaining.update(str(row[0]) for row in db.execute(
-                    "SELECT id FROM evidence WHERE subject_id = ? AND (origin_id = ? OR id IN (SELECT evidence_id FROM evidence_origin_history WHERE origin_id = ?))",
-                    (subject_id, origin, origin)))
+        remaining.update(_context_evidence_ids(db, subject_id, conversation_id, str(episode_id), str(raw)))
+    return remaining
+
+
+def _context_evidence_ids(db: sqlite3.Connection, subject_id: str, conversation_id: str,
+                          episode_id: str, raw: str) -> set[str]:
+    from ..dsh_bridge import _origin_id
+    remaining: set[str] = set()
+    hosts = {str(row[0]) for row in db.execute("SELECT DISTINCT host_id FROM evidence WHERE subject_id = ?", (subject_id,))}
+    for index, turn in enumerate(json.loads(raw)):
+        if not isinstance(turn, dict) or turn.get("role") != "user":
+            continue
+        ref = turn.get('source_ref')
+        if turn.get('content') == '' and isinstance(ref, str) and ref.startswith('memoweft:evidence:'):
+            eid = ref.removeprefix('memoweft:evidence:')
+            if db.execute("SELECT 1 FROM evidence WHERE id=? AND subject_id=? AND deleted_at IS NULL", (eid, subject_id)).fetchone():
+                remaining.add(eid)
+            continue
+        for host_id in hosts:
+            origin = _origin_id(message=turn, content=str(turn.get("content", "")), session_id=conversation_id,
+                                message_index=index, subject_id=subject_id, host_id=host_id, boundary_id=episode_id)
+            remaining.update(str(row[0]) for row in db.execute(
+                "SELECT id FROM evidence WHERE subject_id = ? AND deleted_at IS NULL AND (origin_id = ? OR id IN (SELECT evidence_id FROM evidence_origin_history WHERE origin_id = ?))",
+                (subject_id, origin, origin)))
     return remaining
 
 

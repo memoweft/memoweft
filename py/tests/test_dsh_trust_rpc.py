@@ -143,6 +143,8 @@ def test_rpc_hard_deleted_source_has_dedicated_code_only_for_origin_tombstone(
         assert preview["result"]["evidence_ids"] == [evidence_id]  # type: ignore[index]
         invalid = server.handle(_request("invalid-preview", "preview_forget", {"target_kind": "evidence", "target_id": evidence_id, "conversation_id": "dsh-session"}))
         assert invalid["ok"] is False
+        preview_result = preview["result"]
+        assert isinstance(preview_result, dict)
         deleted = server.handle(_request("delete-source-command", "submit_command", {
             "command": {
                 "schema_version": 1,
@@ -153,7 +155,7 @@ def test_rpc_hard_deleted_source_has_dedicated_code_only_for_origin_tombstone(
                 "operation": "delete_evidence",
                 "target_kind": "evidence",
                 "target_id": evidence_id,
-                "payload": {},
+                "payload": {"forget_scope": preview_result["forget_scope"]},
                 "submitted_at": _T,
             }
         }))
