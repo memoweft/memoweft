@@ -547,8 +547,8 @@ class DshRpcV2Server:
             )
             return result, f"interaction_dependencies_{result['result_state']}"
         if method == "preview_forget":
-            raw = _require_params(params, allowed=frozenset({"target_kind", "target_id", "conversation_id"}), required=frozenset())
-            if set(raw) not in ({"target_kind", "target_id"}, {"conversation_id"}):
+            raw = _require_params(params, allowed=frozenset({"target_kind", "target_id", "conversation_id", "additional_targets"}), required=frozenset())
+            if set(raw) not in ({"target_kind", "target_id"}, {"target_kind", "target_id", "additional_targets"}, {"conversation_id"}):
                 raise DshRpcProtocolError("invalid_forget_preview")
             kind = raw.get("target_kind")
             if kind is not None and kind not in {"evidence", "entity", "relationship", "event", "cognition"}:
@@ -558,7 +558,8 @@ class DshRpcV2Server:
             result = preview_forget(str(self._runtime.db_path), self._runtime.subject_id,
                 target_kind=str(kind) if kind is not None else None,
                 target_id=_identifier(raw["target_id"], "invalid_target_id") if "target_id" in raw else None,
-                conversation_id=_identifier(raw["conversation_id"], "invalid_conversation_id") if "conversation_id" in raw else None)
+                conversation_id=_identifier(raw["conversation_id"], "invalid_conversation_id") if "conversation_id" in raw else None,
+                additional_targets=raw.get("additional_targets"))
             return result, "query_ok"
         if method == "erase_conversation_context":
             raw = _require_params(params, allowed=frozenset({"conversation_id"}), required=frozenset({"conversation_id"}))

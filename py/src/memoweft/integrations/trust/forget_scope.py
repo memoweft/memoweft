@@ -53,6 +53,7 @@ def scope_token(subject_id: str, revision: int, kind: str, item_id: str, snapsho
 def guarded_forget(db: sqlite3.Connection, command: CommandEnvelopeV1,
                    completed_at: str, mutate: Mutation) -> CommandMutation:
     from .command_store import CommandMutation
+    from .forget_targets import scope_target
     before = context_snapshot(db, command['subject_id'])
     supplied = command['payload'].get('forget_scope')
     # The caller holds BEGIN IMMEDIATE. Tentative writes stay inside this
@@ -62,9 +63,9 @@ def guarded_forget(db: sqlite3.Connection, command: CommandEnvelopeV1,
         mutation = mutate(db, command, completed_at)
         after = context_snapshot(db, command['subject_id'])
         digest, changed = affected_scope(before, after)
-        expected = scope_token(command['subject_id'], command['expected_world_revision'],
-                               command['target_kind'], command['target_id'], digest)
-        reason = ('forget_scope_required' if supplied is None and changed else
+        kind, item_id = scope_target(command['target_kind'], command['target_id'], command['payload'].get('additional_targets'))
+        expected = scope_token(command['subject_id'], command['expected_world_revision'], kind, item_id, digest)
+        reason = ('forget_scope_required' if supplied is None and (changed or 'additional_targets' in command['payload']) else
                   'forget_scope_changed' if supplied is not None and supplied != expected else None)
         if reason:
             db.execute('ROLLBACK TO forget_scope_guard')

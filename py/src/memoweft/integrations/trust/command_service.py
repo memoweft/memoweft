@@ -172,6 +172,7 @@ class CommandService:
             ],
             "expected_revision_fence": True,
             "forget_scope_fence": 1,
+            "forget_batch": 1,
             "durable_receipts": True,
             "mutation_surface": True,
             "correction_source": True,
@@ -296,6 +297,11 @@ class CommandService:
             return self._update_permissions(db, command)
         if operation == "forget_evidence":
             return self._forget(db, command, completed_at)
+        if operation in {"delete_evidence", "delete_world_item"} and "additional_targets" in command["payload"]:
+            from .forget_targets import delete_targets
+            if (operation == "delete_evidence") != (command["target_kind"] == "evidence"):
+                return CommandMutation("rejected", rejection_code="invalid_world_target")
+            return delete_targets(db, command, completed_at)
         if operation == "delete_evidence":
             from .true_delete import delete_evidence
 

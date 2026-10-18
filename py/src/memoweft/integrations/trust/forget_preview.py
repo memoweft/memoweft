@@ -8,15 +8,21 @@ from ...store.interaction_context import erased_context_json
 
 from .command_store import TrustCommandError
 from .model import CommandEnvelopeV1
+from .forget_targets import forget_targets, delete_targets, scope_target
 from .revision import coherent_revision_read
 from .forget_scope import context_snapshot, affected_scope, scope_token, cleared_evidence_contexts
 from .true_delete import conversation_evidence_ids, delete_evidence, delete_world_item, erase_conversation_commitments, _redact_observed_dependencies
 
 
 def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = None,
-                   target_id: str | None = None, conversation_id: str | None = None) -> dict[str, object]:
+                   target_id: str | None = None, conversation_id: str | None = None,
+                   additional_targets: object = None) -> dict[str, object]:
     # The source connection is mode=ro + query_only. No savepoint on the live
     # database, receipt, revision advance, storage cleanup or model invocation.
+    if additional_targets is not None and (conversation_id is not None or target_kind is None or target_id is None):
+        raise TrustCommandError("invalid_forget_preview")
+    if target_kind is not None and target_id is not None:
+        forget_targets(target_kind, target_id, additional_targets)
     copy = sqlite3.connect(":memory:", isolation_level=None)
     try:
         with coherent_revision_read(db_path) as view:
@@ -46,7 +52,11 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
                 "actor": "owner", "expected_world_revision": revision, "submitted_at": "preview-only",
                 "operation": "delete_evidence" if kind == "evidence" else "delete_world_item",
                 "target_kind": kind, "target_id": item_id, "payload": {}}  # type: ignore[typeddict-item]
-            result = (delete_evidence if kind == "evidence" else delete_world_item)(copy, command, "preview-only", subject_id)
+            if additional_targets is not None:
+                command["payload"] = {"additional_targets": additional_targets}
+                result = delete_targets(copy, command, "preview-only")
+            else:
+                result = (delete_evidence if kind == "evidence" else delete_world_item)(copy, command, "preview-only", subject_id)
             if result.result_state == "rejected":
                 raise TrustCommandError(result.rejection_code or "world_item_not_found")
             affected.update(result.affected_ids)
@@ -75,8 +85,8 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
             items.append({'object_kind': 'evidence_context', 'item_id': evidence_id,
                           'name': display, 'item_type': 'preceding_ai_context'})
         digest, _ = affected_scope(before_context, after_context)
-        token = scope_token(subject_id, revision, 'conversation' if conversation_id is not None else str(target_kind),
-                            conversation_id if conversation_id is not None else str(target_id), digest)
+        scope_kind, scope_id = ('conversation', conversation_id) if conversation_id is not None else scope_target(str(target_kind), str(target_id), additional_targets)
+        token = scope_token(subject_id, revision, scope_kind, scope_id, digest)
         return {"world_revision": revision, "forget_scope": token, "items": items, "item_count": len(items),
                 "evidence_ids": sorted(evidence_ids), "evidence_count": len(evidence_ids)}
     finally:

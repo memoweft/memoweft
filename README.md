@@ -88,6 +88,15 @@ MemoWeft keeps these boundaries explicit:
   alter contexts without a token rolls back with `forget_scope_required`.
   Re-preview and obtain a new confirmation and command ID after rejection; never silently refresh
   the token at execution time. `forget_scope_fence: 1` advertises this contract.
+  `forget_batch: 1` additionally supports `additional_targets` (1–31 exact
+  `{target_kind, target_id}` objects) on `preview_forget` and in the existing
+  delete command payload. The primary target plus these targets share one
+  preview, account, revision, scope token, transaction and receipt. Preview
+  lists the combined cascade; the token binds the ordered target list as well
+  as all affected context copies. A missing scope, changed target/context or
+  rejected source rolls back the entire batch. Overlapping revision chains
+  are erased once. Retain the original confirmed token; no per-target refresh
+  or host-side queue is needed. Existing single-target calls remain unchanged.
   The same scope includes `evidence.preceding_ai_context` copies. Preview items
   identify them as `object_kind=evidence_context`, `item_type=preceding_ai_context`;
   successful receipt `affected_ids` includes their Evidence IDs. Context-only
