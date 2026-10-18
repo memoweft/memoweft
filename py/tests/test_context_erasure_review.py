@@ -185,3 +185,95 @@ def test_scope_guard_rolls_back_source_and_receipt_on_context_write_failure(tmp_
     assert db.execute("SELECT 1 FROM trust_command_receipt WHERE command_id='forget'").fetchone() is None
     assert db.execute('SELECT revision FROM memory_state').fetchone()[0] == preview['world_revision']
     db.close()
+
+
+def test_late_evidence_preceding_context_invalidates_forget_scope(tmp_path: Path) -> None:
+    """Round two: acceptance can add an Evidence context without a revision bump."""
+    from memoweft.integrations.hermes.boundary_store import HermesBoundaryStore
+    from test_hermes_boundary_store import _boundary, _candidate
+    path = tmp_path / 'world.sqlite'
+    _initialize_database(path)
+    prior = form(path, 'I live in York.', 1, kind='attribute')
+    preview = preview_forget(str(path), 'owner', target_kind='cognition', target_id=prior)
+    assert preview['world_revision'] == 1
+    db = open_db(str(path))
+    try:
+        context = json.dumps([{'role': 'assistant', 'content': 'You live in York.'}])
+        accepted = HermesBoundaryStore(db).accept(_boundary(_candidate(
+            'bicycles', raw_content='I like bicycles.', preceding_ai_context=context)))
+        evidence_id = db.execute("SELECT id FROM evidence WHERE raw_content='I like bicycles.'").fetchone()[0]
+        assert db.execute('SELECT revision FROM memory_state').fetchone()[0] == 1
+        assert db.execute('SELECT COUNT(*) FROM interaction_context').fetchone()[0] == 0
+        service = CommandService(path, subject_id='owner', host_id='h')
+        stale = service.submit_command(command(preview, prior))
+        assert stale['result_state'] == 'rejected', stale
+        assert stale['rejection_code'] == 'forget_scope_changed'
+        assert stale['affected_ids'] == []
+        assert stale['before_revision'] == stale['after_revision'] == 1
+        assert db.execute('SELECT 1 FROM cognition WHERE id=?', (prior,)).fetchone()
+        assert db.execute('SELECT raw_content,preceding_ai_context FROM evidence WHERE id=?', (evidence_id,)).fetchone() == ('I like bicycles.', context)
+        before = list(db.iterdump())
+        refreshed = preview_forget(str(path), 'owner', target_kind='cognition', target_id=prior)
+        assert list(db.iterdump()) == before, 'preview remains read-only'
+        items = refreshed['items']
+        assert isinstance(items, list)
+        assert any(item['object_kind'] == 'evidence_context' and item['item_id'] == evidence_id
+                   and item['item_type'] == 'preceding_ai_context' and 'York' in item['name'] for item in items)
+        # The independent original is not advertised as a source to delete.
+        source_ids = refreshed['evidence_ids']
+        assert isinstance(source_ids, list) and evidence_id not in source_ids
+        assert refreshed['forget_scope'] != preview['forget_scope']
+        receipt = service.submit_command(command(refreshed, prior, command_id='refreshed'))
+        assert receipt['result_state'] == 'applied'
+        assert evidence_id in receipt['affected_ids']
+        assert db.execute('SELECT raw_content,preceding_ai_context,deleted_at FROM evidence WHERE id=?', (evidence_id,)).fetchone() == ('I like bicycles.', None, None)
+        assert db.execute('SELECT 1 FROM memory_world_job WHERE job_id=?', (accepted.job_id,)).fetchone()
+        assert service.submit_command(command(refreshed, prior, command_id='refreshed')) == receipt
+    finally:
+        db.close()
+
+
+@pytest.mark.parametrize('change', ['missing', 'changed', 'unrelated', 'foreign'])
+def test_evidence_preceding_context_scope_preserves_independent_evidence(tmp_path: Path, change: str) -> None:
+    from memoweft.integrations.hermes.boundary_store import HermesBoundaryStore
+    from test_hermes_boundary_store import _boundary, _candidate, _target
+    path = tmp_path / 'world.sqlite'
+    _initialize_database(path)
+    prior = form(path, 'I live in York.', 1, kind='attribute')
+    db = open_db(str(path))
+    try:
+        context = json.dumps([{'role': 'assistant', 'content': 'You live in York.'}])
+        HermesBoundaryStore(db).accept(_boundary(_candidate('bicycles', raw_content='I like bicycles.', preceding_ai_context=context)))
+        evidence_id = db.execute("SELECT id FROM evidence WHERE raw_content='I like bicycles.'").fetchone()[0]
+        preview = preview_forget(str(path), 'owner', target_kind='cognition', target_id=prior)
+        request = command(preview, prior)
+        if change == 'missing':
+            request['payload'] = {}
+        elif change == 'changed':
+            db.execute('UPDATE evidence SET preceding_ai_context=? WHERE id=?',
+                       (json.dumps([{'role': 'assistant', 'content': 'You live in York. You also like parks.'}]), evidence_id))
+            db.commit()
+        else:
+            HermesBoundaryStore(db).accept(_boundary(_candidate('retained', raw_content='I like swimming.',
+                preceding_ai_context=context if change == 'foreign' else 'Unrelated assistant context'),
+                event_id='retained-boundary', payload_label='retained',
+                target=_target(subject_id='other-owner' if change == 'foreign' else 'owner')))
+        before = db.execute('SELECT id,raw_content,preceding_ai_context,deleted_at FROM evidence ORDER BY id').fetchall()
+        assert db.execute('SELECT revision FROM memory_state').fetchone()[0] == 1
+        service = CommandService(path, subject_id='owner', host_id='h')
+        result = service.submit_command(request)
+        if change in {'missing', 'changed'}:
+            assert result['result_state'] == 'rejected'
+            assert result['rejection_code'] == ('forget_scope_required' if change == 'missing' else 'forget_scope_changed')
+            assert result['affected_ids'] == []
+            assert db.execute('SELECT id,raw_content,preceding_ai_context,deleted_at FROM evidence ORDER BY id').fetchall() == before
+            assert db.execute('SELECT revision FROM memory_state').fetchone()[0] == 1
+        else:
+            assert result['result_state'] == 'applied'
+            assert evidence_id in result['affected_ids']
+            retained = db.execute("SELECT id,raw_content,preceding_ai_context,deleted_at FROM evidence WHERE raw_content='I like swimming.'").fetchone()
+            assert retained in before and retained[0] not in result['affected_ids']
+            assert db.execute('SELECT raw_content,preceding_ai_context,deleted_at FROM evidence WHERE id=?', (evidence_id,)).fetchone() == ('I like bicycles.', None, None)
+        assert result == service.submit_command(request)
+    finally:
+        db.close()

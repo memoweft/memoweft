@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Forget previews, scope validation and receipts now include Evidence preceding-assistant-context copies. A newly accepted copy invalidates stale confirmation without deleting its independent user Evidence.
+
 - Forget confirmations now bind the context snapshot; a changed scope requires a fresh preview and confirmation. Legacy context matching preserves complete fact boundaries, and Portable tombstones cascade through every verified matching local context ID without deleting unrelated host-local ID collisions.
 
 - Forgetting erases whole recall-dependent interaction copies and matching legacy copies in the same account. The preview includes those copies; content-free identities prevent replay and Portable restore from reviving them. Original application chats remain outside this deletion.

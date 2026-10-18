@@ -156,7 +156,9 @@ def test_forget_preserves_unrelated_preceding_context_and_clears_source_or_id(tm
             _seed_evidence(db, item_id, text)
             db.execute("UPDATE evidence SET preceding_ai_context = ? WHERE id = ?", (context, item_id))
         _seed_revision(db)
-    result = _service(path).submit_command(_command("erase-a", 1, "delete_evidence", "evidence", "e-a"))
+    preview = preview_forget(str(path), _SUBJECT, target_kind="evidence", target_id="e-a")
+    result = _service(path).submit_command(_command("erase-a", 1, "delete_evidence", "evidence", "e-a", {"forget_scope": preview["forget_scope"]}))
+    assert {"e-c", "e-d"} <= set(result["affected_ids"])
     assert result["result_state"] == "applied"
     with _open(path) as db:
         contexts = dict(db.execute("SELECT id, preceding_ai_context FROM evidence"))

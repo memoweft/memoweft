@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+from dataclasses import replace
 import json
 import sqlite3
 from typing import TYPE_CHECKING
@@ -17,7 +18,19 @@ def context_snapshot(db: sqlite3.Connection, subject_id: str) -> dict[str, dict[
         if db.execute('SELECT 1 FROM sqlite_master WHERE name=?', (table,)).fetchone():
             rows[table] = {str(row[0]): list(row) for row in db.execute(
                 f'SELECT * FROM {table} WHERE subject_id=? ORDER BY id', (subject_id,))}
+    # Evidence can acquire an assistant-context copy during boundary acceptance
+    # without an interaction row or a World revision change. Snapshot only that
+    # field, not the independent user's retained original Evidence.
+    rows['evidence_context'] = {str(row[0]): list(row) for row in db.execute(
+        'SELECT id,preceding_ai_context FROM evidence WHERE subject_id=? '
+        'AND preceding_ai_context IS NOT NULL ORDER BY id', (subject_id,))}
     return rows
+
+
+def cleared_evidence_contexts(before: dict[str, dict[str, list[object]]],
+                              after: dict[str, dict[str, list[object]]]) -> dict[str, str]:
+    return {item_id: str(row[1]) for item_id, row in before.get('evidence_context', {}).items()
+            if item_id not in after.get('evidence_context', {})}
 
 
 def affected_scope(before: dict[str, dict[str, list[object]]],
@@ -47,7 +60,8 @@ def guarded_forget(db: sqlite3.Connection, command: CommandEnvelopeV1,
     db.execute('SAVEPOINT forget_scope_guard')
     try:
         mutation = mutate(db, command, completed_at)
-        digest, changed = affected_scope(before, context_snapshot(db, command['subject_id']))
+        after = context_snapshot(db, command['subject_id'])
+        digest, changed = affected_scope(before, after)
         expected = scope_token(command['subject_id'], command['expected_world_revision'],
                                command['target_kind'], command['target_id'], digest)
         reason = ('forget_scope_required' if supplied is None and changed else
@@ -55,6 +69,11 @@ def guarded_forget(db: sqlite3.Connection, command: CommandEnvelopeV1,
         if reason:
             db.execute('ROLLBACK TO forget_scope_guard')
             mutation = CommandMutation('rejected', rejection_code=reason)
+        elif mutation.result_state == 'applied':
+            # Report only after validation, without treating these Evidence IDs
+            # as erased sources in the provenance/dependency cascade itself.
+            mutation = replace(mutation, affected_ids=tuple(sorted(
+                set(mutation.affected_ids) | cleared_evidence_contexts(before, after).keys())))
         db.execute('RELEASE forget_scope_guard')
         return mutation
     except BaseException:

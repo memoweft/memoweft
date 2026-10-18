@@ -9,7 +9,7 @@ from ...store.interaction_context import erased_context_json
 from .command_store import TrustCommandError
 from .model import CommandEnvelopeV1
 from .revision import coherent_revision_read
-from .forget_scope import context_snapshot, affected_scope, scope_token
+from .forget_scope import context_snapshot, affected_scope, scope_token, cleared_evidence_contexts
 from .true_delete import conversation_evidence_ids, delete_evidence, delete_world_item, erase_conversation_commitments, _redact_observed_dependencies
 
 
@@ -65,7 +65,16 @@ def preview_forget(db_path: str, subject_id: str, *, target_kind: str | None = N
                 display = '\n'.join(str(turn.get('content', '')) for turn in json.loads(name)) if kind == 'interaction_context' else name
                 items.append({"object_kind": kind, "item_id": item_id, "name": display, "item_type": item_type})
         evidence_ids = [str(row[0]) for row in copy.execute("SELECT id FROM evidence WHERE subject_id = ?", (subject_id,)) if str(row[0]) in affected]
-        digest, _ = affected_scope(before_context, context_snapshot(copy, subject_id))
+        after_context = context_snapshot(copy, subject_id)
+        for evidence_id, raw in sorted(cleared_evidence_contexts(before_context, after_context).items()):
+            try:
+                turns = json.loads(raw)
+            except (TypeError, ValueError):
+                turns = None
+            display = '\n'.join(str(turn.get('content', '')) for turn in turns if isinstance(turn, dict)) if isinstance(turns, list) else raw
+            items.append({'object_kind': 'evidence_context', 'item_id': evidence_id,
+                          'name': display, 'item_type': 'preceding_ai_context'})
+        digest, _ = affected_scope(before_context, after_context)
         token = scope_token(subject_id, revision, 'conversation' if conversation_id is not None else str(target_kind),
                             conversation_id if conversation_id is not None else str(target_id), digest)
         return {"world_revision": revision, "forget_scope": token, "items": items, "item_count": len(items),

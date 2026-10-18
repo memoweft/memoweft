@@ -26,6 +26,7 @@ MemoWeft 明确区分这些边界：
   简短中文确认可带“刚才/之前你说的”指回前缀，但完整主题和动作须逐字匹配所选提议，完整回复的否定、问句与长度检查仍然生效；具体边界见上述规则。
 - 助手轮次通过现有 `model_context_dependencies` 或 `link_interaction_dependencies` 保存实际召回依赖。遗忘会传递清除相关交互上下文整段副本；缺少完整依赖的旧副本按同账户原话/规范事实匹配，列入同一次遗忘预览。保留无内容的上下文标识阻止重放与 Portable 恢复带回旧副本，导出时不擦词。原应用聊天不受影响；未收到删除状态的空库无法撤销独立保存的历史备份。
 - 遗忘预览返回 `forget_scope`，调用方必须随用户确认计划保留，并原样放进 `delete_evidence` / `delete_world_item` 的 `payload.forget_scope`。它绑定账户、目标、世界修订号和实际会改动的上下文/承诺 ID 与正文；无关新增不影响这次确认；事务内范围变化返回 `forget_scope_changed`，没有摘要但会改动上下文的旧调用回滚并返回 `forget_scope_required`。拒绝后须重新预览和确认，并使用新命令 ID，不能在执行时静默刷新摘要；能力字段为 `forget_scope_fence: 1`。
+- `evidence.preceding_ai_context` 前文副本也纳入同一范围凭据。预览以 `object_kind=evidence_context`、`item_type=preceding_ai_context` 单列，成功回执的 `affected_ids` 记录所属 Evidence ID；仅清理前文时保留独立原话，不把它加入预览的原来源删除列表 `evidence_ids`。
 - 旧上下文只按完整句/分句等价匹配，保留词和值边界；York 不会匹配 Yorkshire。Portable 的无正文删除标记带原副本指纹，同名会话/轮次下的不同 ID 只有指纹一致才能清空，并对全部匹配 ID 级联，避免跨库本地编号碰撞。
 
 - 偏好/状态修订中的 entity 指向主体，不是新值。模型把新值误标为主题时，沿用现有单次持久编译修正；写入时仍校验同账户、同主体和用户原话，不放宽替换边界。

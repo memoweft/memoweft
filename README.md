@@ -88,6 +88,11 @@ MemoWeft keeps these boundaries explicit:
   alter contexts without a token rolls back with `forget_scope_required`.
   Re-preview and obtain a new confirmation and command ID after rejection; never silently refresh
   the token at execution time. `forget_scope_fence: 1` advertises this contract.
+  The same scope includes `evidence.preceding_ai_context` copies. Preview items
+  identify them as `object_kind=evidence_context`, `item_type=preceding_ai_context`;
+  successful receipt `affected_ids` includes their Evidence IDs. Context-only
+  cleanup retains the independent raw Evidence and does not add it to the
+  preview's source-deletion `evidence_ids` list.
   Portable erasure markers carry a content-free original context fingerprint;
   alternate local IDs with reused session/episode names must match that fingerprint,
   and all matched IDs participate in the same transitive cascade.
