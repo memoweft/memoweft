@@ -330,17 +330,10 @@ def _world_item_sources(db: sqlite3.Connection, kind: str, item_id: str) -> set[
     return sources
 
 
-def delete_world_item(
-    db: sqlite3.Connection,
-    command: CommandEnvelopeV1,
-    completed_at: str,
-    subject_id: str,
-) -> CommandMutation:
-    payload = command["payload"]
-    if set(payload) - {"delete_conversation_snippets", "forget_scope"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
-        raise TrustCommandError("invalid_trust_command_payload")
-    kind = command["target_kind"]
-    item_id = command["target_id"]
+def _world_item_delete_scope(
+    db: sqlite3.Connection, subject_id: str, kind: str, item_id: str,
+) -> tuple[set[str], set[str]] | CommandMutation:
+    """Resolve and validate a complete explicit target before any cascade writes."""
     table_and_owner = {
         "entity": ("entity", "world_id"),
         "relationship": ("relationship", "world_id"),
@@ -371,6 +364,24 @@ def delete_world_item(
         if db.execute("SELECT 1 FROM evidence WHERE id = ? AND subject_id = ?",
                       (evidence_id, subject_id)).fetchone() is None:
             return CommandMutation("rejected", rejection_code="source_provenance_missing")
+
+    return chain, sources
+
+
+def delete_world_item(
+    db: sqlite3.Connection,
+    command: CommandEnvelopeV1,
+    completed_at: str,
+    subject_id: str,
+) -> CommandMutation:
+    payload = command["payload"]
+    if set(payload) - {"delete_conversation_snippets", "forget_scope"} or not isinstance(payload.get("delete_conversation_snippets", False), bool):
+        raise TrustCommandError("invalid_trust_command_payload")
+    scope = _world_item_delete_scope(db, subject_id, command["target_kind"], command["target_id"])
+    if isinstance(scope, CommandMutation):
+        return scope
+    chain, sources = scope
+    kind = command["target_kind"]
 
     # A source can still reject its own deletion (for example, a historical
     # soft tombstone with no recoverable origin). Keep the marker and every
