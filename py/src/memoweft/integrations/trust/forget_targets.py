@@ -36,7 +36,7 @@ def scope_target(kind: str, item_id: str, additional: object = None) -> tuple[st
 
 
 def delete_targets(db: sqlite3.Connection, command: CommandEnvelopeV1, completed_at: str) -> CommandMutation:
-    from .true_delete import delete_evidence, _world_item_delete_scope
+    from .true_delete import delete_evidence, _world_item_delete_scope, _formation_in_progress
     if command['payload'].get('additional_targets') is None:
         raise TrustCommandError('invalid_forget_targets')
     targets = forget_targets(command['target_kind'], command['target_id'], command['payload'].get('additional_targets'))
@@ -60,6 +60,8 @@ def delete_targets(db: sqlite3.Connection, command: CommandEnvelopeV1, completed
             markers.update((kind, linked_id) for linked_id in chain)
             sources.update(target_sources)
             world_sources.update(target_sources)
+    if markers and _formation_in_progress(db, command['subject_id'], sources):
+        return CommandMutation('rejected', rejection_code='formation_in_progress')
     affected = {item_id for _, item_id in markers}
     applied = False
     # A later target may reject. Roll back earlier targets too, including all

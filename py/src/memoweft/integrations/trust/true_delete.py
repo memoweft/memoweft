@@ -368,6 +368,18 @@ def _world_item_delete_scope(
     return chain, sources
 
 
+def _formation_in_progress(db: sqlite3.Connection, subject_id: str, sources: set[str]) -> bool:
+    """An in-flight interpretation may revise this World item.
+
+    The model may already have read this predecessor. An explicitly
+    included source is safe: its job is erased/fenced by the same transaction.
+    Only the current account's existing durable jobs participate.
+    """
+    return any(set(json.loads(str(raw))) - sources for raw, in db.execute(
+        "SELECT evidence_ids_json FROM memory_world_job WHERE subject_id=? "
+        "AND state = 'processing'", (subject_id,)))
+
+
 def delete_world_item(
     db: sqlite3.Connection,
     command: CommandEnvelopeV1,
@@ -381,6 +393,8 @@ def delete_world_item(
     if isinstance(scope, CommandMutation):
         return scope
     chain, sources = scope
+    if _formation_in_progress(db, subject_id, sources):
+        return CommandMutation("rejected", rejection_code="formation_in_progress")
     kind = command["target_kind"]
 
     # A source can still reject its own deletion (for example, a historical
