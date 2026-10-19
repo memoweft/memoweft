@@ -111,6 +111,13 @@ MemoWeft keeps these boundaries explicit:
   alternate local IDs with reused session/episode names must match that fingerprint,
   and all matched IDs participate in the same transitive cascade.
 - Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
+  Pending explicit first-person preference quotes can also accompany first-person
+  preference questions when the changed value does not repeat the old activity
+  noun. They remain verbatim provisional user context, not a synthesized slot,
+  replacement link or formal World item. This bounded fallback does not nominate
+  third-person statements, quoted tasks or questions; the existing account,
+  destination permission, age, size and deletion gates still apply. Once formation
+  settles, formal recall replaces the pending quote through the existing path.
   Python links current, sourced self-naming claims and accepted aliases to
   the same person even when an earlier neutral name remains canonical;
   only current, destination-readable alias provenance can establish this link.
