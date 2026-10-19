@@ -90,3 +90,25 @@ def test_preference_fallback_does_not_nominate_other_people_questions_or_tasks(
         assert _recent(runtime, query) == []
     finally:
         runtime.shutdown()
+
+
+def test_broad_pending_quote_does_not_mark_an_unrelated_formal_preference_corrected(tmp_path: Path) -> None:
+    runtime = _runtime(tmp_path)
+    try:
+        _ingest(runtime, '我喜欢喝红茶')
+        def route(messages: Any, *, session_id: str) -> dict[str, object]:
+            e = json.loads(messages[-1]['content'])['evidence'][0]
+            return _model(_batch({'action': 'form', 'target': 'owner_self', 'statement_kind': 'preference',
+                'formed_by': 'stated', 'proposition': e['text'], 'supports': [{'evidence_id': e['id'], 'sentence_id': 't0'}]}))
+        worker = WorldJobWorker(_db_path(runtime), processor=HermesBatchAdapterProcessor(str(_db_path(runtime)), route, model_tier='local'))
+        assert worker.run_until_quiescent() == 1
+        _ingest(runtime, 'I actually prefer cycling.', 'b', 'other-session')
+        result = QueryService(_db_path(runtime), subject_id=_subject(runtime)).preview_recall('我喜欢喝什么？')
+        preview = result['preview']
+        assert isinstance(preview, dict)
+        assert '红茶' in preview['rendered_recall']
+        assert preview['recent_evidence'][0]['text'] == 'I actually prefer cycling.'
+        assert preview['pending_corrections'] == [], 'a context nomination is not proof of the same preference slot'
+        assert result['world_revision'] == 1
+    finally:
+        runtime.shutdown()

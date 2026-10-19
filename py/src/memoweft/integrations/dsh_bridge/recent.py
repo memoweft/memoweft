@@ -56,9 +56,7 @@ def _reference_tokens(text: str) -> set[str]:
     return (_topic_tokens(text) - _GENERIC) | set(re.findall(r"\d+(?:[比:：/]\d+)+", text))
 
 
-def _related(query: str, text: str) -> bool:
-    if match_cognitions(query, [{"id": "raw", "content": text, "confidence": 600}]):
-        return True
+def _pending_preference_quote(query: str, text: str) -> bool:
     # A changed value need not repeat its old activity noun: "I prefer cycling"
     # can answer a first-person preference question before formation establishes
     # a formal successor. Nominate the complete user quote, never infer a slot,
@@ -71,7 +69,11 @@ def _related(query: str, text: str) -> bool:
     preference_quote = bool(re.search(
         r"^(?:(?:请)?记住[：:，,\s]*)?(?:我|用户)(?:(?:其实|现在|目前|更|最|比较|也|不|并不|已经|仍然|真的|还|很)\s*)*(?:喜欢|偏好|喜爱|讨厌)"
         r"|^(?:remember\s+(?:that\s+)?)?i\s+(?:(?:actually|now|really|still|do\s+not|don't)\s+)*(?:prefer|like|love|hate)\b", text.strip(), re.I))
-    if preference_question and preference_quote and not re.search(r"[?？]|什么|哪(?:个|种)|\b(?:what|whether)\b", text, re.I):
+    return preference_question and preference_quote and not bool(re.search(r"[?？]|什么|哪(?:个|种)|\b(?:what|whether)\b", text, re.I))
+
+
+def _related(query: str, text: str) -> bool:
+    if match_cognitions(query, [{"id": "raw", "content": text, "confidence": 600}]):
         return True
     # Short literal names/topics must survive a long surrounding sentence. Only
     # informative tokens participate; greetings have no matching topic.
@@ -127,7 +129,8 @@ def recent_evidence(
         }:
             continue
         candidates = correction_candidates(rows, index)
-        if not _related(query, row["text"]) and not any(_related(query, r["text"]) for r in candidates):
+        if (not _related(query, row["text"]) and not _pending_preference_quote(query, row["text"])
+                and not any(_related(query, r["text"]) for r in candidates)):
             continue
         item = {key: row[key] for key in ("id", "text", "session_id", "created_at")}
         if len(candidates) == 1:
