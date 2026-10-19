@@ -59,6 +59,20 @@ def _reference_tokens(text: str) -> set[str]:
 def _related(query: str, text: str) -> bool:
     if match_cognitions(query, [{"id": "raw", "content": text, "confidence": 600}]):
         return True
+    # A changed value need not repeat its old activity noun: "I prefer cycling"
+    # can answer a first-person preference question before formation establishes
+    # a formal successor. Nominate the complete user quote, never infer a slot,
+    # replacement link or fact from it. Existing account/permission/size/age and
+    # terminal-state gates still apply to the source below.
+    preference_question = bool(re.search(
+        r"^(?:我(?:现在|目前)?(?:更|最)?(?:喜欢|偏好|喜好)|我的(?:偏好|喜好)).*(?:什么|哪)"
+        r"|^what\s+do\s+i\s+(?:prefer|like)\b"
+        r"|^what\s+(?:is|are)\s+my\s+(?:preferences?|favo[u]?rites?)\b", query.strip(), re.I))
+    preference_quote = bool(re.search(
+        r"^(?:(?:请)?记住[：:，,\s]*)?(?:我|用户)(?:(?:其实|现在|目前|更|最|比较|也|不|并不|已经|仍然|真的|还|很)\s*)*(?:喜欢|偏好|喜爱|讨厌)"
+        r"|^(?:remember\s+(?:that\s+)?)?i\s+(?:(?:actually|now|really|still|do\s+not|don't)\s+)*(?:prefer|like|love|hate)\b", text.strip(), re.I))
+    if preference_question and preference_quote and not re.search(r"[?？]|什么|哪(?:个|种)|\b(?:what|whether)\b", text, re.I):
+        return True
     # Short literal names/topics must survive a long surrounding sentence. Only
     # informative tokens participate; greetings have no matching topic.
     return bool((_topic_tokens(query) & _topic_tokens(text)) - _GENERIC)
