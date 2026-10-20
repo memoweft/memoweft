@@ -1,26 +1,9 @@
-"""Deterministic, read-only Recall over the accepted Personal Memory World.
+"""Read-only recall with semantic-first ranking and bounded exact user sources.
 
-V1 Recall must satisfy the authority contract (§6.5): read the accepted World
-only (read-only connection, no schema creation, no initialization of an empty
-World), make zero generation-model calls, and return only current,
-lifecycle-eligible, permission-allowed formal claims in a byte-stable order
-for the same World revision.  It deliberately does NOT search raw Evidence and
-does not inject Evidence text, summaries, or internal IDs.
-
-Literal matching uses the original main candidate path. For English, a main
-candidate may be removed only when every shared occurrence is grammatical in
-its original case and contraction context, using a small explicit set. Any
-substantive overlap preserves it regardless of new
-scores. Previous English improvements may use remaining slots; their scores
-never veto main, and rendering cannot consume a retained main item's budget.
-An optional local CPU provider nominates at most three
-supplementary items; all original gates remain authoritative. Loading or failure
-preserves literal recall. A small,
-owner-approved semantic category table closes the observed lexical gap
-("水果" vs "荔枝" share no bigrams): it expands the QUERY's category words to
-member names ONLY when direct bigram matching produced zero hits (Owner
-decision 2026-08-16: fallback-only), keeping the matcher deterministic,
-model-free, and byte-stable.
+Experimental retrieval changes only. Formal claims retain their existing
+permission/currentness gates. Source excerpts are separately labelled, carry
+original timestamps, and add at most three quotes / 1800 characters. Loading
+or encoder failure preserves the literal route.
 """
 
 from __future__ import annotations
@@ -44,6 +27,8 @@ import sqlite3
 from typing import Any, Callable, Iterable, Literal, Mapping, Sequence, TypeVar, cast
 
 from ..trust.currentness import (
+    _all_evidence_current,
+    linked_evidence,
     current_entity_aliases,
     CurrentnessSurface,
     subject_currentness_facts,
@@ -1504,18 +1489,17 @@ def _append_semantic_candidates(
     nominees: tuple[SemanticCandidate, ...], provider: CandidateProvider | None,
 ) -> list[dict[str, object]]:
     try:
-        selected = list(literal)
+        selected: list[dict[str, object]] = []
         if nominees and provider is not None:
             eligible = {(str(row["kind"]), str(row["id"])): row
                         for row in _query_eligible_rows(query, rows)}
-            seen = {(str(item["kind"]), str(item["id"])) for item in selected}
-            additions = 0
+            seen: set[tuple[str, str]] = set()
             for candidate in nominees:
                 key = candidate.kind, candidate.item_id
                 row = eligible.get(key)
                 if (key in seen or row is None or not math.isfinite(candidate.score)
                         or candidate.score < provider.config.threshold or candidate.score > 1.00001
-                        or additions >= min(3, provider.config.max_additions)):
+                        ):
                     continue
                 table = "world_event" if candidate.kind == "event" else candidate.kind
                 if table not in {"cognition", "relationship", "world_event"}:
@@ -1525,10 +1509,75 @@ def _append_semantic_candidates(
                     continue
                 selected.append({**row, "score": candidate.score})
                 seen.add(key)
-                additions += 1
+            selected.sort(key=lambda item: (-float(cast(Any, item['score'])),
+                          -int(cast(Any, item.get('confidence', 600))), str(item['id']), str(item['kind'])))
+            selected.extend(item for item in literal if (str(item['kind']), str(item['id'])) not in seen)
+        else:
+            selected = list(literal)
     except Exception:
         selected = list(literal)
     return selected
+
+
+def _original_quotes(
+    db: sqlite3.Connection, subject_id: str, query: str, model_tier: ModelTier,
+    rows: list[dict[str, object]], provider: CandidateProvider | None, lang: Lang,
+) -> str:
+    """Bounded, verbatim source fallback, separate from formal memory items.
+
+    Only sources of eligible current claims participate. A source shared with
+    an excluded claim is withheld whole: a quote cannot revive another person's
+    fact, an archived item, or a replaced value in the same user turn.
+    No raw-source index, vector cache or new durable copy is created.
+    """
+    scorer = getattr(provider, 'score_texts', None)
+    if provider is None or not provider.config.enabled or not callable(scorer):
+        return ''
+    surface: CurrentnessSurface = 'model_cloud' if model_tier == 'cloud' else 'recall'
+    eligible_keys = {(str(row['kind']), str(row['id'])) for row in _query_eligible_rows(query, rows)}
+    sources: set[str] = set()
+    for kind, item_id in eligible_keys:
+        sources.update(linked_evidence(db, cast(Any, kind), item_id))
+    candidates: list[tuple[str, str, str]] = []
+    for evidence_id in sorted(sources):
+        if not _all_evidence_current(db, [evidence_id], subject_id=subject_id, surface=surface, model_tier=model_tier):
+            continue
+        links = [(kind, str(item_id)) for kind, table, column in (
+            ('cognition', 'cognition_evidence', 'cognition_id'),
+            ('relationship', 'relationship_evidence', 'relationship_id'),
+            ('event', 'world_event_evidence', 'world_event_id'))
+            for (item_id,) in db.execute(f'SELECT {column} FROM {table} WHERE evidence_id=?', (evidence_id,))]
+        if any(key not in eligible_keys for key in links):
+            continue
+        row = db.execute("SELECT occurred_at, raw_content FROM evidence WHERE id=? AND subject_id=? AND source_kind='spoken'", (evidence_id, subject_id)).fetchone()
+        if row is not None and str(row[1]).strip():
+            candidates.append((evidence_id, str(row[0]), str(row[1])))
+    # Bound CPU/input work as well as the returned context. Long turns are
+    # ranked using their leading 512 tokens by the existing encoder contract.
+    candidates = sorted(candidates, key=lambda item: (item[1], item[0]), reverse=True)[:512]
+    try:
+        scores = scorer(query, [item[2] for item in candidates])
+        if len(scores) != len(candidates):
+            return ''
+        ranked = sorted(zip(scores, candidates), key=lambda pair: (-pair[0], pair[1][0]))
+        lines: list[str] = []
+        seen: set[str] = set()
+        for score, (_, timestamp, text) in ranked:
+            if not math.isfinite(score) or score < provider.config.threshold or score > 1.00001 or text in seen:
+                continue
+            # Preserve an exact leading excerpt; explicitly label truncation.
+            label = 'User original' if lang == 'en' else '用户原话'
+            suffix = ' [excerpt]' if lang == 'en' else '［节选］'
+            line = f'{label} [{timestamp}]' + (suffix if len(text) > 520 else '') + ': ' + text[:520]
+            if sum(len(value) + 1 for value in lines) + len(line) > 1799:
+                continue
+            lines.append(line)
+            seen.add(text)
+            if len(lines) == 3:
+                break
+        return '\n'.join(lines)
+    except Exception:
+        return ''
 
 
 def _render_snapshot_selection(
@@ -1536,6 +1585,7 @@ def _render_snapshot_selection(
     selected: list[dict[str, object]], rows: list[dict[str, object]],
     dates: Mapping[tuple[str, str], str] | None = None,
 ) -> tuple[list[dict[str, object]], str]:
+    selected = selected[:MAX_ITEMS]
     historical = bool(_HISTORICAL_QUERY_PATTERN.search(query) or re.search(r'为什么|为何|不算|失效|why|invalid', query, re.I))
     if lang == 'en':
         # Matching keeps the original text, including its existing copy.
@@ -1614,38 +1664,47 @@ def recall_world_snapshot(
                 surface="model_cloud" if model_tier == "cloud" else "recall")]
             return items
 
-        main_items = arm(_match_world_rows_main(query, rows))
-        if _CJK_RUN.search(query):
+        semantic_items = arm([]) if nominees else []
+        if semantic_items:
             selected, rendered_recall = _render_snapshot_selection(
-                db, subject_id, query, model_tier, lang, main_items, rows)
+                db, subject_id, query, model_tier, lang,
+                arm(_match_world_rows_main(query, rows)), rows)
         else:
-            try:
-                prior_items = arm(_match_world_rows_improved(query, rows))
-            except Exception:
-                # The optional improvement arm must never invalidate a main
-                # result. Main failures above retain their existing behavior.
-                prior_items = []
-            union = {english_candidate_key(item): item for item in [*main_items, *prior_items]}
-            # One batched metadata projection per snapshot, shared by both arms
-            # and any budget fallback. Never scan once per render or item.
-            dates = recall_dates(db, subject_id, list(union.values()), model_tier) if lang == 'en' else None
-            main, _ = _render_snapshot_selection(db, subject_id, query, model_tier, lang, main_items, rows, dates)
-            try:
-                prior, _ = _render_snapshot_selection(db, subject_id, query, model_tier, lang, prior_items, rows, dates)
-            except Exception:
-                prior = []
-            combined = compose_english(query, rows, main, prior, max_items=max(MAX_ITEMS, len(main)))
-            selected, rendered_recall = _render_snapshot_selection(
-                db, subject_id, query, model_tier, lang, combined, rows, dates)
-            main_keys = {english_candidate_key(item) for item in main}
-            required = {english_candidate_key(item) for item in combined if english_candidate_key(item) in main_keys}
-            # Reordering and supplementary text must not consume a retained
-            # main item's character budget. Original main order is always a
-            # feasible fallback because those exact projected items fitted it.
-            if (not required <= {english_candidate_key(item) for item in selected}
-                    or (lang == 'zh' and len(rendered_recall) >= MAX_OUTPUT_CHARS)):
+            main_items = arm(_match_world_rows_main(query, rows))
+            if _CJK_RUN.search(query):
                 selected, rendered_recall = _render_snapshot_selection(
-                    db, subject_id, query, model_tier, lang, reserve_main_order(combined, main), rows, dates)
+                    db, subject_id, query, model_tier, lang, main_items, rows)
+            else:
+                try:
+                    prior_items = arm(_match_world_rows_improved(query, rows))
+                except Exception:
+                    # The optional improvement arm must never invalidate a main
+                    # result. Main failures above retain their existing behavior.
+                    prior_items = []
+                union = {english_candidate_key(item): item for item in [*main_items, *prior_items]}
+                # One batched metadata projection per snapshot, shared by both arms
+                # and any budget fallback. Never scan once per render or item.
+                dates = recall_dates(db, subject_id, list(union.values()), model_tier) if lang == 'en' else None
+                main, _ = _render_snapshot_selection(db, subject_id, query, model_tier, lang, main_items, rows, dates)
+                try:
+                    prior, _ = _render_snapshot_selection(db, subject_id, query, model_tier, lang, prior_items, rows, dates)
+                except Exception:
+                    prior = []
+                combined = compose_english(query, rows, main, prior, max_items=max(MAX_ITEMS, len(main)))
+                selected, rendered_recall = _render_snapshot_selection(
+                    db, subject_id, query, model_tier, lang, combined, rows, dates)
+                main_keys = {english_candidate_key(item) for item in main}
+                required = {english_candidate_key(item) for item in combined if english_candidate_key(item) in main_keys}
+                # Reordering and supplementary text must not consume a retained
+                # main item's character budget. Original main order is always a
+                # feasible fallback because those exact projected items fitted it.
+                if (not required <= {english_candidate_key(item) for item in selected}
+                        or (lang == 'zh' and len(rendered_recall) >= MAX_OUTPUT_CHARS)):
+                    selected, rendered_recall = _render_snapshot_selection(
+                        db, subject_id, query, model_tier, lang, reserve_main_order(combined, main), rows, dates)
+        quotes = _original_quotes(db, subject_id, query, model_tier, rows, provider, lang)
+        if quotes:
+            rendered_recall = '\n'.join(filter(None, (rendered_recall, quotes)))
         selected_item_ids = tuple(
             (str(item["kind"]), str(item["id"])) for item in selected
         )

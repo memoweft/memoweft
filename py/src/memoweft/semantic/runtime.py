@@ -192,6 +192,29 @@ class SemanticRuntime:
             raise
         return written
 
+    def score_texts(self, query: str, texts: Sequence[str]) -> Sequence[float]:
+        """Ephemeral source ranking; no source text/vector is retained or written.
+
+        Callers must authorize sources in their read snapshot before calling.
+        A busy/unavailable encoder leaves the existing formal recall intact.
+        """
+        if len(query) > 4000 or not texts or not self.config.enabled or self._stop.is_set():
+            return ()
+        if not self._inference.acquire(blocking=False):
+            return ()
+        try:
+            with self._lock:
+                encoder = self._encoder if self._state == 'ready' else None
+            if encoder is None:
+                return ()
+            vector = encoder.encode([query], query=True)[0]
+            scores: list[float] = []
+            for start in range(0, len(texts), self.config.batch_size):
+                scores.extend(float(value) for value in encoder.encode(texts[start:start + self.config.batch_size]) @ vector)
+            return scores
+        finally:
+            self._inference.release()
+
     def candidates(self, db: sqlite3.Connection, subject_id: str, query: str) -> Sequence[SemanticCandidate]:
         if len(query) > 4000:
             return ()
