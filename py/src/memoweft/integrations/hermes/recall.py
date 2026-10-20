@@ -2,7 +2,8 @@
 
 Experimental retrieval changes only. Formal claims retain their existing
 permission/currentness gates. Source excerpts are separately labelled, carry
-original timestamps, and add at most three quotes / 1800 characters. Loading
+original timestamps, and add at most five quotes / 2600 characters. Owner
+questions can also receive a bounded, sourced current profile. Loading
 or encoder failure preserves the literal route.
 """
 
@@ -1523,61 +1524,8 @@ def _original_quotes(
     db: sqlite3.Connection, subject_id: str, query: str, model_tier: ModelTier,
     rows: list[dict[str, object]], provider: CandidateProvider | None, lang: Lang,
 ) -> str:
-    """Bounded, verbatim source fallback, separate from formal memory items.
-
-    Only sources of eligible current claims participate. A source shared with
-    an excluded claim is withheld whole: a quote cannot revive another person's
-    fact, an archived item, or a replaced value in the same user turn.
-    No raw-source index, vector cache or new durable copy is created.
-    """
-    scorer = getattr(provider, 'score_texts', None)
-    if provider is None or not provider.config.enabled or not callable(scorer):
-        return ''
-    surface: CurrentnessSurface = 'model_cloud' if model_tier == 'cloud' else 'recall'
-    eligible_keys = {(str(row['kind']), str(row['id'])) for row in _query_eligible_rows(query, rows)}
-    sources: set[str] = set()
-    for kind, item_id in eligible_keys:
-        sources.update(linked_evidence(db, cast(Any, kind), item_id))
-    candidates: list[tuple[str, str, str]] = []
-    for evidence_id in sorted(sources):
-        if not _all_evidence_current(db, [evidence_id], subject_id=subject_id, surface=surface, model_tier=model_tier):
-            continue
-        links = [(kind, str(item_id)) for kind, table, column in (
-            ('cognition', 'cognition_evidence', 'cognition_id'),
-            ('relationship', 'relationship_evidence', 'relationship_id'),
-            ('event', 'world_event_evidence', 'world_event_id'))
-            for (item_id,) in db.execute(f'SELECT {column} FROM {table} WHERE evidence_id=?', (evidence_id,))]
-        if any(key not in eligible_keys for key in links):
-            continue
-        row = db.execute("SELECT occurred_at, raw_content FROM evidence WHERE id=? AND subject_id=? AND source_kind='spoken'", (evidence_id, subject_id)).fetchone()
-        if row is not None and str(row[1]).strip():
-            candidates.append((evidence_id, str(row[0]), str(row[1])))
-    # Bound CPU/input work as well as the returned context. Long turns are
-    # ranked using their leading 512 tokens by the existing encoder contract.
-    candidates = sorted(candidates, key=lambda item: (item[1], item[0]), reverse=True)[:512]
-    try:
-        scores = scorer(query, [item[2] for item in candidates])
-        if len(scores) != len(candidates):
-            return ''
-        ranked = sorted(zip(scores, candidates), key=lambda pair: (-pair[0], pair[1][0]))
-        lines: list[str] = []
-        seen: set[str] = set()
-        for score, (_, timestamp, text) in ranked:
-            if not math.isfinite(score) or score < provider.config.threshold or score > 1.00001 or text in seen:
-                continue
-            # Preserve an exact leading excerpt; explicitly label truncation.
-            label = 'User original' if lang == 'en' else '用户原话'
-            suffix = ' [excerpt]' if lang == 'en' else '［节选］'
-            line = f'{label} [{timestamp}]' + (suffix if len(text) > 520 else '') + ': ' + text[:520]
-            if sum(len(value) + 1 for value in lines) + len(line) > 1799:
-                continue
-            lines.append(line)
-            seen.add(text)
-            if len(lines) == 3:
-                break
-        return '\n'.join(lines)
-    except Exception:
-        return ''
+    from .recall_context import original_quotes
+    return original_quotes(db, subject_id, query, model_tier, rows, provider, lang)
 
 
 def _render_snapshot_selection(
@@ -1702,6 +1650,12 @@ def recall_world_snapshot(
                         or (lang == 'zh' and len(rendered_recall) >= MAX_OUTPUT_CHARS)):
                     selected, rendered_recall = _render_snapshot_selection(
                         db, subject_id, query, model_tier, lang, reserve_main_order(combined, main), rows, dates)
+        from .recall_context import profile_context
+        profile_items, profile_text = profile_context(db, subject_id, query, model_tier, rows, lang)
+        if profile_text:
+            rendered_recall = '\n'.join(filter(None, (profile_text, rendered_recall)))
+            selected_keys = {(str(item['kind']), str(item['id'])) for item in selected}
+            selected.extend(item for item in profile_items if (str(item['kind']), str(item['id'])) not in selected_keys)
         quotes = _original_quotes(db, subject_id, query, model_tier, rows, provider, lang)
         if quotes:
             rendered_recall = '\n'.join(filter(None, (rendered_recall, quotes)))

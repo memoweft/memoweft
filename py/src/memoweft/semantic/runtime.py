@@ -193,12 +193,13 @@ class SemanticRuntime:
         return written
 
     def score_texts(self, query: str, texts: Sequence[str]) -> Sequence[float]:
-        """Ephemeral source ranking; no source text/vector is retained or written.
+        scores = self.score_texts_many([query], texts)
+        return scores[0] if scores else ()
 
-        Callers must authorize sources in their read snapshot before calling.
-        A busy/unavailable encoder leaves the existing formal recall intact.
-        """
-        if len(query) > 4000 or not texts or not self.config.enabled or self._stop.is_set():
+    def score_texts_many(self, queries: Sequence[str], texts: Sequence[str]) -> Sequence[Sequence[float]]:
+        """Encode authorized source windows once per request, never cache them."""
+        if (not queries or len(queries) > 5 or any(len(q) > 4000 for q in queries)
+                or not texts or not self.config.enabled or self._stop.is_set()):
             return ()
         if not self._inference.acquire(blocking=False):
             return ()
@@ -207,10 +208,12 @@ class SemanticRuntime:
                 encoder = self._encoder if self._state == 'ready' else None
             if encoder is None:
                 return ()
-            vector = encoder.encode([query], query=True)[0]
-            scores: list[float] = []
+            vectors = encoder.encode(queries, query=True)
+            scores: list[list[float]] = [[] for _ in queries]
             for start in range(0, len(texts), self.config.batch_size):
-                scores.extend(float(value) for value in encoder.encode(texts[start:start + self.config.batch_size]) @ vector)
+                batch = encoder.encode(texts[start:start + self.config.batch_size]) @ vectors.T
+                for index, values in enumerate(batch.T):
+                    scores[index].extend(float(value) for value in values)
             return scores
         finally:
             self._inference.release()

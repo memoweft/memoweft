@@ -138,9 +138,13 @@ MemoWeft keeps these boundaries explicit:
   permissions still apply separately to the name and the recalled fact.
   This experimental branch ranks authorized local CPU semantic candidates first,
   retaining literal recall when the encoder is unavailable. It separately appends
-  up to three timestamped exact user-source excerpts under an 1800-character cap;
+  up to five timestamped exact user-source excerpts under a 2600-character cap;
   source permissions, person isolation and deletion gates remain authoritative.
-  The formal-memory cap remains five items / 600 characters. See the
+  The main-memory cap remains five items / 600 characters. Owner questions can
+  also receive at most 18 current sourced profile items / 1800 characters, with
+  their original attribution and dates; selected dependency IDs include them.
+  This branch tunes formation detail and existing supersession links separately
+  from retrieval, on already observed data only. See the
   [experimental configuration and limits](docs/semantic-recall.md).
   Short natural corrections can be retrieved through the topic of their
   permission-eligible predecessors. Only the current successor is rendered

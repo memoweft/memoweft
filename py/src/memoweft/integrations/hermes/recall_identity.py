@@ -123,11 +123,12 @@ def associate_owner_names(
         for name in names if holders[name.casefold()] <= self_ids and name not in ambiguous
     ))
     if not owner_names and not ambiguous:
-        return rows
+        return [{**row, 'owner_names': (), 'owner_entity_ids': tuple(sorted(self_ids))} for row in rows]
 
     result: list[dict[str, object]] = []
     for row in rows:
-        updated = {**row, "ambiguous_anchors": ambiguous}
+        updated = {**row, "ambiguous_anchors": ambiguous,
+                   'owner_names': owner_names, 'owner_entity_ids': tuple(sorted(self_ids))}
         if row["kind"] == "cognition" and row.get("statement_kind") in {"attribute", "preference"}:
             target = db.execute(
                 "SELECT ct.target_entity_id, ct.perspective_entity_id, e.kind "
