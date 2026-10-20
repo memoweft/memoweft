@@ -68,6 +68,13 @@ MemoWeft keeps these boundaries explicit:
   its complete literal topic and action verb must match the selected proposal.
   Whole-reply denial checks still apply; the finite grammar and limits are
   documented in the [confirmation rules](docs/distraction-sources.md).
+- World-item forgetting pauses with `formation_in_progress` while another source
+  in the same account is being interpreted against the current World. Preview
+  and execution apply the same check, including an older confirmation. It does
+  not infer or erase an unconfirmed correction source. Once formation settles,
+  the owner obtains a new preview; an explicitly confirmed batch covering all
+  of the in-flight job's sources can still erase them atomically and fence the
+  late worker. Other accounts and unrelated, not-yet-started jobs are unaffected.
 - Hosts bind the actual recall dependencies to assistant turns through the existing
   `model_context_dependencies` boundary field or `link_interaction_dependencies`.
   Forgetting a fact erases whole dependent interaction-context copies, transitively,

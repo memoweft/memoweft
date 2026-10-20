@@ -61,6 +61,12 @@ def guarded_forget(db: sqlite3.Connection, command: CommandEnvelopeV1,
     db.execute('SAVEPOINT forget_scope_guard')
     try:
         mutation = mutate(db, command, completed_at)
+        if mutation.result_state == 'rejected' and mutation.rejection_code == 'formation_in_progress':
+            # No cascade ran. Preserve the readiness reason rather than
+            # comparing an empty mutation with the old, nonempty preview.
+            db.execute('ROLLBACK TO forget_scope_guard')
+            db.execute('RELEASE forget_scope_guard')
+            return mutation
         after = context_snapshot(db, command['subject_id'])
         digest, changed = affected_scope(before, after)
         kind, item_id = scope_target(command['target_kind'], command['target_id'], command['payload'].get('additional_targets'))
