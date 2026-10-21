@@ -112,6 +112,7 @@ def test_independent_fact_in_same_message_survives_excluded_retract(tmp_path: Pa
 
 @pytest.mark.parametrize("raw,claim", [
     ("请忘掉骑车偏好：我现在喜欢跑步。", "我现在喜欢跑步。"),
+    ("请忘掉骑车的偏好：我现在喜欢跑步。", "我现在喜欢跑步。"),
     ("Forget cycling — I now prefer running.", "I now prefer running."),
     ("请忘掉骑车偏好：我其实更喜欢跑步。", "我其实更喜欢跑步。"),
     ("Forget cycling — I prefer running.", "I prefer running."),
@@ -149,6 +150,48 @@ def test_command_separator_cannot_promote_an_explanatory_object(tmp_path: Path, 
     item["supports"] = [{"evidence_id": "evidence-1", "quote": claim}]
     _run(path, MutableClock(), [_model(_batch(item))], ("evidence-1",), lambda p: _setup(p, raw))
     _assert_unchanged(path, raw)
+
+
+@pytest.mark.parametrize("raw,claim,name", [
+    ("Forget cycling — Bob now enjoys running.", "Bob now enjoys running.", "Bob"),
+    ("请忘掉骑车偏好：小李现在喜欢跑步。", "小李现在喜欢跑步。", "小李"),
+])
+def test_named_subject_fact_after_command_is_independent(tmp_path: Path, raw: str, claim: str, name: str) -> None:
+    # First prove that this complete, independently supported attribute is
+    # eligible under the existing entity contract without the command prefix.
+    for prefix, source in [("reference", claim), ("command", raw)]:
+        path = tmp_path / (prefix + ".sqlite3")
+        item = _v8_item("attribute", claim, (source.index(claim), len(source)),
+                        entity={"canonical_name": name, "kind": "person"})
+        item["supports"] = [{"evidence_id": "evidence-1", "quote": claim}]
+        _run(path, MutableClock(), [_model(_batch(item))], ("evidence-1",), lambda p: _set_evidence(p, "evidence-1", source))
+        assert _job(path)["state"] == "applied", prefix
+        with sqlite3.connect(path) as db:
+            assert current_world_revision(db) == 1
+            assert db.execute("SELECT count(*) FROM cognition").fetchone()[0] == 1
+            assert db.execute("SELECT canonical_name FROM entity").fetchall() == [(name,)]
+
+
+@pytest.mark.parametrize("raw,claim,name", [
+    ("Delete this preference: Bob likes cycling.", "Bob likes cycling.", "Bob"),
+    ("Forget cycling — Bob.", "Bob.", "Bob"),
+    ("Forget cycling — Bob / Alice.", "Bob / Alice.", "Bob"),
+    ("Forget cycling — Bob and Alice.", "Bob and Alice.", "Bob"),
+    ("Please forget that Bob now enjoys running.", "Bob now enjoys running.", "Bob"),
+    ("Forget Bob's preference: Bob likes cycling.", "Bob likes cycling.", "Bob"),
+    ("Forget Bob: Bob likes cycling.", "Bob likes cycling.", "Bob"),
+    ("请忘掉小李：小李现在喜欢跑步。", "小李现在喜欢跑步。", "小李"),
+    ("请忘掉小李的偏好：小李现在喜欢跑步。", "小李现在喜欢跑步。", "小李"),
+])
+def test_named_object_or_list_fragment_cannot_become_an_independent_fact(tmp_path: Path, raw: str, claim: str, name: str) -> None:
+    path = tmp_path / "world.sqlite3"
+    item = _v8_item("attribute", claim, (raw.index(claim), len(raw)),
+                    entity={"canonical_name": name, "kind": "person"})
+    item["supports"] = [{"evidence_id": "evidence-1", "quote": claim}]
+    _run(path, MutableClock(), [_model(_batch(item))], ("evidence-1",), lambda p: _setup(p, raw))
+    _assert_unchanged(path, raw)
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT count(*) FROM entity").fetchone()[0] == 0
 
 
 @pytest.mark.parametrize("raw", ["我从来不喜欢骑自行车。", "喜欢骑自行车的是朋友，不是我。", "I never liked cycling."])

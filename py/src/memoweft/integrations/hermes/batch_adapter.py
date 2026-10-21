@@ -2646,11 +2646,6 @@ class HermesBatchAdapterProcessor:
             return None, "span_out_of_range"
 
         slices = [support[3] for support in parsed]
-        management_error = _memory_management_support_error(
-            parsed, raw_by_id, naming=action == "form" and kind == "naming",
-        )
-        if management_error:
-            return None, management_error
         if (kind == "preference" and action == "form" and formed_by == "confirmed"
                 and len(slices) == 1 and claim is not None):
             first_clause = re.split(r"[，,。.!！?？\s]", slices[0].strip(), maxsplit=1)[0]
@@ -3139,6 +3134,13 @@ class HermesBatchAdapterProcessor:
                 for anchor in anchors
             ):
                 return None, "proposition_not_anchored"
+
+        management_error = _memory_management_support_error(
+            parsed, raw_by_id, naming=action == "form" and kind == "naming",
+            named_subject=entity_canonical_name if targeted_attribute and not retract else None,
+        )
+        if management_error:
+            return None, management_error
 
         is_situational_decision = False
         if kind == 'preference' and formed_by in {'stated', 'confirmed'} and not retract and topic_canonical_name is None and entity_canonical_name is None:
@@ -5761,10 +5763,10 @@ def _is_memory_management_command(text: str) -> bool:
                 or _MEMORY_DELETE_COMMAND.match(text) and _MEMORY_MANAGEMENT_OBJECT.search(text))
 
 
-def _memory_management_clause_ranges(text: str) -> list[tuple[int, int, str]]:
+def _memory_management_clause_ranges(text: str, named_subject: str | None) -> list[tuple[int, int, str]]:
     """Refine validation context only; public segment IDs/supports stay exact.
 
-    A named command target followed by a complete first-person assertion can
+    A named command target followed by an independently supported assertion can
     precede an independent fact. A bare 'this/my preference: ...' still needs
     its following description as the command object, even if it starts 'I'.
     """
@@ -5772,9 +5774,30 @@ def _memory_management_clause_ranges(text: str) -> list[tuple[int, int, str]]:
         if any(quote.start() <= separator.start() < quote.end() for quote in _QUOTE.finditer(text)):
             continue
         head, tail = text[:separator.start()].strip(), text[separator.end():].strip()
+        # "Forget Bob: Bob ..." supplies the command's subject description,
+        # not an independent fact about that same forgotten subject.
+        if named_subject:
+            if head.rstrip(" '\"“”‘’").endswith(named_subject) or re.search(
+                re.escape(named_subject) + r"(?:的(?:记忆|偏好)|['’]s\s+(?:memory|memories|preferences?))$",
+                head, re.IGNORECASE,
+            ):
+                continue
+        independent = bool(_OWNER.match(tail) and owner_assertion_error(tail, 0, len(tail)) is None)
+        if named_subject and tail.startswith(named_subject):
+            # The enclosing compiler already validated this entity and the
+            # complete proposition against the selected verbatim support.
+            # Require a name boundary and content after it, not a lone name or
+            # an obvious list. Never infer a subject from an arbitrary word.
+            suffix = tail[len(named_subject):]
+            word_continuation = (named_subject[-1].isascii() and named_subject[-1].isalnum()
+                                 and bool(suffix) and suffix[0].isascii() and suffix[0].isalnum())
+            suffix = suffix.strip()
+            independent = independent or bool(
+                not word_continuation and suffix and suffix[0].isalpha()
+                and not re.match(r"(?:and|or)\b|[和与及或]", suffix, re.IGNORECASE)
+            )
         if (not _is_memory_management_command(head) or _UNSPECIFIED_MEMORY_OBJECT.search(head)
-                or not _OWNER.match(tail) or re.search(r"[?？]", tail)
-                or owner_assertion_error(tail, 0, len(tail)) is not None):
+                or not independent or re.search(r"[?？]", tail)):
             continue
         return [(0, separator.end(), text[:separator.end()]),
                 (separator.end(), len(text), text[separator.end():])]
@@ -5783,7 +5806,7 @@ def _memory_management_clause_ranges(text: str) -> list[tuple[int, int, str]]:
 
 def _memory_management_support_error(
     supports: tuple[tuple[str, int, int, str], ...], raw_by_id: Mapping[str, str],
-    *, naming: bool = False,
+    *, naming: bool = False, named_subject: str | None = None,
 ) -> str | None:
     """Validate a selected range without treating its command object as a fact.
 
@@ -5820,7 +5843,7 @@ def _memory_management_support_error(
             continue
         for sentence in _evidence_sentences(raw):
             for clause in _evidence_segments(sentence["text"]):
-                for begin, stop, text in _memory_management_clause_ranges(clause["text"]):
+                for begin, stop, text in _memory_management_clause_ranges(clause["text"], named_subject):
                     left = sentence["start"] + clause["start"] + begin
                     right = sentence["start"] + clause["start"] + stop
                     if right <= start or end <= left:
