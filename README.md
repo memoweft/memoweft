@@ -21,6 +21,10 @@ The repository candidate may be newer than the latest published package. A succe
 MemoWeft keeps these boundaries explicit:
 
 - Raw user content remains exact Evidence with provenance and permissions.
+- A request to forget a stored memory is not a denial of the remembered fact;
+  formation excludes that command's item while independent factual statements
+  remain eligible. Raw Evidence stays intact until the separate authorized
+  forgetting flow completes; genuine factual denials still support retraction.
 - A source-bound correction counts as fulfilled after a later `no_change` only
   when its applied receipt, current replacement, exact support range and stated
   projection agree. Other corrections, remember requests and unknown uncovered

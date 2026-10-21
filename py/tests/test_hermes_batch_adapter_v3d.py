@@ -37,7 +37,7 @@ from test_hermes_world_worker import (
 )
 
 _RAW_COFFEE = "我喜欢喝咖啡"
-_RAW_RETRACT = "那条删掉吧"
+_RAW_RETRACT = "那条不属实"
 _RAW_CONTRADICT = "咖啡其实不好喝"
 _RAW_REL_RETRACT = "小王不是小杨的女朋友"
 
@@ -210,7 +210,7 @@ def test_retract_cognition_invalidates_and_records_sidecar(tmp_path: Path) -> No
         _model(
             _batch(
                 _v6_item(
-                    "preference", "那条删掉吧", (0, 5),
+                    "preference", "那条不属实", (0, 5),
                     action="correct", retract=True,
                     corrects_cognition_id=target,
                 )
@@ -378,7 +378,7 @@ def test_retract_replay_is_zero_write(tmp_path: Path) -> None:
         _model(
             _batch(
                 _v6_item(
-                    "preference", "那条删掉吧", (0, 5),
+                    "preference", "那条不属实", (0, 5),
                     action="correct", retract=True,
                     corrects_cognition_id=target,
                 )
@@ -392,7 +392,7 @@ def test_retract_replay_is_zero_write(tmp_path: Path) -> None:
         _model(
             _batch(
                 _v6_item(
-                    "preference", "那条删掉吧", (0, 5),
+                    "preference", "那条不属实", (0, 5),
                     action="correct", retract=True,
                     corrects_cognition_id=target,
                 )
@@ -412,7 +412,7 @@ def test_retract_naming_is_rejected(tmp_path: Path) -> None:
         _model(
             _batch(
                 _v6_item(
-                    "naming", "那条删掉吧", (0, 5),
+                    "naming", "那条不属实", (0, 5),
                     action="correct", retract=True,
                     corrects_cognition_id="cognition-x",
                 )
@@ -438,7 +438,7 @@ def test_retract_unknown_target_is_zero_write(tmp_path: Path) -> None:
         _model(
             _batch(
                 _v6_item(
-                    "preference", "那条删掉吧", (0, 5),
+                    "preference", "那条不属实", (0, 5),
                     action="correct", retract=True,
                     corrects_cognition_id="cognition-missing",
                 )
@@ -493,7 +493,7 @@ def test_retract_flag_must_be_boolean(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     item = _v6_item(
-        "preference", "那条删掉吧", (0, 5),
+        "preference", "那条不属实", (0, 5),
         action="correct", corrects_cognition_id="cognition-x",
     )
     item["retract"] = "true"  # stringified — rejected
@@ -513,7 +513,7 @@ def test_retract_rejected_in_v5_envelope(tmp_path: Path) -> None:
     db_path = tmp_path / "memoweft.sqlite3"
     clock = MutableClock()
     item = _v6_item(
-        "preference", "那条删掉吧", (0, 5),
+        "preference", "那条不属实", (0, 5),
         action="correct", retract=True, corrects_cognition_id="cognition-x",
     )
     script = [

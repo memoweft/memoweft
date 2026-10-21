@@ -457,7 +457,7 @@ def test_event_retract_invalidates_and_records_sidecar(tmp_path: Path) -> None:
     )
     event_id = world_event_id_for("owner", "昨天我和小王去了南京")
     retract = _v7_item(
-        "没这事，别记了", (0, 6),
+        "没这事", (0, 3),
         action="correct", retract=True, corrects_event_id=event_id,
         evidence_id="evidence-2",
     )
@@ -499,7 +499,7 @@ def test_event_retract_replay_is_zero_write(tmp_path: Path) -> None:
     )
     event_id = world_event_id_for("owner", "昨天我和小王去了南京")
     retract = _v7_item(
-        "没这事，别记了", (0, 6),
+        "没这事", (0, 3),
         action="correct", retract=True, corrects_event_id=event_id,
         evidence_id="evidence-2",
     )
@@ -522,7 +522,7 @@ def test_event_correct_unknown_target_is_zero_write(tmp_path: Path) -> None:
         _model(
             _batch(
                 _v7_item(
-                    "没这事，别记了", (0, 6),
+                    "没这事", (0, 3),
                     action="correct", corrects_event_id="world-event-x",
                 )
             )
