@@ -61,6 +61,8 @@ def test_frozen_m7_retract_does_not_mutate_world(tmp_path: Path, raw: str, propo
     "Remove my cycling preference from memory.", "Stop remembering that I like cycling.",
     "请你从长期记忆里删掉我喜欢骑自行车这条偏好。",
     "Could you forget that I like cycling?", "请帮我不再记住骑车偏好。",
+    "Please delete my cycling preference.", "请把我的骑车偏好删掉。",
+    "Please remove my evening music preference.", "请删除我的晚间音乐偏好。",
 ])
 def test_management_request_cannot_retract_a_fact(tmp_path: Path, raw: str) -> None:
     path = tmp_path / "world.sqlite3"
@@ -106,6 +108,47 @@ def test_independent_fact_in_same_message_survives_excluded_retract(tmp_path: Pa
         assert db.execute("SELECT count(*) FROM retraction").fetchone()[0] == 0
         assert db.execute("SELECT count(*) FROM cognition WHERE content LIKE '%围棋%'").fetchone()[0] == 1
         assert db.execute("SELECT raw_content FROM evidence WHERE id='evidence-1'").fetchone()[0] == raw
+
+
+@pytest.mark.parametrize("raw,claim", [
+    ("请忘掉骑车偏好：我现在喜欢跑步。", "我现在喜欢跑步。"),
+    ("Forget cycling — I now prefer running.", "I now prefer running."),
+    ("请忘掉骑车偏好：我其实更喜欢跑步。", "我其实更喜欢跑步。"),
+    ("Forget cycling — I prefer running.", "I prefer running."),
+    ("请删除我的晚间音乐偏好：我现在喜欢清晨听音乐。", "我现在喜欢清晨听音乐。"),
+])
+def test_new_state_after_command_separator_is_independent(tmp_path: Path, raw: str, claim: str) -> None:
+    path = tmp_path / "world.sqlite3"
+    start = raw.index(claim)
+    item = _v8_item("preference", claim, (start, len(raw)))
+    item["supports"] = [{"evidence_id": "evidence-1", "quote": claim}]
+    command = raw[:start].rstrip(" ：:—–")
+    retract = _v8_item("preference", command, (0, len(command)), action="correct", retract=True, corrects_cognition_id=TARGET)
+    retract["supports"] = [{"evidence_id": "evidence-1", "quote": command}]
+    _run(path, MutableClock(), [_model(_batch(retract, item))], ("evidence-1",), lambda p: _setup(p, raw))
+    assert _job(path)["state"] == "applied"
+    with sqlite3.connect(path) as db:
+        assert current_world_revision(db) == 1
+        assert db.execute("SELECT count(*) FROM cognition").fetchone()[0] == 2
+        assert db.execute("SELECT invalid_at FROM cognition WHERE id=?", (TARGET,)).fetchone()[0] is None
+        assert db.execute("SELECT count(*) FROM retraction").fetchone()[0] == 0
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='evidence-1'").fetchone()[0] == raw
+
+
+@pytest.mark.parametrize("raw,claim", [
+    ("Delete this preference: I like cycling.", "I like cycling."),
+    ("Delete this preference: I now prefer running.", "I now prefer running."),
+    ("请删除这项偏好：我现在喜欢跑步。", "我现在喜欢跑步。"),
+    ("Forget this — I like cycling.", "I like cycling."),
+    ("Delete my preference: I like cycling.", "I like cycling."),
+])
+def test_command_separator_cannot_promote_an_explanatory_object(tmp_path: Path, raw: str, claim: str) -> None:
+    path = tmp_path / "world.sqlite3"
+    start = raw.index(claim)
+    item = _v8_item("preference", claim, (start, len(raw)))
+    item["supports"] = [{"evidence_id": "evidence-1", "quote": claim}]
+    _run(path, MutableClock(), [_model(_batch(item))], ("evidence-1",), lambda p: _setup(p, raw))
+    _assert_unchanged(path, raw)
 
 
 @pytest.mark.parametrize("raw", ["我从来不喜欢骑自行车。", "喜欢骑自行车的是朋友，不是我。", "I never liked cycling."])
@@ -211,6 +254,8 @@ def test_ordinary_remember_request_still_forms_preference(tmp_path: Path) -> Non
     "Please delete the memory dump files every night.",
     "请删除每天生成的临时文件。",
     "请删除每天生成的记忆训练文件。",
+    "Please delete my cycling preference files every night.",
+    "请删除每天生成的骑车偏好配置文件。",
 ])
 def test_ongoing_file_instruction_is_not_memory_management(tmp_path: Path, raw: str) -> None:
     path = tmp_path / "world.sqlite3"
@@ -237,3 +282,21 @@ def test_mixed_support_requires_rewrite_without_silent_trimming(tmp_path: Path) 
         assert db.execute("SELECT invalid_at FROM cognition WHERE id=?", (TARGET,)).fetchone()[0] is None
         assert db.execute("SELECT count(*) FROM retraction").fetchone()[0] == 0
         assert db.execute("SELECT count(*) FROM cognition WHERE content LIKE '%围棋%'").fetchone()[0] == 1
+
+
+def test_separator_does_not_silently_trim_mixed_support(tmp_path: Path) -> None:
+    path = tmp_path / "world.sqlite3"
+    raw = "Forget cycling — I prefer running."
+    claim = "I prefer running."
+    mixed = _v8_item("preference", raw, (0, len(raw)), action="correct", retract=True, corrects_cognition_id=TARGET)
+    stable = _v8_item("preference", claim, (raw.index(claim), len(raw)))
+    stable["supports"] = [{"evidence_id": "evidence-1", "quote": claim}]
+    _run(path, MutableClock(), [_model(_batch(mixed)), _model(_batch(stable))], ("evidence-1",), lambda p: _setup(p, raw))
+    job = _job(path)
+    assert job["state"] == "applied"
+    assert json.loads(str(job["model_result_json"]))["formation_rewrite"]["error"]["code"] == "mixed_memory_command_and_fact"
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT count(*) FROM cognition").fetchone()[0] == 2
+        assert db.execute("SELECT count(*) FROM retraction").fetchone()[0] == 0
+        assert db.execute("SELECT invalid_at FROM cognition WHERE id=?", (TARGET,)).fetchone()[0] is None
+        assert db.execute("SELECT raw_content FROM evidence WHERE id='evidence-1'").fetchone()[0] == raw

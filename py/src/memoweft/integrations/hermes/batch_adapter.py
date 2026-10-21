@@ -49,7 +49,7 @@ from .world_worker import (
 from .terminal_outcome import persist_terminal_outcome_in_transaction
 from .recall import _predecessor_match_texts
 from .state_evolution import is_superseded, resolve_state_version, validate_successor
-from .source_assertion import _QUOTE, owner_assertion_error
+from .source_assertion import _OWNER, _QUOTE, owner_assertion_error
 
 logger = logging.getLogger(__name__)
 
@@ -5739,11 +5739,16 @@ _MEMORY_DELETE_COMMAND = re.compile(
     re.IGNORECASE,
 )
 _MEMORY_MANAGEMENT_OBJECT = re.compile(
-    r"(?:记忆|(?:这|那)(?:条|项)偏好)(?=[里中，。！？；\s]|$|忘掉|删除|删掉|清除|清空)"
-    r"|\b(?:this|that|my|your|the|all|stored)\s+(?:(?:saved|stored|long[- ]term)\s+)?(?:memory|memories|preferences?)\b"
-    r"(?=\s*(?:[.,!?;]|$)|\s+(?:of|about|regarding)\b)"
+    r"(?:记忆|(?:这|那)(?:条|项)偏好|(?:我的|你的|本人的)[^，。！？；：:\n]*?偏好)"
+    r"(?=[里中，。！？；：:—–\s]|$|忘掉|删除|删掉|清除|清空)"
+    r"|\b(?:this|that|my|your|the|all|stored)\s+(?:[\w'-]+\s+)*?(?:memory|memories|preferences?)\b"
+    r"(?=\s*(?:[.,!?;:—–]|$)|\s+(?:of|about|regarding)\b)"
     r"|\bfrom\s+(?:(?:your|long[- ]term)\s+)?memory\b",
     re.IGNORECASE,
+)
+_UNSPECIFIED_MEMORY_OBJECT = re.compile(
+    r"(?:这|那)(?:条|项|个)?(?:记忆|偏好|内容)?$|(?:我|你)的(?:记忆|偏好)$"
+    r"|\b(?:this|that|it|my|your|the)(?:\s+(?:memory|memories|preferences?))?$", re.IGNORECASE,
 )
 
 
@@ -5754,6 +5759,26 @@ def _is_memory_management_command(text: str) -> bool:
     text = text.strip()
     return bool(_MEMORY_MANAGEMENT_COMMAND.match(text)
                 or _MEMORY_DELETE_COMMAND.match(text) and _MEMORY_MANAGEMENT_OBJECT.search(text))
+
+
+def _memory_management_clause_ranges(text: str) -> list[tuple[int, int, str]]:
+    """Refine validation context only; public segment IDs/supports stay exact.
+
+    A named command target followed by a complete first-person assertion can
+    precede an independent fact. A bare 'this/my preference: ...' still needs
+    its following description as the command object, even if it starts 'I'.
+    """
+    for separator in re.finditer(r"[:：]|[—–]+", text):
+        if any(quote.start() <= separator.start() < quote.end() for quote in _QUOTE.finditer(text)):
+            continue
+        head, tail = text[:separator.start()].strip(), text[separator.end():].strip()
+        if (not _is_memory_management_command(head) or _UNSPECIFIED_MEMORY_OBJECT.search(head)
+                or not _OWNER.match(tail) or re.search(r"[?？]", tail)
+                or owner_assertion_error(tail, 0, len(tail)) is not None):
+            continue
+        return [(0, separator.end(), text[:separator.end()]),
+                (separator.end(), len(text), text[separator.end():])]
+    return [(0, len(text), text)]
 
 
 def _memory_management_support_error(
@@ -5795,11 +5820,12 @@ def _memory_management_support_error(
             continue
         for sentence in _evidence_sentences(raw):
             for clause in _evidence_segments(sentence["text"]):
-                left = sentence["start"] + clause["start"]
-                right = sentence["start"] + clause["end"]
-                if right <= start or end <= left:
-                    continue
-                management.append(_is_memory_management_command(clause["text"]))
+                for begin, stop, text in _memory_management_clause_ranges(clause["text"]):
+                    left = sentence["start"] + clause["start"] + begin
+                    right = sentence["start"] + clause["start"] + stop
+                    if right <= start or end <= left:
+                        continue
+                    management.append(_is_memory_management_command(text))
     if management and all(management):
         return "memory_management_instruction"
     if any(management):
