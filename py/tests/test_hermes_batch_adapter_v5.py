@@ -458,13 +458,13 @@ def test_third_party_held_cognition_retract(tmp_path: Path) -> None:
         "owner", "attribute", "小王说小李是00后", entity_id_for("owner", "小王")
     )
     retract = _v8_item(
-        "attribute", "那条删掉吧", (0, 5),
+        "attribute", "那条不属实", (0, 5),
         action="correct", retract=True, corrects_cognition_id=target,
         evidence_id="evidence-2",
     )
     _run(
         db_path, clock, [_model(_batch(retract))], ("evidence-2",),
-        lambda path: _set_evidence(path, "evidence-2", "那条删掉吧"),
+        lambda path: _set_evidence(path, "evidence-2", "那条不属实"),
         job_id="job-2",
     )
     row = _job(db_path, job_id="job-2")

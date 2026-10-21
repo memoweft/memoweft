@@ -49,7 +49,7 @@ from .world_worker import (
 from .terminal_outcome import persist_terminal_outcome_in_transaction
 from .recall import _predecessor_match_texts
 from .state_evolution import is_superseded, resolve_state_version, validate_successor
-from .source_assertion import owner_assertion_error
+from .source_assertion import _OWNER, _QUOTE, owner_assertion_error
 
 logger = logging.getLogger(__name__)
 
@@ -903,11 +903,13 @@ _SYSTEM_PROMPT = (
     "gnition_id、retract、assistant_claim、entity、alias_of、entity_reference、source_entity、target_entity、rela"
     "tion_type、participants、objects、occurred_at、time_expression、perspective_holder）必须**完全省略**，绝不输出空串/null"
     "。target 固定 \"owner_self\"（可省略，缺失视为 owner_self；任何其它值整体拒绝）。\n"
-    "13. retract（明确撤回、无新值）：用户明确说一条已形成的记忆是错的并要撤回/删除/别记（如\"别记我喜欢咖啡了\"且**不给新值**）→ action=correct + retract:tru"
+    "13. retract（事实否定、无新值）：用户明确否定已形成事实本身（如\"我从来不喜欢咖啡\"且**不给新值**）→ action=correct + retract:tru"
     "e + corrects_cognition_id（或关系用 corrects_relationship_id，取 current_relationships 旧关系 id）。proposition "
     "必须逐字等于撤回原话切片；**不要**补\"用户\"主语。不得带任何新值字段；naming 不可撤回（名字纠错走 alias）。如果用户明确说先前记在本人名下的属性/偏好其实属于朋友或其他人、不是本人，而"
     "新的第三方内容不符合本合同的正式形成范围，也必须 retract 对应的本人 cognition；保留整条归属纠正原话作为撤回依据，不得让错误的本人 cognition 继续 current，也不得把"
     "它只当普通 contradict。\n"
+    "13a. 管理记忆副本的请求（如\"请忘掉这项偏好\"\"把那条记忆删掉\"\"别记我喜欢咖啡了\"）不代表事实为假；不得据此 form/correct/retract/contradict，也不得裁掉请求前缀后把宾语当事实。"
+    "这些请求由独立的授权遗忘流程处理，本形成合同不执行删除。忽略这一 item；同一消息中独立陈述的事实仍按原合同形成。真实事实否定、归属纠正继续按第 13 条；单纯\"记住我的偏好\"仍可形成其明确事实。\n"
     "14. contradict（不同意/怀疑，但没说\"错了\"）：仅当用户对一条**已形成**的 attribute/preference 表达相反意见/怀疑，且**没有**说记忆错了、也没给新值时，用 "
     "action=contradict + contradicts_cognition_id（current_cognitions 里对应 id）；proposition 逐字等于反对原话切片、不要补\"用"
     "户\"主语。关系/第三方属性不支持 contradict（关系否定按第 13 条 retract 处理）。分不清 correct/retract/contradict → 不产出该 item。\n"
@@ -918,7 +920,7 @@ _SYSTEM_PROMPT = (
     "三方实体（名字逐字在命题里，kind 默认 person；\"用户\"可指本人），objects 列参与的对象/地点实体（kind 如 place/thing）。名字要在命题里；没有明确实体就省略对应列表"
     "。时间：仅原话明确包含唯一完整日期时，occurred_at 用 YYYY-MM-DD；把命题里的时间短语逐字放进 time_expression，不把昨天/上周等相对时间猜成日期。没有明确日期就省略"
     " occurred_at（事件仍形成）。未发生/不确定是否发生/含糊内容不产出。**proposition 必须逐字等于支持切片原句——含\"上周末/昨天\"等时间词在内，一个字都不许增删改写（如切片是\""
-    "上周末我和小王去了南京\"，proposition就必须原样是它）**。event 撤回（说\"没这事/别记了\"）用 correct+retract+corrects_event_id；event 改口替"
+    "上周末我和小王去了南京\"，proposition就必须原样是它）**。event 撤回（说\"没这事\"，否定事件发生）用 correct+retract+corrects_event_id；event 改口替"
     "换（明确说旧事件记错了并给新叙事）用 correct+corrects_event_id（取 **current_events** 里对应旧事件的 id，原样逐字复制那个 id 字符串）+ 新事件的 "
     "participants/objects/occurred_at/time_expression（同 event 字段合同，proposition=新叙事逐字切片）；event 不支持 contrad"
     "ict。**用 form 另存新事件会让旧事件仍然存在、两条并存——错误状态，必须用 correct**。\n"
@@ -1104,8 +1106,8 @@ _SYSTEM_PROMPT_EN = (
     "reference, source_entity, target_entity, relation_type, participants, objects, occurred_at, time_exp"
     "ression, perspective_holder) MUST be **fully omitted** — never empty strings or null. target is fixe"
     "d \"owner_self\" (omittable; missing means owner_self; any other value rejects the whole batch).\n"
-    "13. retract (explicit retraction, no new value): when the user explicitly says a formed memory is wr"
-    "ong and to retract/delete/forget it (e.g. \"stop remembering that I like coffee\" with **no new value*"
+    "13. retract (factual denial, no new value): when the user explicitly denies the remembered fact "
+    "itself (e.g. \"I never liked coffee\" with **no new value*"
     "*) → action=correct + retract:true + corrects_cognition_id (or corrects_relationship_id from current"
     "_relationships for relationships). The proposition must equal the retraction slice verbatim; carry n"
     "o new-value fields; naming cannot be retracted (name fixes go through alias). If the user explicitly"
@@ -1114,6 +1116,9 @@ _SYSTEM_PROMPT_EN = (
     "mation scope, retract the corresponding owner cognition anyway. Preserve the complete attribution co"
     "rrection as the retraction Evidence; never leave the false owner cognition current or reduce this co"
     "rrection to a mere contradiction.\n"
+    "13a. Requests to manage memory copies (e.g. \"forget that preference\", \"delete that memory\", \"stop remembering that I like coffee\") do not assert that a fact is false. "
+    "Never form/correct/retract/contradict from them or crop their objects into factual supports. The separate authorized forgetting flow handles deletion; formation does not. "
+    "Exclude only that item; independent facts in the same message remain eligible. Actual factual denial or attribution correction still uses rule 13. Explicit facts in ordinary remember requests remain eligible.\n"
     "14. contradict (disagree/doubt, without saying \"wrong\"): ONLY when the user expresses an opposite op"
     "inion or doubt about an **already formed** attribute/preference and does NOT say the memory is wrong"
     " or give a new value, use action=contradict + contradicts_cognition_id (the corresponding id in curr"
@@ -1132,7 +1137,7 @@ _SYSTEM_PROMPT_EN = (
     "the event still forms). Not-yet-happened/uncertain/vague content is not produced. **The proposition "
     "must equal the supporting slice verbatim — including \"last weekend/yesterday\" time words, not a sing"
     "le character added, deleted or rewritten** (if the slice is \"Last weekend I went to Nanjing with Wan"
-    "g\", the proposition must be exactly that). Event retraction (\"that never happened/forget it\") uses c"
+    "g\", the proposition must be exactly that). Event retraction (\"that never happened\", denying occurrence) uses c"
     "orrect+retract+corrects_event_id; event replacement (the old event was wrong and a new narrative is "
     "given) uses correct+corrects_event_id (the **old** event's id from current_events, copied verbatim) "
     "+ the new event's participants/objects/occurred_at/time_expression (same event field contract, propo"
@@ -1411,7 +1416,7 @@ class HermesBatchAdapterProcessor:
         if (
             compiled.batch is None
             and compiled.terminal == "no_change"
-            and compiled.reason != "task_scoped_instruction"
+            and compiled.reason not in {"task_scoped_instruction", "memory_management_instruction"}
             and "formation_rewrite" not in payload
         ):
             first = dict(payload)
@@ -2109,6 +2114,9 @@ class HermesBatchAdapterProcessor:
             return None, reason
         if any(support[3] == "" for support in parsed):
             return None, "span_out_of_range"
+        management_error = _memory_management_support_error(parsed, raw_by_id, naming=kind == "naming")
+        if management_error:
+            return None, management_error
         if kind in ("attribute", "preference"):
             scope_units = [str(sentence["text"]) for support in parsed for sentence in _evidence_sentences(support[3])]
             temporary = [_is_task_scoped_instruction(text) for text in scope_units]
@@ -2231,8 +2239,8 @@ class HermesBatchAdapterProcessor:
                 correction_topic_text=str(current.get(str(raw_item.get("corrects_cognition_id")), {}).get("content", "")) if isinstance(raw_item, dict) and raw_item.get("action") == "correct" else "",
             )
             if item is None:
-                if reason == "task_scoped_instruction":
-                    normalizations.append({"item_index": item_index, "rule": "excluded_task_scoped_instruction"})
+                if reason in {"task_scoped_instruction", "memory_management_instruction"}:
+                    normalizations.append({"item_index": item_index, "rule": "excluded_" + reason})
                     continue
                 return None, reason
             if item.assistant_claim:
@@ -3126,6 +3134,13 @@ class HermesBatchAdapterProcessor:
                 for anchor in anchors
             ):
                 return None, "proposition_not_anchored"
+
+        management_error = _memory_management_support_error(
+            parsed, raw_by_id, naming=action == "form" and kind == "naming",
+            named_subject=entity_canonical_name if targeted_attribute and not retract else None,
+        )
+        if management_error:
+            return None, management_error
 
         is_situational_decision = False
         if kind == 'preference' and formed_by in {'stated', 'confirmed'} and not retract and topic_canonical_name is None and entity_canonical_name is None:
@@ -5708,6 +5723,137 @@ class HermesBatchAdapterProcessor:
         if batch.normalizations:
             outcome["normalizations"] = list(batch.normalizations)
         return outcome
+
+
+_MEMORY_MANAGEMENT_COMMAND = re.compile(
+    r"^(?:请|麻烦)(?:你|帮我)?(?:永久|彻底|现在)?(?:忘掉|忘记|别(?:再)?记|不要(?:再)?记|不再记)"
+    r"|^(?:永久|彻底)?(?:忘掉|忘记)(?:我|这|那|关于)"
+    r"|^(?:别(?:再)?记|不要(?:再)?记|不再记)"
+    r"|^(?:这|那)(?:条|项|个)(?:记忆|偏好|记录)?(?:请)?(?:删掉|删除|忘掉|别记)"
+    r"|^(?:please\s+)?(?:(?:could|can|would|will)\s+you\s+)?(?:please\s+)?(?:permanently\s+)?(?:forget\b|stop remembering\b|do not remember\b|don't remember\b)",
+    re.IGNORECASE,
+)
+_MEMORY_DELETE_COMMAND = re.compile(
+    r"^(?:请|麻烦)?(?:你|帮我)?(?:永久|彻底|现在)?(?:删除|删掉|清除|清空)"
+    r"|^(?:请|麻烦)?(?:你|帮我)?把[^。！？；\n]+(?:忘掉|删除|删掉|清除|清空)(?:吧|一下|了)?[\s，。！？；,!?;.]*$"
+    r"|^(?:请|麻烦)?(?:你|帮我)?从[^，。！？；\n]{0,16}记忆[里中](?:删除|删掉|清除|清空)"
+    r"|^(?:please\s+)?(?:(?:could|can|would|will)\s+you\s+)?(?:please\s+)?(?:permanently\s+)?(?:delete\b|remove\b|erase\b)",
+    re.IGNORECASE,
+)
+_MEMORY_MANAGEMENT_OBJECT = re.compile(
+    r"(?:记忆|(?:这|那)(?:条|项)偏好|(?:我的|你的|本人的)[^，。！？；：:\n]*?偏好)"
+    r"(?=[里中，。！？；：:—–\s]|$|忘掉|删除|删掉|清除|清空)"
+    r"|\b(?:this|that|my|your|the|all|stored)\s+(?:[\w'-]+\s+)*?(?:memory|memories|preferences?)\b"
+    r"(?=\s*(?:[.,!?;:—–]|$)|\s+(?:of|about|regarding)\b)"
+    r"|\bfrom\s+(?:(?:your|long[- ]term)\s+)?memory\b",
+    re.IGNORECASE,
+)
+_UNSPECIFIED_MEMORY_OBJECT = re.compile(
+    r"(?:这|那)(?:条|项|个)?(?:记忆|偏好|内容)?$|(?:我|你)的(?:记忆|偏好)$"
+    r"|\b(?:this|that|it|my|your|the)(?:\s+(?:memory|memories|preferences?))?$", re.IGNORECASE,
+)
+
+
+def _is_memory_management_command(text: str) -> bool:
+    # Delete/remove alone also occur in eligible ongoing file instructions.
+    # Require a memory object; the explicit forget/stop-remembering verbs and
+    # deictic "delete that entry" requests need no inferred factual topic.
+    text = text.strip()
+    return bool(_MEMORY_MANAGEMENT_COMMAND.match(text)
+                or _MEMORY_DELETE_COMMAND.match(text) and _MEMORY_MANAGEMENT_OBJECT.search(text))
+
+
+def _memory_management_clause_ranges(text: str, named_subject: str | None) -> list[tuple[int, int, str]]:
+    """Refine validation context only; public segment IDs/supports stay exact.
+
+    A named command target followed by an independently supported assertion can
+    precede an independent fact. A bare 'this/my preference: ...' still needs
+    its following description as the command object, even if it starts 'I'.
+    """
+    for separator in re.finditer(r"[:：]|[—–]+", text):
+        if any(quote.start() <= separator.start() < quote.end() for quote in _QUOTE.finditer(text)):
+            continue
+        head, tail = text[:separator.start()].strip(), text[separator.end():].strip()
+        # "Forget Bob: Bob ..." supplies the command's subject description,
+        # not an independent fact about that same forgotten subject.
+        if named_subject:
+            if head.rstrip(" '\"“”‘’").endswith(named_subject) or re.search(
+                re.escape(named_subject) + r"(?:的(?:记忆|偏好)|['’]s\s+(?:memory|memories|preferences?))$",
+                head, re.IGNORECASE,
+            ):
+                continue
+        independent = bool(_OWNER.match(tail) and owner_assertion_error(tail, 0, len(tail)) is None)
+        if named_subject and tail.startswith(named_subject):
+            # The enclosing compiler already validated this entity and the
+            # complete proposition against the selected verbatim support.
+            # Require a name boundary and content after it, not a lone name or
+            # an obvious list. Never infer a subject from an arbitrary word.
+            suffix = tail[len(named_subject):]
+            word_continuation = (named_subject[-1].isascii() and named_subject[-1].isalnum()
+                                 and bool(suffix) and suffix[0].isascii() and suffix[0].isalnum())
+            suffix = suffix.strip()
+            independent = independent or bool(
+                not word_continuation and suffix and suffix[0].isalpha()
+                and not re.match(r"(?:and|or)\b|[和与及或]", suffix, re.IGNORECASE)
+            )
+        if (not _is_memory_management_command(head) or _UNSPECIFIED_MEMORY_OBJECT.search(head)
+                or not independent or re.search(r"[?？]", tail)):
+            continue
+        return [(0, separator.end(), text[:separator.end()]),
+                (separator.end(), len(text), text[separator.end():])]
+    return [(0, len(text), text)]
+
+
+def _memory_management_support_error(
+    supports: tuple[tuple[str, int, int, str], ...], raw_by_id: Mapping[str, str],
+    *, naming: bool = False, named_subject: str | None = None,
+) -> str | None:
+    """Validate a selected range without treating its command object as a fact.
+
+    The enclosing source clause is validation context only, never a widened
+    support. Pure management items are excluded independently. Mixed selected
+    clauses need the existing compiler rewrite, not automatic source trimming.
+    Raw Evidence and deletion authorization are untouched.
+    """
+    management: list[bool] = []
+    for evidence_id, start, end, _selected in supports:
+        raw = raw_by_id[evidence_id]
+        # Retain the quoted command's context even when only its object was
+        # selected. A quotation is not an assertion of that remembered fact.
+        quoted_command = False
+        for quote in _QUOTE.finditer(raw):
+            if not (quote.start() <= start and end <= quote.end()
+                    and _is_memory_management_command(quote.group()[1:-1])):
+                continue
+            # A complete name introduced as a book/title is a mention, not an
+            # instruction. Keep the outer clause check below: "forget the book
+            # 'Forget Me'" is still a command, even for a naming interpretation.
+            named_title = naming and start <= quote.start() + 1 and end >= quote.end() - 1 and (
+                quote.group().startswith("《") or re.search(
+                    r"\b(?:book|novel|song|album|film|movie|poem|title|named|called|titled)\s*$"
+                    r"|(?:名叫|叫作|书名是|标题是|名字是)\s*$",
+                    raw[:quote.start()], re.IGNORECASE,
+                ) is not None
+            )
+            if not named_title:
+                quoted_command = True
+                break
+        if quoted_command:
+            management.append(True)
+            continue
+        for sentence in _evidence_sentences(raw):
+            for clause in _evidence_segments(sentence["text"]):
+                for begin, stop, text in _memory_management_clause_ranges(clause["text"], named_subject):
+                    left = sentence["start"] + clause["start"] + begin
+                    right = sentence["start"] + clause["start"] + stop
+                    if right <= start or end <= left:
+                        continue
+                    management.append(_is_memory_management_command(text))
+    if management and all(management):
+        return "memory_management_instruction"
+    if any(management):
+        return "mixed_memory_command_and_fact"
+    return None
 
 
 _ONGOING_INSTRUCTION = re.compile(
