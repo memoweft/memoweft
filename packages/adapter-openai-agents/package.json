@@ -47,11 +47,11 @@
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "peerDependencies": {
-    "@openai/agents": "^0.13",
+    "@openai/agents": "^0.20",
     "memoweft": "^0.6.0 || ^0.7.0 || ^1.0.0-rc.1 || ^2.0.0"
   },
   "devDependencies": {
-    "@openai/agents": "^0.13",
+    "@openai/agents": "^0.20",
     "memoweft": "*"
   }
 }
