@@ -24,6 +24,7 @@ from test_trust_command_service import _command, _seed_evidence, _seed_revision,
 @pytest.mark.parametrize('private', [
     '临时登录密码是 synthetic-pass-42，密码别记。',
     'My password is synthetic-pass-42.',
+    'My password is\nsynthetic-pass-42.',
     'My API key is synthetic-key-value.',
     'My verification code is 123456.',
     '我的证件号是 110101200001010000。',
@@ -116,6 +117,7 @@ def test_long_pasted_speech_cannot_lose_original_attribution(tmp_path: Path, int
 
 @pytest.mark.parametrize('private', [
     'My password is synthetic-pass-42.',
+    'My password is\nsynthetic-pass-42.',
     'My API key is synthetic-key-value.',
     'My verification code is 123456.',
     '我的证件号是 110101200001010000。',

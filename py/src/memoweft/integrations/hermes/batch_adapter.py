@@ -5474,21 +5474,19 @@ def _source_privacy_support_error(
     supports: tuple[tuple[str, int, int, str], ...], raw_by_id: Mapping[str, str],
     *, check_opt_out: bool = True,
 ) -> str | None:
-    """Check source clauses so cropping cannot hide a label or opt-out.
+    """Check sensitive ranges and sentence opt-outs without widening supports.
 
     Semicolons retain a following 'do not remember that' with its statement.
     Independent sentences remain independently eligible for formation.
     """
     for evidence_id, start, end, _ in supports:
         raw = raw_by_id[evidence_id]
-        # Preserve the compiler's exact ranges: an unselected intervening
-        # credential cannot suppress independently selected ordinary facts.
-        for sentence in _evidence_sentences(raw):
-            for clause in _evidence_segments(sentence['text']):
-                left = sentence['start'] + clause['start']
-                right = sentence['start'] + clause['end']
-                if right > start and left < end and _SENSITIVE_SOURCE_VALUE.search(clause['text']):
-                    return "sensitive_source_content"
+        # Match the label/value on the intact source, including line breaks,
+        # then intersect with the exact selected ranges. This catches a cropped
+        # value without pulling an unselected credential into ordinary facts.
+        if any(match.end() > start and match.start() < end
+               for match in _SENSITIVE_SOURCE_VALUE.finditer(raw)):
+            return "sensitive_source_content"
         if not check_opt_out:
             continue
         begin = 0
