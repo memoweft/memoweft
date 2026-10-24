@@ -310,8 +310,8 @@ def test_owner_preference_misattributed_to_friend_is_retracted_but_traceable(
 
 
 def test_temporary_state_contract_and_unrelated_recall_stay_scoped(tmp_path: Path) -> None:
-    assert "这周不想社交" in _SYSTEM_PROMPT
-    assert "must not become a permanent attribute" in _SYSTEM_PROMPT_EN
+    assert "一次性的临时需要不形成记忆" in _SYSTEM_PROMPT
+    assert "Do not form memories from hypotheticals, jokes or one-off temporary needs" in _SYSTEM_PROMPT_EN
 
     db_path = tmp_path / "memoweft.sqlite3"
     _initialize_database(db_path)

@@ -1,6 +1,6 @@
 """Read-only recall with semantic-first ranking and bounded exact user sources.
 
-Experimental retrieval changes only. Formal claims retain their existing
+Formal claims retain their existing
 permission/currentness gates. Source excerpts are separately labelled, carry
 original timestamps, and add at most five quotes / 2600 characters. Owner
 questions can also receive a bounded, sourced current profile. Loading

@@ -84,18 +84,18 @@ def test_forbidden_evidence_never_dispatches_formation_route(
         db.close()
 
 
-def test_chinese_and_english_event_contracts_allow_only_happened_confirmed_events() -> None:
-    assert "除已发生/已确定事件外的一次性事实" in _SYSTEM_PROMPT
-    assert "未发生/不确定是否发生/含糊内容不产出" in _SYSTEM_PROMPT
-    assert "one-off facts other than happened/confirmed events" in _SYSTEM_PROMPT_EN
-    assert "Not-yet-happened/uncertain/vague content is not produced" in _SYSTEM_PROMPT_EN
+def test_chinese_and_english_event_contracts_preserve_source_time_and_intentions() -> None:
+    assert "计划只表示意向" in _SYSTEM_PROMPT
+    assert "occurred_at 只用原话明确的唯一完整日期" in _SYSTEM_PROMPT
+    assert "treat plans as intentions" in _SYSTEM_PROMPT_EN
+    assert "use occurred_at only for one explicit full source date" in _SYSTEM_PROMPT_EN
 
 
 @pytest.mark.parametrize(
     ("lang", "raw", "prompt_phrase"),
     [
-        ("zh", "昨天我去了南京", "除已发生/已确定事件外的一次性事实"),
-        ("en", "Yesterday I went to Nanjing", "one-off facts other than happened/confirmed events"),
+        ("zh", "昨天我去了南京", "计划只表示意向"),
+        ("en", "Yesterday I went to Nanjing", "treat plans as intentions"),
     ],
 )
 def test_event_contract_reaches_captured_route_and_applies(

@@ -30,14 +30,12 @@ def _item(kind: str, proposition: str, quote: str, *, entity: str) -> dict[str, 
 
 
 def test_v8_prompt_matches_segment_and_third_party_preference_contract() -> None:
-    assert "第三方**身份类稳定属性**" not in _SYSTEM_PROMPT
-    assert "第三方稳定属性或偏好" in _SYSTEM_PROMPT
-    assert "proposition只是必填占位" in _SYSTEM_PROMPT
-    assert "同一Evidence前段" in _SYSTEM_PROMPT
-    assert "identity-class stable attributes" not in _SYSTEM_PROMPT_EN
-    assert "third-party attributes or preferences" in _SYSTEM_PROMPT_EN
-    assert "proposition is only a required placeholder" in _SYSTEM_PROMPT_EN
-    assert "earlier segment in the same Evidence" in _SYSTEM_PROMPT_EN
+    assert "明确事实或观点属于谁" in _SYSTEM_PROMPT
+    assert "stated 正式命题由系统从所选原话派生" in _SYSTEM_PROMPT
+    assert "第三方需可核对姓名或唯一 entity_reference" in _SYSTEM_PROMPT
+    assert "make clear whose facts or views they are" in _SYSTEM_PROMPT_EN
+    assert "the system derives stated claims from the selected verbatim source" in _SYSTEM_PROMPT_EN
+    assert "ground a third party's name or unique entity_reference" in _SYSTEM_PROMPT_EN
 
 
 def test_quote_derives_exact_span_and_stated_proposition_for_person_naming(

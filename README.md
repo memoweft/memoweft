@@ -140,16 +140,18 @@ MemoWeft keeps these boundaries explicit:
   the fact is about the owner. Other wording keeps its existing recall paths
   rather than guessing a new identity link. Ambiguous names stay unresolved, and source
   permissions still apply separately to the name and the recalled fact.
-  This experimental branch ranks authorized local CPU semantic candidates first,
+  Python recall ranks authorized local CPU semantic candidates first,
   retaining literal recall when the encoder is unavailable. It separately appends
   up to five timestamped exact user-source excerpts under a 2600-character cap;
   source permissions, person isolation and deletion gates remain authoritative.
   The main-memory cap remains five items / 600 characters. Owner questions can
   also receive at most 18 current sourced profile items / 1800 characters, with
   their original attribution and dates; selected dependency IDs include them.
-  This branch tunes formation detail and existing supersession links separately
-  from retrieval, on already observed data only. See the
-  [experimental configuration and limits](docs/semantic-recall.md).
+  Formation preserves concrete details and links new states to their sourced
+  predecessors. Forgetting removes Core source copies and derived context;
+  forgotten memories and withdrawn or deleted sources cannot return through
+  the main recall, profile or original-source windows. See the
+  [configuration and limits](docs/semantic-recall.md).
   Short natural corrections can be retrieved through the topic of their
   permission-eligible predecessors. Only the current successor is rendered
   and selected; past preference values appear for historical questions or
