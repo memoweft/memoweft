@@ -66,7 +66,7 @@ def test_final_gate_alone_rejects_a_forced_unfiltered_row(tmp_path: Path, state:
         assert snapshot is not None and snapshot.selected_item_ids == ()
 
 
-def test_literal_order_cap_and_name_rules(tmp_path: Path) -> None:
+def test_semantic_primary_cap_literal_fallback_and_name_rules(tmp_path: Path) -> None:
     memories = [{"id": f"m-{i}", "content": "我喜欢蓝色手账。" if i == 0 else f"我收藏虚构品种{i}。"} for i in range(7)]
     path = tmp_path / "synthetic.sqlite3"
     fixture.seed(path, {"memories": memories})
@@ -75,7 +75,8 @@ def test_literal_order_cap_and_name_rules(tmp_path: Path) -> None:
         current = recall_world_snapshot(db, "fictional-owner", "我喜欢什么手账？", candidate_provider=ForcedProvider(memories))
         assert baseline is not None and current is not None
         assert current.selected_item_ids[:baseline.count] == baseline.selected_item_ids
-        assert current.count == baseline.count + 3
+        assert current.count == 5
+        assert current.selected_item_ids == tuple(("cognition", f"m-{i}") for i in range(5))
     named = [{"id": "person-fact", "content": "樂是我的同事。"}, {"id": "unrelated", "content": "我收藏虚构邮票。"}]
     fixture.seed(tmp_path / "named.sqlite3", {"memories": named, "person_name": "樂"})
     with closing(sqlite3.connect(tmp_path / "named.sqlite3")) as db:

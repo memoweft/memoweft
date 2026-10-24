@@ -88,7 +88,9 @@ uv run python scripts/smoke_distribution.py
 Python 3.11 or newer is required. Development verifies the sibling `../shared` contract; wheel and sdist installs carry the generated runtime JSON and do not require a monorepo checkout.
 
 The optional `semantic` extra adds local CPU semantic recall to the production
-Python integrations. It preserves literal matches, adds at most three candidates,
-and falls back during loading or failure. See [configuration, status, and derived
+Python integrations. It ranks eligible semantic candidates before literal matches,
+adds bounded original-source windows and a sourced owner profile, and falls back
+to literal recall during loading or failure. Source permissions and deletion apply
+to every output. See [configuration, status, and derived
 storage lifecycle](../docs/semantic-recall.md). The Python primary schema remains
 21; the rebuildable vector tables are an optional extension.

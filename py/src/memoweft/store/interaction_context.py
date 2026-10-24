@@ -240,6 +240,10 @@ class SqliteInteractionContextStore:
                 continue
             world_items = dep.get('world_items', [])
             for item in world_items if isinstance(world_items, list) else []:
+                if isinstance(item, dict) and item.get('object_kind') == 'evidence' and self._db.execute(
+                    "SELECT 1 FROM evidence WHERE subject_id=? AND id=? AND deleted_at IS NOT NULL",
+                    (subject_id, item.get('item_id'))).fetchone():
+                    return True
                 if isinstance(item, dict) and self._db.execute(
                     "SELECT 1 FROM world_delete_marker WHERE subject_id=? AND object_kind=? AND item_id=?",
                     (subject_id, item.get('object_kind'), item.get('item_id'))).fetchone():

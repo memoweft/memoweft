@@ -10,7 +10,7 @@ from pathlib import Path
 @dataclass(frozen=True)
 class SemanticConfig:
     enabled: bool = True
-    threshold: float = 0.87
+    threshold: float = 0.75
     max_additions: int = 3
     batch_size: int = 16
     cache_dir: Path | None = None
@@ -28,6 +28,6 @@ class SemanticConfig:
         cache = os.environ.get("MEMOWEFT_SEMANTIC_CACHE_DIR")
         return cls(
             enabled=os.environ.get("MEMOWEFT_SEMANTIC_ENABLED", "1").lower() not in {"0", "false", "off"},
-            threshold=float(os.environ.get("MEMOWEFT_SEMANTIC_THRESHOLD", "0.87")),
+            threshold=float(os.environ.get("MEMOWEFT_SEMANTIC_THRESHOLD", "0.75")),
             cache_dir=Path(cache) if cache else None,
         )

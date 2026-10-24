@@ -192,6 +192,32 @@ class SemanticRuntime:
             raise
         return written
 
+    def score_texts(self, query: str, texts: Sequence[str]) -> Sequence[float]:
+        scores = self.score_texts_many([query], texts)
+        return scores[0] if scores else ()
+
+    def score_texts_many(self, queries: Sequence[str], texts: Sequence[str]) -> Sequence[Sequence[float]]:
+        """Encode authorized source windows once per request, never cache them."""
+        if (not queries or len(queries) > 5 or any(len(q) > 4000 for q in queries)
+                or not texts or not self.config.enabled or self._stop.is_set()):
+            return ()
+        if not self._inference.acquire(blocking=False):
+            return ()
+        try:
+            with self._lock:
+                encoder = self._encoder if self._state == 'ready' else None
+            if encoder is None:
+                return ()
+            vectors = encoder.encode(queries, query=True)
+            scores: list[list[float]] = [[] for _ in queries]
+            for start in range(0, len(texts), self.config.batch_size):
+                batch = encoder.encode(texts[start:start + self.config.batch_size]) @ vectors.T
+                for index, values in enumerate(batch.T):
+                    scores[index].extend(float(value) for value in values)
+            return scores
+        finally:
+            self._inference.release()
+
     def candidates(self, db: sqlite3.Connection, subject_id: str, query: str) -> Sequence[SemanticCandidate]:
         if len(query) > 4000:
             return ()

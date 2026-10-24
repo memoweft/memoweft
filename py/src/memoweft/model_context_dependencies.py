@@ -31,7 +31,7 @@ _CAPTURE_STATUSES = frozenset(
     {"complete", "complete_empty", "unavailable", "withheld"}
 )
 _WORLD_ITEM_KEYS = frozenset({"object_kind", "item_id"})
-WORLD_ITEM_KINDS = frozenset({"cognition", "entity", "relationship", "event"})
+WORLD_ITEM_KINDS = frozenset({"cognition", "entity", "relationship", "event", "evidence"})
 _TOKEN_KEYS = (
     "recall_snapshot_token",
     "interaction_snapshot_token",

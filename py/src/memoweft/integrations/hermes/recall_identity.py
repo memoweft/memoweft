@@ -14,13 +14,7 @@ from ..trust.currentness import CurrentnessSurface, current_entity_aliases, link
 
 
 def _direct_self_fact(db: sqlite3.Connection, subject_id: str, cognition_id: str) -> bool:
-    """Recognize supported self descriptions, never the speaker's perspective.
-
-    Be conservative where the existing target is absent or only a topic. A
-    direct first-person birth/preference clause is sufficient; possession of a
-    relative, reported opinions and omitted subjects are not. Other wording
-    keeps its existing recall paths rather than guessing a new person link.
-    """
+    """Recognize directly sourced self clauses, not a third party's subject."""
     from .batch_adapter import _stated_normalize
 
     for content, raw in db.execute(
@@ -30,15 +24,20 @@ def _direct_self_fact(db: sqlite3.Connection, subject_id: str, cognition_id: str
         "WHERE c.id=? AND c.subject_id=? AND e.source_kind='spoken'", (cognition_id, subject_id),
     ).fetchall():
         source = str(raw).strip()
-        direct = re.match(
-            r"^I\s+(?:(?:am|was)\s+born\b|(?:(?:really|usually|always)\s+)*"
-            r"(?:like|prefer|enjoy|dislike|love|hate)\b)"
-            r"|^(?:我|本人)(?:更|最|很|平时|通常|一直|也|不|特别)*"
-            r"(?:出生|喜欢(?!的)|偏好)", source, re.IGNORECASE,
-        )
+        # Use the claim's own subject and exact support, rather than a catalogue
+        # of allowed preference verbs. Possessive third parties remain excluded.
+        claim = str(content).strip()
+        if re.match(r"^I\s+(?:think|believe|know|heard|feel)\s+(?:that\s+)?(?:they|he|she|my|his|her|their)\b", claim, re.I):
+            continue
+        if re.match(r'^(?:用户|我|本人)(?:觉得|认为|听说|知道)', claim) or re.match(r'^(?:用户|我|本人)[^，。！？!?]{0,12}的', claim):
+            continue
+        direct = re.match(r"^(?:I(?:\s|['’])|我(?!的)|本人(?!的))", claim, re.I)
         # A self clause elsewhere in a shared source must not qualify a
         # different claim. Compare only; never change Evidence or proposition.
-        if direct and _stated_normalize(source).startswith(str(content)):
+        if (direct or claim.startswith('用户') and re.match(r'^(?:我(?!的)|本人(?!的))', source)) and (
+            _stated_normalize(source).startswith(claim)
+            or bool(re.search(r"[.!?。！？\n]\s*" + re.escape(claim), source))
+        ):
             return True
     return False
 
@@ -124,11 +123,12 @@ def associate_owner_names(
         for name in names if holders[name.casefold()] <= self_ids and name not in ambiguous
     ))
     if not owner_names and not ambiguous:
-        return rows
+        return [{**row, 'owner_names': (), 'owner_entity_ids': tuple(sorted(self_ids))} for row in rows]
 
     result: list[dict[str, object]] = []
     for row in rows:
-        updated = {**row, "ambiguous_anchors": ambiguous}
+        updated = {**row, "ambiguous_anchors": ambiguous,
+                   'owner_names': owner_names, 'owner_entity_ids': tuple(sorted(self_ids))}
         if row["kind"] == "cognition" and row.get("statement_kind") in {"attribute", "preference"}:
             target = db.execute(
                 "SELECT ct.target_entity_id, ct.perspective_entity_id, e.kind "

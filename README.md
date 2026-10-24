@@ -121,7 +121,7 @@ MemoWeft keeps these boundaries explicit:
   Portable erasure markers carry a content-free original context fingerprint;
   alternate local IDs with reused session/episode names must match that fingerprint,
   and all matched IDs participate in the same transitive cascade.
-- Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
+- Recall is deterministic for the same source snapshot and ready retrieval index, and performs no World writes.
   Pending explicit first-person preference quotes can also accompany first-person
   preference questions when the changed value does not repeat the old activity
   noun. They remain verbatim provisional user context, not a synthesized slot,
@@ -135,22 +135,25 @@ MemoWeft keeps these boundaries explicit:
   Complete affirmative self introductions such as `I am Martin Mark.`,
   `I'm Martin Mark.` and `我是林晓。` qualify too; questions, negations,
   quoted statements and being the named person's friend or colleague do not.
-  It associates directly sourced first-person birth/preference clauses during recall;
+  It associates directly sourced first-person clauses during recall;
   missing targets, topic labels and the owner's viewpoint alone never prove
-  the fact is about the owner. Other wording keeps its existing recall paths
-  rather than guessing a new identity link. Ambiguous names stay unresolved, and source
+  the fact is about the owner. Possessive descriptions of other people and reported third-party views keep
+  their original attribution. Ambiguous names stay unresolved, and source
   permissions still apply separately to the name and the recalled fact.
-  Python optionally supplements literal matches with up to three local CPU
-  semantic candidates; loading/failure preserves literal recall. See
-  [configuration and lifecycle](docs/semantic-recall.md).
-  English recall preserves the original main candidate path. A candidate may be
-  removed only when every shared occurrence is grammatical in its original
-  case and contraction context, using an explicit 79-word set. Capitalized
-  names, uppercase words and bare contraction fragments remain substantive.
-  A substantive overlap always survives new
-  scores. Previous English improvements may fill remaining slots, while main
-  items retain priority under count/character budgets. See the
-  [candidate invariant and regression collections](bench/recall-quality/README.md).
+  Python recall ranks authorized local CPU semantic candidates first,
+  retaining literal recall when the encoder is unavailable. It separately appends
+  up to five timestamped exact user-source excerpts under a 2600-character cap;
+  source permissions, person isolation and deletion gates remain authoritative.
+  The main-memory cap remains five items / 600 characters. Owner questions can
+  also receive at most 18 current sourced profile items / 1800 characters, with
+  their original attribution and dates; selected dependency IDs include them
+  and every quoted source (`evidence` references). Hosts retain those references
+  in assistant context dependencies so forgetting also erases dependent replies.
+  Formation preserves concrete details and links new states to their sourced
+  predecessors. Forgetting removes Core source copies and derived context;
+  forgotten memories and withdrawn or deleted sources cannot return through
+  the main recall, profile or original-source windows. See the
+  [configuration and limits](docs/semantic-recall.md).
   Short natural corrections can be retrieved through the topic of their
   permission-eligible predecessors. Only the current successor is rendered
   and selected; past preference values appear for historical questions or
