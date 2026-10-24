@@ -62,7 +62,7 @@ from memoweft.semantic.model import MODEL_ID
 assert memoweft.CONFIG.consolidation.support_step > 0
 assert len(prompt_versions()) == 8
 assert SemanticConfig().enabled and SemanticConfig().max_additions == 3
-assert SemanticConfig().threshold == 0.75
+assert SemanticConfig().threshold == 0.87
 assert 'multilingual-e5-small' in MODEL_ID
 
 entries = [
