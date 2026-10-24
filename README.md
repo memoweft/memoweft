@@ -121,7 +121,7 @@ MemoWeft keeps these boundaries explicit:
   Portable erasure markers carry a content-free original context fingerprint;
   alternate local IDs with reused session/episode names must match that fingerprint,
   and all matched IDs participate in the same transitive cascade.
-- Recall is deterministic for the same revision and ready retrieval index, and performs no World writes.
+- Recall is deterministic for the same source snapshot and ready retrieval index, and performs no World writes.
   Pending explicit first-person preference quotes can also accompany first-person
   preference questions when the changed value does not repeat the old activity
   noun. They remain verbatim provisional user context, not a synthesized slot,
@@ -135,10 +135,10 @@ MemoWeft keeps these boundaries explicit:
   Complete affirmative self introductions such as `I am Martin Mark.`,
   `I'm Martin Mark.` and `我是林晓。` qualify too; questions, negations,
   quoted statements and being the named person's friend or colleague do not.
-  It associates directly sourced first-person birth/preference clauses during recall;
+  It associates directly sourced first-person clauses during recall;
   missing targets, topic labels and the owner's viewpoint alone never prove
-  the fact is about the owner. Other wording keeps its existing recall paths
-  rather than guessing a new identity link. Ambiguous names stay unresolved, and source
+  the fact is about the owner. Possessive descriptions of other people and reported third-party views keep
+  their original attribution. Ambiguous names stay unresolved, and source
   permissions still apply separately to the name and the recalled fact.
   Python recall ranks authorized local CPU semantic candidates first,
   retaining literal recall when the encoder is unavailable. It separately appends
