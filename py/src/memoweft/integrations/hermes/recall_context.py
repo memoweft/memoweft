@@ -119,6 +119,7 @@ def _windows(text: str) -> list[str]:
 
 def original_quotes(db: sqlite3.Connection,subject_id: str,query: str,tier: ModelTier,rows: list[dict[str,object]],provider: CandidateProvider|None,lang: Lang) -> tuple[str, tuple[tuple[str, str], ...]]:
     from .recall import _query_eligible_rows,_anchor_is_explicit,_bigrams
+    from .batch_adapter import _source_privacy_support_error, _memory_management_support_error
     scorer=getattr(provider,'score_texts',None)
     if provider is None or not provider.config.enabled or not callable(scorer):return '', ()
     owner,names,other_names,ambiguous=_scope(db,subject_id,query,rows,tier)
@@ -127,8 +128,13 @@ def original_quotes(db: sqlite3.Connection,subject_id: str,query: str,tier: Mode
     if owner:eligible.update((str(r['kind']),str(r['id'])) for r in _profile_rows(db,subject_id,rows))
     candidates=[]
     source_links: dict[str, tuple[tuple[str, str], ...]] = {}
+    source_texts: dict[str, str] = {}
     for eid,timestamp,raw in db.execute("SELECT id,occurred_at,raw_content FROM evidence WHERE subject_id=? AND source_kind='spoken' AND deleted_at IS NULL ORDER BY occurred_at DESC,id LIMIT 256",(subject_id,)):
         eid,text=str(eid),str(raw)
+        source_support = ((eid, 0, len(text), text),)
+        if (_source_privacy_support_error(source_support, {eid: text})
+                or _memory_management_support_error(source_support, {eid: text})):
+            continue
         if not _all_evidence_current(db,[eid],subject_id=subject_id,surface='model_cloud' if tier=='cloud' else 'recall',model_tier=tier):continue
         links=[(kind,str(i)) for kind,table,col in (('cognition','cognition_evidence','cognition_id'),('relationship','relationship_evidence','relationship_id'),('event','world_event_evidence','world_event_id')) for i, in db.execute(f'SELECT {col} FROM {table} WHERE evidence_id=?',(eid,))]
         if any(key not in eligible for key in links):continue
@@ -137,6 +143,7 @@ def original_quotes(db: sqlite3.Connection,subject_id: str,query: str,tier: Mode
             if not other_names and not re.match(r"^(?:I\b|I['’]|My\b|我|本人)",text.strip(),re.I):continue
             if re.match(r'^I\s+(?:think|believe|know|heard|feel)\s+(?:that\s+)?(?:they|he|she)\b',text.strip(),re.I):continue
         source_links[eid] = tuple(links)
+        source_texts[eid] = text
         for window in _windows(text):
             if window.strip():candidates.append((eid,str(timestamp),window,len(text)>len(window)))
     if not candidates:return '', ()
@@ -154,7 +161,13 @@ def original_quotes(db: sqlite3.Connection,subject_id: str,query: str,tier: Mode
             for ranked in rankings:
                 for i in ranked:
                     eid,timestamp,text,partial=candidates[i]
-                    if i in chosen or per_source.get(eid,0)>=2:continue
+                    source_limit = 2 if source_links[eid] else 1
+                    if i in chosen or per_source.get(eid,0)>=source_limit:continue
+                    # Unformed speech has no accepted claim range proving who
+                    # said a cropped sentence. Keep the entire attribution;
+                    # sources that cannot fit the existing quote budget wait.
+                    if not source_links[eid]:
+                        text, partial = source_texts[eid], False
                     terms=_bigrams(text)
                     if any(len(terms&_bigrams(candidates[j][2]))/max(1,len(terms|_bigrams(candidates[j][2])))>0.7 for j in chosen):continue
                     label='User original' if lang=='en' else '用户原话'

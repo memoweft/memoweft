@@ -1835,6 +1835,9 @@ class HermesBatchAdapterProcessor:
             return None, reason
         if any(support[3] == "" for support in parsed):
             return None, "span_out_of_range"
+        privacy_error = _source_privacy_support_error(parsed, raw_by_id)
+        if privacy_error:
+            return None, privacy_error
         management_error = _memory_management_support_error(parsed, raw_by_id, naming=kind == "naming")
         if management_error:
             return None, management_error
@@ -1960,7 +1963,7 @@ class HermesBatchAdapterProcessor:
                 correction_topic_text=str(current.get(str(raw_item.get("corrects_cognition_id")), {}).get("content", "")) if isinstance(raw_item, dict) and raw_item.get("action") == "correct" else "",
             )
             if item is None:
-                if reason in {"task_scoped_instruction", "memory_management_instruction"}:
+                if reason in {"task_scoped_instruction", "memory_management_instruction", "sensitive_source_content", "memory_opt_out"}:
                     normalizations.append({"item_index": item_index, "rule": "excluded_" + reason})
                     continue
                 return None, reason
@@ -2856,6 +2859,9 @@ class HermesBatchAdapterProcessor:
             ):
                 return None, "proposition_not_anchored"
 
+        privacy_error = _source_privacy_support_error(parsed, raw_by_id)
+        if privacy_error:
+            return None, privacy_error
         management_error = _memory_management_support_error(
             parsed, raw_by_id, naming=action == "form" and kind == "naming",
             named_subject=entity_canonical_name if targeted_attribute and not retract else None,
@@ -5444,6 +5450,47 @@ class HermesBatchAdapterProcessor:
         if batch.normalizations:
             outcome["normalizations"] = list(batch.normalizations)
         return outcome
+
+
+
+# One source-value rule for formation supports and original-source recall.
+# Labels must introduce a value; discussing password managers is not a secret.
+_SENSITIVE_SOURCE_VALUE = re.compile(
+    r"(?:密码|口令|密钥|验证码|动态码|证件号|身份证(?:号|号码)?|护照(?:号|号码)?)"
+    r"\s*(?:(?:是|为|[:：=])\s*[^\s，。！？；;]{2,}|[A-Za-z0-9][A-Za-z0-9_+=/\-]{3,})"
+    r"|\b(?:password|passphrase|api[ _-]?key|access[ _-]?token|secret[ _-]?key|"
+    r"verification[ _-]?code|one[ -]?time[ _-]?(?:code|password)|otp|"
+    r"(?:passport|identity|government[ -]?id)[ _-]?(?:number|no\.?|#)|ssn)"
+    r"\s*(?:(?:is|equals)\s+|[:=]\s*)[^\s,;!?]{2,}"
+    r"|-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----", re.IGNORECASE,
+)
+_SOURCE_OPT_OUT = re.compile(
+    r"(?:别|不要)(?:再)?记(?:住)?(?:了)?[。.!！?？\s]*$"
+    r"|\b(?:do not|don't)\s+(?:remember|store)\s+(?:this|that|it)[.!?\s]*$", re.IGNORECASE,
+)
+
+
+def _source_privacy_support_error(
+    supports: tuple[tuple[str, int, int, str], ...], raw_by_id: Mapping[str, str],
+) -> str | None:
+    """Check full source sentences so cropping cannot hide a label or opt-out.
+
+    Semicolons retain a following 'do not remember that' with its statement.
+    Independent sentences remain independently eligible for formation.
+    """
+    for evidence_id, start, end, _ in supports:
+        raw = raw_by_id[evidence_id]
+        begin = 0
+        for boundary in re.finditer(r"[。！？!?\n]|(?<!\d)\.(?!\d)|$", raw):
+            stop = boundary.end()
+            if stop > start and begin < end:
+                text = raw[begin:stop]
+                if _SENSITIVE_SOURCE_VALUE.search(text):
+                    return "sensitive_source_content"
+                if _SOURCE_OPT_OUT.search(text):
+                    return "memory_opt_out"
+            begin = stop
+    return None
 
 
 _MEMORY_MANAGEMENT_COMMAND = re.compile(

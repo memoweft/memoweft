@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import re
 import sqlite3
-from typing import cast
+from typing import Literal, cast
 
 from ...store.interaction_context import SqliteInteractionContextStore
 from ...types import Lang, ModelTier, InteractionContext, VisibleTurn
@@ -305,6 +305,32 @@ def _world_dependency_exists(
     )
 
 
+def _evidence_dependency_current(
+    db: sqlite3.Connection, subject_id: str, evidence_id: str, model_tier: ModelTier,
+) -> bool:
+    """Resolve later formation as well as the source's own read permission."""
+    from ..hermes.state_evolution import is_superseded
+
+    surface: Literal["model_cloud", "recall"] = "model_cloud" if model_tier == "cloud" else "recall"
+    if not _all_evidence_current(db, [evidence_id], subject_id=subject_id,
+                                 surface=surface, model_tier=model_tier):
+        return False
+    for kind, table, column in (
+        ("cognition", "cognition_evidence", "cognition_id"),
+        ("relationship", "relationship_evidence", "relationship_id"),
+        ("event", "world_event_evidence", "world_event_id"),
+    ):
+        for item_id, in db.execute(
+            f"SELECT {column} FROM {table} WHERE evidence_id=? AND relation='support'",
+            (evidence_id,),
+        ):
+            if not world_item_visible(db, subject_id, kind, str(item_id), surface=surface):  # type: ignore[arg-type]
+                return False
+            if kind in {"cognition", "relationship"} and is_superseded(db, kind, str(item_id)):  # type: ignore[arg-type]
+                return False
+    return True
+
+
 def _dependency_failure_priority(states: list[str]) -> str:
     if not states:
         return "visible"
@@ -364,10 +390,8 @@ def _dependency_state_for_turn(
             if not _world_dependency_exists(db, subject_id, kind, item_id):
                 states.append("missing")
             elif kind == "evidence":
-                states.append("visible" if _all_evidence_current(
-                    db, [item_id], subject_id=subject_id,
-                    surface="model_cloud" if model_tier == "cloud" else "recall",
-                    model_tier=model_tier,
+                states.append("visible" if _evidence_dependency_current(
+                    db, subject_id, item_id, model_tier,
                 ) else "stale")
             elif not world_item_visible(
                 db,
