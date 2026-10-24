@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Python semantic recall again requires 0.87 similarity by default, keeping weakly related memories and source quotes out of brief conversations while retaining strongly relevant recall.
+
 - Forget previews, scope validation and receipts now include Evidence preceding-assistant-context copies. A newly accepted copy invalidates stale confirmation without deleting its independent user Evidence.
 
 - Forget confirmations now bind the context snapshot; a changed scope requires a fresh preview and confirmation. Legacy context matching preserves complete fact boundaries, and Portable tombstones cascade through every verified matching local context ID without deleting unrelated host-local ID collisions.
