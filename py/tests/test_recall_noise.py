@@ -33,6 +33,7 @@ class SparseProvider:
 @pytest.mark.parametrize('query', ['你好', '您好', 'Hello', '早上好', '今天怎样'])
 def test_sparse_unrelated_memories_do_not_fill_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, query: str) -> None:
     monkeypatch.delenv('MEMOWEFT_SEMANTIC_THRESHOLD', raising=False)
+    monkeypatch.setenv('MEMOWEFT_SEMANTIC_ENABLED', '1')
     path = tmp_path / 'sparse.sqlite3'
     fixture.seed(path, {'memories': [
         {'id': 'autumn', 'content': '我喜欢秋天。'},
