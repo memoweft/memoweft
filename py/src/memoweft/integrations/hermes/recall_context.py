@@ -117,15 +117,16 @@ def _windows(text: str) -> list[str]:
     return [windows[round(i*(len(windows)-1)/3)] for i in range(4)]
 
 
-def original_quotes(db: sqlite3.Connection,subject_id: str,query: str,tier: ModelTier,rows: list[dict[str,object]],provider: CandidateProvider|None,lang: Lang) -> str:
+def original_quotes(db: sqlite3.Connection,subject_id: str,query: str,tier: ModelTier,rows: list[dict[str,object]],provider: CandidateProvider|None,lang: Lang) -> tuple[str, tuple[tuple[str, str], ...]]:
     from .recall import _query_eligible_rows,_anchor_is_explicit,_bigrams
     scorer=getattr(provider,'score_texts',None)
-    if provider is None or not provider.config.enabled or not callable(scorer):return ''
+    if provider is None or not provider.config.enabled or not callable(scorer):return '', ()
     owner,names,other_names,ambiguous=_scope(db,subject_id,query,rows,tier)
-    if ambiguous:return ''
+    if ambiguous:return '', ()
     eligible={(str(r['kind']),str(r['id'])) for r in _query_eligible_rows(query,rows)}
     if owner:eligible.update((str(r['kind']),str(r['id'])) for r in _profile_rows(db,subject_id,rows))
     candidates=[]
+    source_links: dict[str, tuple[tuple[str, str], ...]] = {}
     for eid,timestamp,raw in db.execute("SELECT id,occurred_at,raw_content FROM evidence WHERE subject_id=? AND source_kind='spoken' AND deleted_at IS NULL ORDER BY occurred_at DESC,id LIMIT 256",(subject_id,)):
         eid,text=str(eid),str(raw)
         if not _all_evidence_current(db,[eid],subject_id=subject_id,surface='model_cloud' if tier=='cloud' else 'recall',model_tier=tier):continue
@@ -135,14 +136,15 @@ def original_quotes(db: sqlite3.Connection,subject_id: str,query: str,tier: Mode
             if other_names and not any(_anchor_is_explicit(text.casefold(),n.casefold()) for n in other_names):continue
             if not other_names and not re.match(r"^(?:I\b|I['’]|My\b|我|本人)",text.strip(),re.I):continue
             if re.match(r'^I\s+(?:think|believe|know|heard|feel)\s+(?:that\s+)?(?:they|he|she)\b',text.strip(),re.I):continue
+        source_links[eid] = tuple(links)
         for window in _windows(text):
             if window.strip():candidates.append((eid,str(timestamp),window,len(text)>len(window)))
-    if not candidates:return ''
+    if not candidates:return '', ()
     queries=_facets(query,names)
     try:
         many=getattr(provider,'score_texts_many',None)
         matrix=many(queries,[c[2] for c in candidates]) if callable(many) else [scorer(q,[c[2] for c in candidates]) for q in queries]
-        if len(matrix)!=len(queries) or any(len(s)!=len(candidates) for s in matrix):return ''
+        if len(matrix)!=len(queries) or any(len(s)!=len(candidates) for s in matrix):return '', ()
         rankings=[sorted((i for i,v in enumerate(scores) if math.isfinite(v) and provider.config.threshold<=v<=1.00001),key=lambda i:(-scores[i],candidates[i][0],i)) for scores in matrix]
         chosen: list[int]=[]
         per_source: dict[str,int]={}
@@ -163,6 +165,10 @@ def original_quotes(db: sqlite3.Connection,subject_id: str,query: str,tier: Mode
                     break
                 if len(chosen)==QUOTE_ITEMS:break
             if len(chosen)==QUOTE_ITEMS or not added:break
-        return '\n'.join(lines)
+        dependencies = tuple(dict.fromkeys(
+            reference for i in chosen
+            for reference in (('evidence', candidates[i][0]), *source_links[candidates[i][0]])
+        ))
+        return '\n'.join(lines), dependencies
     except Exception:
-        return ''
+        return '', ()

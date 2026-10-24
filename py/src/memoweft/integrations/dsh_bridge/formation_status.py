@@ -129,6 +129,8 @@ def formation_requests(db: sqlite3.Connection, subject_id: str, *, model_tier: M
 
 def correction_notices(db: sqlite3.Connection, subject_id: str, query: str, *, model_tier: ModelTier,
                        selected_item_ids: tuple[tuple[str, str], ...] = ()) -> list[dict[str, Any]]:
+    # Quoted Evidence dependencies are not formal correction targets.
+    selected_item_ids = tuple(pair for pair in selected_item_ids if pair[0] != 'evidence')
     notices = []
     for item in formation_requests(db, subject_id, model_tier=model_tier):
         if item['intent'] != 'correction':

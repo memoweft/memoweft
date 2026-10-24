@@ -16,7 +16,7 @@ from .dependencies import (
     WORLD_ITEM_KINDS,
     validate_model_context_dependencies,
 )
-from ..trust.currentness import world_item_visible
+from ..trust.currentness import _all_evidence_current, world_item_visible
 from ..hermes.recall import _anchor_is_explicit, _entity_names
 from ..recall_language import call_with_recall_language
 
@@ -286,6 +286,7 @@ _WORLD_TABLES = {
     "entity": ("entity", "world_id"),
     "relationship": ("relationship", "world_id"),
     "event": ("world_event", "world_id"),
+    "evidence": ("evidence", "subject_id"),
 }
 
 
@@ -362,6 +363,12 @@ def _dependency_state_for_turn(
             item_id = str(item["item_id"])
             if not _world_dependency_exists(db, subject_id, kind, item_id):
                 states.append("missing")
+            elif kind == "evidence":
+                states.append("visible" if _all_evidence_current(
+                    db, [item_id], subject_id=subject_id,
+                    surface="model_cloud" if model_tier == "cloud" else "recall",
+                    model_tier=model_tier,
+                ) else "stale")
             elif not world_item_visible(
                 db,
                 subject_id,

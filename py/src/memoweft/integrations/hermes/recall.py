@@ -1523,7 +1523,7 @@ def _append_semantic_candidates(
 def _original_quotes(
     db: sqlite3.Connection, subject_id: str, query: str, model_tier: ModelTier,
     rows: list[dict[str, object]], provider: CandidateProvider | None, lang: Lang,
-) -> str:
+) -> tuple[str, tuple[tuple[str, str], ...]]:
     from .recall_context import original_quotes
     return original_quotes(db, subject_id, query, model_tier, rows, provider, lang)
 
@@ -1656,12 +1656,12 @@ def recall_world_snapshot(
             rendered_recall = '\n'.join(filter(None, (profile_text, rendered_recall)))
             selected_keys = {(str(item['kind']), str(item['id'])) for item in selected}
             selected.extend(item for item in profile_items if (str(item['kind']), str(item['id'])) not in selected_keys)
-        quotes = _original_quotes(db, subject_id, query, model_tier, rows, provider, lang)
+        quotes, quote_dependencies = _original_quotes(db, subject_id, query, model_tier, rows, provider, lang)
         if quotes:
             rendered_recall = '\n'.join(filter(None, (rendered_recall, quotes)))
-        selected_item_ids = tuple(
+        selected_item_ids = tuple(dict.fromkeys(tuple(
             (str(item["kind"]), str(item["id"])) for item in selected
-        )
+        ) + quote_dependencies))
         recall_snapshot_token = _digest(
             {
                 "schema_version": 1,

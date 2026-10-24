@@ -146,7 +146,9 @@ MemoWeft keeps these boundaries explicit:
   source permissions, person isolation and deletion gates remain authoritative.
   The main-memory cap remains five items / 600 characters. Owner questions can
   also receive at most 18 current sourced profile items / 1800 characters, with
-  their original attribution and dates; selected dependency IDs include them.
+  their original attribution and dates; selected dependency IDs include them
+  and every quoted source (`evidence` references). Hosts retain those references
+  in assistant context dependencies so forgetting also erases dependent replies.
   Formation preserves concrete details and links new states to their sourced
   predecessors. Forgetting removes Core source copies and derived context;
   forgotten memories and withdrawn or deleted sources cannot return through
