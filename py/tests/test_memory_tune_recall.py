@@ -9,7 +9,9 @@ from test_semantic_recall import ForcedProvider,fixture
 
 class SourceProvider(ForcedProvider):
     def score_texts(self,query: str,texts: list[str]) -> list[float]:
-        return [0.98 if 'cobalt' in t else 0.80 for t in texts]
+        # Both positive source fixtures must clear the production relevance gate
+        # before testing that deletion actually removes their recalled copies.
+        return [0.98 if 'cobalt' in t or 'earnings' in t else 0.80 for t in texts]
 
 
 def test_owner_profile_reaches_nonliteral_attribute_without_encoder(tmp_path: Path) -> None:
