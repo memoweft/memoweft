@@ -2859,7 +2859,7 @@ class HermesBatchAdapterProcessor:
             ):
                 return None, "proposition_not_anchored"
 
-        privacy_error = _source_privacy_support_error(parsed, raw_by_id)
+        privacy_error = _source_privacy_support_error(parsed, raw_by_id, check_opt_out=action != "correct")
         if privacy_error:
             return None, privacy_error
         management_error = _memory_management_support_error(
@@ -5472,21 +5472,30 @@ _SOURCE_OPT_OUT = re.compile(
 
 def _source_privacy_support_error(
     supports: tuple[tuple[str, int, int, str], ...], raw_by_id: Mapping[str, str],
+    *, check_opt_out: bool = True,
 ) -> str | None:
-    """Check full source sentences so cropping cannot hide a label or opt-out.
+    """Check source clauses so cropping cannot hide a label or opt-out.
 
     Semicolons retain a following 'do not remember that' with its statement.
     Independent sentences remain independently eligible for formation.
     """
     for evidence_id, start, end, _ in supports:
         raw = raw_by_id[evidence_id]
+        # Preserve the compiler's exact ranges: an unselected intervening
+        # credential cannot suppress independently selected ordinary facts.
+        for sentence in _evidence_sentences(raw):
+            for clause in _evidence_segments(sentence['text']):
+                left = sentence['start'] + clause['start']
+                right = sentence['start'] + clause['end']
+                if right > start and left < end and _SENSITIVE_SOURCE_VALUE.search(clause['text']):
+                    return "sensitive_source_content"
+        if not check_opt_out:
+            continue
         begin = 0
         for boundary in re.finditer(r"[。！？!?\n]|(?<!\d)\.(?!\d)|$", raw):
             stop = boundary.end()
             if stop > start and begin < end:
                 text = raw[begin:stop]
-                if _SENSITIVE_SOURCE_VALUE.search(text):
-                    return "sensitive_source_content"
                 if _SOURCE_OPT_OUT.search(text):
                     return "memory_opt_out"
             begin = stop
