@@ -4,6 +4,8 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
+- Current World exports now exclude superseded preferences and relationships while retaining their history and original sources. Phone replicas can remove the previous state after a reported change, consistently with current recall.
+
 - Forget previews, scope validation and receipts now include Evidence preceding-assistant-context copies. A newly accepted copy invalidates stale confirmation without deleting its independent user Evidence.
 
 - Forget confirmations now bind the context snapshot; a changed scope requires a fresh preview and confirmation. Legacy context matching preserves complete fact boundaries, and Portable tombstones cascade through every verified matching local context ID without deleting unrelated host-local ID collisions.
