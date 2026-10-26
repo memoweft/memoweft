@@ -20,6 +20,57 @@ from memoweft.store import open_db
 SUBJECT = "trust-owner"
 
 
+def test_superseded_preference_is_history_only_without_invalidating_its_source(tmp_path: Path) -> None:
+    path = tmp_path / "superseded.sqlite3"
+    _seed(path)
+    with sqlite3.connect(path) as db:
+        # A changed state retains its valid historical row; unlike a correction,
+        # supersession deliberately does not set invalid_at.
+        db.execute("UPDATE cognition SET invalid_at=NULL WHERE id='cognition-old'")
+        db.execute("UPDATE cognition_transitions SET reason='supersedes'")
+    query = QueryService(path, subject_id=SUBJECT)
+    current = _any_result(query.list_world_items("cognition"))
+    assert [item["item_id"] for item in current["items"]] == ["cognition-1"]
+    history = _any_result(query.get_world_item("cognition", "cognition-old", include_history=True))["item"]
+    assert history["current_state"] == "not_current"
+    assert history["lifecycle"]["invalid_at"] is None
+    assert history["lifecycle"]["currentness_state"] == "world_item_superseded"
+    assert history["provenance"][0]["evidence"]["raw_content"] == "用户说小王是同事"
+    assert len(_any_result(query.list_world_items("cognition", include_history=True))["items"]) == 2
+    with pytest.raises(TrustQueryError, match="world_item_not_current"):
+        query.get_world_item("cognition", "cognition-old")
+    source = _any_result(query.get_world_item_provenance("cognition", "cognition-1"))["provenance"][0]
+    linked = {item["item_id"]: item["current_state"] for item in source["linked_world_items"]}
+    assert linked["cognition-old"] == "not_current"
+    assert linked["cognition-1"] == "current"
+
+
+def test_superseded_relationship_is_excluded_from_current_exports(tmp_path: Path) -> None:
+    path = tmp_path / "relationship.sqlite3"
+    _seed(path)
+    with sqlite3.connect(path) as db:
+        db.execute(
+            "INSERT INTO relationship(id, world_id, source_entity_id, target_entity_id, "
+            "relation_type, content, formed_by, confidence, cred_status, invalid_at, created_at, updated_at) "
+            "SELECT 'relationship-old', world_id, source_entity_id, target_entity_id, relation_type, "
+            "content, formed_by, confidence, cred_status, invalid_at, created_at, updated_at "
+            "FROM relationship WHERE id='relationship-1'"
+        )
+        db.execute("INSERT INTO relationship_evidence VALUES ('relationship-old', 'ev-main', 'support')")
+        db.execute(
+            "CREATE TABLE relationship_transitions (id TEXT PRIMARY KEY, prior_relationship_id TEXT NOT NULL UNIQUE, "
+            "replacement_relationship_id TEXT NOT NULL, reason TEXT NOT NULL, revision INTEGER NOT NULL)"
+        )
+        db.execute("INSERT INTO relationship_transitions VALUES ('rel-transition', 'relationship-old', 'relationship-1', 'supersedes', 7)")
+    query = QueryService(path, subject_id=SUBJECT)
+    current = _any_result(query.list_world_items("relationship"))
+    assert [item["item_id"] for item in current["items"]] == ["relationship-1"]
+    history = _any_result(query.get_world_item("relationship", "relationship-old", include_history=True))["item"]
+    assert history["current_state"] == "not_current"
+    assert history["lifecycle"]["invalid_at"] is None
+    assert history["transition_history"][0]["replacement_item_id"] == "relationship-1"
+
+
 def _canonical(value: object) -> str:
     return json.dumps(
         value, ensure_ascii=True, allow_nan=False, separators=(",", ":"), sort_keys=True
@@ -280,6 +331,15 @@ def test_model_provenance_withholds_mixed_world_evidence_but_history_keeps_raw(
     with sqlite3.connect(trust_db) as db:
         db.execute("UPDATE cognition SET invalid_at = NULL WHERE id = 'cognition-old'")
         db.execute("UPDATE world_event SET invalid_at = NULL WHERE id = 'event-old'")
+    current = _any_result(
+        service.get_world_item_provenance("cognition", "cognition-1", projection="model")
+    )["provenance"][0]
+    assert current["evidence"]["raw_content"] is None
+    assert current["model_denial_reason"] == "mixed_world_currentness"
+    # Clearing lifecycle flags cannot turn a transitioned predecessor current.
+    # Only the independent fixture with no outgoing transition is all current.
+    with sqlite3.connect(trust_db) as db:
+        db.execute("DELETE FROM cognition_transitions")
     current = _any_result(
         service.get_world_item_provenance("cognition", "cognition-1", projection="model")
     )["provenance"][0]

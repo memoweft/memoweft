@@ -565,7 +565,7 @@ class QueryService:
         archived_at = native_archived_at or sidecar_archived_at
         muted_at = native_muted_at or sidecar_muted_at
         lifecycle_current = invalid_at is None and archived_at is None and muted_at is None
-        visible = lifecycle_current and world_item_visible(
+        visible = lifecycle_current and not self._has_successor(read.db, kind, item_id) and world_item_visible(
             read.db,
             self._subject_id,
             kind,
@@ -614,6 +614,21 @@ class QueryService:
             "updated_at": updated_at,
         }
 
+    @staticmethod
+    def _has_successor(db: sqlite3.Connection, kind: str, item_id: str) -> bool:
+        # Supersession keeps the historical row valid. Its outgoing transition,
+        # rather than invalid_at, determines whether it is a current state.
+        if kind not in {"cognition", "relationship"}:
+            return False
+        if kind == "relationship" and not db.execute(
+            "SELECT 1 FROM sqlite_master WHERE name='relationship_transitions'"
+        ).fetchone():
+            return False
+        return db.execute(
+            f"SELECT 1 FROM {kind}_transitions WHERE prior_{kind}_id=? LIMIT 1",
+            (item_id,),
+        ).fetchone() is not None
+
     def _item_denial_state(
         self,
         db: sqlite3.Connection,
@@ -629,6 +644,8 @@ class QueryService:
             return "world_item_archived"
         if muted_at is not None:
             return "world_item_muted"
+        if self._has_successor(db, kind, item_id):
+            return "world_item_superseded"
         evidence_ids = linked_evidence(db, kind, item_id)
         if not evidence_ids:
             return "world_item_missing_provenance"
@@ -828,7 +845,7 @@ class QueryService:
                 denial = "linked_world_items_overflow"
             elif relation != "support" or any(item["relation"] != "support" for item in linked_items):
                 denial = "non_support_relation"
-            elif not world_item_visible(db, self._subject_id, kind, item_id, surface="recall"):
+            elif self._has_successor(db, kind, item_id) or not world_item_visible(db, self._subject_id, kind, item_id, surface="recall"):
                 denial = "target_not_current"
             elif int(row["allow_local_read"]) != 1 or int(row["allow_inference"]) != 1 or row["deleted_at"] is not None:
                 denial = "evidence_not_model_readable"
@@ -901,7 +918,7 @@ class QueryService:
                 "object_kind": kind,
                 "item_id": linked_item_id,
                 "relation": relation,
-                "current_state": "current" if world_item_visible(db, self._subject_id, cast(Any, kind), linked_item_id, surface="recall") else "not_current",
+                "current_state": "current" if not self._has_successor(db, kind, linked_item_id) and world_item_visible(db, self._subject_id, cast(Any, kind), linked_item_id, surface="recall") else "not_current",
             }
             for kind, linked_item_id, relation in ordered[:64]
         ]
