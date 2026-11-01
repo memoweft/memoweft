@@ -106,7 +106,8 @@ TRUST_PROVIDER_TOOL_SCHEMAS: tuple[dict[str, object], ...] = (
         "name": "memoweft_query_jobs",
         "description": (
             "Read World Job acceptance, Core terminal, and delivery facts without mutation. "
-            "List selectors must all match; a projection returns only distinct IDs."
+            "List selectors must all match; a projection returns only distinct IDs "
+            "or Evidence sessions of the selected jobs."
         ),
         "parameters": {
             "type": "object",
@@ -504,8 +505,8 @@ class QueryService:
                 params.append(json.dumps(list(values)))
         if evidence_ids is not None:
             where.append(
-                "EXISTS (SELECT 1 FROM json_each(j.evidence_ids_json) AS e "
-                "WHERE e.value IN (SELECT value FROM json_each(?)))"
+                "EXISTS (SELECT 1 FROM json_each(j.evidence_ids_json) AS accepted "
+                "WHERE accepted.value IN (SELECT value FROM json_each(?)))"
             )
             params.append(json.dumps(list(evidence_ids)))
         if session_id is not None:
