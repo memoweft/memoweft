@@ -206,8 +206,10 @@ MemoWeft keeps these boundaries explicit:
   corrections do not become healthy merely because their worker is `no_change`.
   Every accepted turn keeps a job, so hosts select what they need: `list`
   accepts `states`, `boundary_event_ids`, `evidence_ids` and `session_id`
-  (all must match), and `projection: "evidence_ids"` or
-  `"boundary_event_ids"` returns only the distinct IDs of the selected jobs.
+  (all must match). `projection: "evidence_ids"`, `"evidence_sessions"` or
+  `"boundary_event_ids"` returns only the distinct Evidence IDs, Evidence and
+  session pairs, or boundary IDs of the selected jobs; replays of one source
+  then count once.
   `retry_formation` reuses the existing source reprocessing operation with a
   request ID, preserves the rejected terminal, and wakes the configured worker.
   Recall previews expose permission-filtered `pending_corrections` independently

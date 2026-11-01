@@ -400,6 +400,10 @@ def test_job_selectors_stay_small_when_settled_history_grows(trust_db: Path) -> 
     assert [job["job_id"] for job in jobs(boundary_event_ids=["boundary-7", "boundary-missing"])["jobs"]] == ["job-7"]
     assert [job["job_id"] for job in jobs(evidence_ids=["ev-local"], states=["dead"])["jobs"]] == ["job-5003"]
     assert jobs(session_id="session-b", projection="evidence_ids")["evidence_ids"] == ["ev-local"]
+    assert jobs(evidence_ids=["ev-main"], projection="evidence_sessions")["evidence_sessions"] == [
+        {"evidence_id": "ev-main", "parent_session_id": session, "result_session_id": session}
+        for session in ("session-0", "session-1", "session-a")
+    ]
     assert len(jobs(projection="evidence_ids")["evidence_ids"]) == 1 + 1 + 1002
     assert jobs(boundary_event_ids=["boundary-1", "boundary-x"],
                 projection="boundary_event_ids")["boundary_event_ids"] == ["boundary-1"]

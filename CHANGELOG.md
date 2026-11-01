@@ -4,7 +4,7 @@ All notable changes to MemoWeft are recorded here. Release publication remains a
 
 ## Unreleased
 
-- Job queries can select by state, boundary, Evidence or session and project distinct Evidence or boundary IDs. Hosts no longer need the whole job history, which exceeds an 8 MiB RPC frame after a few thousand accepted turns.
+- Job queries can select by state, boundary, Evidence or session and project distinct Evidence IDs, Evidence sessions or boundary IDs. Hosts no longer need the whole job history, which exceeds an 8 MiB RPC frame after a few thousand accepted turns.
 
 - Current World exports now exclude superseded preferences and relationships while retaining their history and original sources. Phone replicas can remove the previous state after a reported change, consistently with current recall.
 

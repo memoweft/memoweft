@@ -43,7 +43,7 @@ _KIND_ORDER: dict[str, int] = {
 _KINDS = frozenset(_KIND_ORDER)
 _JOB_STATES = frozenset({"pending", "processing", "retry", "applied", "no_change", "dead"})
 _JOB_SELECTORS = ("states", "boundary_event_ids", "evidence_ids", "session_id")
-_JOB_PROJECTIONS = ("evidence_ids", "boundary_event_ids")
+_JOB_PROJECTIONS = ("evidence_ids", "evidence_sessions", "boundary_event_ids")
 _OPERATIONS = (
     "get_capabilities",
     "get_world_revision",
@@ -520,6 +520,26 @@ class QueryService:
                     params,
                 ).fetchall()
                 return {**self._base(read.world_revision), "evidence_ids": [str(row[0]) for row in rows]}
+            if projection == "evidence_sessions":
+                # Replays of one source share its Evidence and sessions; selecting
+                # by Evidence must not return one row per replay.
+                rows = read.db.execute(
+                    "SELECT DISTINCT e.value, j.parent_session_id, j.result_session_id "
+                    "FROM memory_world_job AS j, json_each(j.evidence_ids_json) AS e "
+                    f"WHERE {selected} ORDER BY 1, 2, 3",
+                    params,
+                ).fetchall()
+                return {
+                    **self._base(read.world_revision),
+                    "evidence_sessions": [
+                        {
+                            "evidence_id": str(row[0]),
+                            "parent_session_id": str(row[1]),
+                            "result_session_id": str(row[2]),
+                        }
+                        for row in rows
+                    ],
+                }
             if projection == "boundary_event_ids":
                 rows = read.db.execute(
                     f"SELECT j.boundary_event_id FROM memory_world_job AS j WHERE {selected} "
