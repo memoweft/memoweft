@@ -23,6 +23,10 @@ _GENERIC = _GENERIC_PREDICATE_BIGRAMS | {"以后", "之后", "现在", "最近",
 _QUANTITY = re.compile(r"\d+(?:\.\d+)?\s*(毫升|升|毫克|克|千克|公斤|毫米|厘米|米|公里|元|美元|秒|分钟|小时|点|时|ml\b|kg\b|cm\b|km\b)", re.I)
 _DIMENSIONS = {"毫升": "volume", "升": "volume", "ml": "volume", "毫克": "mass", "克": "mass", "千克": "mass", "公斤": "mass", "kg": "mass", "毫米": "length", "厘米": "length", "米": "length", "公里": "length", "cm": "length", "km": "length", "点": "clock", "时": "clock", "秒": "duration", "分钟": "duration", "小时": "duration"}
 _ANAPHOR = re.compile(r"前面那个|上一句|刚才说的|那个(?:数|时间|价格)|\b(?:that number|that time|previous price)\b", re.I)
+# Formation looked and found nothing that belongs in memory; the request is settled.
+SETTLED_NO_CHANGE = frozenset({
+    "task_scoped_instruction", "pure_inquiry_no_declarative_facts", "no_world_mutation", "model_out_of_scope",
+})
 
 
 def _dimensions(text: str) -> set[str]:
@@ -124,9 +128,7 @@ def recent_evidence(
             continue
         if row["state"] not in {"pending", "processing", "retry", "no_change", "dead"}:
             continue
-        if row["state"] == "no_change" and row["reason"] in {
-            "task_scoped_instruction", "pure_inquiry_no_declarative_facts", "no_world_mutation",
-        }:
+        if row["state"] == "no_change" and row["reason"] in SETTLED_NO_CHANGE:
             continue
         candidates = correction_candidates(rows, index)
         if (not _related(query, row["text"]) and not _pending_preference_quote(query, row["text"])

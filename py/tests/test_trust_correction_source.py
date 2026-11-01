@@ -308,6 +308,36 @@ def test_no_change_status_requires_the_exact_completed_correction_scope(
         assert db.execute('SELECT raw_content FROM evidence WHERE id=?', (evidence_id,)).fetchone()[0] == raw
 
 
+@pytest.mark.parametrize('raw,reply,reason,listed', [
+    # Editing a reminder says 改到, yet it states nothing to remember.
+    ('帮我把那条喝水提醒改到下午三点', None, 'pure_inquiry_no_declarative_facts', False),
+    ('这次回答记住先列一个提纲。', {'schema_version': 1, 'result': 'one_cognition', 'cognition': {
+        'target': 'owner_self', 'statement_kind': 'preference', 'proposition': '这次回答记住先列一个提纲。',
+        'supports': [{'evidence_id': '$evidence', 'start': 0, 'end': 13}]}}, 'task_scoped_instruction', False),
+    ('喝水提醒的内容不对，改成打卡。', {'schema_version': 8, 'result': 'out_of_scope', 'note': '提醒流程'}, 'model_out_of_scope', False),
+    ('记住我的生日是五月一日。', {'schema_version': 8, 'result': 'no_change'}, 'model_no_change', True),
+])
+def test_status_lists_only_requests_that_still_have_something_to_remember(
+    tmp_path: Path, raw: str, reply: dict[str, object] | None, reason: str, listed: bool,
+) -> None:
+    from memoweft.integrations.dsh_bridge.formation_status import formation_requests
+    path = tmp_path / 'settled-no-change.sqlite3'
+    _prepare(path)
+    candidates = _candidates([{'role': 'user', 'content': raw, 'message_id': 'settled-message'}],
+        session_id='real-session', subject_id=_SUBJECT, host_id=_HOST, boundary_id='settled-turn')
+    with _open(path) as db:
+        HermesBoundaryStore(db, clock=_clock).accept(_boundary(*candidates, event_id='settled-turn',
+            target=_target(parent_session_id='real-session', result_session_id='real-session', subject_id=_SUBJECT, host_id=_HOST)))
+        evidence_id = str(db.execute('SELECT id FROM evidence WHERE origin_id=?', (candidates[0].origin_id,)).fetchone()[0])
+    script = [_model(json.loads(json.dumps(reply).replace('$evidence', evidence_id)))] * 2 if reply else []
+    processor = HermesBatchAdapterProcessor(str(path), _route(script), clock=_clock)
+    assert WorldJobWorker(path, processor=processor, policy=_policy(), clock=_clock).run_until_quiescent() == 1
+    with _open(path) as db:
+        row = db.execute('SELECT state,world_result_json FROM memory_world_job').fetchone()
+        assert (row['state'], json.loads(row['world_result_json'])['reason']) == ('no_change', reason)
+        assert [item['text'] for item in formation_requests(db, _SUBJECT)] == ([raw] if listed else [])
+
+
 @pytest.mark.parametrize('legacy_content,raw_json_only', [
     ('I like tea.', False), ('{"relation":"support","note":"literal user JSON"}', False), ('I like tea.', True),
 ])
