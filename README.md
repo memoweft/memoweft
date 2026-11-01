@@ -204,6 +204,10 @@ MemoWeft keeps these boundaries explicit:
   A correction topic may reuse the permission-eligible predecessor's wording.
 - `query_jobs` also returns unresolved explicit `formation_requests`; rejected
   corrections do not become healthy merely because their worker is `no_change`.
+  Every accepted turn keeps a job, so hosts select what they need: `list`
+  accepts `states`, `boundary_event_ids`, `evidence_ids` and `session_id`
+  (all must match), and `projection: "evidence_ids"` or
+  `"boundary_event_ids"` returns only the distinct IDs of the selected jobs.
   `retry_formation` reuses the existing source reprocessing operation with a
   request ID, preserves the rejected terminal, and wakes the configured worker.
   Recall previews expose permission-filtered `pending_corrections` independently

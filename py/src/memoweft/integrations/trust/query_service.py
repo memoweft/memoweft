@@ -41,6 +41,9 @@ _KIND_ORDER: dict[str, int] = {
     "cognition": 3,
 }
 _KINDS = frozenset(_KIND_ORDER)
+_JOB_STATES = frozenset({"pending", "processing", "retry", "applied", "no_change", "dead"})
+_JOB_SELECTORS = ("states", "boundary_event_ids", "evidence_ids", "session_id")
+_JOB_PROJECTIONS = ("evidence_ids", "boundary_event_ids")
 _OPERATIONS = (
     "get_capabilities",
     "get_world_revision",
@@ -101,12 +104,23 @@ TRUST_PROVIDER_TOOL_SCHEMAS: tuple[dict[str, object], ...] = (
     },
     {
         "name": "memoweft_query_jobs",
-        "description": "Read World Job acceptance, Core terminal, and delivery facts without mutation.",
+        "description": (
+            "Read World Job acceptance, Core terminal, and delivery facts without mutation. "
+            "List selectors must all match; a projection returns only distinct IDs."
+        ),
         "parameters": {
             "type": "object",
             "properties": {
                 "operation": {"type": "string", "enum": ["list", "get"]},
                 "job_id": {"type": "string"},
+                "states": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": sorted(_JOB_STATES)},
+                },
+                "boundary_event_ids": {"type": "array", "items": {"type": "string"}},
+                "evidence_ids": {"type": "array", "items": {"type": "string"}},
+                "session_id": {"type": "string"},
+                "projection": {"type": "string", "enum": list(_JOB_PROJECTIONS)},
             },
             "required": ["operation"],
             "additionalProperties": False,
@@ -295,13 +309,36 @@ class QueryService:
         if tool_name == "memoweft_query_jobs":
             self._require_keys(
                 raw,
-                allowed=frozenset({"operation", "job_id"}),
+                allowed=frozenset({"operation", "job_id", "projection", *_JOB_SELECTORS}),
                 required=frozenset({"operation"}),
             )
             if raw["operation"] == "list":
-                self._require_keys(raw, allowed=frozenset({"operation"}))
-                return self.list_jobs()
+                self._require_keys(
+                    raw, allowed=frozenset({"operation", "projection", *_JOB_SELECTORS})
+                )
+                states = raw.get("states")
+                if states is not None and (
+                    not isinstance(states, list)
+                    or any(not isinstance(state, str) or state not in _JOB_STATES for state in states)
+                ):
+                    raise TrustQueryError("invalid_job_states")
+                projection = raw.get("projection")
+                if projection is not None and projection not in _JOB_PROJECTIONS:
+                    raise TrustQueryError("invalid_job_projection")
+                session_id = raw.get("session_id")
+                return self.list_jobs(
+                    states=cast(list[str] | None, states),
+                    boundary_event_ids=self._identifiers(
+                        raw.get("boundary_event_ids"), "invalid_boundary_event_ids"
+                    ),
+                    evidence_ids=self._identifiers(raw.get("evidence_ids"), "invalid_evidence_ids"),
+                    session_id=None
+                    if session_id is None
+                    else self._identifier(session_id, "invalid_session_id"),
+                    projection=projection,
+                )
             if raw["operation"] == "get":
+                self._require_keys(raw, allowed=frozenset({"operation", "job_id"}))
                 return self.get_job(
                     self._identifier(raw.get("job_id"), "invalid_job_id")
                 )
@@ -445,12 +482,58 @@ class QueryService:
                 "evidence": self._evidence(read.world_revision, row),
             }
 
-    def list_jobs(self) -> dict[str, object]:
+    def list_jobs(
+        self,
+        *,
+        states: Sequence[str] | None = None,
+        boundary_event_ids: Sequence[str] | None = None,
+        evidence_ids: Sequence[str] | None = None,
+        session_id: str | None = None,
+        projection: str | None = None,
+    ) -> dict[str, object]:
+        """List jobs matching every given selector; None leaves a selector open.
+
+        The unselected list grows with every accepted turn. Hosts select the
+        jobs they need, or project distinct IDs, instead of reading history.
+        """
+
+        where, params = ["j.subject_id = ?"], [self._subject_id]
+        for column, values in (("j.state", states), ("j.boundary_event_id", boundary_event_ids)):
+            if values is not None:
+                where.append(f"{column} IN (SELECT value FROM json_each(?))")
+                params.append(json.dumps(list(values)))
+        if evidence_ids is not None:
+            where.append(
+                "EXISTS (SELECT 1 FROM json_each(j.evidence_ids_json) AS e "
+                "WHERE e.value IN (SELECT value FROM json_each(?)))"
+            )
+            params.append(json.dumps(list(evidence_ids)))
+        if session_id is not None:
+            where.append("? IN (j.parent_session_id, j.result_session_id)")
+            params.append(session_id)
+        selected = " AND ".join(where)
         with self._read() as read:
+            if projection == "evidence_ids":
+                rows = read.db.execute(
+                    "SELECT DISTINCT e.value FROM memory_world_job AS j, "
+                    f"json_each(j.evidence_ids_json) AS e WHERE {selected} ORDER BY e.value",
+                    params,
+                ).fetchall()
+                return {**self._base(read.world_revision), "evidence_ids": [str(row[0]) for row in rows]}
+            if projection == "boundary_event_ids":
+                rows = read.db.execute(
+                    f"SELECT j.boundary_event_id FROM memory_world_job AS j WHERE {selected} "
+                    "ORDER BY j.boundary_event_id",
+                    params,
+                ).fetchall()
+                return {
+                    **self._base(read.world_revision),
+                    "boundary_event_ids": [str(row[0]) for row in rows],
+                }
             rows = read.db.execute(
-                "SELECT job_id FROM memory_world_job WHERE subject_id = ? "
-                "ORDER BY created_at, job_id",
-                (self._subject_id,),
+                f"SELECT j.job_id FROM memory_world_job AS j WHERE {selected} "
+                "ORDER BY j.created_at, j.job_id",
+                params,
             ).fetchall()
             jobs = [self._job(read, str(row[0])) for row in rows]
             from ..dsh_bridge.formation_status import formation_requests
@@ -516,6 +599,14 @@ class QueryService:
         ):
             raise TrustQueryError(code)
         return value
+
+    @classmethod
+    def _identifiers(cls, value: object, code: str) -> list[str] | None:
+        if value is None:
+            return None
+        if not isinstance(value, list):
+            raise TrustQueryError(code)
+        return [cls._identifier(item, code) for item in value]
 
     def _item_ids(
         self, db: sqlite3.Connection, kind: TrustWorldItemKind
