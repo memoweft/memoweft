@@ -10,7 +10,7 @@ from typing import Any
 from ...types import ModelTier
 from ..trust.currentness import evidence_state
 from .interactions import _model_eligible
-from .recent import _CORRECTION, _related
+from .recent import SETTLED_NO_CHANGE, _CORRECTION, _related
 from .reprocess import source_boundary_event
 
 _REMEMBER = re.compile(r"记住|记着|记下来|记下|remember|keep in mind", re.I)
@@ -119,7 +119,7 @@ def formation_requests(db: sqlite3.Connection, subject_id: str, *, model_tier: M
                     # Unknown uncovered facts stay unfinished, including a
                     # remember request alongside an already applied correction.
                     intent = 'correction' if _CORRECTION.search(remaining) else 'remember'
-                elif result.get('reason') == 'no_world_mutation':
+                elif result.get('reason') in SETTLED_NO_CHANGE:
                     continue
             requests.append(dict(job_id=job['job_id'], evidence_id=eid, text=text,
                                  session_id=job['parent_session_id'], created_at=job['created_at'],
