@@ -368,6 +368,55 @@ def test_jobs_separate_acceptance_core_terminal_delivery_and_host_scope(trust_db
     }
 
 
+def test_job_selectors_stay_small_when_settled_history_grows(trust_db: Path) -> None:
+    # One full job is about 2 KB, so a few thousand settled turns exceed a host's
+    # 8 MiB frame. Selected jobs and projected IDs must not grow with that history.
+    with sqlite3.connect(trust_db) as db:
+        db.row_factory = sqlite3.Row
+        template = dict(db.execute("SELECT * FROM memory_world_job WHERE job_id = 'job-1'").fetchone())
+
+        def insert(index: int, state: str, evidence: str, session: str) -> None:
+            row = {**template, "job_id": f"job-{index}", "boundary_event_id": f"boundary-{index}",
+                   "evidence_ids_json": json.dumps([evidence]), "state": state, "terminal_state": None,
+                   "parent_session_id": session, "result_session_id": session,
+                   "created_at": f"2026-08-24T01:{index // 600:02d}:{index // 10 % 60:02d}.{index % 10}Z",
+                   "completed_at": None if state == "pending" else template["completed_at"]}
+            db.execute(f"INSERT INTO memory_world_job ({','.join(row)}) VALUES ({','.join('?' * len(row))})",
+                       tuple(row.values()))
+
+        for index in range(2, 5002):
+            # A replayed request reuses its Evidence; ordinary turns have their own.
+            insert(index, "no_change", "ev-main" if index < 4000 else f"ev-turn-{index}", f"session-{index % 2}")
+        insert(5002, "pending", "ev-local", "session-b")
+        insert(5003, "dead", "ev-local", "session-b")
+    service = QueryService(trust_db, subject_id=SUBJECT)
+
+    def jobs(**selectors: object) -> dict[str, Any]:
+        return _any_result(service.execute_provider_tool("memoweft_query_jobs", {"operation": "list", **selectors}))
+
+    open_jobs = jobs(states=["pending", "processing", "retry", "dead"])
+    assert [job["job_id"] for job in open_jobs["jobs"]] == ["job-5002", "job-5003"]
+    assert len(json.dumps(open_jobs)) < 16_000
+    assert [job["job_id"] for job in jobs(boundary_event_ids=["boundary-7", "boundary-missing"])["jobs"]] == ["job-7"]
+    assert [job["job_id"] for job in jobs(evidence_ids=["ev-local"], states=["dead"])["jobs"]] == ["job-5003"]
+    assert jobs(session_id="session-b", projection="evidence_ids")["evidence_ids"] == ["ev-local"]
+    assert jobs(evidence_ids=["ev-main"], projection="evidence_sessions")["evidence_sessions"] == [
+        {"evidence_id": "ev-main", "parent_session_id": session, "result_session_id": session}
+        for session in ("session-0", "session-1", "session-a")
+    ]
+    assert len(jobs(projection="evidence_ids")["evidence_ids"]) == 1 + 1 + 1002
+    assert jobs(boundary_event_ids=["boundary-1", "boundary-x"],
+                projection="boundary_event_ids")["boundary_event_ids"] == ["boundary-1"]
+    assert jobs(states=[])["jobs"] == []
+    for selectors, code in (({"states": ["failed"]}, "invalid_job_states"),
+                            ({"evidence_ids": "ev-main"}, "invalid_evidence_ids"),
+                            ({"projection": "jobs"}, "invalid_job_projection")):
+        with pytest.raises(TrustQueryError, match=code):
+            jobs(**selectors)
+    with pytest.raises(TrustQueryError, match="unexpected_trust_tool_argument"):
+        service.execute_provider_tool("memoweft_query_jobs", {"operation": "get", "job_id": "job-1", "states": []})
+
+
 def test_recall_preview_reuses_production_snapshot_and_is_zero_write(trust_db: Path) -> None:
     before = trust_db.read_bytes()
     service = QueryService(trust_db, subject_id=SUBJECT)
